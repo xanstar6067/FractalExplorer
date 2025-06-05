@@ -312,7 +312,7 @@
             // colorColor
             // 
             colorColor.AutoSize = true;
-            colorColor.Location = new Point(145, 407);
+            colorColor.Location = new Point(159, 407);
             colorColor.Name = "colorColor";
             colorColor.Size = new Size(52, 19);
             colorColor.TabIndex = 37;
