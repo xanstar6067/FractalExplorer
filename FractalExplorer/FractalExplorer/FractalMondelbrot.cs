@@ -69,7 +69,7 @@ namespace FractalDraving
             CheckBox mondelbrotClassicCb = Controls.Find("mondelbrotClassicBox", true).FirstOrDefault() as CheckBox;
 
             paletteCheckBoxes = new CheckBox[] {
-                colorBox2, oldRenderBW2,
+                colorBox, oldRenderBW,
                 Controls.Find("checkBox1", true).FirstOrDefault() as CheckBox,
                 Controls.Find("checkBox2", true).FirstOrDefault() as CheckBox,
                 Controls.Find("checkBox3", true).FirstOrDefault() as CheckBox,
@@ -84,10 +84,10 @@ namespace FractalDraving
                 cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
             }
 
-            nudIterations2.ValueChanged += ParamControl_Changed;
-            nudThreshold2.ValueChanged += ParamControl_Changed;
-            cbThreads2.SelectedIndexChanged += ParamControl_Changed;
-            nudZoom2.ValueChanged += ParamControl_Changed;
+            nudIterations.ValueChanged += ParamControl_Changed;
+            nudThreshold.ValueChanged += ParamControl_Changed;
+            cbThreads.SelectedIndexChanged += ParamControl_Changed;
+            nudZoom.ValueChanged += ParamControl_Changed;
 
             canvas2.MouseWheel += Canvas_MouseWheel;
             canvas2.MouseDown += Canvas_MouseDown;
@@ -98,26 +98,26 @@ namespace FractalDraving
             int cores = Environment.ProcessorCount;
             for (int i = 1; i <= cores; i++)
             {
-                cbThreads2.Items.Add(i);
+                cbThreads.Items.Add(i);
             }
-            cbThreads2.Items.Add("Auto");
-            cbThreads2.SelectedItem = "Auto";
+            cbThreads.Items.Add("Auto");
+            cbThreads.SelectedItem = "Auto";
 
-            nudIterations2.Minimum = 50;
-            nudIterations2.Maximum = 100000;
+            nudIterations.Minimum = 50;
+            nudIterations.Maximum = 100000;
 
 
-            nudThreshold2.Minimum = 2m;
-            nudThreshold2.Maximum = 1000m;
-            nudThreshold2.DecimalPlaces = 1;
-            nudThreshold2.Increment = 0.1m;
-            nudThreshold2.Value = 2m;
+            nudThreshold.Minimum = 2m;
+            nudThreshold.Maximum = 1000m;
+            nudThreshold.DecimalPlaces = 1;
+            nudThreshold.Increment = 0.1m;
+            nudThreshold.Value = 2m;
 
-            nudZoom2.DecimalPlaces = 2;
-            nudZoom2.Increment = 0.1m;
-            nudZoom2.Minimum = 0.1m;
+            nudZoom.DecimalPlaces = 2;
+            nudZoom.Increment = 0.1m;
+            nudZoom.Minimum = 0.1m;
             
-            nudZoom2.Value = 0.5m;
+            nudZoom.Value = 0.5m;
 
             this.Resize += Form1_Resize;
             canvas2.Resize += Canvas_Resize;
@@ -226,21 +226,21 @@ namespace FractalDraving
 
         private void HandleColorBoxEnableState()
         {
-            if (paletteCheckBoxes == null || colorBox2 == null || oldRenderBW2 == null) return;
+            if (paletteCheckBoxes == null || colorBox == null || oldRenderBW == null) return;
 
             bool isAnyNewPaletteCbChecked = paletteCheckBoxes.Skip(2).Any(cb => cb != null && cb.Checked);
 
             if (isAnyNewPaletteCbChecked)
             {
-                colorBox2.Enabled = true;
+                colorBox.Enabled = true;
             }
-            else if (colorBox2.Checked && !oldRenderBW2.Checked)
+            else if (colorBox.Checked && !oldRenderBW.Checked)
             {
-                colorBox2.Enabled = true;
+                colorBox.Enabled = true;
             }
             else
             {
-                colorBox2.Enabled = !oldRenderBW2.Checked;
+                colorBox.Enabled = !oldRenderBW.Checked;
             }
         }
 
@@ -261,12 +261,12 @@ namespace FractalDraving
         {
             if (isHighResRendering) return;
 
-            if (sender == nudZoom2)
+            if (sender == nudZoom)
             {
-                zoom = Math.Max((double)nudZoom2.Minimum, Math.Min((double)nudZoom2.Maximum, (double)nudZoom2.Value));
-                if (nudZoom2.Value != (decimal)zoom)
+                zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
+                if (nudZoom.Value != (decimal)zoom)
                 {
-                    nudZoom2.Value = (decimal)zoom;
+                    nudZoom.Value = (decimal)zoom;
                 }
             }
             // nudRe, nudIm, nudBaseScale больше не вызывают этот обработчик,
@@ -322,11 +322,11 @@ namespace FractalDraving
 
         private void UpdateParameters()
         {
-            maxIterations = (int)nudIterations2.Value;
-            threshold = (double)nudThreshold2.Value;
-            threadCount = cbThreads2.SelectedItem.ToString() == "Auto"
+            maxIterations = (int)nudIterations.Value;
+            threshold = (double)nudThreshold.Value;
+            threadCount = cbThreads.SelectedItem.ToString() == "Auto"
                 ? Environment.ProcessorCount
-                : Convert.ToInt32(cbThreads2.SelectedItem);
+                : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
         private delegate Color PaletteFunction(double t, int iter, int maxIterations, int maxColorIter);
@@ -345,8 +345,8 @@ namespace FractalDraving
 
             if (lastSelectedPaletteCheckBox != null)
             {
-                if (lastSelectedPaletteCheckBox == colorBox2) selectedPaletteFunc = GetPaletteColorBoxColor;
-                else if (lastSelectedPaletteCheckBox == oldRenderBW2) selectedPaletteFunc = GetPaletteOldBWColor;
+                if (lastSelectedPaletteCheckBox == colorBox) selectedPaletteFunc = GetPaletteColorBoxColor;
+                else if (lastSelectedPaletteCheckBox == oldRenderBW) selectedPaletteFunc = GetPaletteOldBWColor;
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox1") selectedPaletteFunc = GetPalette1Color;
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox2") selectedPaletteFunc = GetPalette2Color;
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox3") selectedPaletteFunc = GetPalette3Color;
@@ -530,15 +530,15 @@ namespace FractalDraving
                     }
 
                     int progress = Interlocked.Increment(ref done);
-                    if (!token.IsCancellationRequested && progressBar2.IsHandleCreated && !progressBar2.IsDisposed && height > 0)
+                    if (!token.IsCancellationRequested && progressBar.IsHandleCreated && !progressBar.IsDisposed && height > 0)
                     {
                         try
                         {
-                            progressBar2.BeginInvoke((Action)(() =>
+                            progressBar.BeginInvoke((Action)(() =>
                             {
-                                if (progressBar2.IsHandleCreated && !progressBar2.IsDisposed && progressBar2.Value <= progressBar2.Maximum)
+                                if (progressBar.IsHandleCreated && !progressBar.IsDisposed && progressBar.Value <= progressBar.Maximum)
                                 {
-                                    progressBar2.Value = Math.Min(progressBar2.Maximum, (int)(100.0 * progress / height));
+                                    progressBar.Value = Math.Min(progressBar.Maximum, (int)(100.0 * progress / height));
                                 }
                             }));
                         }
@@ -685,7 +685,7 @@ namespace FractalDraving
             double mouseRe = centerX + (e.X - width / 2.0) * scaleBeforeZoomX;
             double mouseIm = centerY + (e.Y - height / 2.0) * scaleBeforeZoomY;
 
-            zoom = Math.Max((double)nudZoom2.Minimum, Math.Min((double)nudZoom2.Maximum, zoom * zoomFactor));
+            zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
 
             double scaleAfterZoomX = BASE_SCALE / zoom / width;
             double scaleAfterZoomY = BASE_SCALE / zoom / height;
@@ -695,9 +695,9 @@ namespace FractalDraving
 
             canvas2.Invalidate();
 
-            if (nudZoom2.Value != (decimal)zoom)
+            if (nudZoom.Value != (decimal)zoom)
             {
-                nudZoom2.Value = (decimal)zoom;
+                nudZoom.Value = (decimal)zoom;
             }
             else
             {
@@ -772,19 +772,19 @@ namespace FractalDraving
         {
             Action action = () =>
             {
-                if (btnRender2 != null) btnRender2.Enabled = enabled;
+                if (btnRender != null) btnRender.Enabled = enabled;
                 // REMOVED: Управление Enabled для nudRe, nudIm, nudBaseScale
                 // if (nudRe != null) nudRe.Enabled = enabled; // Если контрол еще существует в дизайнере, можно оставить с проверкой if (nudRe != null)
                 // if (nudIm != null) nudIm.Enabled = enabled;
                 // if (nudBaseScale != null) nudBaseScale.Enabled = enabled;
 
-                nudIterations2.Enabled = enabled;
-                nudThreshold2.Enabled = enabled;
-                cbThreads2.Enabled = enabled;
-                nudZoom2.Enabled = enabled;
+                nudIterations.Enabled = enabled;
+                nudThreshold.Enabled = enabled;
+                cbThreads.Enabled = enabled;
+                nudZoom.Enabled = enabled;
 
-                if (nudW2 != null) nudW2.Enabled = enabled;
-                if (nudH2 != null) nudH2.Enabled = enabled;
+                if (nudW != null) nudW.Enabled = enabled;
+                if (nudH != null) nudH.Enabled = enabled;
 
                 foreach (var cb in paletteCheckBoxes.Where(cb => cb != null))
                 {
@@ -794,9 +794,9 @@ namespace FractalDraving
                 {
                     HandleColorBoxEnableState();
                 }
-                else if (colorBox2 != null)
+                else if (colorBox != null)
                 {
-                    colorBox2.Enabled = false;
+                    colorBox.Enabled = false;
                 }
             };
 
@@ -818,8 +818,8 @@ namespace FractalDraving
                 return;
             }
 
-            int saveWidth = (int)nudW2.Value; // Используем nudW2 для Мандельброта
-            int saveHeight = (int)nudH2.Value; // Используем nudH2 для Мандельброта
+            int saveWidth = (int)nudW.Value; // Используем nudW2 для Мандельброта
+            int saveHeight = (int)nudH.Value; // Используем nudH2 для Мандельброта
 
             if (saveWidth <= 0 || saveHeight <= 0)
             {
@@ -845,10 +845,10 @@ namespace FractalDraving
                     if (currentActionSaveButton != null) currentActionSaveButton.Enabled = false;
                     SetMainControlsEnabled(false);
 
-                    if (progressPNG2 != null) // Используем progressPNG2 для Мандельброта
+                    if (progressPNG != null) // Используем progressPNG2 для Мандельброта
                     {
-                        progressPNG2.Value = 0;
-                        progressPNG2.Visible = true;
+                        progressPNG.Value = 0;
+                        progressPNG.Visible = true;
                     }
 
                     try
@@ -869,15 +869,15 @@ namespace FractalDraving
                             currentThreadCount_Capture,
                             progressPercentage =>
                             {
-                                if (progressPNG2 != null && progressPNG2.IsHandleCreated && !progressPNG2.IsDisposed) // Используем progressPNG2
+                                if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) // Используем progressPNG2
                                 {
                                     try
                                     {
-                                        progressPNG2.Invoke((Action)(() =>
+                                        progressPNG.Invoke((Action)(() =>
                                         {
-                                            if (progressPNG2.Maximum > 0 && progressPNG2.Value <= progressPNG2.Maximum)
+                                            if (progressPNG.Maximum > 0 && progressPNG.Value <= progressPNG.Maximum)
                                             {
-                                                progressPNG2.Value = Math.Min(progressPNG2.Maximum, progressPercentage);
+                                                progressPNG.Value = Math.Min(progressPNG.Maximum, progressPercentage);
                                             }
                                         }));
                                     }
@@ -900,14 +900,14 @@ namespace FractalDraving
                         if (currentActionSaveButton != null) currentActionSaveButton.Enabled = true;
                         SetMainControlsEnabled(true);
 
-                        if (progressPNG2 != null && progressPNG2.IsHandleCreated && !progressPNG2.IsDisposed) // Используем progressPNG2
+                        if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) // Используем progressPNG2
                         {
                             try
                             {
-                                progressPNG2.Invoke((Action)(() =>
+                                progressPNG.Invoke((Action)(() =>
                                 {
-                                    progressPNG2.Visible = false;
-                                    progressPNG2.Value = 0;
+                                    progressPNG.Visible = false;
+                                    progressPNG.Value = 0;
                                 }));
                             }
                             catch (ObjectDisposedException) { }

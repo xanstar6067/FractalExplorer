@@ -68,7 +68,7 @@ namespace FractalDraving
         /// Свойство для доступа к масштабу лупы в окне выбора 'c'.
         /// Значение берется из элемента управления NumericUpDown.
         /// </summary>
-        public double LoupeZoom => (double)nudBaseScale1.Value;
+        public double LoupeZoom => (double)nudBaseScale.Value;
 
         /// <summary>
         /// Событие, возникающее при изменении масштаба лупы.
@@ -100,8 +100,8 @@ namespace FractalDraving
             // Инициализация массива чекбоксов для выбора цветовых палитр
             // Некоторые чекбоксы находятся по имени с помощью Controls.Find
             paletteCheckBoxes = new CheckBox[] {
-                colorBox1, // Чекбокс для старой цветной палитры
-                oldRenderBW1, // Чекбокс для старой черно-белой палитры
+                colorBox, // Чекбокс для старой цветной палитры
+                oldRenderBW, // Чекбокс для старой черно-белой палитры
                 Controls.Find("checkBox1", true).FirstOrDefault() as CheckBox, // Новая палитра 1
                 Controls.Find("checkBox2", true).FirstOrDefault() as CheckBox, // Новая палитра 2
                 Controls.Find("checkBox3", true).FirstOrDefault() as CheckBox, // Новая палитра 3
@@ -122,8 +122,8 @@ namespace FractalDraving
             nudIterations1.ValueChanged += ParamControl_Changed;    // Количество итераций
             nudThreshold1.ValueChanged += ParamControl_Changed;     // Порог "убегания"
             cbThreads1.SelectedIndexChanged += ParamControl_Changed;// Количество потоков
-            nudZoom1.ValueChanged += ParamControl_Changed;          // Уровень масштаба
-            nudBaseScale1.ValueChanged += NudBaseScale_ValueChanged; // Масштаб лупы для окна выбора 'c'
+            nudZoom.ValueChanged += ParamControl_Changed;          // Уровень масштаба
+            nudBaseScale.ValueChanged += NudBaseScale_ValueChanged; // Масштаб лупы для окна выбора 'c'
 
             // Подписка на события мыши для области отрисовки (canvas)
             canvas1.MouseWheel += Canvas_MouseWheel;   // Масштабирование колесом мыши
@@ -170,15 +170,15 @@ namespace FractalDraving
             nudThreshold1.DecimalPlaces = 1;
             nudThreshold1.Increment = 0.1m;
 
-            nudZoom1.DecimalPlaces = 2;
-            nudZoom1.Increment = 0.1m;
-            nudZoom1.Value = 1m; // Значение по умолчанию для масштаба
+            nudZoom.DecimalPlaces = 2;
+            nudZoom.Increment = 0.1m;
+            nudZoom.Value = 1m; // Значение по умолчанию для масштаба
 
-            nudBaseScale1.Minimum = 1m;
-            nudBaseScale1.Maximum = 10m;
-            nudBaseScale1.DecimalPlaces = 1;
-            nudBaseScale1.Increment = 0.1m;
-            nudBaseScale1.Value = 4m; // Значение по умолчанию для масштаба лупы
+            nudBaseScale.Minimum = 1m;
+            nudBaseScale.Maximum = 10m;
+            nudBaseScale.DecimalPlaces = 1;
+            nudBaseScale.Increment = 0.1m;
+            nudBaseScale.Value = 4m; // Значение по умолчанию для масштаба лупы
 
             // Подписка на события изменения размера формы и области отрисовки (canvas)
             this.Resize += Form1_Resize;    // При изменении размера формы
@@ -654,7 +654,7 @@ namespace FractalDraving
         private void HandleColorBoxEnableState()
         {
             // Проверка на существование необходимых контролов (массив палитр, colorBox, oldRenderBW).
-            if (paletteCheckBoxes == null || colorBox1 == null || oldRenderBW1 == null)
+            if (paletteCheckBoxes == null || colorBox == null || oldRenderBW == null)
             {
                 return;
             }
@@ -669,20 +669,20 @@ namespace FractalDraving
                 // Если выбрана одна из новых палитр (checkBox1-6), то "colorBox" (старая цветная)
                 // становится доступен для выбора. Это позволяет пользователю переключиться
                 // на старую цветную палитру, если он пробует новые.
-                colorBox1.Enabled = true;
+                colorBox.Enabled = true;
             }
-            else if (colorBox1.Checked && !oldRenderBW1.Checked)
+            else if (colorBox.Checked && !oldRenderBW.Checked)
             {
                 // Если "colorBox" уже выбран и при этом не выбран Ч/Б режим ("oldRenderBW"),
                 // то "colorBox" остается доступным (пользователь может снять с него галочку).
-                colorBox1.Enabled = true;
+                colorBox.Enabled = true;
             }
             else
             {
                 // В остальных случаях (например, если выбран "oldRenderBW", или не выбрана ни одна из новых палитр,
                 // и "colorBox" не выбран), доступность "colorBox" определяется тем, не выбран ли Ч/Б режим.
                 // Если Ч/Б режим ("oldRenderBW") выбран, "colorBox" должен быть недоступен.
-                colorBox1.Enabled = !oldRenderBW1.Checked;
+                colorBox.Enabled = !oldRenderBW.Checked;
             }
         }
 
@@ -734,17 +734,17 @@ namespace FractalDraving
             }
 
             // Если изменился масштаб (zoom) через соответствующий NumericUpDown (nudZoom).
-            if (sender == nudZoom1)
+            if (sender == nudZoom)
             {
                 // Ограничиваем значение zoom в допустимых пределах:
                 // минимум 1, максимум из свойства nudZoom.Maximum.
                 // Это предотвращает слишком большой или некорректный (например, нулевой или отрицательный) зум.
-                zoom = Math.Max(1, Math.Min((double)nudZoom1.Maximum, (double)nudZoom1.Value));
+                zoom = Math.Max(1, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
                 // Обновляем значение в элементе управления nudZoom, если оно было скорректировано.
                 // Это также вызовет событие ValueChanged для nudZoom, но так как мы уже в его обработчике
                 // (или в обработчике другого контрола), рекурсии не будет, если значение не изменилось.
                 // Если значение изменилось, ScheduleRender будет вызван.
-                nudZoom1.Value = (decimal)zoom;
+                nudZoom.Value = (decimal)zoom;
             }
 
             // Если изменились параметры Re (nudRe) или Im (nudIm),
@@ -907,8 +907,8 @@ namespace FractalDraving
             if (lastSelectedPaletteCheckBox != null) // Если какой-либо чекбокс палитры выбран
             {
                 // Сопоставление выбранного чекбокса с соответствующей функцией палитры.
-                if (lastSelectedPaletteCheckBox == colorBox1) selectedPaletteFunc = GetPaletteColorBoxColor;         // Старая цветная палитра (HSV-градиент)
-                else if (lastSelectedPaletteCheckBox == oldRenderBW1) selectedPaletteFunc = GetPaletteOldBWColor;    // Старая Ч/Б палитра (линейный градиент серого)
+                if (lastSelectedPaletteCheckBox == colorBox) selectedPaletteFunc = GetPaletteColorBoxColor;         // Старая цветная палитра (HSV-градиент)
+                else if (lastSelectedPaletteCheckBox == oldRenderBW) selectedPaletteFunc = GetPaletteOldBWColor;    // Старая Ч/Б палитра (линейный градиент серого)
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox1") selectedPaletteFunc = GetPalette1Color;   // Палитра "Огонь"
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox2") selectedPaletteFunc = GetPalette2Color;   // Палитра "Вода/Лед"
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox3") selectedPaletteFunc = GetPalette3Color;   // Палитра "Психоделическая"
@@ -1488,7 +1488,7 @@ namespace FractalDraving
             // Обновление уровня масштаба (zoom) с учетом zoomFactor.
             // Результат ограничивается минимальным значением 1 и максимальным значением,
             // заданным в свойстве Maximum элемента nudZoom.
-            zoom = Math.Max(1, Math.Min((double)nudZoom1.Maximum, zoom * zoomFactor));
+            zoom = Math.Max(1, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
 
             // Пересчет центра отображения (centerX, centerY) таким образом,
             // чтобы точка (mouseRe, mouseIm), которая была под курсором до зума,
@@ -1508,11 +1508,11 @@ namespace FractalDraving
             // Обновление значения в NumericUpDown (nudZoom), если оно изменилось в результате масштабирования.
             // Если значение nudZoom.Value не изменилось (например, достигнут предел min/max),
             // но centerX/centerY изменились, все равно нужно запланировать полный рендер нового кадра.
-            if (nudZoom1.Value != (decimal)zoom)
+            if (nudZoom.Value != (decimal)zoom)
             {
                 // Установка нового значения в nudZoom. Это вызовет событие nudZoom.ValueChanged,
                 // которое, в свою очередь, вызовет ParamControl_Changed и, следовательно, ScheduleRender.
-                nudZoom1.Value = (decimal)zoom;
+                nudZoom.Value = (decimal)zoom;
             }
             else
             {
@@ -1658,12 +1658,12 @@ namespace FractalDraving
                 // Включение/отключение ComboBox для выбора количества потоков.
                 cbThreads1.Enabled = enabled;
                 // Включение/отключение NumericUpDown для масштаба (zoom) и базового масштаба (для лупы).
-                nudZoom1.Enabled = enabled;
-                nudBaseScale1.Enabled = enabled;
+                nudZoom.Enabled = enabled;
+                nudBaseScale.Enabled = enabled;
 
                 // Включение/отключение NumericUpDown для задания размеров (ширины W, высоты H) при сохранении изображения.
-                if (nudW1 != null) nudW1.Enabled = enabled;
-                if (nudH1 != null) nudH1.Enabled = enabled;
+                if (nudW != null) nudW.Enabled = enabled;
+                if (nudH != null) nudH.Enabled = enabled;
 
                 // Включение/отключение всех чекбоксов выбора цветовой палитры.
                 foreach (var cb in paletteCheckBoxes.Where(cb => cb != null))
@@ -1677,9 +1677,9 @@ namespace FractalDraving
                 {
                     HandleColorBoxEnableState(); // Вызывает метод, который определит, должен ли colorBox быть Enabled.
                 }
-                else if (colorBox1 != null) // При общем отключении контролов (enabled == false), colorBox также отключается.
+                else if (colorBox != null) // При общем отключении контролов (enabled == false), colorBox также отключается.
                 {
-                    colorBox1.Enabled = false;
+                    colorBox.Enabled = false;
                 }
             };
 
@@ -1708,8 +1708,8 @@ namespace FractalDraving
                 return;
             }
 
-            int saveWidth = (int)nudW1.Value; // Используем nudW1 для Жюлиа
-            int saveHeight = (int)nudH1.Value; // Используем nudH1 для Жюлиа
+            int saveWidth = (int)nudW.Value; // Используем nudW1 для Жюлиа
+            int saveHeight = (int)nudH.Value; // Используем nudH1 для Жюлиа
 
             if (saveWidth <= 0 || saveHeight <= 0)
             {
@@ -1740,10 +1740,10 @@ namespace FractalDraving
                     if (currentActionSaveButton != null) currentActionSaveButton.Enabled = false;
                     SetMainControlsEnabled(false);
 
-                    if (progressPNG1 != null) // Используем progressPNG1 для Жюлиа
+                    if (progressPNG != null) // Используем progressPNG1 для Жюлиа
                     {
-                        progressPNG1.Value = 0;
-                        progressPNG1.Visible = true;
+                        progressPNG.Value = 0;
+                        progressPNG.Visible = true;
                     }
 
                     try
@@ -1766,15 +1766,15 @@ namespace FractalDraving
                             currentThreadCount_Capture,
                             progressPercentage =>
                             {
-                                if (progressPNG1 != null && progressPNG1.IsHandleCreated && !progressPNG1.IsDisposed) // Используем progressPNG1
+                                if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) // Используем progressPNG1
                                 {
                                     try
                                     {
-                                        progressPNG1.Invoke((Action)(() =>
+                                        progressPNG.Invoke((Action)(() =>
                                         {
-                                            if (progressPNG1.Maximum > 0 && progressPNG1.Value <= progressPNG1.Maximum)
+                                            if (progressPNG.Maximum > 0 && progressPNG.Value <= progressPNG.Maximum)
                                             {
-                                                progressPNG1.Value = Math.Min(progressPNG1.Maximum, progressPercentage);
+                                                progressPNG.Value = Math.Min(progressPNG.Maximum, progressPercentage);
                                             }
                                         }));
                                     }
@@ -1797,14 +1797,14 @@ namespace FractalDraving
                         if (currentActionSaveButton != null) currentActionSaveButton.Enabled = true;
                         SetMainControlsEnabled(true);
 
-                        if (progressPNG1 != null && progressPNG1.IsHandleCreated && !progressPNG1.IsDisposed) // Используем progressPNG1
+                        if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) // Используем progressPNG1
                         {
                             try
                             {
-                                progressPNG1.Invoke((Action)(() =>
+                                progressPNG.Invoke((Action)(() =>
                                 {
-                                    progressPNG1.Visible = false;
-                                    progressPNG1.Value = 0;
+                                    progressPNG.Visible = false;
+                                    progressPNG.Value = 0;
                                 }));
                             }
                             catch (ObjectDisposedException) { }

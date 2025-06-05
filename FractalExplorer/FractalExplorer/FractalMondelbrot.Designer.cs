@@ -29,168 +29,168 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
-            mondelbrotClassicBox2 = new CheckBox();
-            checkBox62 = new CheckBox();
-            checkBox52 = new CheckBox();
-            checkBox42 = new CheckBox();
-            checkBox32 = new CheckBox();
-            checkBox22 = new CheckBox();
-            checkBox12 = new CheckBox();
-            nudW2 = new NumericUpDown();
-            nudH2 = new NumericUpDown();
-            progressPNG2 = new ProgressBar();
+            mondelbrotClassicBox = new CheckBox();
+            checkBox6 = new CheckBox();
+            checkBox5 = new CheckBox();
+            checkBox4 = new CheckBox();
+            checkBox3 = new CheckBox();
+            checkBox2 = new CheckBox();
+            checkBox1 = new CheckBox();
+            nudW = new NumericUpDown();
+            nudH = new NumericUpDown();
+            progressPNG = new ProgressBar();
             label8 = new Label();
-            oldRenderBW2 = new CheckBox();
+            oldRenderBW = new CheckBox();
             label5 = new Label();
-            nudZoom2 = new NumericUpDown();
-            colorBox2 = new CheckBox();
-            btnRender2 = new Button();
-            progressBar2 = new ProgressBar();
+            nudZoom = new NumericUpDown();
+            colorBox = new CheckBox();
+            btnRender = new Button();
+            progressBar = new ProgressBar();
             label6 = new Label();
-            cbThreads2 = new ComboBox();
-            btnSave2 = new Button();
+            cbThreads = new ComboBox();
+            btnSave = new Button();
             label4 = new Label();
             label3 = new Label();
-            nudThreshold2 = new NumericUpDown();
-            nudIterations2 = new NumericUpDown();
+            nudThreshold = new NumericUpDown();
+            nudIterations = new NumericUpDown();
             canvas2 = new PictureBox();
             panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)nudW2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudH2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudZoom2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudThreshold2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudIterations2).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudH).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudThreshold).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)canvas2).BeginInit();
             SuspendLayout();
             // 
             // panel1
             // 
-            panel1.Controls.Add(mondelbrotClassicBox2);
-            panel1.Controls.Add(checkBox62);
-            panel1.Controls.Add(checkBox52);
-            panel1.Controls.Add(checkBox42);
-            panel1.Controls.Add(checkBox32);
-            panel1.Controls.Add(checkBox22);
-            panel1.Controls.Add(checkBox12);
-            panel1.Controls.Add(nudW2);
-            panel1.Controls.Add(nudH2);
-            panel1.Controls.Add(progressPNG2);
+            panel1.Controls.Add(mondelbrotClassicBox);
+            panel1.Controls.Add(checkBox6);
+            panel1.Controls.Add(checkBox5);
+            panel1.Controls.Add(checkBox4);
+            panel1.Controls.Add(checkBox3);
+            panel1.Controls.Add(checkBox2);
+            panel1.Controls.Add(checkBox1);
+            panel1.Controls.Add(nudW);
+            panel1.Controls.Add(nudH);
+            panel1.Controls.Add(progressPNG);
             panel1.Controls.Add(label8);
-            panel1.Controls.Add(oldRenderBW2);
+            panel1.Controls.Add(oldRenderBW);
             panel1.Controls.Add(label5);
-            panel1.Controls.Add(nudZoom2);
-            panel1.Controls.Add(colorBox2);
-            panel1.Controls.Add(btnRender2);
-            panel1.Controls.Add(progressBar2);
+            panel1.Controls.Add(nudZoom);
+            panel1.Controls.Add(colorBox);
+            panel1.Controls.Add(btnRender);
+            panel1.Controls.Add(progressBar);
             panel1.Controls.Add(label6);
-            panel1.Controls.Add(cbThreads2);
-            panel1.Controls.Add(btnSave2);
+            panel1.Controls.Add(cbThreads);
+            panel1.Controls.Add(btnSave);
             panel1.Controls.Add(label4);
             panel1.Controls.Add(label3);
-            panel1.Controls.Add(nudThreshold2);
-            panel1.Controls.Add(nudIterations2);
+            panel1.Controls.Add(nudThreshold);
+            panel1.Controls.Add(nudIterations);
             panel1.Dock = DockStyle.Left;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 0;
             // 
-            // mondelbrotClassicBox2
+            // mondelbrotClassicBox
             // 
-            mondelbrotClassicBox2.AutoSize = true;
-            mondelbrotClassicBox2.Location = new Point(126, 347);
-            mondelbrotClassicBox2.Name = "mondelbrotClassicBox2";
-            mondelbrotClassicBox2.Size = new Size(77, 19);
-            mondelbrotClassicBox2.TabIndex = 32;
-            mondelbrotClassicBox2.Text = "Классика";
-            mondelbrotClassicBox2.UseVisualStyleBackColor = true;
+            mondelbrotClassicBox.AutoSize = true;
+            mondelbrotClassicBox.Location = new Point(126, 347);
+            mondelbrotClassicBox.Name = "mondelbrotClassicBox";
+            mondelbrotClassicBox.Size = new Size(77, 19);
+            mondelbrotClassicBox.TabIndex = 32;
+            mondelbrotClassicBox.Text = "Классика";
+            mondelbrotClassicBox.UseVisualStyleBackColor = true;
             // 
-            // checkBox62
+            // checkBox6
             // 
-            checkBox62.AutoSize = true;
-            checkBox62.Location = new Point(195, 372);
-            checkBox62.Name = "checkBox62";
-            checkBox62.Size = new Size(32, 19);
-            checkBox62.TabIndex = 29;
-            checkBox62.Text = "6";
-            checkBox62.UseVisualStyleBackColor = true;
+            checkBox6.AutoSize = true;
+            checkBox6.Location = new Point(195, 372);
+            checkBox6.Name = "checkBox6";
+            checkBox6.Size = new Size(32, 19);
+            checkBox6.TabIndex = 29;
+            checkBox6.Text = "6";
+            checkBox6.UseVisualStyleBackColor = true;
             // 
-            // checkBox52
+            // checkBox5
             // 
-            checkBox52.AutoSize = true;
-            checkBox52.Location = new Point(164, 372);
-            checkBox52.Name = "checkBox52";
-            checkBox52.Size = new Size(32, 19);
-            checkBox52.TabIndex = 28;
-            checkBox52.Text = "5";
-            checkBox52.UseVisualStyleBackColor = true;
+            checkBox5.AutoSize = true;
+            checkBox5.Location = new Point(164, 372);
+            checkBox5.Name = "checkBox5";
+            checkBox5.Size = new Size(32, 19);
+            checkBox5.TabIndex = 28;
+            checkBox5.Text = "5";
+            checkBox5.UseVisualStyleBackColor = true;
             // 
-            // checkBox42
+            // checkBox4
             // 
-            checkBox42.AutoSize = true;
-            checkBox42.Location = new Point(126, 372);
-            checkBox42.Name = "checkBox42";
-            checkBox42.Size = new Size(32, 19);
-            checkBox42.TabIndex = 27;
-            checkBox42.Text = "4";
-            checkBox42.UseVisualStyleBackColor = true;
+            checkBox4.AutoSize = true;
+            checkBox4.Location = new Point(126, 372);
+            checkBox4.Name = "checkBox4";
+            checkBox4.Size = new Size(32, 19);
+            checkBox4.TabIndex = 27;
+            checkBox4.Text = "4";
+            checkBox4.UseVisualStyleBackColor = true;
             // 
-            // checkBox32
+            // checkBox3
             // 
-            checkBox32.AutoSize = true;
-            checkBox32.Location = new Point(88, 372);
-            checkBox32.Name = "checkBox32";
-            checkBox32.Size = new Size(32, 19);
-            checkBox32.TabIndex = 26;
-            checkBox32.Text = "3";
-            checkBox32.UseVisualStyleBackColor = true;
+            checkBox3.AutoSize = true;
+            checkBox3.Location = new Point(88, 372);
+            checkBox3.Name = "checkBox3";
+            checkBox3.Size = new Size(32, 19);
+            checkBox3.TabIndex = 26;
+            checkBox3.Text = "3";
+            checkBox3.UseVisualStyleBackColor = true;
             // 
-            // checkBox22
+            // checkBox2
             // 
-            checkBox22.AutoSize = true;
-            checkBox22.Location = new Point(50, 372);
-            checkBox22.Name = "checkBox22";
-            checkBox22.Size = new Size(32, 19);
-            checkBox22.TabIndex = 25;
-            checkBox22.Text = "2";
-            checkBox22.UseVisualStyleBackColor = true;
+            checkBox2.AutoSize = true;
+            checkBox2.Location = new Point(50, 372);
+            checkBox2.Name = "checkBox2";
+            checkBox2.Size = new Size(32, 19);
+            checkBox2.TabIndex = 25;
+            checkBox2.Text = "2";
+            checkBox2.UseVisualStyleBackColor = true;
             // 
-            // checkBox12
+            // checkBox1
             // 
-            checkBox12.AutoSize = true;
-            checkBox12.Location = new Point(12, 372);
-            checkBox12.Name = "checkBox12";
-            checkBox12.Size = new Size(32, 19);
-            checkBox12.TabIndex = 24;
-            checkBox12.Text = "1";
-            checkBox12.UseVisualStyleBackColor = true;
+            checkBox1.AutoSize = true;
+            checkBox1.Location = new Point(12, 372);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new Size(32, 19);
+            checkBox1.TabIndex = 24;
+            checkBox1.Text = "1";
+            checkBox1.UseVisualStyleBackColor = true;
             // 
-            // nudW2
+            // nudW
             // 
-            nudW2.Location = new Point(12, 289);
-            nudW2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-            nudW2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudW2.Name = "nudW2";
-            nudW2.Size = new Size(86, 23);
-            nudW2.TabIndex = 23;
-            nudW2.Value = new decimal(new int[] { 1920, 0, 0, 0 });
+            nudW.Location = new Point(12, 289);
+            nudW.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            nudW.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            nudW.Name = "nudW";
+            nudW.Size = new Size(86, 23);
+            nudW.TabIndex = 23;
+            nudW.Value = new decimal(new int[] { 1920, 0, 0, 0 });
             // 
-            // nudH2
+            // nudH
             // 
-            nudH2.Location = new Point(124, 289);
-            nudH2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-            nudH2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudH2.Name = "nudH2";
-            nudH2.Size = new Size(83, 23);
-            nudH2.TabIndex = 22;
-            nudH2.Value = new decimal(new int[] { 1080, 0, 0, 0 });
+            nudH.Location = new Point(124, 289);
+            nudH.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            nudH.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            nudH.Name = "nudH";
+            nudH.Size = new Size(83, 23);
+            nudH.TabIndex = 22;
+            nudH.Value = new decimal(new int[] { 1080, 0, 0, 0 });
             // 
-            // progressPNG2
+            // progressPNG
             // 
-            progressPNG2.Location = new Point(3, 318);
-            progressPNG2.Name = "progressPNG2";
-            progressPNG2.Size = new Size(218, 23);
-            progressPNG2.TabIndex = 21;
+            progressPNG.Location = new Point(3, 318);
+            progressPNG.Name = "progressPNG";
+            progressPNG.Size = new Size(218, 23);
+            progressPNG.TabIndex = 21;
             // 
             // label8
             // 
@@ -201,15 +201,15 @@
             label8.TabIndex = 20;
             label8.Text = "Обработка";
             // 
-            // oldRenderBW2
+            // oldRenderBW
             // 
-            oldRenderBW2.AutoSize = true;
-            oldRenderBW2.Location = new Point(76, 347);
-            oldRenderBW2.Name = "oldRenderBW2";
-            oldRenderBW2.Size = new Size(41, 19);
-            oldRenderBW2.TabIndex = 17;
-            oldRenderBW2.Text = "ЧБ";
-            oldRenderBW2.UseVisualStyleBackColor = true;
+            oldRenderBW.AutoSize = true;
+            oldRenderBW.Location = new Point(76, 347);
+            oldRenderBW.Name = "oldRenderBW";
+            oldRenderBW.Size = new Size(41, 19);
+            oldRenderBW.TabIndex = 17;
+            oldRenderBW.Text = "ЧБ";
+            oldRenderBW.UseVisualStyleBackColor = true;
             // 
             // label5
             // 
@@ -220,41 +220,41 @@
             label5.TabIndex = 16;
             label5.Text = "Приближение";
             // 
-            // nudZoom2
+            // nudZoom
             // 
-            nudZoom2.Increment = new decimal(new int[] { 10, 0, 0, 0 });
-            nudZoom2.Location = new Point(12, 86);
-            nudZoom2.Maximum = new decimal(new int[] { 268435455, 1042612833, 542101086, 0 });
-            nudZoom2.Name = "nudZoom2";
-            nudZoom2.Size = new Size(196, 23);
-            nudZoom2.TabIndex = 2;
+            nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
+            nudZoom.Location = new Point(12, 86);
+            nudZoom.Maximum = new decimal(new int[] { 268435455, 1042612833, 542101086, 0 });
+            nudZoom.Name = "nudZoom";
+            nudZoom.Size = new Size(196, 23);
+            nudZoom.TabIndex = 2;
             // 
-            // colorBox2
+            // colorBox
             // 
-            colorBox2.AutoSize = true;
-            colorBox2.Location = new Point(12, 347);
-            colorBox2.Name = "colorBox2";
-            colorBox2.Size = new Size(52, 19);
-            colorBox2.TabIndex = 15;
-            colorBox2.Text = "Цвет";
-            colorBox2.UseVisualStyleBackColor = true;
+            colorBox.AutoSize = true;
+            colorBox.Location = new Point(12, 347);
+            colorBox.Name = "colorBox";
+            colorBox.Size = new Size(52, 19);
+            colorBox.TabIndex = 15;
+            colorBox.Text = "Цвет";
+            colorBox.UseVisualStyleBackColor = true;
             // 
-            // btnRender2
+            // btnRender
             // 
-            btnRender2.Location = new Point(34, 165);
-            btnRender2.Name = "btnRender2";
-            btnRender2.Size = new Size(164, 23);
-            btnRender2.TabIndex = 2;
-            btnRender2.Text = "Запустить рендер";
-            btnRender2.UseVisualStyleBackColor = true;
-            btnRender2.Click += btnRender_Click;
+            btnRender.Location = new Point(34, 165);
+            btnRender.Name = "btnRender";
+            btnRender.Size = new Size(164, 23);
+            btnRender.TabIndex = 2;
+            btnRender.Text = "Запустить рендер";
+            btnRender.UseVisualStyleBackColor = true;
+            btnRender.Click += btnRender_Click;
             // 
-            // progressBar2
+            // progressBar
             // 
-            progressBar2.Location = new Point(5, 209);
-            progressBar2.Name = "progressBar2";
-            progressBar2.Size = new Size(218, 23);
-            progressBar2.TabIndex = 14;
+            progressBar.Location = new Point(5, 209);
+            progressBar.Name = "progressBar";
+            progressBar.Size = new Size(218, 23);
+            progressBar.TabIndex = 14;
             // 
             // label6
             // 
@@ -265,23 +265,23 @@
             label6.TabIndex = 13;
             label6.Text = "Потоки ЦП";
             // 
-            // cbThreads2
+            // cbThreads
             // 
-            cbThreads2.FormattingEnabled = true;
-            cbThreads2.Location = new Point(12, 131);
-            cbThreads2.Name = "cbThreads2";
-            cbThreads2.Size = new Size(195, 23);
-            cbThreads2.TabIndex = 12;
+            cbThreads.FormattingEnabled = true;
+            cbThreads.Location = new Point(12, 131);
+            cbThreads.Name = "cbThreads";
+            cbThreads.Size = new Size(195, 23);
+            cbThreads.TabIndex = 12;
             // 
-            // btnSave2
+            // btnSave
             // 
-            btnSave2.Location = new Point(28, 260);
-            btnSave2.Name = "btnSave2";
-            btnSave2.Size = new Size(164, 23);
-            btnSave2.TabIndex = 11;
-            btnSave2.Text = "Сохранить изображение";
-            btnSave2.UseVisualStyleBackColor = true;
-            btnSave2.Click += btnSave_Click_1;
+            btnSave.Location = new Point(28, 260);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(164, 23);
+            btnSave.TabIndex = 11;
+            btnSave.Text = "Сохранить изображение";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnSave_Click_1;
             // 
             // label4
             // 
@@ -301,26 +301,26 @@
             label3.TabIndex = 6;
             label3.Text = "Итерации";
             // 
-            // nudThreshold2
+            // nudThreshold
             // 
-            nudThreshold2.DecimalPlaces = 3;
-            nudThreshold2.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
-            nudThreshold2.Location = new Point(12, 41);
-            nudThreshold2.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
-            nudThreshold2.Name = "nudThreshold2";
-            nudThreshold2.Size = new Size(120, 23);
-            nudThreshold2.TabIndex = 3;
-            nudThreshold2.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            nudThreshold.DecimalPlaces = 3;
+            nudThreshold.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
+            nudThreshold.Location = new Point(12, 41);
+            nudThreshold.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
+            nudThreshold.Name = "nudThreshold";
+            nudThreshold.Size = new Size(120, 23);
+            nudThreshold.TabIndex = 3;
+            nudThreshold.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
-            // nudIterations2
+            // nudIterations
             // 
-            nudIterations2.Location = new Point(12, 12);
-            nudIterations2.Maximum = new decimal(new int[] { 5000, 0, 0, 0 });
-            nudIterations2.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
-            nudIterations2.Name = "nudIterations2";
-            nudIterations2.Size = new Size(120, 23);
-            nudIterations2.TabIndex = 2;
-            nudIterations2.Value = new decimal(new int[] { 500, 0, 0, 0 });
+            nudIterations.Location = new Point(12, 12);
+            nudIterations.Maximum = new decimal(new int[] { 5000, 0, 0, 0 });
+            nudIterations.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
+            nudIterations.Name = "nudIterations";
+            nudIterations.Size = new Size(120, 23);
+            nudIterations.TabIndex = 2;
+            nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
             // canvas2
             // 
@@ -345,11 +345,11 @@
             Load += Form1_Load;
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)nudW2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudH2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudZoom2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudThreshold2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudIterations2).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudW).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudH).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudThreshold).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)canvas2).EndInit();
             ResumeLayout(false);
         }
@@ -360,27 +360,27 @@
         private PictureBox canvas2;
         private Label label4;
         private Label label3;
-        private NumericUpDown nudThreshold2;
-        private NumericUpDown nudIterations2;
-        private Button btnSave2;
+        private NumericUpDown nudThreshold;
+        private NumericUpDown nudIterations;
+        private Button btnSave;
         private Label label6;
-        private ComboBox cbThreads2;
-        private ProgressBar progressBar2;
-        private Button btnRender2;
-        private CheckBox colorBox2;
+        private ComboBox cbThreads;
+        private ProgressBar progressBar;
+        private Button btnRender;
+        private CheckBox colorBox;
         private Label label5;
-        private NumericUpDown nudZoom2;
-        private CheckBox oldRenderBW2;
+        private NumericUpDown nudZoom;
+        private CheckBox oldRenderBW;
         private Label label8;
-        private ProgressBar progressPNG2;
-        private NumericUpDown nudW2;
-        private NumericUpDown nudH2;
-        private CheckBox checkBox62;
-        private CheckBox checkBox52;
-        private CheckBox checkBox42;
-        private CheckBox checkBox32;
-        private CheckBox checkBox22;
-        private CheckBox checkBox12;
-        private CheckBox mondelbrotClassicBox2;
+        private ProgressBar progressPNG;
+        private NumericUpDown nudW;
+        private NumericUpDown nudH;
+        private CheckBox checkBox6;
+        private CheckBox checkBox5;
+        private CheckBox checkBox4;
+        private CheckBox checkBox3;
+        private CheckBox checkBox2;
+        private CheckBox checkBox1;
+        private CheckBox mondelbrotClassicBox;
     }
 }
