@@ -373,50 +373,68 @@ namespace FractalExplorer
         }
 
         private void RenderSierpinskiGeometric(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
-                                             double zoom, double cX, double cY, int depth,
-                                             bool useBW, bool useGrayscale, Color frColor, int numThreads, Action<int> reportProgress)
+                                         double zoom, double cX, double cY, int depth,
+                                         bool useBW, bool useGrayscale, Color frColor, int numThreads, Action<int> reportProgress)
         {
-            if (depth < 0) return;
+            if (depth < 0)
+            {
+                reportProgress(100); // Если глубина некорректна, считаем завершенным
+                return;
+            }
 
-            // Определяем цвет фрактала
             Color actualFractalColor;
             if (useBW) actualFractalColor = Color.Black;
-            else if (useGrayscale) actualFractalColor = Color.FromArgb(50, 50, 50); // Темно-серый
+            else if (useGrayscale) actualFractalColor = Color.FromArgb(200, 50, 50, 50); // Темно-серый, но не слишком, чтобы отличался от черного фона если он есть
             else actualFractalColor = frColor;
 
-            // Базовые точки для равностороннего треугольника в "мировых" координатах (вокруг 0,0)
-            // Высота равностороннего треугольника со стороной S = S * sqrt(3)/2
-            // Пусть сторона = 1.0 для начала.
             double side = 1.0;
             double height_triangle = side * Math.Sqrt(3) / 2.0;
 
-            PointF p1_world = new PointF(0, (float)(height_triangle * 2.0 / 3.0));
-            PointF p2_world = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0));
-            PointF p3_world = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0));
+            // Центрируем начальный треугольник относительно (0,0) в мировых координатах
+            // Вершина направлена вверх
+            PointF p1_world = new PointF(0, (float)(height_triangle * 2.0 / 3.0 - height_triangle / 2.0));
+            PointF p2_world = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0 - height_triangle / 2.0));
+            PointF p3_world = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0 - height_triangle / 2.0));
 
-            // Используем блокирующий стек для сбора задач, так как рекурсия в Parallel.For сложна
-            var tasks = new System.Collections.Concurrent.BlockingCollection<Action>();
-            var totalTrianglesToDrawApprox = (long)Math.Pow(3, depth); // Очень приблизительно для прогресса
-            long drawnTriangles = 0;
+            // Используем List<Action> для сбора финальных действий по отрисовке.
+            // BlockingCollection здесь избыточна, так как генерация будет однопоточной.
+            var drawingActions = new List<Action>();
+            long totalTrianglesToDraw = (long)Math.Pow(3, depth);
+            long drawnTrianglesCounter = 0;
 
-            Action<int, PointF, PointF, PointF> drawRecursive = null;
-            drawRecursive = (d, pA, pB, pC) =>
+            Action<int, PointF, PointF, PointF> generateDrawingTasksRecursive = null;
+            generateDrawingTasksRecursive = (d, pA, pB, pC) =>
             {
                 if (token.IsCancellationRequested) return;
 
                 if (d == 0)
                 {
-                    // Преобразование мировых координат во экранные
-                    PointF sP1 = WorldToScreen(pA, W, H, zoom, cX, cY);
-                    PointF sP2 = WorldToScreen(pB, W, H, zoom, cX, cY);
-                    PointF sP3 = WorldToScreen(pC, W, H, zoom, cX, cY);
-
-                    DrawTriangleToBuffer(buffer, W, H, stride, bpp, sP1, sP2, sP3, actualFractalColor);
-                    Interlocked.Increment(ref drawnTriangles);
-                    if (drawnTriangles % 100 == 0 && totalTrianglesToDrawApprox > 0) // Обновляем прогресс не слишком часто
+                    // Это листовой узел, добавляем действие по его отрисовке
+                    drawingActions.Add(() =>
                     {
-                        reportProgress((int)Math.Min(100, (100 * drawnTriangles / totalTrianglesToDrawApprox)));
-                    }
+                        if (token.IsCancellationRequested) return;
+
+                        PointF sP1 = WorldToScreen(pA, W, H, zoom, cX, cY);
+                        PointF sP2 = WorldToScreen(pB, W, H, zoom, cX, cY);
+                        PointF sP3 = WorldToScreen(pC, W, H, zoom, cX, cY);
+
+                        // Для Серпинского нам нужна заливка треугольников
+                        FillTriangleToBuffer(buffer, W, H, stride, bpp, sP1, sP2, sP3, actualFractalColor);
+
+                        long currentCount = Interlocked.Increment(ref drawnTrianglesCounter);
+                        if (totalTrianglesToDraw > 0)
+                        {
+                            // Обновляем прогресс не на каждом треугольнике, если их много
+                            if (currentCount == totalTrianglesToDraw || (totalTrianglesToDraw > 100 && currentCount % (totalTrianglesToDraw / 100) == 0))
+                            {
+                                reportProgress((int)Math.Min(100, (100 * currentCount / totalTrianglesToDraw)));
+                            }
+                            else if (totalTrianglesToDraw <= 100) // Для малого числа обновляем всегда
+                            {
+                                reportProgress((int)Math.Min(100, (100 * currentCount / totalTrianglesToDraw)));
+                            }
+                        }
+                    });
                     return;
                 }
 
@@ -424,23 +442,137 @@ namespace FractalExplorer
                 PointF pBC = MidPoint(pB, pC);
                 PointF pCA = MidPoint(pC, pA);
 
-                // Рекурсивные вызовы (для параллелизации можно было бы добавить в очередь)
-                tasks.Add(() => drawRecursive(d - 1, pA, pAB, pCA));
-                tasks.Add(() => drawRecursive(d - 1, pAB, pB, pBC));
-                tasks.Add(() => drawRecursive(d - 1, pCA, pBC, pC));
+                generateDrawingTasksRecursive(d - 1, pA, pAB, pCA);
+                if (token.IsCancellationRequested) return;
+                generateDrawingTasksRecursive(d - 1, pAB, pB, pBC);
+                if (token.IsCancellationRequested) return;
+                generateDrawingTasksRecursive(d - 1, pCA, pBC, pC);
             };
 
-            tasks.Add(() => drawRecursive(depth, p1_world, p2_world, p3_world));
-            tasks.CompleteAdding();
+            // Этап 1: Генерация всех действий по отрисовке (последовательно)
+            try
+            {
+                generateDrawingTasksRecursive(depth, p1_world, p2_world, p3_world);
+            }
+            catch (OperationCanceledException)
+            {
+                // Если отмена произошла во время генерации, выходим
+                reportProgress(drawnTrianglesCounter > 0 && totalTrianglesToDraw > 0 ? (int)(100 * drawnTrianglesCounter / totalTrianglesToDraw) : 0);
+                return;
+            }
 
+            if (token.IsCancellationRequested)
+            {
+                reportProgress(drawnTrianglesCounter > 0 && totalTrianglesToDraw > 0 ? (int)(100 * drawnTrianglesCounter / totalTrianglesToDraw) : 0);
+                return;
+            }
+
+            // Этап 2: Параллельное выполнение сгенерированных действий по отрисовке
             var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token };
             try
             {
-                Parallel.ForEach(tasks.GetConsumingEnumerable(), po, action => action());
+                Parallel.ForEach(drawingActions, po, drawingAction =>
+                {
+                    // CancellationToken должен проверяться внутри drawingAction, если оно длительное.
+                    // Но сами лямбды уже проверяют токен в начале.
+                    drawingAction();
+                });
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+                // Операция была отменена во время параллельного выполнения
+            }
+            finally // Убедимся, что прогресс показан корректно
+            {
+                if (token.IsCancellationRequested)
+                {
+                    reportProgress(drawnTrianglesCounter > 0 && totalTrianglesToDraw > 0 ? (int)Math.Min(100, (100 * drawnTrianglesCounter / totalTrianglesToDraw)) : 0);
+                }
+                else
+                {
+                    reportProgress(100); // Успешное завершение
+                }
+            }
+        }
 
-            reportProgress(100); // Завершение
+        // Вспомогательный метод для заливки треугольника (Scanline Fill)
+        // Это упрощенная версия для выпуклых многоугольников (треугольник всегда выпуклый)
+        private void FillTriangleToBuffer(byte[] buffer, int W, int H, int stride, int bpp, PointF p1, PointF p2, PointF p3, Color color)
+        {
+            // Сортируем вершины по Y
+            PointF[] v = { p1, p2, p3 };
+            Array.Sort(v, (a, b) => a.Y.CompareTo(b.Y));
+
+            PointF vTop = v[0];
+            PointF vMid = v[1];
+            PointF vBot = v[2];
+
+            byte cB = color.B; byte cG = color.G; byte cR = color.R; byte cA = color.A;
+
+            // Растеризация верхней половины треугольника (vTop -> vMid)
+            if (Math.Abs(vMid.Y - vTop.Y) > 0.001) // Проверка на горизонтальную линию
+            {
+                for (float y = vTop.Y; y <= vMid.Y; y += 1.0f)
+                {
+                    if (y < 0 || y >= H) continue;
+
+                    float x1 = vTop.X + (vBot.X - vTop.X) * (y - vTop.Y) / (vBot.Y - vTop.Y); // Линия vTop-vBot
+                    float x2 = vTop.X + (vMid.X - vTop.X) * (y - vTop.Y) / (vMid.Y - vTop.Y); // Линия vTop-vMid
+
+                    if (float.IsNaN(x1) || float.IsInfinity(x1)) x1 = (vBot.Y == vTop.Y) ? vTop.X : float.NaN; // Обработка горизонтальной vTop-vBot
+                    if (float.IsNaN(x2) || float.IsInfinity(x2)) x2 = (vMid.Y == vTop.Y) ? vTop.X : float.NaN; // Обработка горизонтальной vTop-vMid
+
+                    if (float.IsNaN(x1) && float.IsNaN(x2)) continue;
+                    if (float.IsNaN(x1)) x1 = x2; // если одна из линий вертикальная
+                    if (float.IsNaN(x2)) x2 = x1;
+
+
+                    int startX = (int)Math.Min(x1, x2);
+                    int endX = (int)Math.Max(x1, x2);
+
+                    for (int x = startX; x <= endX; x++)
+                    {
+                        if (x < 0 || x >= W) continue;
+                        int idx = (int)y * stride + x * bpp;
+                        if (idx < 0 || idx + (bpp - 1) >= buffer.Length) continue;
+
+                        buffer[idx + 0] = cB; buffer[idx + 1] = cG;
+                        buffer[idx + 2] = cR; buffer[idx + 3] = cA;
+                    }
+                }
+            }
+
+            // Растеризация нижней половины треугольника (vMid -> vBot)
+            if (Math.Abs(vBot.Y - vMid.Y) > 0.001) // Проверка на горизонтальную линию
+            {
+                for (float y = vMid.Y; y <= vBot.Y; y += 1.0f)
+                {
+                    if (y < 0 || y >= H) continue;
+
+                    float x1 = vTop.X + (vBot.X - vTop.X) * (y - vTop.Y) / (vBot.Y - vTop.Y);       // Линия vTop-vBot
+                    float x2 = vMid.X + (vBot.X - vMid.X) * (y - vMid.Y) / (vBot.Y - vMid.Y);       // Линия vMid-vBot
+
+                    if (float.IsNaN(x1) || float.IsInfinity(x1)) x1 = (vBot.Y == vTop.Y) ? vTop.X : float.NaN;
+                    if (float.IsNaN(x2) || float.IsInfinity(x2)) x2 = (vBot.Y == vMid.Y) ? vMid.X : float.NaN;
+
+                    if (float.IsNaN(x1) && float.IsNaN(x2)) continue;
+                    if (float.IsNaN(x1)) x1 = x2;
+                    if (float.IsNaN(x2)) x2 = x1;
+
+                    int startX = (int)Math.Min(x1, x2);
+                    int endX = (int)Math.Max(x1, x2);
+
+                    for (int x = startX; x <= endX; x++)
+                    {
+                        if (x < 0 || x >= W) continue;
+                        int idx = (int)y * stride + x * bpp;
+                        if (idx < 0 || idx + (bpp - 1) >= buffer.Length) continue;
+
+                        buffer[idx + 0] = cB; buffer[idx + 1] = cG;
+                        buffer[idx + 2] = cR; buffer[idx + 3] = cA;
+                    }
+                }
+            }
         }
 
         private void RenderSierpinskiChaos(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,

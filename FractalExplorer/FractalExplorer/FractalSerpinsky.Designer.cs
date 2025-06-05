@@ -29,6 +29,13 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            FractalTypeIsChaos = new CheckBox();
+            FractalTypeIsGeometry = new CheckBox();
+            colorFractal = new CheckBox();
+            colorBackground = new CheckBox();
+            label1 = new Label();
+            panel2 = new Panel();
+            canvasPalette = new PictureBox();
             colorGrayscale = new CheckBox();
             nudW2 = new NumericUpDown();
             nudH2 = new NumericUpDown();
@@ -44,22 +51,15 @@
             btnSavePNG = new Button();
             label3 = new Label();
             nudIterations = new NumericUpDown();
-            panel2 = new Panel();
             canvasSerpinsky = new PictureBox();
-            canvasPalette = new PictureBox();
-            label1 = new Label();
-            colorBackground = new CheckBox();
-            colorFractal = new CheckBox();
-            FractalTypeIsGeometry = new CheckBox();
-            FractalTypeIsChaos = new CheckBox();
             panel1.SuspendLayout();
+            panel2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudW2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
-            panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
             SuspendLayout();
             // 
             // panel1
@@ -90,6 +90,74 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 1;
+            // 
+            // FractalTypeIsChaos
+            // 
+            FractalTypeIsChaos.AutoSize = true;
+            FractalTypeIsChaos.Location = new Point(130, 85);
+            FractalTypeIsChaos.Name = "FractalTypeIsChaos";
+            FractalTypeIsChaos.Size = new Size(81, 19);
+            FractalTypeIsChaos.TabIndex = 36;
+            FractalTypeIsChaos.Text = "Игра хаос";
+            FractalTypeIsChaos.UseVisualStyleBackColor = true;
+            // 
+            // FractalTypeIsGeometry
+            // 
+            FractalTypeIsGeometry.AutoSize = true;
+            FractalTypeIsGeometry.Location = new Point(13, 85);
+            FractalTypeIsGeometry.Name = "FractalTypeIsGeometry";
+            FractalTypeIsGeometry.Size = new Size(118, 19);
+            FractalTypeIsGeometry.TabIndex = 35;
+            FractalTypeIsGeometry.Text = "Геометрический";
+            FractalTypeIsGeometry.UseVisualStyleBackColor = true;
+            // 
+            // colorFractal
+            // 
+            colorFractal.AutoSize = true;
+            colorFractal.Location = new Point(160, 435);
+            colorFractal.Name = "colorFractal";
+            colorFractal.Size = new Size(66, 19);
+            colorFractal.TabIndex = 34;
+            colorFractal.Text = "Фигура";
+            colorFractal.UseVisualStyleBackColor = true;
+            // 
+            // colorBackground
+            // 
+            colorBackground.AutoSize = true;
+            colorBackground.Location = new Point(109, 435);
+            colorBackground.Name = "colorBackground";
+            colorBackground.Size = new Size(49, 19);
+            colorBackground.TabIndex = 33;
+            colorBackground.Text = "Фон";
+            colorBackground.UseVisualStyleBackColor = true;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(5, 439);
+            label1.Name = "label1";
+            label1.Size = new Size(91, 15);
+            label1.TabIndex = 32;
+            label1.Text = "Выберите цвет.";
+            // 
+            // panel2
+            // 
+            panel2.Controls.Add(canvasPalette);
+            panel2.Dock = DockStyle.Bottom;
+            panel2.Location = new Point(0, 457);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(231, 179);
+            panel2.TabIndex = 31;
+            // 
+            // canvasPalette
+            // 
+            canvasPalette.Dock = DockStyle.Fill;
+            canvasPalette.Location = new Point(0, 0);
+            canvasPalette.Name = "canvasPalette";
+            canvasPalette.Size = new Size(231, 179);
+            canvasPalette.TabIndex = 3;
+            canvasPalette.TabStop = false;
+            canvasPalette.Click += cancasPalette_Click;
             // 
             // colorGrayscale
             // 
@@ -161,9 +229,11 @@
             nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
             nudZoom.Location = new Point(12, 56);
             nudZoom.Maximum = new decimal(new int[] { 268435455, 1042612833, 542101086, 0 });
+            nudZoom.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudZoom.Name = "nudZoom";
             nudZoom.Size = new Size(196, 23);
             nudZoom.TabIndex = 2;
+            nudZoom.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
             // btnRender
             // 
@@ -228,15 +298,6 @@
             nudIterations.TabIndex = 2;
             nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
-            // panel2
-            // 
-            panel2.Controls.Add(canvasPalette);
-            panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 457);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(231, 179);
-            panel2.TabIndex = 31;
-            // 
             // canvasSerpinsky
             // 
             canvasSerpinsky.Dock = DockStyle.Fill;
@@ -245,65 +306,6 @@
             canvasSerpinsky.Size = new Size(853, 636);
             canvasSerpinsky.TabIndex = 2;
             canvasSerpinsky.TabStop = false;
-            // 
-            // canvasPalette
-            // 
-            canvasPalette.Dock = DockStyle.Fill;
-            canvasPalette.Location = new Point(0, 0);
-            canvasPalette.Name = "canvasPalette";
-            canvasPalette.Size = new Size(231, 179);
-            canvasPalette.TabIndex = 3;
-            canvasPalette.TabStop = false;
-            canvasPalette.Click += cancasPalette_Click;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(5, 439);
-            label1.Name = "label1";
-            label1.Size = new Size(91, 15);
-            label1.TabIndex = 32;
-            label1.Text = "Выберите цвет.";
-            // 
-            // colorBackground
-            // 
-            colorBackground.AutoSize = true;
-            colorBackground.Location = new Point(109, 435);
-            colorBackground.Name = "colorBackground";
-            colorBackground.Size = new Size(49, 19);
-            colorBackground.TabIndex = 33;
-            colorBackground.Text = "Фон";
-            colorBackground.UseVisualStyleBackColor = true;
-            // 
-            // colorFractal
-            // 
-            colorFractal.AutoSize = true;
-            colorFractal.Location = new Point(160, 435);
-            colorFractal.Name = "colorFractal";
-            colorFractal.Size = new Size(66, 19);
-            colorFractal.TabIndex = 34;
-            colorFractal.Text = "Фигура";
-            colorFractal.UseVisualStyleBackColor = true;
-            // 
-            // FractalTypeIsGeometry
-            // 
-            FractalTypeIsGeometry.AutoSize = true;
-            FractalTypeIsGeometry.Location = new Point(13, 85);
-            FractalTypeIsGeometry.Name = "FractalTypeIsGeometry";
-            FractalTypeIsGeometry.Size = new Size(118, 19);
-            FractalTypeIsGeometry.TabIndex = 35;
-            FractalTypeIsGeometry.Text = "Геометрический";
-            FractalTypeIsGeometry.UseVisualStyleBackColor = true;
-            // 
-            // FractalTypeIsChaos
-            // 
-            FractalTypeIsChaos.AutoSize = true;
-            FractalTypeIsChaos.Location = new Point(130, 85);
-            FractalTypeIsChaos.Name = "FractalTypeIsChaos";
-            FractalTypeIsChaos.Size = new Size(81, 19);
-            FractalTypeIsChaos.TabIndex = 36;
-            FractalTypeIsChaos.Text = "Игра хаос";
-            FractalTypeIsChaos.UseVisualStyleBackColor = true;
             // 
             // FractalSerpinsky
             // 
@@ -317,13 +319,13 @@
             Text = "Треугольник Серпинского";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
+            panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudW2).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudH2).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
-            panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).EndInit();
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
             ResumeLayout(false);
         }
 
