@@ -129,7 +129,7 @@ namespace FractalExplorer
             else if (activeCb == FractalTypeIsChaos)
             {
                 FractalTypeIsGeometry.Checked = false;
-                nudIterations.Maximum = 1000000; // Количество точек для хаоса
+                nudIterations.Maximum = int.MaxValue; // Количество точек для хаоса
                 nudIterations.Minimum = 1000;
                 if (nudIterations.Value < 1000 && nudIterations.Value > 0) nudIterations.Value = 50000; // reasonable default for chaos
                 else if (nudIterations.Value == 0) nudIterations.Value = 50000;
