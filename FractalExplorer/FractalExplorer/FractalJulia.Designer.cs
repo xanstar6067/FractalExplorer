@@ -236,6 +236,7 @@
             label7.Size = new Size(105, 15);
             label7.TabIndex = 19;
             label7.Text = "Увеличение лупы";
+            label7.Visible = false;
             // 
             // nudBaseScale1
             // 
@@ -246,6 +247,7 @@
             nudBaseScale1.Size = new Size(195, 23);
             nudBaseScale1.TabIndex = 18;
             nudBaseScale1.Value = new decimal(new int[] { 4, 0, 0, 0 });
+            nudBaseScale1.Visible = false;
             // 
             // oldRenderBW1
             // 
