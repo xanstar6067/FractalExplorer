@@ -1,8 +1,8 @@
 namespace FractalExplorer
 {
-    public partial class FractalExplorer : Form
+    public partial class MainFractalForm : Form
     {
-        public FractalExplorer()
+        public MainFractalForm()
         {
             InitializeComponent();
         }
