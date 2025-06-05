@@ -36,9 +36,13 @@
             richTextBox1 = new RichTextBox();
             btnLaunchMondelbrot = new Button();
             tabControlFractals = new TabControl();
+            tabPageSerpinsky = new TabPage();
+            richTextBox3 = new RichTextBox();
+            btnLaunchSerpinsky = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
+            tabPageSerpinsky.SuspendLayout();
             SuspendLayout();
             // 
             // tabPageJulia
@@ -112,6 +116,7 @@
             // 
             tabControlFractals.Controls.Add(tabPageMandelbrot);
             tabControlFractals.Controls.Add(tabPageJulia);
+            tabControlFractals.Controls.Add(tabPageSerpinsky);
             tabControlFractals.Dock = DockStyle.Fill;
             tabControlFractals.Font = new Font("Segoe UI", 10F);
             tabControlFractals.Location = new Point(0, 0);
@@ -119,6 +124,40 @@
             tabControlFractals.SelectedIndex = 0;
             tabControlFractals.Size = new Size(800, 191);
             tabControlFractals.TabIndex = 0;
+            // 
+            // tabPageSerpinsky
+            // 
+            tabPageSerpinsky.Controls.Add(richTextBox3);
+            tabPageSerpinsky.Controls.Add(btnLaunchSerpinsky);
+            tabPageSerpinsky.Location = new Point(4, 26);
+            tabPageSerpinsky.Name = "tabPageSerpinsky";
+            tabPageSerpinsky.Padding = new Padding(3);
+            tabPageSerpinsky.Size = new Size(792, 161);
+            tabPageSerpinsky.TabIndex = 2;
+            tabPageSerpinsky.Text = "Треугольник Серпинского";
+            tabPageSerpinsky.UseVisualStyleBackColor = true;
+            // 
+            // richTextBox3
+            // 
+            richTextBox3.BackColor = SystemColors.Window;
+            richTextBox3.BorderStyle = BorderStyle.None;
+            richTextBox3.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
+            richTextBox3.Location = new Point(184, 3);
+            richTextBox3.Name = "richTextBox3";
+            richTextBox3.ReadOnly = true;
+            richTextBox3.Size = new Size(605, 157);
+            richTextBox3.TabIndex = 4;
+            richTextBox3.Text = "Исследуйте ";
+            // 
+            // btnLaunchSerpinsky
+            // 
+            btnLaunchSerpinsky.Location = new Point(8, 15);
+            btnLaunchSerpinsky.Name = "btnLaunchSerpinsky";
+            btnLaunchSerpinsky.Size = new Size(131, 44);
+            btnLaunchSerpinsky.TabIndex = 3;
+            btnLaunchSerpinsky.Text = "Запустить";
+            btnLaunchSerpinsky.UseVisualStyleBackColor = true;
+            btnLaunchSerpinsky.Click += btnLaunchSerpinsky_Click;
             // 
             // MainFractalForm
             // 
@@ -134,6 +173,7 @@
             tabPageJulia.ResumeLayout(false);
             tabPageMandelbrot.ResumeLayout(false);
             tabControlFractals.ResumeLayout(false);
+            tabPageSerpinsky.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -146,5 +186,8 @@
         private TabControl tabControlFractals;
         private RichTextBox richTextBox1;
         private RichTextBox richTextBox2;
+        private TabPage tabPageSerpinsky;
+        private RichTextBox richTextBox3;
+        private Button btnLaunchSerpinsky;
     }
 }

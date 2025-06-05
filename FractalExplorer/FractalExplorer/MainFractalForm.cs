@@ -21,20 +21,9 @@ namespace FractalExplorer
 
         private void btnLaunchMondelbrot_Click(object sender, EventArgs e)
         {
-            // 1. Создаем экземпляр вашей формы FractalJulia
             FractalMondelbrot FractalMondelbrotForm = new FractalMondelbrot();
 
-            // 2. Показываем форму
-            // Есть два основных способа:
-
-            // Способ А: Показать как немодальное окно (пользователь может взаимодействовать и с LauncherForm)
             FractalMondelbrotForm.Show();
-
-            // Способ Б: Показать как модальное окно (LauncherForm будет заблокирована, пока juliaForm открыта)
-            // juliaForm.ShowDialog();
-
-            // Выберите один из способов (Show() или ShowDialog()) и закомментируйте или удалите другой.
-            // Обычно для таких случаев лучше Show(), чтобы пользователь мог запустить оба фрактала одновременно.
         }
 
         private void btnLaunchJulia_Click(object sender, EventArgs e)
@@ -53,6 +42,15 @@ namespace FractalExplorer
 
             // Выберите один из способов (Show() или ShowDialog()) и закомментируйте или удалите другой.
             // Обычно для таких случаев лучше Show(), чтобы пользователь мог запустить оба фрактала одновременно.
+        }
+
+        private void btnLaunchSerpinsky_Click(object sender, EventArgs e)
+        {
+            // FractalSerpinsky
+            FractalSerpinsky FractalSerpinskyForm = new FractalSerpinsky();
+
+            FractalSerpinskyForm.Show();
+
         }
     }
 }
