@@ -28,37 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
-            tabControlFractals = new TabControl();
-            tabPageMandelbrot = new TabPage();
             tabPageJulia = new TabPage();
-            btnLaunchMondelbrot = new Button();
             btnLaunchJulia = new Button();
-            tabControlFractals.SuspendLayout();
-            tabPageMandelbrot.SuspendLayout();
+            tabPageMandelbrot = new TabPage();
+            btnLaunchMondelbrot = new Button();
+            tabControlFractals = new TabControl();
             tabPageJulia.SuspendLayout();
+            tabPageMandelbrot.SuspendLayout();
+            tabControlFractals.SuspendLayout();
             SuspendLayout();
-            // 
-            // tabControlFractals
-            // 
-            tabControlFractals.Controls.Add(tabPageMandelbrot);
-            tabControlFractals.Controls.Add(tabPageJulia);
-            tabControlFractals.Dock = DockStyle.Fill;
-            tabControlFractals.Location = new Point(0, 0);
-            tabControlFractals.Name = "tabControlFractals";
-            tabControlFractals.SelectedIndex = 0;
-            tabControlFractals.Size = new Size(800, 191);
-            tabControlFractals.TabIndex = 0;
-            // 
-            // tabPageMandelbrot
-            // 
-            tabPageMandelbrot.Controls.Add(btnLaunchMondelbrot);
-            tabPageMandelbrot.Location = new Point(4, 24);
-            tabPageMandelbrot.Name = "tabPageMandelbrot";
-            tabPageMandelbrot.Padding = new Padding(3);
-            tabPageMandelbrot.Size = new Size(792, 163);
-            tabPageMandelbrot.TabIndex = 0;
-            tabPageMandelbrot.Text = "Множество Мандельброта";
-            tabPageMandelbrot.UseVisualStyleBackColor = true;
             // 
             // tabPageJulia
             // 
@@ -71,16 +49,6 @@
             tabPageJulia.Text = "Множество Жюлиа";
             tabPageJulia.UseVisualStyleBackColor = true;
             // 
-            // btnLaunchMondelbrot
-            // 
-            btnLaunchMondelbrot.Location = new Point(8, 8);
-            btnLaunchMondelbrot.Name = "btnLaunchMondelbrot";
-            btnLaunchMondelbrot.Size = new Size(75, 23);
-            btnLaunchMondelbrot.TabIndex = 0;
-            btnLaunchMondelbrot.Text = "button1";
-            btnLaunchMondelbrot.UseVisualStyleBackColor = true;
-            btnLaunchMondelbrot.Click += this.btnLaunchMondelbrot_Click;
-            // 
             // btnLaunchJulia
             // 
             btnLaunchJulia.Location = new Point(8, 8);
@@ -89,7 +57,39 @@
             btnLaunchJulia.TabIndex = 0;
             btnLaunchJulia.Text = "button2";
             btnLaunchJulia.UseVisualStyleBackColor = true;
-            btnLaunchJulia.Click += this.btnLaunchJulia_Click;
+            btnLaunchJulia.Click += btnLaunchJulia_Click;
+            // 
+            // tabPageMandelbrot
+            // 
+            tabPageMandelbrot.Controls.Add(btnLaunchMondelbrot);
+            tabPageMandelbrot.Location = new Point(4, 24);
+            tabPageMandelbrot.Name = "tabPageMandelbrot";
+            tabPageMandelbrot.Padding = new Padding(3);
+            tabPageMandelbrot.Size = new Size(792, 163);
+            tabPageMandelbrot.TabIndex = 0;
+            tabPageMandelbrot.Text = "Множество Мандельброта";
+            tabPageMandelbrot.UseVisualStyleBackColor = true;
+            // 
+            // btnLaunchMondelbrot
+            // 
+            btnLaunchMondelbrot.Location = new Point(8, 8);
+            btnLaunchMondelbrot.Name = "btnLaunchMondelbrot";
+            btnLaunchMondelbrot.Size = new Size(75, 23);
+            btnLaunchMondelbrot.TabIndex = 0;
+            btnLaunchMondelbrot.Text = "button1";
+            btnLaunchMondelbrot.UseVisualStyleBackColor = true;
+            btnLaunchMondelbrot.Click += btnLaunchMondelbrot_Click;
+            // 
+            // tabControlFractals
+            // 
+            tabControlFractals.Controls.Add(tabPageMandelbrot);
+            tabControlFractals.Controls.Add(tabPageJulia);
+            tabControlFractals.Dock = DockStyle.Fill;
+            tabControlFractals.Location = new Point(0, 0);
+            tabControlFractals.Name = "tabControlFractals";
+            tabControlFractals.SelectedIndex = 0;
+            tabControlFractals.Size = new Size(800, 191);
+            tabControlFractals.TabIndex = 0;
             // 
             // MainFractalForm
             // 
@@ -101,18 +101,19 @@
             MaximizeBox = false;
             Name = "MainFractalForm";
             Text = "Менеджер фракталов";
-            tabControlFractals.ResumeLayout(false);
-            tabPageMandelbrot.ResumeLayout(false);
+            Load += MainFractalForm_Load_1;
             tabPageJulia.ResumeLayout(false);
+            tabPageMandelbrot.ResumeLayout(false);
+            tabControlFractals.ResumeLayout(false);
             ResumeLayout(false);
         }
 
         #endregion
 
-        private TabControl tabControlFractals;
-        private TabPage tabPageMandelbrot;
         private TabPage tabPageJulia;
-        private Button btnLaunchMondelbrot;
         private Button btnLaunchJulia;
+        private TabPage tabPageMandelbrot;
+        private Button btnLaunchMondelbrot;
+        private TabControl tabControlFractals;
     }
 }
