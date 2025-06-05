@@ -123,8 +123,9 @@ namespace FractalExplorer
             {
                 FractalTypeIsChaos.Checked = false;
                 nudIterations.Maximum = 15; // Глубина для геометрического
-                if (nudIterations.Value > 15) nudIterations.Value = 15;
                 nudIterations.Minimum = 0;
+                if (nudIterations.Value >= 15) nudIterations.Value = 5;
+                
             }
             else if (activeCb == FractalTypeIsChaos)
             {
