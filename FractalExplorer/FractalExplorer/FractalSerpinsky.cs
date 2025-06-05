@@ -1,16 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
-using System.Numerics; // Может понадобиться для более сложных трансформаций, но для Серпинского пока не обязательно
+﻿using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace FractalExplorer
 {
@@ -85,8 +74,7 @@ namespace FractalExplorer
             nudIterations.Maximum = 15; // Разумный предел для глубины, для точек хаоса может быть больше
             nudIterations.Value = 5;
 
-            nudZoom.Minimum = 0.1m;
-            nudZoom.Maximum = 1000000m; // Большой предел для зума
+
             nudZoom.Value = 1m;
             nudZoom.DecimalPlaces = 2;
 
@@ -875,37 +863,35 @@ namespace FractalExplorer
             double zoomFactor = e.Delta > 0 ? 1.2 : 1.0 / 1.2;
             double oldZoom = currentZoom;
 
-            // 1. Мировые координаты точки под курсором ДО зума
             PointF worldPosUnderCursor = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, oldZoom, centerX, centerY);
 
-            // 2. Применяем новый зум
-            currentZoom = Math.Max(0.01, Math.Min((double)nudZoom.Maximum, currentZoom * zoomFactor));
+            double minZoomFromNud = (double)nudZoom.Minimum;
+            if (minZoomFromNud <= 0) minZoomFromNud = 0.01; // Запасной минимум
 
-            // 3. Рассчитываем новый центр так, чтобы worldPosUnderCursor осталась под курсором e.Location при новом зуме
-            // viewWidthWorld и viewHeightWorld для НОВОГО зума
+            // Применяем зум, ограничивая его min/max значениями из nudZoom
+            currentZoom = Math.Max(minZoomFromNud, Math.Min((double)nudZoom.Maximum, currentZoom * zoomFactor));
+
+            // Рассчитываем новый центр, чтобы точка под курсором осталась на месте
             double newViewWidthWorld = (BASE_SCALE / currentZoom) * ((double)canvasSerpinsky.Width / canvasSerpinsky.Height);
             double newViewHeightWorld = BASE_SCALE / currentZoom;
-
-            // Формулы для centerX и centerY, чтобы worldPosUnderCursor оказалась в e.Location при новом зуме:
-            // centerX = worldPosUnderCursor.X - ( (e.X / (double)canvasSerpinsky.Width) - 0.5 ) * newViewWidthWorld
-            // centerY = worldPosUnderCursor.Y - ( (0.5 - (e.Y / (double)canvasSerpinsky.Height)) ) * newViewHeightWorld  //  (0.5 - screenY_ratio) т.к. мировой Y инвертирован
 
             centerX = worldPosUnderCursor.X - (((double)e.X / canvasSerpinsky.Width) - 0.5) * newViewWidthWorld;
             centerY = worldPosUnderCursor.Y - (0.5 - ((double)e.Y / canvasSerpinsky.Height)) * newViewHeightWorld;
 
-
             canvasSerpinsky.Invalidate();
 
-            if (nudZoom.Value != (decimal)currentZoom)
+            // Обновляем nudZoom, если currentZoom изменился и отличается от значения в NUD
+            if (Math.Abs((double)nudZoom.Value - currentZoom) > 0.00001)
             {
-                // Отвязываем временно, чтобы не вызывать ParamControl_Changed дважды, если ScheduleRender ниже тоже его вызовет
-                nudZoom.ValueChanged -= ParamControl_Changed;
-                nudZoom.Value = (decimal)currentZoom; // Это не вызовет ParamControl_Changed, если отписан
-                nudZoom.ValueChanged += ParamControl_Changed; // Подписываем обратно
-                ScheduleRender(); // Явный вызов рендера, т.к. центр и/или зум изменились
+                nudZoom.ValueChanged -= ParamControl_Changed; // Временно отписаться
+                nudZoom.Value = (decimal)currentZoom;
+                nudZoom.ValueChanged += ParamControl_Changed; // Подписаться обратно
+                ScheduleRender(); // Нужен полный рендер, т.к. центр и зум изменились
             }
             else
             {
+                // Если nudZoom.Value уже равен currentZoom (например, достигли предела),
+                // но центр изменился, все равно нужен рендер
                 ScheduleRender();
             }
         }
@@ -923,73 +909,28 @@ namespace FractalExplorer
         private void CanvasSerpinsky_MouseMove(object sender, MouseEventArgs e)
         {
             if (isHighResRendering || !panning) return;
-            if (canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0) return; // Добавил проверку размеров
+            if (canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0) return;
 
-            PointF worldPanStart = ScreenToWorld(panStart, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
-            PointF worldCurrentMouse = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
+            // Масштабные коэффициенты: сколько мировых единиц в одном пикселе
+            double worldUnitsPerPixelX = (BASE_SCALE / currentZoom) * ((double)canvasSerpinsky.Width / canvasSerpinsky.Height) / canvasSerpinsky.Width;
+            double worldUnitsPerPixelY = (BASE_SCALE / currentZoom) / canvasSerpinsky.Height;
 
-            // Рассчитываем смещение в мировых координатах
-            float deltaX_world = worldCurrentMouse.X - worldPanStart.X;
-            float deltaY_world = worldCurrentMouse.Y - worldPanStart.Y;
-
-            // Обновляем центр фрактала. 
-            // Если мышь двигается вправо (deltaX_world > 0), фрактал должен двигаться влево (centerX уменьшается).
-            // Если мышь двигается вверх (deltaY_world > 0, так как мировой Y растет вверх), фрактал должен двигаться вниз (centerY уменьшается).
-            // Поэтому вычитаем deltaX и deltaY.
-            // В предыдущей версии для Y был `+=`, что могло быть источником путаницы.
-            // Давайте вернемся к логике:
-            // При движении мыши вправо (e.X > panStart.X) -> worldCurrentMouse.X > worldPanStart.X -> deltaX_world > 0
-            // Чтобы фрактал сдвинулся влево, centerX должен уменьшиться. Значит centerX -= deltaX_world.
-            // При движении мыши вниз (e.Y > panStart.Y) -> worldCurrentMouse.Y < worldPanStart.Y (из-за инверсии в ScreenToWorld для Y) -> deltaY_world < 0
-            // Чтобы фрактал сдвинулся вниз, centerY должен уменьшиться. Значит centerY -= deltaY_world (т.е. centerY += Math.Abs(deltaY_world))
-            // Или, если deltaY_world уже учитывает направление мирового Y:
-            // Если мировой Y растет ВВЕРХ:
-            //  - тянем мышь ВНИЗ (e.Y увеличивается)
-            //  - хотим, чтобы фрактал тоже сместился ВНИЗ (уменьшение centerY)
-            //  - ScreenToWorld: worldY = (centerY + viewHeightWorld/2.0) - (screenY / screenHeight) * viewHeightWorld. 
-            //    При увеличении screenY, worldY уменьшается. Значит worldCurrentMouse.Y < worldPanStart.Y.
-            //    deltaY_world = worldCurrentMouse.Y - worldPanStart.Y будет ОТРИЦАТЕЛЬНЫМ.
-            //    Чтобы centerY УМЕНЬШИЛСЯ, нужно к нему ПРИБАВИТЬ это отрицательное deltaY_world.
-            //    centerY_new = centerY_old + deltaY_world
-
-            centerX -= deltaX_world;
-            centerY -= deltaY_world; // Если deltaY_world рассчитана как (world_current - world_start) и мировой Y растет вверх, это правильно.
-                                     // Если мышь идет вниз, world_current.Y < world_start.Y, deltaY_world < 0.
-                                     // Тогда centerX -= (отрицательное) => центр сдвигается вправо по X.
-                                     // centerY -= (отрицательное) => центр сдвигается вверх по Y. Это инверсия для Y.
-                                     // Значит, для Y должно быть: centerY += deltaY_world;
-                                     // НО! Если мы используем worldPanStart и worldCurrentMouse, то мы считаем смещение *объекта* в мировых координатах.
-                                     // Если объект сдвинулся на deltaX_world, то и центр должен сдвинуться на deltaX_world.
-                                     // Давайте упростим: смещение в пикселях преобразуем в смещение в мировых единицах.
-
-            double scaleFactorX = (BASE_SCALE / currentZoom) * ((double)canvasSerpinsky.Width / canvasSerpinsky.Height) / canvasSerpinsky.Width;
-            double scaleFactorY = (BASE_SCALE / currentZoom) / canvasSerpinsky.Height;
-
+            // Смещение мыши в пикселях
             double pixelDeltaX = e.X - panStart.X;
             double pixelDeltaY = e.Y - panStart.Y;
 
-            // Смещение в мировых координатах
-            // Если мышь двигается вправо (pixelDeltaX > 0), centerX должен УМЕНЬШИТЬСЯ (фрактал влево)
-            // Если мышь двигается вниз (pixelDeltaY > 0), centerY должен УМЕНЬШИТЬСЯ (фрактал вниз, если мировой Y вверх)
-            centerX -= pixelDeltaX * scaleFactorX;
-            centerY += pixelDeltaY * scaleFactorY; // Y инвертирован: экранный Y вниз, мировой Y вверх. 
-                                                   // Поэтому при движении мыши вниз (pixelDeltaY > 0), centerY (мировой) должен УВЕЛИЧИВАТЬСЯ, чтобы фрактал сдвинулся ВНИЗ относительно окна.
-                                                   // Эта логика была в самом первом варианте и оказалась правильной.
-                                                   // Давайте вернем:
-                                                   // centerX -= (e.X - panStart.X) * scale / width; // где scale - это viewWidthWorld / screenWidth
-                                                   // centerY += (e.Y - panStart.Y) * scale / height; // где scale - это viewHeightWorld / screenHeight
+            // Обновляем мировой центр
+            // Если мышь двигается вправо (pixelDeltaX > 0), фрактал должен сдвинуться вправо,
+            // значит мировой centerX должен увеличиться
+            centerX -= pixelDeltaX * worldUnitsPerPixelX;
 
-            double viewWidthWorld = (BASE_SCALE / currentZoom) * ((double)canvasSerpinsky.Width / canvasSerpinsky.Height);
-            double viewHeightWorld = BASE_SCALE / currentZoom;
-
-            centerX -= (e.X - panStart.X) * (viewWidthWorld / canvasSerpinsky.Width);
-            centerY += (e.Y - panStart.Y) * (viewHeightWorld / canvasSerpinsky.Height); // ИСПРАВЛЕНО: Знак "+" для Y
+            // Если мышь двигается вниз (pixelDeltaY > 0), фрактал должен сдвинуться вниз,
+            // значит мировой centerY должен увеличиться (при стандартной системе координат где Y растет вверх)
+            centerY += pixelDeltaY * worldUnitsPerPixelY; // ИСПРАВЛЕНО: используем плюс
 
             panStart = e.Location;
-
             canvasSerpinsky.Invalidate();
             ScheduleRender();
-
         }
 
         private void CanvasSerpinsky_MouseUp(object sender, MouseEventArgs e)
