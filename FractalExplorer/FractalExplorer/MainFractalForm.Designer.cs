@@ -30,12 +30,12 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainFractalForm));
             tabPageJulia = new TabPage();
+            richTextBox2 = new RichTextBox();
             btnLaunchJulia = new Button();
             tabPageMandelbrot = new TabPage();
+            richTextBox1 = new RichTextBox();
             btnLaunchMondelbrot = new Button();
             tabControlFractals = new TabControl();
-            richTextBox1 = new RichTextBox();
-            richTextBox2 = new RichTextBox();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
@@ -52,6 +52,17 @@
             tabPageJulia.TabIndex = 1;
             tabPageJulia.Text = "Множество Жюлиа";
             tabPageJulia.UseVisualStyleBackColor = true;
+            // 
+            // richTextBox2
+            // 
+            richTextBox2.BackColor = SystemColors.Window;
+            richTextBox2.BorderStyle = BorderStyle.None;
+            richTextBox2.Location = new Point(184, 3);
+            richTextBox2.Name = "richTextBox2";
+            richTextBox2.ReadOnly = true;
+            richTextBox2.Size = new Size(605, 157);
+            richTextBox2.TabIndex = 3;
+            richTextBox2.Text = resources.GetString("richTextBox2.Text");
             // 
             // btnLaunchJulia
             // 
@@ -75,6 +86,18 @@
             tabPageMandelbrot.Text = "Множество Мандельброта";
             tabPageMandelbrot.UseVisualStyleBackColor = true;
             // 
+            // richTextBox1
+            // 
+            richTextBox1.BackColor = SystemColors.Window;
+            richTextBox1.BorderStyle = BorderStyle.None;
+            richTextBox1.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
+            richTextBox1.Location = new Point(184, 3);
+            richTextBox1.Name = "richTextBox1";
+            richTextBox1.ReadOnly = true;
+            richTextBox1.Size = new Size(605, 157);
+            richTextBox1.TabIndex = 2;
+            richTextBox1.Text = resources.GetString("richTextBox1.Text");
+            // 
             // btnLaunchMondelbrot
             // 
             btnLaunchMondelbrot.Location = new Point(8, 15);
@@ -96,25 +119,6 @@
             tabControlFractals.SelectedIndex = 0;
             tabControlFractals.Size = new Size(800, 191);
             tabControlFractals.TabIndex = 0;
-            // 
-            // richTextBox1
-            // 
-            richTextBox1.BorderStyle = BorderStyle.None;
-            richTextBox1.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            richTextBox1.Location = new Point(184, 3);
-            richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(605, 157);
-            richTextBox1.TabIndex = 2;
-            richTextBox1.Text = resources.GetString("richTextBox1.Text");
-            // 
-            // richTextBox2
-            // 
-            richTextBox2.BorderStyle = BorderStyle.None;
-            richTextBox2.Location = new Point(184, 3);
-            richTextBox2.Name = "richTextBox2";
-            richTextBox2.Size = new Size(605, 157);
-            richTextBox2.TabIndex = 3;
-            richTextBox2.Text = resources.GetString("richTextBox2.Text");
             // 
             // MainFractalForm
             // 
