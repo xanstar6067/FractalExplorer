@@ -330,7 +330,6 @@
             canvas2.Size = new Size(853, 636);
             canvas2.TabIndex = 1;
             canvas2.TabStop = false;
-            canvas2.Click += btnSave_Click_1;
             // 
             // FractalMondelbrot
             // 
