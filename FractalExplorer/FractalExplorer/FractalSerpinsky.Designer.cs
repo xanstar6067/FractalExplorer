@@ -52,6 +52,7 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             canvasSerpinsky = new PictureBox();
+            colorColor = new CheckBox();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
@@ -64,6 +65,7 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(colorColor);
             panel1.Controls.Add(FractalTypeIsChaos);
             panel1.Controls.Add(FractalTypeIsGeometry);
             panel1.Controls.Add(colorFractal);
@@ -307,6 +309,16 @@
             canvasSerpinsky.TabIndex = 2;
             canvasSerpinsky.TabStop = false;
             // 
+            // colorColor
+            // 
+            colorColor.AutoSize = true;
+            colorColor.Location = new Point(145, 407);
+            colorColor.Name = "colorColor";
+            colorColor.Size = new Size(52, 19);
+            colorColor.TabIndex = 37;
+            colorColor.Text = "Цвет";
+            colorColor.UseVisualStyleBackColor = true;
+            // 
             // FractalSerpinsky
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -355,5 +367,6 @@
         private CheckBox colorFractal;
         private CheckBox FractalTypeIsChaos;
         private CheckBox FractalTypeIsGeometry;
+        private CheckBox colorColor;
     }
 }
