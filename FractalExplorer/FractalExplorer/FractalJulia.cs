@@ -1702,61 +1702,53 @@ namespace FractalDraving
         /// </summary>
         private async void btnSave_Click_1(object sender, EventArgs e)
         {
-            // Если процесс сохранения в высоком разрешении уже запущен (флаг isHighResRendering == true),
-            // выводим информационное сообщение и выходим из метода, чтобы не запускать второй процесс.
             if (isHighResRendering)
             {
                 MessageBox.Show("Процесс сохранения в высоком разрешении уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            // Получение размеров (ширины и высоты) для сохранения из NumericUpDown элементов (nudW, nudH).
-            int saveWidth = (int)nudW1.Value;
-            int saveHeight = (int)nudH1.Value;
+            int saveWidth = (int)nudW1.Value; // Используем nudW1 для Жюлиа
+            int saveHeight = (int)nudH1.Value; // Используем nudH1 для Жюлиа
 
-            // Проверка корректности введенных размеров. Они должны быть больше 0.
             if (saveWidth <= 0 || saveHeight <= 0)
             {
                 MessageBox.Show("Ширина и высота изображения для сохранения должны быть больше 0.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // Создание и настройка диалога сохранения файла (SaveFileDialog).
+            // Получаем значения Re и Im
+            // Используем InvariantCulture для точки в качестве десятичного разделителя,
+            // затем заменяем точку на подчеркивание для имени файла.
+            string reValueString = nudRe1.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
+            string imValueString = nudIm1.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+            string suggestedFileName = $"fractal_julia_re{reValueString}_im{imValueString}_{timestamp}.png";
+
             using (SaveFileDialog saveDialog = new SaveFileDialog
             {
-                Filter = "PNG Image|*.png", // Фильтр для файлов PNG.
-                Title = "Сохранить фрактал (Высокое разрешение)", // Заголовок диалога.
-                FileName = "fractal_high_res.png" // Имя файла по умолчанию.
+                Filter = "PNG Image|*.png",
+                Title = "Сохранить фрактал Жюлиа (Высокое разрешение)",
+                FileName = suggestedFileName // Устанавливаем новое имя файла по умолчанию
             })
             {
-                // Отображение диалога. Если пользователь выбрал файл и нажал "ОК".
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
-                    Button currentActionSaveButton = sender as Button; // Кнопка, инициировавшая сохранение (btnSave_Click_1).
-                    isHighResRendering = true; // Установка флага, что начался рендеринг высокого разрешения.
-                    if (currentActionSaveButton != null)
-                    {
-                        currentActionSaveButton.Enabled = false; // Отключаем кнопку "Сохранить PNG" на время операции.
-                    }
-                    SetMainControlsEnabled(false); // Отключаем основные элементы управления на форме.
+                    Button currentActionSaveButton = sender as Button;
+                    isHighResRendering = true;
+                    if (currentActionSaveButton != null) currentActionSaveButton.Enabled = false;
+                    SetMainControlsEnabled(false);
 
-                    // Настройка и отображение ProgressBar (progressPNG) для индикации процесса сохранения.
-                    if (progressPNG1 != null)
+                    if (progressPNG1 != null) // Используем progressPNG1 для Жюлиа
                     {
-                        progressPNG1.Value = 0;    // Сброс значения ProgressBar.
-                        progressPNG1.Visible = true; // Делаем ProgressBar видимым.
+                        progressPNG1.Value = 0;
+                        progressPNG1.Visible = true;
                     }
 
                     try
                     {
-                        // Сохраняем текущие параметры фрактала для передачи в метод рендеринга.
-                        // UpdateParameters() вызывается здесь, чтобы гарантировать использование
-                        // самых актуальных параметров, установленных на форме, для рендеринга.
-                        UpdateParameters();
-                        // Захват текущих параметров фрактала в локальные переменные.
-                        // Это делается для того, чтобы передать их в асинхронный метод Task.Run
-                        // и избежать проблем с доступом к членам класса из другого потока,
-                        // а также для фиксации состояния параметров на момент начала рендеринга.
+                        UpdateParameters(); // Этот метод должен установить this.c из nudRe1 и nudIm1
                         Complex currentC_Capture = this.c;
                         int currentMaxIterations_Capture = this.maxIterations;
                         double currentThreshold_Capture = this.threshold;
@@ -1765,80 +1757,58 @@ namespace FractalDraving
                         double currentCenterY_Capture = this.centerY;
                         int currentThreadCount_Capture = this.threadCount;
 
-                        // Асинхронный рендеринг фрактала в Bitmap с указанными размерами (saveWidth, saveHeight) и параметрами.
-                        // Task.Run выполняет метод RenderFractalToBitmap в фоновом потоке.
                         Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(
-                            saveWidth, saveHeight, // Размеры для сохранения
-                            currentCenterX_Capture, currentCenterY_Capture, currentZoom_Capture, // Параметры вида
-                            BASE_SCALE, // Используем константу базового масштаба
-                            currentC_Capture, currentMaxIterations_Capture, currentThreshold_Capture, // Параметры фрактала
-                            currentThreadCount_Capture, // Количество потоков
-                            progressPercentage => // Callback-функция для обновления ProgressBar из RenderFractalToBitmap.
+                            saveWidth, saveHeight,
+                            currentCenterX_Capture, currentCenterY_Capture, currentZoom_Capture,
+                            BASE_SCALE, // BASE_SCALE для Жюлиа
+                            currentC_Capture, // Передаем захваченное значение 'c'
+                            currentMaxIterations_Capture, currentThreshold_Capture,
+                            currentThreadCount_Capture,
+                            progressPercentage =>
                             {
-                                // Проверяем, что progressPNG существует, создан и не уничтожен.
-                                if (progressPNG1 != null && progressPNG1.IsHandleCreated && !progressPNG1.IsDisposed)
+                                if (progressPNG1 != null && progressPNG1.IsHandleCreated && !progressPNG1.IsDisposed) // Используем progressPNG1
                                 {
                                     try
                                     {
-                                        // Обновляем ProgressBar в потоке UI с помощью Invoke.
                                         progressPNG1.Invoke((Action)(() =>
                                         {
-                                            // Дополнительная проверка состояния progressPNG внутри делегата Invoke.
                                             if (progressPNG1.Maximum > 0 && progressPNG1.Value <= progressPNG1.Maximum)
                                             {
-                                                // Обновляем значение, ограничивая его максимумом.
                                                 progressPNG1.Value = Math.Min(progressPNG1.Maximum, progressPercentage);
                                             }
                                         }));
                                     }
-                                    catch (ObjectDisposedException)
-                                    {
-                                        // Игнорируем ошибки ObjectDisposedException, если контрол progressPNG
-                                        // был уничтожен во время выполнения Invoke.
-                                    }
-                                    catch (InvalidOperationException)
-                                    {
-                                        // Игнорируем ошибки InvalidOperationException, если хэндл контрола
-                                        // был уничтожен.
-                                    }
+                                    catch (ObjectDisposedException) { }
+                                    catch (InvalidOperationException) { }
                                 }
                             }
                         ));
-                        // Сохранение отрендеренного Bitmap (highResBitmap) в выбранный файл (saveDialog.FileName)
-                        // в формате PNG (ImageFormat.Png).
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                        highResBitmap.Dispose(); // Освобождение ресурсов, занятых highResBitmap.
+                        highResBitmap.Dispose();
                         MessageBox.Show("Изображение успешно сохранено в высоком разрешении!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    catch (Exception ex) // Обработка любых исключений, возникших во время рендеринга или сохранения.
+                    catch (Exception ex)
                     {
                         MessageBox.Show($"Ошибка при сохранении изображения: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                    finally // Блок finally выполняется всегда, независимо от того, было ли исключение.
+                    finally
                     {
-                        // Восстановление состояния формы после завершения сохранения (или в случае ошибки).
-                        isHighResRendering = false; // Сброс флага рендеринга высокого разрешения.
-                        if (currentActionSaveButton != null)
-                        {
-                            currentActionSaveButton.Enabled = true; // Включаем кнопку "Сохранить PNG" обратно.
-                        }
-                        SetMainControlsEnabled(true); // Включаем основные элементы управления на форме.
+                        isHighResRendering = false;
+                        if (currentActionSaveButton != null) currentActionSaveButton.Enabled = true;
+                        SetMainControlsEnabled(true);
 
-                        // Скрытие ProgressBar (progressPNG).
-                        // Проверяем, что progressPNG существует, создан и не уничтожен.
-                        if (progressPNG1 != null && progressPNG1.IsHandleCreated && !progressPNG1.IsDisposed)
+                        if (progressPNG1 != null && progressPNG1.IsHandleCreated && !progressPNG1.IsDisposed) // Используем progressPNG1
                         {
                             try
                             {
-                                // Выполняем обновление UI (скрытие progressPNG) в потоке UI.
                                 progressPNG1.Invoke((Action)(() =>
                                 {
-                                    progressPNG1.Visible = false; // Скрываем ProgressBar.
-                                    progressPNG1.Value = 0;       // Сбрасываем его значение.
+                                    progressPNG1.Visible = false;
+                                    progressPNG1.Value = 0;
                                 }));
                             }
-                            catch (ObjectDisposedException) { /* Игнорируем, если контрол уже уничтожен */ }
-                            catch (InvalidOperationException) { /* Игнорируем, если хэндл уже уничтожен */ }
+                            catch (ObjectDisposedException) { }
+                            catch (InvalidOperationException) { }
                         }
                     }
                 }

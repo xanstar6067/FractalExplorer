@@ -818,8 +818,8 @@ namespace FractalDraving
                 return;
             }
 
-            int saveWidth = (int)nudW2.Value;
-            int saveHeight = (int)nudH2.Value;
+            int saveWidth = (int)nudW2.Value; // Используем nudW2 для Мандельброта
+            int saveHeight = (int)nudH2.Value; // Используем nudH2 для Мандельброта
 
             if (saveWidth <= 0 || saveHeight <= 0)
             {
@@ -827,11 +827,15 @@ namespace FractalDraving
                 return;
             }
 
+            // Формируем имя файла с датой и временем
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string suggestedFileName = $"fractal_mandelbrot_{timestamp}.png";
+
             using (SaveFileDialog saveDialog = new SaveFileDialog
             {
                 Filter = "PNG Image|*.png",
-                Title = "Сохранить фрактал (Высокое разрешение)",
-                FileName = "fractal_mandelbrot_high_res.png"
+                Title = "Сохранить фрактал Мандельброта (Высокое разрешение)",
+                FileName = suggestedFileName // Устанавливаем новое имя файла по умолчанию
             })
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
@@ -841,7 +845,7 @@ namespace FractalDraving
                     if (currentActionSaveButton != null) currentActionSaveButton.Enabled = false;
                     SetMainControlsEnabled(false);
 
-                    if (progressPNG2 != null)
+                    if (progressPNG2 != null) // Используем progressPNG2 для Мандельброта
                     {
                         progressPNG2.Value = 0;
                         progressPNG2.Visible = true;
@@ -860,12 +864,12 @@ namespace FractalDraving
                         Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(
                             saveWidth, saveHeight,
                             currentCenterX_Capture, currentCenterY_Capture, currentZoom_Capture,
-                            BASE_SCALE,
+                            BASE_SCALE, // BASE_SCALE для Мандельброта
                             currentMaxIterations_Capture, currentThreshold_Capture,
                             currentThreadCount_Capture,
                             progressPercentage =>
                             {
-                                if (progressPNG2 != null && progressPNG2.IsHandleCreated && !progressPNG2.IsDisposed)
+                                if (progressPNG2 != null && progressPNG2.IsHandleCreated && !progressPNG2.IsDisposed) // Используем progressPNG2
                                 {
                                     try
                                     {
@@ -896,7 +900,7 @@ namespace FractalDraving
                         if (currentActionSaveButton != null) currentActionSaveButton.Enabled = true;
                         SetMainControlsEnabled(true);
 
-                        if (progressPNG2 != null && progressPNG2.IsHandleCreated && !progressPNG2.IsDisposed)
+                        if (progressPNG2 != null && progressPNG2.IsHandleCreated && !progressPNG2.IsDisposed) // Используем progressPNG2
                         {
                             try
                             {
