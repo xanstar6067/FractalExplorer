@@ -1,16 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
-// using System.Numerics; // Пока не используется напрямую для Серпинского
+﻿using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace FractalExplorer
 {
@@ -935,6 +924,11 @@ namespace FractalExplorer
             renderTimer?.Stop(); renderTimer?.Dispose();
             canvasBitmap?.Dispose(); colorDialog?.Dispose();
             base.OnFormClosed(e);
+        }
+
+        private void abortRender_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

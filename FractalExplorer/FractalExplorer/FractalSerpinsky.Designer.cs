@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            abortRender = new Button();
             panel3 = new Panel();
             label2 = new Label();
             colorColor = new CheckBox();
@@ -38,6 +39,7 @@
             colorBackground = new CheckBox();
             label1 = new Label();
             panel2 = new Panel();
+            canvasPalette = new PictureBox();
             colorGrayscale = new CheckBox();
             nudW2 = new NumericUpDown();
             nudH2 = new NumericUpDown();
@@ -53,21 +55,21 @@
             btnSavePNG = new Button();
             label3 = new Label();
             nudIterations = new NumericUpDown();
-            canvasPalette = new PictureBox();
             canvasSerpinsky = new PictureBox();
             panel1.SuspendLayout();
             panel3.SuspendLayout();
             panel2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudW2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
             ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).BeginInit();
             SuspendLayout();
             // 
             // panel1
             // 
+            panel1.Controls.Add(abortRender);
             panel1.Controls.Add(panel3);
             panel1.Controls.Add(colorColor);
             panel1.Controls.Add(FractalTypeIsChaos);
@@ -96,6 +98,16 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 1;
+            // 
+            // abortRender
+            // 
+            abortRender.Location = new Point(134, 247);
+            abortRender.Name = "abortRender";
+            abortRender.Size = new Size(89, 23);
+            abortRender.TabIndex = 39;
+            abortRender.Text = "Запустить рендер";
+            abortRender.UseVisualStyleBackColor = true;
+            abortRender.Click += abortRender_Click;
             // 
             // panel3
             // 
@@ -184,6 +196,16 @@
             panel2.Size = new Size(231, 122);
             panel2.TabIndex = 31;
             // 
+            // canvasPalette
+            // 
+            canvasPalette.Dock = DockStyle.Fill;
+            canvasPalette.Location = new Point(0, 0);
+            canvasPalette.Name = "canvasPalette";
+            canvasPalette.Size = new Size(229, 120);
+            canvasPalette.TabIndex = 3;
+            canvasPalette.TabStop = false;
+            canvasPalette.Click += cancasPalette_Click;
+            // 
             // colorGrayscale
             // 
             colorGrayscale.AutoSize = true;
@@ -262,9 +284,9 @@
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(35, 247);
+            btnRender.Location = new Point(5, 247);
             btnRender.Name = "btnRender";
-            btnRender.Size = new Size(164, 23);
+            btnRender.Size = new Size(123, 23);
             btnRender.TabIndex = 2;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
@@ -323,16 +345,6 @@
             nudIterations.TabIndex = 2;
             nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
-            // canvasPalette
-            // 
-            canvasPalette.Dock = DockStyle.Fill;
-            canvasPalette.Location = new Point(0, 0);
-            canvasPalette.Name = "canvasPalette";
-            canvasPalette.Size = new Size(229, 120);
-            canvasPalette.TabIndex = 3;
-            canvasPalette.TabStop = false;
-            canvasPalette.Click += cancasPalette_Click;
-            // 
             // canvasSerpinsky
             // 
             canvasSerpinsky.Dock = DockStyle.Fill;
@@ -357,11 +369,11 @@
             panel3.ResumeLayout(false);
             panel3.PerformLayout();
             panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudW2).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudH2).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
             ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).EndInit();
             ResumeLayout(false);
         }
@@ -395,5 +407,6 @@
         private CheckBox colorColor;
         private Panel panel3;
         private Label label2;
+        private Button abortRender;
     }
 }
