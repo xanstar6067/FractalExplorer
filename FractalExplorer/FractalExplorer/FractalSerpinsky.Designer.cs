@@ -71,19 +71,13 @@
             // 
             panel1.Controls.Add(abortRender);
             panel1.Controls.Add(panel3);
-            panel1.Controls.Add(colorColor);
             panel1.Controls.Add(FractalTypeIsChaos);
             panel1.Controls.Add(FractalTypeIsGeometry);
-            panel1.Controls.Add(colorFractal);
-            panel1.Controls.Add(colorBackground);
-            panel1.Controls.Add(label1);
             panel1.Controls.Add(panel2);
-            panel1.Controls.Add(colorGrayscale);
             panel1.Controls.Add(nudW2);
             panel1.Controls.Add(nudH2);
             panel1.Controls.Add(progressPNGSerpinsky);
             panel1.Controls.Add(label8);
-            panel1.Controls.Add(renderBW);
             panel1.Controls.Add(label5);
             panel1.Controls.Add(nudZoom);
             panel1.Controls.Add(btnRender);
@@ -112,16 +106,22 @@
             // panel3
             // 
             panel3.Controls.Add(label2);
+            panel3.Controls.Add(label1);
+            panel3.Controls.Add(colorColor);
+            panel3.Controls.Add(renderBW);
+            panel3.Controls.Add(colorGrayscale);
+            panel3.Controls.Add(colorBackground);
+            panel3.Controls.Add(colorFractal);
             panel3.Dock = DockStyle.Bottom;
-            panel3.Location = new Point(0, 487);
+            panel3.Location = new Point(0, 431);
             panel3.Name = "panel3";
-            panel3.Size = new Size(231, 27);
+            panel3.Size = new Size(231, 83);
             panel3.TabIndex = 38;
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(35, 7);
+            label2.Location = new Point(35, 65);
             label2.Name = "label2";
             label2.Size = new Size(164, 15);
             label2.TabIndex = 38;
@@ -130,7 +130,7 @@
             // colorColor
             // 
             colorColor.AutoSize = true;
-            colorColor.Location = new Point(162, 446);
+            colorColor.Location = new Point(169, 25);
             colorColor.Name = "colorColor";
             colorColor.Size = new Size(52, 19);
             colorColor.TabIndex = 37;
@@ -160,7 +160,7 @@
             // colorFractal
             // 
             colorFractal.AutoSize = true;
-            colorFractal.Location = new Point(124, 465);
+            colorFractal.Location = new Point(131, 44);
             colorFractal.Name = "colorFractal";
             colorFractal.Size = new Size(66, 19);
             colorFractal.TabIndex = 34;
@@ -170,7 +170,7 @@
             // colorBackground
             // 
             colorBackground.AutoSize = true;
-            colorBackground.Location = new Point(69, 465);
+            colorBackground.Location = new Point(76, 44);
             colorBackground.Name = "colorBackground";
             colorBackground.Size = new Size(49, 19);
             colorBackground.TabIndex = 33;
@@ -180,7 +180,7 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(60, 428);
+            label1.Location = new Point(67, 7);
             label1.Name = "label1";
             label1.Size = new Size(91, 15);
             label1.TabIndex = 32;
@@ -209,7 +209,7 @@
             // colorGrayscale
             // 
             colorGrayscale.AutoSize = true;
-            colorGrayscale.Location = new Point(53, 446);
+            colorGrayscale.Location = new Point(60, 25);
             colorGrayscale.Name = "colorGrayscale";
             colorGrayscale.Size = new Size(112, 19);
             colorGrayscale.TabIndex = 30;
@@ -255,7 +255,7 @@
             // renderBW
             // 
             renderBW.AutoSize = true;
-            renderBW.Location = new Point(8, 446);
+            renderBW.Location = new Point(15, 25);
             renderBW.Name = "renderBW";
             renderBW.Size = new Size(41, 19);
             renderBW.TabIndex = 17;
