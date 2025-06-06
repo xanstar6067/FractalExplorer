@@ -29,13 +29,15 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            panel3 = new Panel();
+            label2 = new Label();
+            colorColor = new CheckBox();
             FractalTypeIsChaos = new CheckBox();
             FractalTypeIsGeometry = new CheckBox();
             colorFractal = new CheckBox();
             colorBackground = new CheckBox();
             label1 = new Label();
             panel2 = new Panel();
-            canvasPalette = new PictureBox();
             colorGrayscale = new CheckBox();
             nudW2 = new NumericUpDown();
             nudH2 = new NumericUpDown();
@@ -51,20 +53,22 @@
             btnSavePNG = new Button();
             label3 = new Label();
             nudIterations = new NumericUpDown();
+            canvasPalette = new PictureBox();
             canvasSerpinsky = new PictureBox();
-            colorColor = new CheckBox();
             panel1.SuspendLayout();
+            panel3.SuspendLayout();
             panel2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudW2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH2).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
             ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).BeginInit();
             SuspendLayout();
             // 
             // panel1
             // 
+            panel1.Controls.Add(panel3);
             panel1.Controls.Add(colorColor);
             panel1.Controls.Add(FractalTypeIsChaos);
             panel1.Controls.Add(FractalTypeIsGeometry);
@@ -92,6 +96,34 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 1;
+            // 
+            // panel3
+            // 
+            panel3.Controls.Add(label2);
+            panel3.Dock = DockStyle.Bottom;
+            panel3.Location = new Point(0, 487);
+            panel3.Name = "panel3";
+            panel3.Size = new Size(231, 27);
+            panel3.TabIndex = 38;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(35, 7);
+            label2.Name = "label2";
+            label2.Size = new Size(164, 15);
+            label2.TabIndex = 38;
+            label2.Text = "Кликни для настройки цвета";
+            // 
+            // colorColor
+            // 
+            colorColor.AutoSize = true;
+            colorColor.Location = new Point(159, 407);
+            colorColor.Name = "colorColor";
+            colorColor.Size = new Size(52, 19);
+            colorColor.TabIndex = 37;
+            colorColor.Text = "Цвет";
+            colorColor.UseVisualStyleBackColor = true;
             // 
             // FractalTypeIsChaos
             // 
@@ -144,22 +176,13 @@
             // 
             // panel2
             // 
+            panel2.BorderStyle = BorderStyle.FixedSingle;
             panel2.Controls.Add(canvasPalette);
             panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 457);
+            panel2.Location = new Point(0, 514);
             panel2.Name = "panel2";
-            panel2.Size = new Size(231, 179);
+            panel2.Size = new Size(231, 122);
             panel2.TabIndex = 31;
-            // 
-            // canvasPalette
-            // 
-            canvasPalette.Dock = DockStyle.Fill;
-            canvasPalette.Location = new Point(0, 0);
-            canvasPalette.Name = "canvasPalette";
-            canvasPalette.Size = new Size(231, 179);
-            canvasPalette.TabIndex = 3;
-            canvasPalette.TabStop = false;
-            canvasPalette.Click += cancasPalette_Click;
             // 
             // colorGrayscale
             // 
@@ -300,6 +323,16 @@
             nudIterations.TabIndex = 2;
             nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
+            // canvasPalette
+            // 
+            canvasPalette.Dock = DockStyle.Fill;
+            canvasPalette.Location = new Point(0, 0);
+            canvasPalette.Name = "canvasPalette";
+            canvasPalette.Size = new Size(229, 120);
+            canvasPalette.TabIndex = 3;
+            canvasPalette.TabStop = false;
+            canvasPalette.Click += cancasPalette_Click;
+            // 
             // canvasSerpinsky
             // 
             canvasSerpinsky.Dock = DockStyle.Fill;
@@ -308,16 +341,6 @@
             canvasSerpinsky.Size = new Size(853, 636);
             canvasSerpinsky.TabIndex = 2;
             canvasSerpinsky.TabStop = false;
-            // 
-            // colorColor
-            // 
-            colorColor.AutoSize = true;
-            colorColor.Location = new Point(159, 407);
-            colorColor.Name = "colorColor";
-            colorColor.Size = new Size(52, 19);
-            colorColor.TabIndex = 37;
-            colorColor.Text = "Цвет";
-            colorColor.UseVisualStyleBackColor = true;
             // 
             // FractalSerpinsky
             // 
@@ -331,12 +354,14 @@
             Text = "Треугольник Серпинского";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
+            panel3.ResumeLayout(false);
+            panel3.PerformLayout();
             panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudW2).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudH2).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
+            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
             ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).EndInit();
             ResumeLayout(false);
         }
@@ -368,5 +393,7 @@
         private CheckBox FractalTypeIsChaos;
         private CheckBox FractalTypeIsGeometry;
         private CheckBox colorColor;
+        private Panel panel3;
+        private Label label2;
     }
 }
