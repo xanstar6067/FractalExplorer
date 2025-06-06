@@ -105,7 +105,7 @@
             abortRender.Name = "abortRender";
             abortRender.Size = new Size(89, 23);
             abortRender.TabIndex = 39;
-            abortRender.Text = "Запустить рендер";
+            abortRender.Text = "Отмена";
             abortRender.UseVisualStyleBackColor = true;
             abortRender.Click += abortRender_Click;
             // 
