@@ -101,7 +101,7 @@
             // 
             // abortRender
             // 
-            abortRender.Location = new Point(134, 247);
+            abortRender.Location = new Point(134, 271);
             abortRender.Name = "abortRender";
             abortRender.Size = new Size(89, 23);
             abortRender.TabIndex = 39;
@@ -130,7 +130,7 @@
             // colorColor
             // 
             colorColor.AutoSize = true;
-            colorColor.Location = new Point(159, 407);
+            colorColor.Location = new Point(162, 446);
             colorColor.Name = "colorColor";
             colorColor.Size = new Size(52, 19);
             colorColor.TabIndex = 37;
@@ -160,7 +160,7 @@
             // colorFractal
             // 
             colorFractal.AutoSize = true;
-            colorFractal.Location = new Point(160, 435);
+            colorFractal.Location = new Point(124, 465);
             colorFractal.Name = "colorFractal";
             colorFractal.Size = new Size(66, 19);
             colorFractal.TabIndex = 34;
@@ -170,7 +170,7 @@
             // colorBackground
             // 
             colorBackground.AutoSize = true;
-            colorBackground.Location = new Point(109, 435);
+            colorBackground.Location = new Point(69, 465);
             colorBackground.Name = "colorBackground";
             colorBackground.Size = new Size(49, 19);
             colorBackground.TabIndex = 33;
@@ -180,7 +180,7 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(5, 439);
+            label1.Location = new Point(60, 428);
             label1.Name = "label1";
             label1.Size = new Size(91, 15);
             label1.TabIndex = 32;
@@ -209,7 +209,7 @@
             // colorGrayscale
             // 
             colorGrayscale.AutoSize = true;
-            colorGrayscale.Location = new Point(46, 407);
+            colorGrayscale.Location = new Point(53, 446);
             colorGrayscale.Name = "colorGrayscale";
             colorGrayscale.Size = new Size(112, 19);
             colorGrayscale.TabIndex = 30;
@@ -218,7 +218,7 @@
             // 
             // nudW2
             // 
-            nudW2.Location = new Point(12, 349);
+            nudW2.Location = new Point(12, 373);
             nudW2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudW2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudW2.Name = "nudW2";
@@ -228,7 +228,7 @@
             // 
             // nudH2
             // 
-            nudH2.Location = new Point(124, 349);
+            nudH2.Location = new Point(124, 373);
             nudH2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudH2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudH2.Name = "nudH2";
@@ -238,7 +238,7 @@
             // 
             // progressPNGSerpinsky
             // 
-            progressPNGSerpinsky.Location = new Point(8, 378);
+            progressPNGSerpinsky.Location = new Point(8, 402);
             progressPNGSerpinsky.Name = "progressPNGSerpinsky";
             progressPNGSerpinsky.Size = new Size(218, 23);
             progressPNGSerpinsky.TabIndex = 21;
@@ -246,7 +246,7 @@
             // label8
             // 
             label8.AutoSize = true;
-            label8.Location = new Point(84, 273);
+            label8.Location = new Point(84, 297);
             label8.Name = "label8";
             label8.Size = new Size(67, 15);
             label8.TabIndex = 20;
@@ -255,7 +255,7 @@
             // renderBW
             // 
             renderBW.AutoSize = true;
-            renderBW.Location = new Point(9, 407);
+            renderBW.Location = new Point(8, 446);
             renderBW.Name = "renderBW";
             renderBW.Size = new Size(41, 19);
             renderBW.TabIndex = 17;
@@ -284,7 +284,7 @@
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(5, 247);
+            btnRender.Location = new Point(3, 271);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(123, 23);
             btnRender.TabIndex = 2;
@@ -294,7 +294,7 @@
             // 
             // progressBarSerpinsky
             // 
-            progressBarSerpinsky.Location = new Point(5, 291);
+            progressBarSerpinsky.Location = new Point(5, 315);
             progressBarSerpinsky.Name = "progressBarSerpinsky";
             progressBarSerpinsky.Size = new Size(218, 23);
             progressBarSerpinsky.TabIndex = 14;
@@ -302,7 +302,7 @@
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(16, 200);
+            label6.Location = new Point(19, 224);
             label6.Name = "label6";
             label6.Size = new Size(69, 15);
             label6.TabIndex = 13;
@@ -311,14 +311,14 @@
             // cbCPUThreads
             // 
             cbCPUThreads.FormattingEnabled = true;
-            cbCPUThreads.Location = new Point(16, 218);
+            cbCPUThreads.Location = new Point(19, 242);
             cbCPUThreads.Name = "cbCPUThreads";
             cbCPUThreads.Size = new Size(195, 23);
             cbCPUThreads.TabIndex = 12;
             // 
             // btnSavePNG
             // 
-            btnSavePNG.Location = new Point(28, 320);
+            btnSavePNG.Location = new Point(26, 344);
             btnSavePNG.Name = "btnSavePNG";
             btnSavePNG.Size = new Size(164, 23);
             btnSavePNG.TabIndex = 11;
