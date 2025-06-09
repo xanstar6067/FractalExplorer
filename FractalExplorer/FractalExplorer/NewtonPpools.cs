@@ -945,7 +945,6 @@ namespace FractalExplorer
                 action();
         }
 
-        // --- УЛУЧШЕННЫЙ ПАРСЕР ПОЛИНОМОВ ---
         private Polynomial ParsePolynomial(string polyStr)
         {
             polyStr = polyStr.Replace(" ", "");
