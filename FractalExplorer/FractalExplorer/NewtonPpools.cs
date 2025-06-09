@@ -900,9 +900,33 @@ namespace FractalExplorer
             else action();
         }
 
+        private string EvaluateFractions(string expr)
+        {
+            return Regex.Replace(expr, @"\(([^()]+/[^()]+)\)", m => {
+                try
+                {
+                    var result = new DataTable().Compute(m.Groups[1].Value, null);
+                    return Convert.ToDouble(result).ToString(CultureInfo.InvariantCulture);
+                }
+                catch
+                {
+                    return m.Value; // оставить как есть, если не удалось
+                }
+            });
+        }
+
         private Polynomial ParsePolynomial(string polyStr)
         {
             polyStr = polyStr.Replace(" ", "");
+
+            // Добавляем обработку дробей и умножений
+            polyStr = EvaluateFractions(polyStr);
+            polyStr = Regex.Replace(polyStr, @"(?<coef>\([^\)]+\))\*\(?z(\^\d+)?\)?", match =>
+            {
+                string coef = match.Groups["coef"].Value;
+                string powerPart = match.Value.Contains("^") ? match.Value.Substring(match.Value.IndexOf("^")) : "";
+                return coef + "z" + powerPart;
+            });
 
             var culture = System.Globalization.CultureInfo.InvariantCulture;
 
