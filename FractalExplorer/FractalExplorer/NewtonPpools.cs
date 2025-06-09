@@ -331,10 +331,10 @@ namespace FractalExplorer
             else if (usePastel)
             {
                 Color[] pastelColors = {
-                    Color.FromArgb(255, 182, 193),
-                    Color.FromArgb(173, 216, 230),
-                    Color.FromArgb(189, 252, 201),
-                };
+            Color.FromArgb(255, 182, 193),
+            Color.FromArgb(173, 216, 230),
+            Color.FromArgb(189, 252, 201),
+        };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
@@ -343,10 +343,10 @@ namespace FractalExplorer
             else if (useContrast)
             {
                 Color[] contrastColors = {
-                    Color.FromArgb(255, 0, 0),
-                    Color.FromArgb(255, 255, 0),
-                    Color.FromArgb(0, 0, 255),
-                };
+            Color.FromArgb(255, 0, 0),
+            Color.FromArgb(255, 255, 0),
+            Color.FromArgb(0, 0, 255),
+        };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -450,39 +450,7 @@ namespace FractalExplorer
                         Color pixelColor;
                         if (rootIndex >= 0 && minDist < epsilon)
                         {
-                            if (useGradient)
-                            {
-                                double t = smoothIter / maxIterations;
-                                t = Math.Sqrt(t);
-                                Color color1 = Color.FromArgb(135, 206, 250);
-                                Color color2 = Color.FromArgb(245, 245, 220);
-                                Color color3 = Color.FromArgb(255, 182, 193);
-                                if (t < 0.5)
-                                {
-                                    pixelColor = InterpolateColor(color1, color2, t * 2);
-                                }
-                                else
-                                {
-                                    pixelColor = InterpolateColor(color2, color3, (t - 0.5) * 2);
-                                }
-                            }
-                            else if (useJulia1)
-                            {
-                                double t = smoothIter / maxIterations;
-                                t = Math.Sqrt(t);
-                                Color color1 = Color.FromArgb(0, 0, 50);
-                                Color color2 = Color.FromArgb(0, 255, 0);
-                                Color color3 = Color.FromArgb(255, 255, 0);
-                                if (t < 0.5)
-                                {
-                                    pixelColor = InterpolateColor(color1, color2, t * 2);
-                                }
-                                else
-                                {
-                                    pixelColor = InterpolateColor(color2, color3, (t - 0.5) * 2);
-                                }
-                            }
-                            else if (useJulia4)
+                            if (useJulia4)
                             {
                                 double t = (smoothIter / maxIterations + rootIndex * 0.3) % 1.0;
                                 double angle = z.Phase;
