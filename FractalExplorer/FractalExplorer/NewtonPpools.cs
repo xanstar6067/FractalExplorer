@@ -920,17 +920,31 @@ namespace FractalExplorer
         {
             polyStr = polyStr.Replace(" ", "");
 
-            // Обработка дробей и раскрытие скобок с умножением
+            // Обработка дробей
             polyStr = EvaluateFractions(polyStr);
-            polyStr = Regex.Replace(polyStr, @"(?<coef>\([^()]+\))\*\(?z(\^\d+)?\)?", match => {
-                string coef = match.Groups["coef"].Value;
-                string powerPart = match.Groups[2].Success ? match.Groups[2].Value : "";
-                return coef + "z" + powerPart;
+
+            // Обработка всех скобочных умножений (в том числе с несколькими скобками)
+            while (Regex.IsMatch(polyStr, @"\([^()]+\)\*\([^()]*z\^?\d*\)?"))
+            {
+                polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\(([^()]*z\^?\d*)\)", m =>
+                {
+                    return "(" + m.Groups[1].Value + ")" + m.Groups[2].Value;
+                });
+            }
+
+            // Упрощённая форма (a+bi)*z^n или *z
+            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", m =>
+            {
+                return "(" + m.Groups[1].Value + ")z" + (m.Groups[2].Success ? m.Groups[2].Value : "");
             });
+
+            // Также для случаев: (a+bi)*z
+            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z", m => "(" + m.Groups[1].Value + ")z");
+
+            // Очистка от лишних пробелов в комплексных скобках
             polyStr = Regex.Replace(polyStr, @"\(([0-9\.+\-]+[+-][0-9\.+\-]+)i\)", m => m.Value.Replace(" ", ""));
 
-            var culture = System.Globalization.CultureInfo.InvariantCulture;
-
+            var culture = CultureInfo.InvariantCulture;
             List<string> terms = new List<string>();
             StringBuilder currentTerm = new StringBuilder();
             int parenthesesCount = 0;
@@ -940,10 +954,8 @@ namespace FractalExplorer
             {
                 char c = polyStr[i];
 
-                if (c == '(')
-                    parenthesesCount++;
-                else if (c == ')')
-                    parenthesesCount--;
+                if (c == '(') parenthesesCount++;
+                else if (c == ')') parenthesesCount--;
 
                 if ((c == '+' || c == '-') && parenthesesCount == 0 && !isFirstTerm)
                 {
@@ -983,7 +995,6 @@ namespace FractalExplorer
                 {
                     double realPart = double.Parse(complexWithZ.Groups[1].Value, culture);
                     string imagStr = complexWithZ.Groups[2].Value;
-
                     double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
                     coeff = new Complex(realPart, imagPart);
 
