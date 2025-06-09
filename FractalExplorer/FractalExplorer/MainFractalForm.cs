@@ -52,5 +52,13 @@ namespace FractalExplorer
             FractalSerpinskyForm.Show();
 
         }
+
+        private void btnLaunchNewton_Click(object sender, EventArgs e)
+        {
+            // FractalNewtonPool
+            NewtonPpools NewtonPpoolsForm = new NewtonPpools();
+
+            NewtonPpoolsForm.Show();
+        }
     }
 }

@@ -39,10 +39,14 @@
             tabPageSerpinsky = new TabPage();
             richTextBox3 = new RichTextBox();
             btnLaunchSerpinsky = new Button();
+            tabPageNewtonPools = new TabPage();
+            richTextBox4 = new RichTextBox();
+            btnLaunchNewton = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
             tabPageSerpinsky.SuspendLayout();
+            tabPageNewtonPools.SuspendLayout();
             SuspendLayout();
             // 
             // tabPageJulia
@@ -117,6 +121,7 @@
             tabControlFractals.Controls.Add(tabPageMandelbrot);
             tabControlFractals.Controls.Add(tabPageJulia);
             tabControlFractals.Controls.Add(tabPageSerpinsky);
+            tabControlFractals.Controls.Add(tabPageNewtonPools);
             tabControlFractals.Dock = DockStyle.Fill;
             tabControlFractals.Font = new Font("Segoe UI", 10F);
             tabControlFractals.Location = new Point(0, 0);
@@ -159,6 +164,40 @@
             btnLaunchSerpinsky.UseVisualStyleBackColor = true;
             btnLaunchSerpinsky.Click += btnLaunchSerpinsky_Click;
             // 
+            // tabPageNewtonPools
+            // 
+            tabPageNewtonPools.Controls.Add(richTextBox4);
+            tabPageNewtonPools.Controls.Add(btnLaunchNewton);
+            tabPageNewtonPools.Location = new Point(4, 26);
+            tabPageNewtonPools.Name = "tabPageNewtonPools";
+            tabPageNewtonPools.Padding = new Padding(3);
+            tabPageNewtonPools.Size = new Size(792, 161);
+            tabPageNewtonPools.TabIndex = 3;
+            tabPageNewtonPools.Text = "tabPage1";
+            tabPageNewtonPools.UseVisualStyleBackColor = true;
+            // 
+            // richTextBox4
+            // 
+            richTextBox4.BackColor = SystemColors.Window;
+            richTextBox4.BorderStyle = BorderStyle.None;
+            richTextBox4.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
+            richTextBox4.Location = new Point(182, 2);
+            richTextBox4.Name = "richTextBox4";
+            richTextBox4.ReadOnly = true;
+            richTextBox4.Size = new Size(605, 157);
+            richTextBox4.TabIndex = 6;
+            richTextBox4.Text = "Откройте для";
+            // 
+            // btnLaunchNewton
+            // 
+            btnLaunchNewton.Location = new Point(6, 14);
+            btnLaunchNewton.Name = "btnLaunchNewton";
+            btnLaunchNewton.Size = new Size(131, 44);
+            btnLaunchNewton.TabIndex = 5;
+            btnLaunchNewton.Text = "Запустить";
+            btnLaunchNewton.UseVisualStyleBackColor = true;
+            btnLaunchNewton.Click += btnLaunchNewton_Click;
+            // 
             // MainFractalForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -174,6 +213,7 @@
             tabPageMandelbrot.ResumeLayout(false);
             tabControlFractals.ResumeLayout(false);
             tabPageSerpinsky.ResumeLayout(false);
+            tabPageNewtonPools.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -189,5 +229,8 @@
         private TabPage tabPageSerpinsky;
         private RichTextBox richTextBox3;
         private Button btnLaunchSerpinsky;
+        private TabPage tabPageNewtonPools;
+        private RichTextBox richTextBox4;
+        private Button btnLaunchNewton;
     }
 }
