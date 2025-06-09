@@ -915,18 +915,19 @@ namespace FractalExplorer
             });
         }
 
+
         private Polynomial ParsePolynomial(string polyStr)
         {
             polyStr = polyStr.Replace(" ", "");
 
-            // Добавляем обработку дробей и умножений
+            // Обработка дробей и раскрытие скобок с умножением
             polyStr = EvaluateFractions(polyStr);
-            polyStr = Regex.Replace(polyStr, @"(?<coef>\([^\)]+\))\*\(?z(\^\d+)?\)?", match =>
-            {
+            polyStr = Regex.Replace(polyStr, @"(?<coef>\([^()]+\))\*\(?z(\^\d+)?\)?", match => {
                 string coef = match.Groups["coef"].Value;
-                string powerPart = match.Value.Contains("^") ? match.Value.Substring(match.Value.IndexOf("^")) : "";
+                string powerPart = match.Groups[2].Success ? match.Groups[2].Value : "";
                 return coef + "z" + powerPart;
             });
+            polyStr = Regex.Replace(polyStr, @"\(([0-9\.+\-]+[+-][0-9\.+\-]+)i\)", m => m.Value.Replace(" ", ""));
 
             var culture = System.Globalization.CultureInfo.InvariantCulture;
 
@@ -983,19 +984,11 @@ namespace FractalExplorer
                     double realPart = double.Parse(complexWithZ.Groups[1].Value, culture);
                     string imagStr = complexWithZ.Groups[2].Value;
 
-                    double imagPart;
-                    if (imagStr == "+" || string.IsNullOrEmpty(imagStr))
-                        imagPart = 1.0;
-                    else if (imagStr == "-")
-                        imagPart = -1.0;
-                    else
-                        imagPart = double.Parse(imagStr, culture);
-
+                    double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
                     coeff = new Complex(realPart, imagPart);
 
                     string zPart = complexWithZ.Groups[3].Value;
                     string powerStr = complexWithZ.Groups[4].Value;
-
                     if (!string.IsNullOrEmpty(zPart))
                         power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
                 }
@@ -1007,7 +1000,6 @@ namespace FractalExplorer
 
                     string zPart = realWithZ.Groups[2].Value;
                     string powerStr = realWithZ.Groups[3].Value;
-
                     if (!string.IsNullOrEmpty(zPart))
                         power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
                 }
@@ -1021,15 +1013,7 @@ namespace FractalExplorer
                 {
                     double realPart = double.Parse(complexConst.Groups[1].Value, culture);
                     string imagStr = complexConst.Groups[2].Value;
-
-                    double imagPart;
-                    if (imagStr == "+" || string.IsNullOrEmpty(imagStr))
-                        imagPart = 1.0;
-                    else if (imagStr == "-")
-                        imagPart = -1.0;
-                    else
-                        imagPart = double.Parse(imagStr, culture);
-
+                    double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
                     coeff = new Complex(realPart, imagPart);
                     power = 0;
                 }
