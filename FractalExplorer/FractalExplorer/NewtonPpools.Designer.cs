@@ -29,6 +29,9 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            label1 = new Label();
+            cbSelector = new ComboBox();
+            richTextBox1 = new RichTextBox();
             nudW = new NumericUpDown();
             nudH = new NumericUpDown();
             progressPNG = new ProgressBar();
@@ -36,7 +39,7 @@
             oldRenderBW = new CheckBox();
             label5 = new Label();
             nudZoom = new NumericUpDown();
-            colorBox = new CheckBox();
+            colorBox0 = new CheckBox();
             btnRender = new Button();
             progressBar = new ProgressBar();
             label6 = new Label();
@@ -47,9 +50,8 @@
             nudThreshold = new NumericUpDown();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
-            richTextBox1 = new RichTextBox();
-            cbSelector = new ComboBox();
-            label1 = new Label();
+            colorBox1 = new CheckBox();
+            colorBox2 = new CheckBox();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH).BeginInit();
@@ -61,6 +63,8 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(colorBox2);
+            panel1.Controls.Add(colorBox1);
             panel1.Controls.Add(label1);
             panel1.Controls.Add(cbSelector);
             panel1.Controls.Add(richTextBox1);
@@ -71,7 +75,7 @@
             panel1.Controls.Add(oldRenderBW);
             panel1.Controls.Add(label5);
             panel1.Controls.Add(nudZoom);
-            panel1.Controls.Add(colorBox);
+            panel1.Controls.Add(colorBox0);
             panel1.Controls.Add(btnRender);
             panel1.Controls.Add(progressBar);
             panel1.Controls.Add(label6);
@@ -86,6 +90,33 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 0;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(29, 398);
+            label1.Name = "label1";
+            label1.Size = new Size(163, 15);
+            label1.TabIndex = 35;
+            label1.Text = "Выбери полином/формулу.";
+            // 
+            // cbSelector
+            // 
+            cbSelector.Dock = DockStyle.Bottom;
+            cbSelector.FormattingEnabled = true;
+            cbSelector.Location = new Point(0, 416);
+            cbSelector.Name = "cbSelector";
+            cbSelector.Size = new Size(231, 23);
+            cbSelector.TabIndex = 34;
+            // 
+            // richTextBox1
+            // 
+            richTextBox1.Dock = DockStyle.Bottom;
+            richTextBox1.Location = new Point(0, 439);
+            richTextBox1.Name = "richTextBox1";
+            richTextBox1.Size = new Size(231, 197);
+            richTextBox1.TabIndex = 33;
+            richTextBox1.Text = "";
             // 
             // nudW
             // 
@@ -126,7 +157,7 @@
             // oldRenderBW
             // 
             oldRenderBW.AutoSize = true;
-            oldRenderBW.Location = new Point(76, 347);
+            oldRenderBW.Location = new Point(5, 347);
             oldRenderBW.Name = "oldRenderBW";
             oldRenderBW.Size = new Size(41, 19);
             oldRenderBW.TabIndex = 17;
@@ -151,15 +182,15 @@
             nudZoom.Size = new Size(196, 23);
             nudZoom.TabIndex = 2;
             // 
-            // colorBox
+            // colorBox0
             // 
-            colorBox.AutoSize = true;
-            colorBox.Location = new Point(12, 347);
-            colorBox.Name = "colorBox";
-            colorBox.Size = new Size(52, 19);
-            colorBox.TabIndex = 15;
-            colorBox.Text = "Цвет";
-            colorBox.UseVisualStyleBackColor = true;
+            colorBox0.AutoSize = true;
+            colorBox0.Location = new Point(46, 347);
+            colorBox0.Name = "colorBox0";
+            colorBox0.Size = new Size(52, 19);
+            colorBox0.TabIndex = 15;
+            colorBox0.Text = "Цвет";
+            colorBox0.UseVisualStyleBackColor = true;
             // 
             // btnRender
             // 
@@ -253,32 +284,25 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
-            // richTextBox1
+            // colorBox1
             // 
-            richTextBox1.Dock = DockStyle.Bottom;
-            richTextBox1.Location = new Point(0, 439);
-            richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(231, 197);
-            richTextBox1.TabIndex = 33;
-            richTextBox1.Text = "";
+            colorBox1.AutoSize = true;
+            colorBox1.Location = new Point(102, 347);
+            colorBox1.Name = "colorBox1";
+            colorBox1.Size = new Size(52, 19);
+            colorBox1.TabIndex = 36;
+            colorBox1.Text = "Цвет";
+            colorBox1.UseVisualStyleBackColor = true;
             // 
-            // cbSelector
+            // colorBox2
             // 
-            cbSelector.Dock = DockStyle.Bottom;
-            cbSelector.FormattingEnabled = true;
-            cbSelector.Location = new Point(0, 416);
-            cbSelector.Name = "cbSelector";
-            cbSelector.Size = new Size(231, 23);
-            cbSelector.TabIndex = 34;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(29, 398);
-            label1.Name = "label1";
-            label1.Size = new Size(163, 15);
-            label1.TabIndex = 35;
-            label1.Text = "Выбери полином/формулу.";
+            colorBox2.AutoSize = true;
+            colorBox2.Location = new Point(155, 347);
+            colorBox2.Name = "colorBox2";
+            colorBox2.Size = new Size(52, 19);
+            colorBox2.TabIndex = 37;
+            colorBox2.Text = "Цвет";
+            colorBox2.UseVisualStyleBackColor = true;
             // 
             // NewtonPpools
             // 
@@ -314,7 +338,7 @@
         private ComboBox cbThreads;
         private ProgressBar progressBar;
         private Button btnRender;
-        private CheckBox colorBox;
+        private CheckBox colorBox0;
         private Label label5;
         private NumericUpDown nudZoom;
         private CheckBox oldRenderBW;
@@ -326,8 +350,8 @@
         private CheckBox checkBox5;
         private CheckBox checkBox4;
         private CheckBox checkBox3;
-        private CheckBox checkBox2;
-        private CheckBox checkBox1;
+        private CheckBox colorBox2;
+        private CheckBox colorBox1;
         private RichTextBox richTextBox1;
         private Label label1;
         private ComboBox cbSelector;
