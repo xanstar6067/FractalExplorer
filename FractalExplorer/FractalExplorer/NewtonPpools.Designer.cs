@@ -29,11 +29,14 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
-            colorBox2 = new CheckBox();
-            colorBox1 = new CheckBox();
-            label1 = new Label();
+            panel2 = new Panel();
             cbSelector = new ComboBox();
             richTextBox1 = new RichTextBox();
+            label1 = new Label();
+            colorBox4 = new CheckBox();
+            colorBox3 = new CheckBox();
+            colorBox2 = new CheckBox();
+            colorBox1 = new CheckBox();
             nudW = new NumericUpDown();
             nudH = new NumericUpDown();
             progressPNG = new ProgressBar();
@@ -49,20 +52,15 @@
             btnSave = new Button();
             label4 = new Label();
             label3 = new Label();
-            nudThreshold = new NumericUpDown();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
-            colorBox3 = new CheckBox();
-            colorBox4 = new CheckBox();
-            panel2 = new Panel();
             panel1.SuspendLayout();
+            panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudThreshold).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).BeginInit();
-            panel2.SuspendLayout();
             SuspendLayout();
             // 
             // panel1
@@ -87,13 +85,70 @@
             panel1.Controls.Add(btnSave);
             panel1.Controls.Add(label4);
             panel1.Controls.Add(label3);
-            panel1.Controls.Add(nudThreshold);
             panel1.Controls.Add(nudIterations);
             panel1.Dock = DockStyle.Left;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 0;
+            // 
+            // panel2
+            // 
+            panel2.Controls.Add(cbSelector);
+            panel2.Controls.Add(richTextBox1);
+            panel2.Controls.Add(label1);
+            panel2.Dock = DockStyle.Bottom;
+            panel2.Location = new Point(0, 411);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(231, 225);
+            panel2.TabIndex = 40;
+            // 
+            // cbSelector
+            // 
+            cbSelector.Dock = DockStyle.Bottom;
+            cbSelector.FormattingEnabled = true;
+            cbSelector.Location = new Point(0, 32);
+            cbSelector.Name = "cbSelector";
+            cbSelector.Size = new Size(231, 23);
+            cbSelector.TabIndex = 34;
+            // 
+            // richTextBox1
+            // 
+            richTextBox1.Dock = DockStyle.Bottom;
+            richTextBox1.Location = new Point(0, 55);
+            richTextBox1.Name = "richTextBox1";
+            richTextBox1.Size = new Size(231, 170);
+            richTextBox1.TabIndex = 33;
+            richTextBox1.Text = "";
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(36, 14);
+            label1.Name = "label1";
+            label1.Size = new Size(163, 15);
+            label1.TabIndex = 35;
+            label1.Text = "Выбери полином/формулу.";
+            // 
+            // colorBox4
+            // 
+            colorBox4.AutoSize = true;
+            colorBox4.Location = new Point(62, 372);
+            colorBox4.Name = "colorBox4";
+            colorBox4.Size = new Size(61, 19);
+            colorBox4.TabIndex = 39;
+            colorBox4.Text = "Цвет 5";
+            colorBox4.UseVisualStyleBackColor = true;
+            // 
+            // colorBox3
+            // 
+            colorBox3.AutoSize = true;
+            colorBox3.Location = new Point(5, 372);
+            colorBox3.Name = "colorBox3";
+            colorBox3.Size = new Size(61, 19);
+            colorBox3.TabIndex = 38;
+            colorBox3.Text = "Цвет 4";
+            colorBox3.UseVisualStyleBackColor = true;
             // 
             // colorBox2
             // 
@@ -114,33 +169,6 @@
             colorBox1.TabIndex = 36;
             colorBox1.Text = "Цвет 2";
             colorBox1.UseVisualStyleBackColor = true;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(36, 14);
-            label1.Name = "label1";
-            label1.Size = new Size(163, 15);
-            label1.TabIndex = 35;
-            label1.Text = "Выбери полином/формулу.";
-            // 
-            // cbSelector
-            // 
-            cbSelector.Dock = DockStyle.Bottom;
-            cbSelector.FormattingEnabled = true;
-            cbSelector.Location = new Point(0, 32);
-            cbSelector.Name = "cbSelector";
-            cbSelector.Size = new Size(231, 23);
-            cbSelector.TabIndex = 34;
-            // 
-            // richTextBox1
-            // 
-            richTextBox1.Dock = DockStyle.Bottom;
-            richTextBox1.Location = new Point(0, 55);
-            richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(231, 170);
-            richTextBox1.TabIndex = 33;
-            richTextBox1.Text = "";
             // 
             // nudW
             // 
@@ -278,17 +306,6 @@
             label3.TabIndex = 6;
             label3.Text = "Итерации";
             // 
-            // nudThreshold
-            // 
-            nudThreshold.DecimalPlaces = 3;
-            nudThreshold.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
-            nudThreshold.Location = new Point(12, 41);
-            nudThreshold.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
-            nudThreshold.Name = "nudThreshold";
-            nudThreshold.Size = new Size(120, 23);
-            nudThreshold.TabIndex = 3;
-            nudThreshold.Value = new decimal(new int[] { 1, 0, 0, 0 });
-            // 
             // nudIterations
             // 
             nudIterations.Location = new Point(12, 12);
@@ -308,37 +325,6 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
-            // colorBox3
-            // 
-            colorBox3.AutoSize = true;
-            colorBox3.Location = new Point(5, 372);
-            colorBox3.Name = "colorBox3";
-            colorBox3.Size = new Size(61, 19);
-            colorBox3.TabIndex = 38;
-            colorBox3.Text = "Цвет 4";
-            colorBox3.UseVisualStyleBackColor = true;
-            // 
-            // colorBox4
-            // 
-            colorBox4.AutoSize = true;
-            colorBox4.Location = new Point(62, 372);
-            colorBox4.Name = "colorBox4";
-            colorBox4.Size = new Size(61, 19);
-            colorBox4.TabIndex = 39;
-            colorBox4.Text = "Цвет 5";
-            colorBox4.UseVisualStyleBackColor = true;
-            // 
-            // panel2
-            // 
-            panel2.Controls.Add(cbSelector);
-            panel2.Controls.Add(richTextBox1);
-            panel2.Controls.Add(label1);
-            panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 411);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(231, 225);
-            panel2.TabIndex = 40;
-            // 
             // NewtonPpools
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -351,14 +337,13 @@
             Text = "Бассейны Ньютона";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
+            panel2.ResumeLayout(false);
+            panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudH).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudThreshold).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).EndInit();
-            panel2.ResumeLayout(false);
-            panel2.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -368,7 +353,6 @@
         private PictureBox fractal_bitmap;
         private Label label4;
         private Label label3;
-        private NumericUpDown nudThreshold;
         private NumericUpDown nudIterations;
         private Button btnSave;
         private Label label6;
