@@ -12,6 +12,12 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using MathNet.Symbolics;
+using Expr = MathNet.Symbolics.Expression;
+using System.Numerics;
+using MathNet.Numerics;
+using System.Collections.Generic;
+
 
 namespace FractalExplorer
 {
@@ -939,146 +945,266 @@ namespace FractalExplorer
         }
 
 
+        // Основная функция парсинга полинома - работает без MathNet.Symbolics
         private Polynomial ParsePolynomial(string polyStr)
         {
-            polyStr = polyStr.Replace(" ", "");
-
-            // Обработка дробей
-            polyStr = EvaluateFractions(polyStr);
-
-            // Обработка всех скобочных умножений (в том числе с несколькими скобками)
-            while (Regex.IsMatch(polyStr, @"\([^()]+\)\*\([^()]*z\^?\d*\)?"))
+            try
             {
-                polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\(([^()]*z\^?\d*)\)", m =>
+                Dictionary<int, Complex> coeffs = new();
+
+                // Очищаем строку
+                polyStr = polyStr.Replace(" ", "").Replace("i", "I");
+
+                // Если строка пустая, возвращаем нулевой полином
+                if (string.IsNullOrWhiteSpace(polyStr))
+                    return new Polynomial(new List<Complex> { Complex.Zero });
+
+                // Добавляем знак + в начало, если строка не начинается с + или -
+                if (!polyStr.StartsWith("+") && !polyStr.StartsWith("-"))
+                    polyStr = "+" + polyStr;
+
+                // Разбиваем на термы по знакам + и -
+                // Ищем все выражения вида +/- что-то до следующего +/-
+                var termMatches = Regex.Matches(polyStr, @"[+-][^+-]+");
+
+                foreach (Match match in termMatches)
                 {
-                    return "(" + m.Groups[1].Value + ")" + m.Groups[2].Value;
-                });
-            }
+                    string term = match.Value.Trim();
+                    if (string.IsNullOrEmpty(term)) continue;
 
-            // Упрощённая форма (a+bi)*z^n или *z
-            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", m =>
-            {
-                return "(" + m.Groups[1].Value + ")z" + (m.Groups[2].Success ? m.Groups[2].Value : "");
-            });
+                    int power = 0;
+                    Complex coeff = Complex.Zero;
 
-            // Также для случаев: (a+bi)*z
-            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z", m => "(" + m.Groups[1].Value + ")z");
-
-            // Очистка от лишних пробелов в комплексных скобках
-            polyStr = Regex.Replace(polyStr, @"\(([0-9\.+\-]+[+-][0-9\.+\-]+)i\)", m => m.Value.Replace(" ", ""));
-
-            var culture = CultureInfo.InvariantCulture;
-            List<string> terms = new List<string>();
-            StringBuilder currentTerm = new StringBuilder();
-            int parenthesesCount = 0;
-            bool isFirstTerm = true;
-
-            for (int i = 0; i < polyStr.Length; i++)
-            {
-                char c = polyStr[i];
-
-                if (c == '(') parenthesesCount++;
-                else if (c == ')') parenthesesCount--;
-
-                if ((c == '+' || c == '-') && parenthesesCount == 0 && !isFirstTerm)
-                {
-                    terms.Add(currentTerm.ToString());
-                    currentTerm.Clear();
-                    currentTerm.Append(c);
-                }
-                else
-                {
-                    currentTerm.Append(c);
-                }
-
-                isFirstTerm = false;
-            }
-
-            if (currentTerm.Length > 0)
-                terms.Add(currentTerm.ToString());
-
-            Dictionary<int, Complex> coeffsDict = new Dictionary<int, Complex>();
-
-            foreach (string term in terms)
-            {
-                if (string.IsNullOrEmpty(term)) continue;
-
-                char sign = term[0] == '-' ? '-' : '+';
-                string termWithoutSign = (term[0] == '+' || term[0] == '-') ? term.Substring(1) : term;
-
-                Complex coeff;
-                int power = 0;
-
-                Match complexWithZ = Regex.Match(termWithoutSign, @"^\((-?\d*\.?\d+)([+-]\d*\.?\d*)i\)(z(?:\^(\d+))?)?$");
-                Match realWithZ = Regex.Match(termWithoutSign, @"^(-?\d*\.?\d+)(z(?:\^(\d+))?)?$");
-                Match justZ = Regex.Match(termWithoutSign, @"^(z(?:\^(\d+))?)$");
-                Match complexConst = Regex.Match(termWithoutSign, @"^\((-?\d*\.?\d+)([+-]\d*\.?\d*)i\)$");
-
-                if (complexWithZ.Success)
-                {
-                    double realPart = double.Parse(complexWithZ.Groups[1].Value, culture);
-                    string imagStr = complexWithZ.Groups[2].Value;
-                    double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
-                    coeff = new Complex(realPart, imagPart);
-
-                    string zPart = complexWithZ.Groups[3].Value;
-                    string powerStr = complexWithZ.Groups[4].Value;
-                    if (!string.IsNullOrEmpty(zPart))
-                        power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
-                }
-                else if (realWithZ.Success)
-                {
-                    string coeffStr = realWithZ.Groups[1].Value;
-                    double realPart = string.IsNullOrEmpty(coeffStr) ? 1.0 : double.Parse(coeffStr, culture);
-                    coeff = new Complex(realPart, 0.0);
-
-                    string zPart = realWithZ.Groups[2].Value;
-                    string powerStr = realWithZ.Groups[3].Value;
-                    if (!string.IsNullOrEmpty(zPart))
-                        power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
-                }
-                else if (justZ.Success)
-                {
-                    coeff = new Complex(1.0, 0.0);
-                    string powerStr = justZ.Groups[2].Value;
-                    power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr);
-                }
-                else if (complexConst.Success)
-                {
-                    double realPart = double.Parse(complexConst.Groups[1].Value, culture);
-                    string imagStr = complexConst.Groups[2].Value;
-                    double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
-                    coeff = new Complex(realPart, imagPart);
-                    power = 0;
-                }
-                else
-                {
-                    if (double.TryParse(termWithoutSign, NumberStyles.Float, culture, out double realValue))
+                    // Определяем степень z
+                    var powerMatch = Regex.Match(term, @"z\^(\d+)");
+                    if (powerMatch.Success)
                     {
-                        coeff = new Complex(realValue, 0.0);
-                        power = 0;
+                        power = int.Parse(powerMatch.Groups[1].Value);
                     }
+                    else if (term.Contains("z"))
+                    {
+                        power = 1;
+                    }
+                    // Если нет z, то это константа (степень 0)
+
+                    // Получаем коэффициент (убираем z^n или z)
+                    string coeffStr = Regex.Replace(term, @"z(\^\d+)?", "").Trim();
+
+                    // Парсим коэффициент
+                    coeff = ParseComplexCoefficient(coeffStr);
+
+                    // Добавляем к словарю коэффициентов
+                    if (coeffs.ContainsKey(power))
+                        coeffs[power] += coeff;
                     else
-                    {
-                        throw new ArgumentException($"Неверный формат слагаемого: {term}");
-                    }
+                        coeffs[power] = coeff;
                 }
 
-                if (sign == '-') coeff = Complex.Negate(coeff);
+                // Если не найдено ни одного терма, попробуем распарсить как простое число
+                if (coeffs.Count == 0)
+                {
+                    var coeff = ParseComplexCoefficient(polyStr);
+                    coeffs[0] = coeff;
+                }
 
-                coeffsDict[power] = coeffsDict.ContainsKey(power) ? coeffsDict[power] + coeff : coeff;
+                // Создаем массив коэффициентов
+                int maxPower = coeffs.Keys.Any() ? coeffs.Keys.Max() : 0;
+                List<Complex> coefficients = new();
+
+                for (int i = 0; i <= maxPower; i++)
+                {
+                    coefficients.Add(coeffs.ContainsKey(i) ? coeffs[i] : Complex.Zero);
+                }
+
+                return new Polynomial(coefficients);
             }
-
-            int maxPower = coeffsDict.Count > 0 ? coeffsDict.Keys.Max() : 0;
-            List<Complex> coefficients = new List<Complex>();
-
-            for (int i = 0; i <= maxPower; i++)
+            catch (Exception ex)
             {
-                coefficients.Add(coeffsDict.ContainsKey(i) ? coeffsDict[i] : Complex.Zero);
+                // В случае ошибки возвращаем полином с одним нулевым коэффициентом
+                return new Polynomial(new List<Complex> { Complex.Zero });
+            }
+        }
+
+        // Вспомогательный метод для парсинга комплексных коэффициентов
+        private Complex ParseComplexCoefficient(string coeffStr)
+        {
+            try
+            {
+                // Убираем лишние символы
+                coeffStr = coeffStr.Trim();
+
+                // Пустая строка или только знак +
+                if (string.IsNullOrEmpty(coeffStr) || coeffStr == "+")
+                    return Complex.One;
+
+                // Только знак -
+                if (coeffStr == "-")
+                    return -Complex.One;
+
+                // Только мнимая единица
+                if (coeffStr == "+I" || coeffStr == "I")
+                    return Complex.ImaginaryOne;
+                if (coeffStr == "-I")
+                    return -Complex.ImaginaryOne;
+
+                // Комплексное число вида a*I
+                var imagOnlyMatch = Regex.Match(coeffStr, @"^([+-]?\d*\.?\d*)\*?I$");
+                if (imagOnlyMatch.Success)
+                {
+                    string numStr = imagOnlyMatch.Groups[1].Value;
+                    if (string.IsNullOrEmpty(numStr) || numStr == "+")
+                        return Complex.ImaginaryOne;
+                    if (numStr == "-")
+                        return -Complex.ImaginaryOne;
+                    if (double.TryParse(numStr, out double imagValue))
+                        return new Complex(0, imagValue);
+                }
+
+                // Комплексное число вида a+bI или a-bI
+                var complexMatch = Regex.Match(coeffStr, @"^([+-]?\d*\.?\d*)([+-]\d*\.?\d*)\*?I$");
+                if (complexMatch.Success)
+                {
+                    string realStr = complexMatch.Groups[1].Value;
+                    string imagStr = complexMatch.Groups[2].Value;
+
+                    double realPart = 0;
+                    double imagPart = 0;
+
+                    if (!string.IsNullOrEmpty(realStr))
+                        double.TryParse(realStr, out realPart);
+
+                    if (!string.IsNullOrEmpty(imagStr))
+                    {
+                        if (imagStr == "+")
+                            imagPart = 1;
+                        else if (imagStr == "-")
+                            imagPart = -1;
+                        else
+                            double.TryParse(imagStr, out imagPart);
+                    }
+
+                    return new Complex(realPart, imagPart);
+                }
+
+                // Проверяем числа с плавающей точкой
+                var floatMatch = Regex.Match(coeffStr, @"^[+-]?\d*\.?\d+$");
+                if (floatMatch.Success)
+                {
+                    if (double.TryParse(coeffStr, out double realValue))
+                        return new Complex(realValue, 0);
+                }
+
+                // Проверяем целые числа
+                var intMatch = Regex.Match(coeffStr, @"^[+-]?\d+$");
+                if (intMatch.Success)
+                {
+                    if (double.TryParse(coeffStr, out double intValue))
+                        return new Complex(intValue, 0);
+                }
+
+                // Если ничего не подошло, возвращаем 1
+                return Complex.One;
+            }
+            catch
+            {
+                return Complex.One;
+            }
+        }
+
+        // Альтернативный метод для более сложных случаев парсинга
+        private Polynomial ParsePolynomialAdvanced(string polyStr)
+        {
+            try
+            {
+                Dictionary<int, Complex> coeffs = new();
+
+                // Нормализуем строку
+                polyStr = NormalizePolynomialString(polyStr);
+
+                // Разбиваем на отдельные термы
+                var terms = SplitPolynomialTerms(polyStr);
+
+                foreach (var term in terms)
+                {
+                    var (power, coeff) = ParseSingleTerm(term);
+
+                    if (coeffs.ContainsKey(power))
+                        coeffs[power] += coeff;
+                    else
+                        coeffs[power] = coeff;
+                }
+
+                // Создаем массив коэффициентов
+                int maxPower = coeffs.Keys.Any() ? coeffs.Keys.Max() : 0;
+                List<Complex> coefficients = new();
+
+                for (int i = 0; i <= maxPower; i++)
+                {
+                    coefficients.Add(coeffs.ContainsKey(i) ? coeffs[i] : Complex.Zero);
+                }
+
+                return new Polynomial(coefficients);
+            }
+            catch
+            {
+                return new Polynomial(new List<Complex> { Complex.Zero });
+            }
+        }
+
+        private string NormalizePolynomialString(string polyStr)
+        {
+            // Убираем пробелы и нормализуем
+            polyStr = polyStr.Replace(" ", "").Replace("i", "I");
+
+            // Заменяем -- на +, +- на -, -+ на -
+            polyStr = polyStr.Replace("--", "+").Replace("+-", "-").Replace("-+", "-");
+
+            // Добавляем + в начало если нужно
+            if (!polyStr.StartsWith("+") && !polyStr.StartsWith("-"))
+                polyStr = "+" + polyStr;
+
+            return polyStr;
+        }
+
+        private List<string> SplitPolynomialTerms(string polyStr)
+        {
+            var terms = new List<string>();
+            var matches = Regex.Matches(polyStr, @"[+-][^+-]+");
+
+            foreach (Match match in matches)
+            {
+                if (!string.IsNullOrWhiteSpace(match.Value))
+                    terms.Add(match.Value.Trim());
             }
 
-            return new Polynomial(coefficients);
+            return terms;
         }
+
+        private (int power, Complex coeff) ParseSingleTerm(string term)
+        {
+            int power = 0;
+            Complex coeff = Complex.One;
+
+            // Определяем степень
+            var powerMatch = Regex.Match(term, @"z\^(\d+)");
+            if (powerMatch.Success)
+            {
+                power = int.Parse(powerMatch.Groups[1].Value);
+            }
+            else if (term.Contains("z"))
+            {
+                power = 1;
+            }
+
+            // Убираем переменную z для получения коэффициента
+            string coeffStr = Regex.Replace(term, @"z(\^\d+)?", "");
+
+            // Парсим коэффициент
+            coeff = ParseComplexCoefficient(coeffStr);
+
+            return (power, coeff);
+        }
+
 
         private List<Complex> FindRoots(Polynomial p, int maxIter = 100, double epsilon = 1e-6)
         {
