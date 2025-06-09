@@ -56,7 +56,7 @@ namespace FractalExplorer
         private void btnLaunchNewton_Click(object sender, EventArgs e)
         {
             // FractalNewtonPool
-            NewtonPpools NewtonPpoolsForm = new NewtonPpools();
+            NewtonPools NewtonPpoolsForm = new NewtonPools();
 
             NewtonPpoolsForm.Show();
         }

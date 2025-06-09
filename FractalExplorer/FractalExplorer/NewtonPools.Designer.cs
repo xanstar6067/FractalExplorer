@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer
 {
-    partial class NewtonPpools
+    partial class NewtonPools
     {
         /// <summary>
         ///  Required designer variable.

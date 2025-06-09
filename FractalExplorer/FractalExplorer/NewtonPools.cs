@@ -15,7 +15,7 @@ using System.Globalization;
 
 namespace FractalExplorer
 {
-    public partial class NewtonPpools : Form
+    public partial class NewtonPools : Form
     {
         private System.Windows.Forms.Timer renderTimer;
         private int maxIterations;
@@ -56,7 +56,7 @@ namespace FractalExplorer
     "(2+3i)*(z^2) - (1-i)*z + 4"
 };
 
-        public NewtonPpools()
+        public NewtonPools()
         {
             InitializeComponent();
             InitializeForm();
