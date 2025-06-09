@@ -677,58 +677,67 @@ namespace FractalExplorer
                 char sign = term[0] == '-' ? '-' : '+';
                 string termWithoutSign = term[0] == '+' || term[0] == '-' ? term.Substring(1) : term;
 
-                // Обработка членов вида (a+bi)z^n, az^n, z^n, (a+bi), z, a
-                Match match = Regex.Match(termWithoutSign, @"^(\((\d*\.?\d+)([+-]\d*\.?\d*)i\))?z(\^(\d+))?$");
+                // Обработка членов вида (a+bi)z^n, az^n, z^n, (a+bi), a
+                Match match = Regex.Match(termWithoutSign, @"^(?:\((\d*\.?\d*)([+-]\d*\.?\d*)i\)|(\d*\.?\d*)|)(z(?:\^(\d+))?)?$");
                 if (match.Success)
                 {
-                    string complexStr = match.Groups[1].Value; // (a+bi) или ""
-                    string realStr = match.Groups[2].Value; // a
-                    string imagStr = match.Groups[3].Value; // +bi or -bi
+                    string realStr = match.Groups[1].Value; // a в (a+bi)
+                    string imagStr = match.Groups[2].Value; // +bi или -bi
+                    string coeffStr = match.Groups[3].Value; // a в az^n
+                    string zStr = match.Groups[4].Value; // z или z^n
                     string powerStr = match.Groups[5].Value; // n
 
                     Complex coeff;
-                    if (!string.IsNullOrEmpty(complexStr))
+                    if (!string.IsNullOrEmpty(realStr) && !string.IsNullOrEmpty(imagStr))
                     {
-                        double realPart = double.Parse(realStr);
-                        double imagPart = double.Parse(imagStr); // Учитывает знак
-                        coeff = new Complex(realPart, imagPart); // Исправлено: убрана лишняя )
+                        double realPart = string.IsNullOrEmpty(realStr) ? 0.0 : double.Parse(realStr);
+                        double imagPart = string.IsNullOrEmpty(imagStr) ? 0.0 : double.Parse(imagStr);
+                        coeff = new Complex(realPart, imagPart);
+                    }
+                    else if (!string.IsNullOrEmpty(coeffStr))
+                    {
+                        double realPart = string.IsNullOrEmpty(coeffStr) ? 1.0 : double.Parse(coeffStr);
+                        coeff = new Complex(realPart, 0.0);
                     }
                     else
                     {
-                        coeff = new Complex(1.0, 0.0); // z^n -> 1z^n
+                        coeff = new Complex(1.0, 0.0); // z^n или z
                     }
 
-                    int power = string.IsNullOrEmpty(powerStr) ? (complexStr.Length > 0 ? 0 : 1) : int.Parse(powerStr);
+                    int power = string.IsNullOrEmpty(zStr) ? 0 : (string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr));
                     if (sign == '-') coeff = Complex.Negate(coeff);
 
                     coeffsDict[power] = coeffsDict.ContainsKey(power) ? coeffsDict[power] + coeff : coeff;
                 }
                 else
                 {
-                    // Обработка вещественных чисел
-                    match = Regex.Match(termWithoutSign, @"^\d*\.?\d+$");
+                    // Обработка констант вида a или (a+bi)
+                    match = Regex.Match(termWithoutSign, @"^(?:(\d*\.?\d*)|(?:\((\d*\.?\d*)([+-]\d*\.?\d*)i\)))$");
                     if (match.Success)
                     {
-                        double coeff = double.Parse(termWithoutSign);
-                        if (sign == '-') coeff = -coeff;
-                        coeffsDict[0] = coeffsDict.ContainsKey(0) ? coeffsDict[0] + new Complex(coeff, 0.0) : new Complex(coeff, 0.0);
-                    }
-                    else
-                    {
-                        // Обработка комплексных чисел вида (a+bi)
-                        match = Regex.Match(termWithoutSign, @"^\((\d*\.?\d+)([+-]\d*\.?\d+)i\)$");
-                        if (match.Success)
+                        string realStr = match.Groups[1].Value; // a
+                        string complexRealStr = match.Groups[2].Value; // a в (a+bi)
+                        string complexImagStr = match.Groups[3].Value; // +bi или -bi
+
+                        Complex coeff;
+                        if (!string.IsNullOrEmpty(complexRealStr) && !string.IsNullOrEmpty(complexImagStr))
                         {
-                            double realPart = double.Parse(match.Groups[1].Value);
-                            double imagPart = double.Parse(match.Groups[2].Value);
-                            Complex coeff = new Complex(realPart, imagPart);
-                            if (sign == '-') coeff = Complex.Negate(coeff);
-                            coeffsDict[0] = coeffsDict.ContainsKey(0) ? coeffsDict[0] + coeff : coeff;
+                            double realPart = double.Parse(complexRealStr);
+                            double imagPart = double.Parse(complexImagStr);
+                            coeff = new Complex(realPart, imagPart);
                         }
                         else
                         {
-                            throw new ArgumentException($"Неверный формат слагаемого: {term}");
+                            double realPart = string.IsNullOrEmpty(realStr) ? 0.0 : double.Parse(realStr);
+                            coeff = new Complex(realPart, 0.0);
                         }
+
+                        if (sign == '-') coeff = Complex.Negate(coeff);
+                        coeffsDict[0] = coeffsDict.ContainsKey(0) ? coeffsDict[0] + coeff : coeff;
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Неверный формат слагаемого: {term}");
                     }
                 }
             }
