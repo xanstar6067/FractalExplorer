@@ -48,6 +48,8 @@
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
             richTextBox1 = new RichTextBox();
+            cbSelector = new ComboBox();
+            label1 = new Label();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH).BeginInit();
@@ -59,6 +61,8 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(label1);
+            panel1.Controls.Add(cbSelector);
             panel1.Controls.Add(richTextBox1);
             panel1.Controls.Add(nudW);
             panel1.Controls.Add(nudH);
@@ -258,6 +262,24 @@
             richTextBox1.TabIndex = 33;
             richTextBox1.Text = "";
             // 
+            // cbSelector
+            // 
+            cbSelector.Dock = DockStyle.Bottom;
+            cbSelector.FormattingEnabled = true;
+            cbSelector.Location = new Point(0, 416);
+            cbSelector.Name = "cbSelector";
+            cbSelector.Size = new Size(231, 23);
+            cbSelector.TabIndex = 34;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(29, 398);
+            label1.Name = "label1";
+            label1.Size = new Size(163, 15);
+            label1.TabIndex = 35;
+            label1.Text = "Выбери полином/формулу.";
+            // 
             // NewtonPpools
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -307,5 +329,7 @@
         private CheckBox checkBox2;
         private CheckBox checkBox1;
         private RichTextBox richTextBox1;
+        private Label label1;
+        private ComboBox cbSelector;
     }
 }
