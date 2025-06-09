@@ -142,15 +142,25 @@ namespace FractalExplorer
             double currentRenderCenterX = centerX;
             double currentRenderCenterY = centerY;
             double currentRenderZoom = zoom;
+            string polyStr = string.Empty;
+
+            if (richTextBox1.InvokeRequired)
+            {
+                polyStr = (string)richTextBox1.Invoke(new Func<string>(() => richTextBox1.Text));
+            }
+            else
+            {
+                polyStr = richTextBox1.Text;
+            }
 
             try
             {
-                await Task.Run(() => RenderFractal(token, currentRenderCenterX, currentRenderCenterY, currentRenderZoom), token);
+                await Task.Run(() => RenderFractal(token, currentRenderCenterX, currentRenderCenterY, currentRenderZoom, polyStr), token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                MessageBox.Show($"Render Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -224,11 +234,10 @@ namespace FractalExplorer
             }
         }
 
-        private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom)
+        private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom, string polyStr)
         {
             if (token.IsCancellationRequested || isHighResRendering || fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
 
-            string polyStr = richTextBox1.Text;
             Polynomial p;
             try
             {
@@ -236,14 +245,26 @@ namespace FractalExplorer
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка парсинга полинома: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
+                {
+                    fractal_bitmap.Invoke((Action)(() =>
+                    {
+                        MessageBox.Show($"Ошибка парсинга полинома: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                }
                 return;
             }
 
             List<Complex> roots = FindRoots(p);
             if (roots.Count == 0)
             {
-                MessageBox.Show("Не удалось найти корни полинома.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
+                {
+                    fractal_bitmap.Invoke((Action)(() =>
+                    {
+                        MessageBox.Show("Не удалось найти корни полинома.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                }
                 return;
             }
 
@@ -370,7 +391,16 @@ namespace FractalExplorer
         {
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
 
-            string polyStr = richTextBox1.Text;
+            string polyStr = string.Empty;
+            if (richTextBox1.InvokeRequired)
+            {
+                polyStr = (string)richTextBox1.Invoke(new Func<string>(() => richTextBox1.Text));
+            }
+            else
+            {
+                polyStr = richTextBox1.Text;
+            }
+
             Polynomial p = ParsePolynomial(polyStr);
             List<Complex> roots = FindRoots(p);
             Color[] rootColors = new Color[roots.Count];
