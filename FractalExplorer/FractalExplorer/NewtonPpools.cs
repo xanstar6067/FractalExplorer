@@ -644,8 +644,10 @@ namespace FractalExplorer
             foreach (string term in terms)
             {
                 if (string.IsNullOrEmpty(term)) continue;
+
+                // Определяем знак и убираем его из терма
                 char sign = term[0] == '-' ? '-' : '+';
-                string termWithoutSign = sign == '-' ? term.Substring(1) : term;
+                string termWithoutSign = term[0] == '+' || term[0] == '-' ? term.Substring(1) : term;
 
                 // Обработка членов вида az^b, z^b или z
                 Match match = Regex.Match(termWithoutSign, @"^((\d*\.?\d+)?z)(\^(\d+))?$");
@@ -662,7 +664,7 @@ namespace FractalExplorer
                 else
                 {
                     // Обработка констант
-                    match = Regex.Match(termWithoutSign, @"^\d*\.?\d+$");
+                    match = Regex.Match(termWithoutSign, @"^\d+$");
                     if (match.Success)
                     {
                         double coeff = double.Parse(termWithoutSign);
