@@ -193,7 +193,7 @@
             // 
             // btnLaunchNewton
             // 
-            btnLaunchNewton.Location = new Point(6, 14);
+            btnLaunchNewton.Location = new Point(8, 15);
             btnLaunchNewton.Name = "btnLaunchNewton";
             btnLaunchNewton.Size = new Size(131, 44);
             btnLaunchNewton.TabIndex = 5;
