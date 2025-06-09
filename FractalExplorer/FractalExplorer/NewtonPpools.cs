@@ -11,6 +11,7 @@ using System.Numerics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace FractalExplorer
 {
@@ -68,7 +69,11 @@ namespace FractalExplorer
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
             cbSelector.SelectedIndexChanged += cbSelector_SelectedIndexChanged;
-            oldRenderBW.CheckedChanged += ParamControl_Changed; // Добавляем обработчик для чекбокса
+            oldRenderBW.CheckedChanged += ParamControl_Changed;
+            // Добавляем обработчики для новых чекбоксов
+            colorBox0.CheckedChanged += ColorBox_Changed;
+            colorBox1.CheckedChanged += ColorBox_Changed;
+            colorBox2.CheckedChanged += ColorBox_Changed;
 
             fractal_bitmap.MouseWheel += Canvas_MouseWheel;
             fractal_bitmap.MouseDown += Canvas_MouseDown;
@@ -117,6 +122,29 @@ namespace FractalExplorer
                 {
                     nudZoom.Value = (decimal)zoom;
                 }
+            }
+            ScheduleRender();
+        }
+
+        // Обработчик для чекбоксов цветовых палитр
+        private void ColorBox_Changed(object sender, EventArgs e)
+        {
+            if (isHighResRendering) return;
+            // Обеспечиваем выбор только одной палитры
+            if (sender == colorBox0 && colorBox0.Checked)
+            {
+                colorBox1.Checked = false;
+                colorBox2.Checked = false;
+            }
+            else if (sender == colorBox1 && colorBox1.Checked)
+            {
+                colorBox0.Checked = false;
+                colorBox2.Checked = false;
+            }
+            else if (sender == colorBox2 && colorBox2.Checked)
+            {
+                colorBox0.Checked = false;
+                colorBox1.Checked = false;
             }
             ScheduleRender();
         }
@@ -269,21 +297,62 @@ namespace FractalExplorer
                 return;
             }
 
+            // Выбор цветовой палитры
             Color[] rootColors = new Color[roots.Count];
-            bool useBlackWhite = oldRenderBW.Checked; // Проверяем чекбокс
-            if (!useBlackWhite)
+            bool useBlackWhite = oldRenderBW.Checked;
+            bool useGradient = colorBox0.Checked;
+            bool usePastel = colorBox1.Checked;
+            bool useContrast = colorBox2.Checked;
+
+            if (useGradient)
             {
+                // colorBox0: Градиент по итерациям (оставляем rootColors пустым, цвет вычисляется позже)
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = 255 * (i + 1) / (roots.Count + 1);
-                    rootColors[i] = Color.FromArgb(shade, shade, shade);
+                    rootColors[i] = Color.White; // Заглушка, цвет зависит от iter
+                }
+            }
+            else if (usePastel)
+            {
+                // colorBox1: Пастельная палитра
+                Color[] pastelColors = {
+                    Color.FromArgb(255, 182, 193), // Светло-розовый
+                    Color.FromArgb(173, 216, 230), // Светло-голубой
+                    Color.FromArgb(189, 252, 201), // Мятный
+                };
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
+                }
+            }
+            else if (useContrast)
+            {
+                // colorBox2: Контрастная палитра
+                Color[] contrastColors = {
+                    Color.FromArgb(255, 0, 0),     // Красный
+                    Color.FromArgb(255, 255, 0),   // Желтый
+                    Color.FromArgb(0, 0, 255),     // Синий
+                };
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                }
+            }
+            else if (useBlackWhite)
+            {
+                // Черно-белый режим
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = Color.White;
                 }
             }
             else
             {
+                // Серая палитра по умолчанию
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White; // Все корни — белые в черно-белом режиме
+                    int shade = 255 * (i + 1) / (roots.Count + 1);
+                    rootColors[i] = Color.FromArgb(shade, shade, shade);
                 }
             }
 
@@ -343,7 +412,26 @@ namespace FractalExplorer
                             }
                         }
 
-                        Color pixelColor = (rootIndex >= 0 && minDist < epsilon) ? rootColors[rootIndex] : Color.Black;
+                        Color pixelColor;
+                        if (rootIndex >= 0 && minDist < epsilon)
+                        {
+                            if (useGradient)
+                            {
+                                // Градиент по итерациям (colorBox0)
+                                double t = (double)iter / maxIterations;
+                                int hue = (int)(240 * t); // От красного (0) к синему (240)
+                                pixelColor = HsvToRgb(hue, 0.8, 1.0);
+                            }
+                            else
+                            {
+                                pixelColor = rootColors[rootIndex];
+                            }
+                        }
+                        else
+                        {
+                            pixelColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
+                        }
+
                         int index = rowOffset + x * 3;
                         buffer[index] = pixelColor.B;
                         buffer[index + 1] = pixelColor.G;
@@ -397,6 +485,32 @@ namespace FractalExplorer
             }
         }
 
+        // Вспомогательный метод для преобразования HSV в RGB
+        private Color HsvToRgb(double hue, double saturation, double value)
+        {
+            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
+            double f = hue / 60 - Math.Floor(hue / 60);
+
+            value = value * 255;
+            int v = Convert.ToInt32(value);
+            int p = Convert.ToInt32(value * (1 - saturation));
+            int q = Convert.ToInt32(value * (1 - f * saturation));
+            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
+
+            if (hi == 0)
+                return Color.FromArgb(v, t, p);
+            else if (hi == 1)
+                return Color.FromArgb(q, v, p);
+            else if (hi == 2)
+                return Color.FromArgb(p, v, t);
+            else if (hi == 3)
+                return Color.FromArgb(p, q, v);
+            else if (hi == 4)
+                return Color.FromArgb(t, p, v);
+            else
+                return Color.FromArgb(v, p, q);
+        }
+
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY,
                                             double currentZoom, int currentMaxIterations, double currentThreshold,
                                             int numThreads, Action<int> reportProgressCallback)
@@ -405,36 +519,78 @@ namespace FractalExplorer
 
             string polyStr = string.Empty;
             bool useBlackWhite = false;
+            bool useGradient = false;
+            bool usePastel = false;
+            bool useContrast = false;
+
             if (this.InvokeRequired)
             {
                 this.Invoke((Action)(() =>
                 {
                     polyStr = richTextBox1.Text;
                     useBlackWhite = oldRenderBW.Checked;
+                    useGradient = colorBox0.Checked;
+                    usePastel = colorBox1.Checked;
+                    useContrast = colorBox2.Checked;
                 }));
             }
             else
             {
                 polyStr = richTextBox1.Text;
                 useBlackWhite = oldRenderBW.Checked;
+                useGradient = colorBox0.Checked;
+                usePastel = colorBox1.Checked;
+                useContrast = colorBox2.Checked;
             }
 
             Polynomial p = ParsePolynomial(polyStr);
             List<Complex> roots = FindRoots(p);
             Color[] rootColors = new Color[roots.Count];
-            if (!useBlackWhite)
+
+            if (useGradient)
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = 255 * (i + 1) / (roots.Count + 1);
-                    rootColors[i] = Color.FromArgb(shade, shade, shade);
+                    rootColors[i] = Color.White; // Заглушка
+                }
+            }
+            else if (usePastel)
+            {
+                Color[] pastelColors = {
+                    Color.FromArgb(255, 182, 193),
+                    Color.FromArgb(173, 216, 230),
+                    Color.FromArgb(189, 252, 201),
+                };
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
+                }
+            }
+            else if (useContrast)
+            {
+                Color[] contrastColors = {
+                    Color.FromArgb(255, 0, 0),
+                    Color.FromArgb(255, 255, 0),
+                    Color.FromArgb(0, 0, 255),
+                };
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                }
+            }
+            else if (useBlackWhite)
+            {
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = Color.White;
                 }
             }
             else
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White;
+                    int shade = 255 * (i + 1) / (roots.Count + 1);
+                    rootColors[i] = Color.FromArgb(shade, shade, shade);
                 }
             }
 
@@ -484,7 +640,25 @@ namespace FractalExplorer
                         }
                     }
 
-                    Color pixelColor = (rootIndex >= 0 && minDist < epsilon) ? rootColors[rootIndex] : Color.Black;
+                    Color pixelColor;
+                    if (rootIndex >= 0 && minDist < epsilon)
+                    {
+                        if (useGradient)
+                        {
+                            double t = (double)iter / currentMaxIterations;
+                            int hue = (int)(240 * t);
+                            pixelColor = HsvToRgb(hue, 0.8, 1.0);
+                        }
+                        else
+                        {
+                            pixelColor = rootColors[rootIndex];
+                        }
+                    }
+                    else
+                    {
+                        pixelColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
+                    }
+
                     int index = rowOffset + x * 3;
                     buffer[index] = pixelColor.B;
                     buffer[index + 1] = pixelColor.G;
@@ -657,7 +831,10 @@ namespace FractalExplorer
                 nudH.Enabled = enabled;
                 cbSelector.Enabled = enabled;
                 richTextBox1.Enabled = enabled;
-                oldRenderBW.Enabled = enabled; // Добавляем чекбокс
+                oldRenderBW.Enabled = enabled;
+                colorBox0.Enabled = enabled;
+                colorBox1.Enabled = enabled;
+                colorBox2.Enabled = enabled;
             };
 
             if (this.InvokeRequired) this.Invoke(action);
@@ -814,8 +991,8 @@ namespace FractalExplorer
         {
             List<Complex> roots = new List<Complex>();
             Polynomial pDeriv = p.Derivative();
-            double[] reValues = { -2.0, -1.0, 0.0, 1.0, 2.0 }; // Расширяем сетку для комплексных
-            double[] imValues = { -2.0, -1.0, 0.0, 1.0, 2.0 };
+            double[] reValues = { -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0 };
+            double[] imValues = { -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0 };
 
             foreach (double re in reValues)
             {
