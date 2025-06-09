@@ -33,7 +33,7 @@ namespace FractalExplorer
         private double renderedCenterX;
         private double renderedCenterY;
         private double renderedZoom;
-        private string[] presetPolynomials = { "z^3-1", "z^4-1", "z^3-2z+2" };
+        private string[] presetPolynomials = { "z^3-1", "z^4-1", "z^3-2z+2", "(1+2i)z^2+z-1", "(0.5-0.3i)z^3+2" };
 
         public NewtonPpools()
         {
@@ -68,6 +68,7 @@ namespace FractalExplorer
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
             cbSelector.SelectedIndexChanged += cbSelector_SelectedIndexChanged;
+            oldRenderBW.CheckedChanged += ParamControl_Changed; // Добавляем обработчик для чекбокса
 
             fractal_bitmap.MouseWheel += Canvas_MouseWheel;
             fractal_bitmap.MouseDown += Canvas_MouseDown;
@@ -269,10 +270,21 @@ namespace FractalExplorer
             }
 
             Color[] rootColors = new Color[roots.Count];
-            for (int i = 0; i < roots.Count; i++)
+            bool useBlackWhite = oldRenderBW.Checked; // Проверяем чекбокс
+            if (!useBlackWhite)
             {
-                int shade = 255 * (i + 1) / (roots.Count + 1);
-                rootColors[i] = Color.FromArgb(shade, shade, shade);
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    int shade = 255 * (i + 1) / (roots.Count + 1);
+                    rootColors[i] = Color.FromArgb(shade, shade, shade);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = Color.White; // Все корни — белые в черно-белом режиме
+                }
             }
 
             Bitmap bmp = null;
@@ -392,22 +404,38 @@ namespace FractalExplorer
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
 
             string polyStr = string.Empty;
-            if (richTextBox1.InvokeRequired)
+            bool useBlackWhite = false;
+            if (this.InvokeRequired)
             {
-                polyStr = (string)richTextBox1.Invoke(new Func<string>(() => richTextBox1.Text));
+                this.Invoke((Action)(() =>
+                {
+                    polyStr = richTextBox1.Text;
+                    useBlackWhite = oldRenderBW.Checked;
+                }));
             }
             else
             {
                 polyStr = richTextBox1.Text;
+                useBlackWhite = oldRenderBW.Checked;
             }
 
             Polynomial p = ParsePolynomial(polyStr);
             List<Complex> roots = FindRoots(p);
             Color[] rootColors = new Color[roots.Count];
-            for (int i = 0; i < roots.Count; i++)
+            if (!useBlackWhite)
             {
-                int shade = 255 * (i + 1) / (roots.Count + 1);
-                rootColors[i] = Color.FromArgb(shade, shade, shade);
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    int shade = 255 * (i + 1) / (roots.Count + 1);
+                    rootColors[i] = Color.FromArgb(shade, shade, shade);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    rootColors[i] = Color.White;
+                }
             }
 
             Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
@@ -629,6 +657,7 @@ namespace FractalExplorer
                 nudH.Enabled = enabled;
                 cbSelector.Enabled = enabled;
                 richTextBox1.Enabled = enabled;
+                oldRenderBW.Enabled = enabled; // Добавляем чекбокс
             };
 
             if (this.InvokeRequired) this.Invoke(action);
@@ -639,50 +668,76 @@ namespace FractalExplorer
         {
             polyStr = polyStr.Replace(" ", "");
             string[] terms = Regex.Split(polyStr, @"(?=[+-])");
-            Dictionary<int, double> coeffsDict = new Dictionary<int, double>();
+            Dictionary<int, Complex> coeffsDict = new Dictionary<int, Complex>();
 
             foreach (string term in terms)
             {
                 if (string.IsNullOrEmpty(term)) continue;
 
-                // Определяем знак и убираем его из терма
                 char sign = term[0] == '-' ? '-' : '+';
                 string termWithoutSign = term[0] == '+' || term[0] == '-' ? term.Substring(1) : term;
 
-                // Обработка членов вида az^b, z^b или z
-                Match match = Regex.Match(termWithoutSign, @"^((\d*\.?\d+)?z)(\^(\d+))?$");
+                // Обработка членов вида (a+bi)z^n, az^n, z^n, (a+bi), z, a
+                Match match = Regex.Match(termWithoutSign, @"^(\((\d*\.?\d+)([+-]\d*\.?\d*)i\))?z(\^(\d+))?$");
                 if (match.Success)
                 {
-                    string coeffStr = match.Groups[2].Value;
-                    string powerStr = match.Groups[4].Value;
-                    double coeff = string.IsNullOrEmpty(coeffStr) ? 1.0 : double.Parse(coeffStr);
-                    int power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr);
-                    if (sign == '-') coeff = -coeff;
+                    string complexStr = match.Groups[1].Value; // (a+bi) или ""
+                    string realStr = match.Groups[2].Value; // a
+                    string imagStr = match.Groups[3].Value; // +bi or -bi
+                    string powerStr = match.Groups[5].Value; // n
+
+                    Complex coeff;
+                    if (!string.IsNullOrEmpty(complexStr))
+                    {
+                        double realPart = double.Parse(realStr);
+                        double imagPart = double.Parse(imagStr); // Учитывает знак
+                        coeff = new Complex(realPart, imagPart); // Исправлено: убрана лишняя )
+                    }
+                    else
+                    {
+                        coeff = new Complex(1.0, 0.0); // z^n -> 1z^n
+                    }
+
+                    int power = string.IsNullOrEmpty(powerStr) ? (complexStr.Length > 0 ? 0 : 1) : int.Parse(powerStr);
+                    if (sign == '-') coeff = Complex.Negate(coeff);
 
                     coeffsDict[power] = coeffsDict.ContainsKey(power) ? coeffsDict[power] + coeff : coeff;
                 }
                 else
                 {
-                    // Обработка констант
-                    match = Regex.Match(termWithoutSign, @"^\d+$");
+                    // Обработка вещественных чисел
+                    match = Regex.Match(termWithoutSign, @"^\d*\.?\d+$");
                     if (match.Success)
                     {
                         double coeff = double.Parse(termWithoutSign);
                         if (sign == '-') coeff = -coeff;
-                        coeffsDict[0] = coeffsDict.ContainsKey(0) ? coeffsDict[0] + coeff : coeff;
+                        coeffsDict[0] = coeffsDict.ContainsKey(0) ? coeffsDict[0] + new Complex(coeff, 0.0) : new Complex(coeff, 0.0);
                     }
                     else
                     {
-                        throw new ArgumentException($"Неверный формат слагаемого: {term}");
+                        // Обработка комплексных чисел вида (a+bi)
+                        match = Regex.Match(termWithoutSign, @"^\((\d*\.?\d+)([+-]\d*\.?\d+)i\)$");
+                        if (match.Success)
+                        {
+                            double realPart = double.Parse(match.Groups[1].Value);
+                            double imagPart = double.Parse(match.Groups[2].Value);
+                            Complex coeff = new Complex(realPart, imagPart);
+                            if (sign == '-') coeff = Complex.Negate(coeff);
+                            coeffsDict[0] = coeffsDict.ContainsKey(0) ? coeffsDict[0] + coeff : coeff;
+                        }
+                        else
+                        {
+                            throw new ArgumentException($"Неверный формат слагаемого: {term}");
+                        }
                     }
                 }
             }
 
-            int maxPower = coeffsDict.Keys.Any() ? coeffsDict.Keys.Max() : 0;
-            List<double> coefficients = new List<double>();
+            int maxPower = coeffsDict.Count > 0 ? coeffsDict.Keys.Max() : 0;
+            List<Complex> coefficients = new List<Complex>();
             for (int i = 0; i <= maxPower; i++)
             {
-                coefficients.Add(coeffsDict.ContainsKey(i) ? coeffsDict[i] : 0.0);
+                coefficients.Add(coeffsDict.ContainsKey(i) ? coeffsDict[i] : Complex.Zero);
             }
             return new Polynomial(coefficients);
         }
@@ -691,8 +746,8 @@ namespace FractalExplorer
         {
             List<Complex> roots = new List<Complex>();
             Polynomial pDeriv = p.Derivative();
-            double[] reValues = { -1.0, 0.0, 1.0 };
-            double[] imValues = { -1.0, 0.0, 1.0 };
+            double[] reValues = { -2.0, -1.0, 0.0, 1.0, 2.0 }; // Расширяем сетку для комплексных
+            double[] imValues = { -2.0, -1.0, 0.0, 1.0, 2.0 };
 
             foreach (double re in reValues)
             {
@@ -703,7 +758,7 @@ namespace FractalExplorer
                     {
                         Complex pz = p.Evaluate(z);
                         Complex pDz = pDeriv.Evaluate(z);
-                        if (pDz.Magnitude < epsilon) break;
+                        if (pDz.Magnitude < epsilon) continue;
                         Complex zNext = z - pz / pDz;
                         if ((zNext - z).Magnitude < epsilon)
                         {
@@ -728,9 +783,9 @@ namespace FractalExplorer
 
         private class Polynomial
         {
-            public List<double> coefficients;
+            public List<Complex> coefficients;
 
-            public Polynomial(List<double> coeffs)
+            public Polynomial(List<Complex> coeffs)
             {
                 coefficients = coeffs;
             }
@@ -747,8 +802,8 @@ namespace FractalExplorer
 
             public Polynomial Derivative()
             {
-                if (coefficients.Count <= 1) return new Polynomial(new List<double> { 0 });
-                List<double> derivCoeffs = new List<double>();
+                if (coefficients.Count <= 1) return new Polynomial(new List<Complex> { Complex.Zero });
+                List<Complex> derivCoeffs = new List<Complex>();
                 for (int i = 1; i < coefficients.Count; i++)
                 {
                     derivCoeffs.Add(i * coefficients[i]);
@@ -762,7 +817,6 @@ namespace FractalExplorer
             renderTimer?.Stop();
             previewRenderCts?.Cancel();
             previewRenderCts?.Dispose();
-            renderTimer?.Dispose();
             base.OnFormClosed(e);
         }
     }
