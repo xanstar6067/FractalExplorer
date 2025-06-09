@@ -33,7 +33,28 @@ namespace FractalExplorer
         private double renderedCenterX;
         private double renderedCenterY;
         private double renderedZoom;
-        private string[] presetPolynomials = { "z^3-1", "z^4-1", "z^3-2z+2", "(1+2i)z^2+z-1", "(0.5-0.3i)z^3+2" };
+        private string[] presetPolynomials = {
+    "z^3-1",
+    "z^4-1",
+    "z^3-2z+2",
+    "(1+2i)z^2+z-1",
+    "(0.5-0.3i)z^3+2",
+    "z^5 - z^2 + 1",
+    "z^6 + 3z^3 - 2",
+    "z^4 - 4z^2 + 4",
+    "0.5z^3 - 1.25z + 2",
+    "z^7 + z^4 - z + 1",
+    "(2+i)z^3 - (1-2i)z + 1",
+    "(i)z^4 + z - 1",
+    "(1+0.5i)z^2 - z + (2-3i)",
+    "(0.3+1.7i)z^3 + (1-i)",
+    "(2-i)z^5 + (3+2i)z^2 - 1",
+    "-2z^3 + 0.75z^2 - 1",
+    "z^6 - 1.5z^3 + 0.25",
+    "-0.1z^4 + z - 2",
+    "(1/2)z^3 + (3/4)z - 1",
+    "(2+3i)*(z^2) - (1-i)*z + 4"
+};
 
         public NewtonPpools()
         {
@@ -329,10 +350,10 @@ namespace FractalExplorer
             else if (useFire)
             {
                 Color[] fireColors = {
-                        Color.FromArgb(200, 0, 0),    // Темно-красный
-                        Color.FromArgb(255, 100, 0),  // Оранжевый
-                        Color.FromArgb(255, 255, 100), // Светло-желтый
-                    };
+                    Color.FromArgb(200, 0, 0),    // Темно-красный
+                    Color.FromArgb(255, 100, 0),  // Оранжевый
+                    Color.FromArgb(255, 255, 100), // Светло-желтый
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < fireColors.Length ? fireColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -341,10 +362,10 @@ namespace FractalExplorer
             else if (useContrasting)
             {
                 Color[] contrastingColors = {
-                        Color.FromArgb(10, 0, 20),     // Темно-фиолетовый
-                        Color.FromArgb(255, 0, 255),   // Пурпурный
-                        Color.FromArgb(0, 255, 255),   // Циановый
-                    };
+                    Color.FromArgb(10, 0, 20),     // Темно-фиолетовый
+                    Color.FromArgb(255, 0, 255),   // Пурпурный
+                    Color.FromArgb(0, 255, 255),   // Циановый
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -978,18 +999,12 @@ namespace FractalExplorer
                     string imagStr = complexConst.Groups[2].Value;
 
                     double imagPart;
-                    if (imagStr == "+" || imagStr == "")
-                    {
+                    if (imagStr == "+" || string.IsNullOrEmpty(imagStr))
                         imagPart = 1.0;
-                    }
                     else if (imagStr == "-")
-                    {
                         imagPart = -1.0;
-                    }
                     else
-                    {
                         imagPart = double.Parse(imagStr, culture);
-                    }
 
                     coeff = new Complex(realPart, imagPart);
                     power = 0;
@@ -1026,9 +1041,9 @@ namespace FractalExplorer
         private List<Complex> FindRoots(Polynomial p, int maxIter = 100, double epsilon = 1e-6)
         {
             List<Complex> roots = new List<Complex>();
-            Polynomial pDeriv = p.Derivative(); // ИСПРАВЛЕНО: Правильный вызов метода
-            double[] reValues = { -2.0, -1.0, 0.0, 1.0, 2.0 }; // ИСПРАВЛЕНО: Сделано более чистым
-            double[] imValues = { -2.0, -1.0, 0.0, 1.0, 2.0 }; // ИСПРАВЛЕНО: Полностью некорректная строка заменена на рабочую
+            Polynomial pDeriv = p.Derivative();
+            double[] reValues = { -2.0, -1.0, 0.0, 1.0, 2.0 };
+            double[] imValues = { -2.0, -1.0, 0.0, 1.0, 2.0 };
 
             foreach (double re in reValues)
             {
@@ -1038,13 +1053,13 @@ namespace FractalExplorer
                     for (int i = 0; i < maxIter; i++)
                     {
                         Complex pz = p.Evaluate(z);
-                        Complex pDz = pDeriv.Evaluate(z); // ИСПРАВЛЕНО: Убрана лишняя скобка
+                        Complex pDz = pDeriv.Evaluate(z);
                         if (pDz.Magnitude < epsilon) break;
                         Complex zNext = z - pz / pDz;
                         if ((zNext - z).Magnitude < epsilon)
                         {
                             bool isNew = true;
-                            foreach (var root in roots)
+                            foreach (Complex root in roots)
                             {
                                 if ((zNext - root).Magnitude < epsilon)
                                 {
@@ -1084,12 +1099,12 @@ namespace FractalExplorer
             public Polynomial Derivative()
             {
                 if (coefficients.Count <= 1) return new Polynomial(new List<Complex> { Complex.Zero });
-                List<Complex> derivCoefficients = new List<Complex>();
+                List<Complex> derivCoeffs = new List<Complex>();
                 for (int i = 1; i < coefficients.Count; i++)
                 {
-                    derivCoefficients.Add(i * coefficients[i]);
+                    derivCoeffs.Add(i * coefficients[i]);
                 }
-                return new Polynomial(derivCoefficients);
+                return new Polynomial(derivCoeffs);
             }
         }
 
@@ -1101,6 +1116,5 @@ namespace FractalExplorer
             renderTimer?.Dispose();
             base.OnFormClosed(e);
         }
-
     }
 }
