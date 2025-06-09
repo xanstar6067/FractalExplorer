@@ -56,7 +56,7 @@
             tabPageJulia.Location = new Point(4, 26);
             tabPageJulia.Name = "tabPageJulia";
             tabPageJulia.Padding = new Padding(3);
-            tabPageJulia.Size = new Size(792, 161);
+            tabPageJulia.Size = new Size(792, 195);
             tabPageJulia.TabIndex = 1;
             tabPageJulia.Text = "Множество Жюлиа";
             tabPageJulia.UseVisualStyleBackColor = true;
@@ -89,7 +89,7 @@
             tabPageMandelbrot.Location = new Point(4, 26);
             tabPageMandelbrot.Name = "tabPageMandelbrot";
             tabPageMandelbrot.Padding = new Padding(3);
-            tabPageMandelbrot.Size = new Size(792, 161);
+            tabPageMandelbrot.Size = new Size(792, 195);
             tabPageMandelbrot.TabIndex = 0;
             tabPageMandelbrot.Text = "Множество Мандельброта";
             tabPageMandelbrot.UseVisualStyleBackColor = true;
@@ -98,11 +98,12 @@
             // 
             richTextBox1.BackColor = SystemColors.Window;
             richTextBox1.BorderStyle = BorderStyle.None;
+            richTextBox1.Dock = DockStyle.Right;
             richTextBox1.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
             richTextBox1.Location = new Point(184, 3);
             richTextBox1.Name = "richTextBox1";
             richTextBox1.ReadOnly = true;
-            richTextBox1.Size = new Size(605, 157);
+            richTextBox1.Size = new Size(605, 189);
             richTextBox1.TabIndex = 2;
             richTextBox1.Text = resources.GetString("richTextBox1.Text");
             // 
@@ -122,12 +123,12 @@
             tabControlFractals.Controls.Add(tabPageJulia);
             tabControlFractals.Controls.Add(tabPageSerpinsky);
             tabControlFractals.Controls.Add(tabPageNewtonPools);
-            tabControlFractals.Dock = DockStyle.Fill;
+            tabControlFractals.Dock = DockStyle.Right;
             tabControlFractals.Font = new Font("Segoe UI", 10F);
             tabControlFractals.Location = new Point(0, 0);
             tabControlFractals.Name = "tabControlFractals";
             tabControlFractals.SelectedIndex = 0;
-            tabControlFractals.Size = new Size(800, 191);
+            tabControlFractals.Size = new Size(800, 225);
             tabControlFractals.TabIndex = 0;
             // 
             // tabPageSerpinsky
@@ -137,7 +138,7 @@
             tabPageSerpinsky.Location = new Point(4, 26);
             tabPageSerpinsky.Name = "tabPageSerpinsky";
             tabPageSerpinsky.Padding = new Padding(3);
-            tabPageSerpinsky.Size = new Size(792, 161);
+            tabPageSerpinsky.Size = new Size(792, 195);
             tabPageSerpinsky.TabIndex = 2;
             tabPageSerpinsky.Text = "Треугольник Серпинского";
             tabPageSerpinsky.UseVisualStyleBackColor = true;
@@ -146,11 +147,12 @@
             // 
             richTextBox3.BackColor = SystemColors.Window;
             richTextBox3.BorderStyle = BorderStyle.None;
+            richTextBox3.Dock = DockStyle.Right;
             richTextBox3.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
             richTextBox3.Location = new Point(184, 3);
             richTextBox3.Name = "richTextBox3";
             richTextBox3.ReadOnly = true;
-            richTextBox3.Size = new Size(605, 157);
+            richTextBox3.Size = new Size(605, 189);
             richTextBox3.TabIndex = 4;
             richTextBox3.Text = resources.GetString("richTextBox3.Text");
             // 
@@ -171,22 +173,23 @@
             tabPageNewtonPools.Location = new Point(4, 26);
             tabPageNewtonPools.Name = "tabPageNewtonPools";
             tabPageNewtonPools.Padding = new Padding(3);
-            tabPageNewtonPools.Size = new Size(792, 161);
+            tabPageNewtonPools.Size = new Size(792, 195);
             tabPageNewtonPools.TabIndex = 3;
-            tabPageNewtonPools.Text = "tabPage1";
+            tabPageNewtonPools.Text = "Бассейны Ньютона";
             tabPageNewtonPools.UseVisualStyleBackColor = true;
             // 
             // richTextBox4
             // 
             richTextBox4.BackColor = SystemColors.Window;
             richTextBox4.BorderStyle = BorderStyle.None;
+            richTextBox4.Dock = DockStyle.Right;
             richTextBox4.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            richTextBox4.Location = new Point(182, 2);
+            richTextBox4.Location = new Point(184, 3);
             richTextBox4.Name = "richTextBox4";
             richTextBox4.ReadOnly = true;
-            richTextBox4.Size = new Size(605, 157);
+            richTextBox4.Size = new Size(605, 189);
             richTextBox4.TabIndex = 6;
-            richTextBox4.Text = "Откройте для";
+            richTextBox4.Text = resources.GetString("richTextBox4.Text");
             // 
             // btnLaunchNewton
             // 
@@ -202,7 +205,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 191);
+            ClientSize = new Size(800, 225);
             Controls.Add(tabControlFractals);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;

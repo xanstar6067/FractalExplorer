@@ -50,7 +50,6 @@
             label6 = new Label();
             cbThreads = new ComboBox();
             btnSave = new Button();
-            label4 = new Label();
             label3 = new Label();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
@@ -83,7 +82,6 @@
             panel1.Controls.Add(label6);
             panel1.Controls.Add(cbThreads);
             panel1.Controls.Add(btnSave);
-            panel1.Controls.Add(label4);
             panel1.Controls.Add(label3);
             panel1.Controls.Add(nudIterations);
             panel1.Dock = DockStyle.Left;
@@ -288,15 +286,6 @@
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
             // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.Location = new Point(138, 43);
-            label4.Name = "label4";
-            label4.Size = new Size(85, 15);
-            label4.TabIndex = 7;
-            label4.Text = "Порог выхода";
-            // 
             // label3
             // 
             label3.AutoSize = true;
@@ -351,7 +340,6 @@
 
         private Panel panel1;
         private PictureBox fractal_bitmap;
-        private Label label4;
         private Label label3;
         private NumericUpDown nudIterations;
         private Button btnSave;
