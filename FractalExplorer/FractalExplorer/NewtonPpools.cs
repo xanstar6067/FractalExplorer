@@ -33,7 +33,7 @@ namespace FractalExplorer
         private double renderedCenterX;
         private double renderedCenterY;
         private double renderedZoom;
-        private string[] presetPolynomials = { "z^3 - 1", "z^4 - 1", "z^3 - 2z + 2" };
+        private string[] presetPolynomials = { "z^3-1", "z^4-1", "z^3-2z+2" };
 
         public NewtonPpools()
         {
@@ -644,14 +644,15 @@ namespace FractalExplorer
             foreach (string term in terms)
             {
                 if (string.IsNullOrEmpty(term)) continue;
-                char sign = term[0];
-                string termWithoutSign = term.Substring(1);
+                char sign = term[0] == '-' ? '-' : '+';
+                string termWithoutSign = sign == '-' ? term.Substring(1) : term;
 
-                Match match = Regex.Match(termWithoutSign, @"^([\d\.]+)?z(\^(\d+))?$");
+                // Обработка членов вида az^b, z^b или z
+                Match match = Regex.Match(termWithoutSign, @"^((\d*\.?\d+)?z)(\^(\d+))?$");
                 if (match.Success)
                 {
-                    string coeffStr = match.Groups[1].Value;
-                    string powerStr = match.Groups[3].Value;
+                    string coeffStr = match.Groups[2].Value;
+                    string powerStr = match.Groups[4].Value;
                     double coeff = string.IsNullOrEmpty(coeffStr) ? 1.0 : double.Parse(coeffStr);
                     int power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr);
                     if (sign == '-') coeff = -coeff;
@@ -660,7 +661,8 @@ namespace FractalExplorer
                 }
                 else
                 {
-                    match = Regex.Match(termWithoutSign, @"^[\d\.]+$");
+                    // Обработка констант
+                    match = Regex.Match(termWithoutSign, @"^\d*\.?\d+$");
                     if (match.Success)
                     {
                         double coeff = double.Parse(termWithoutSign);
@@ -674,7 +676,7 @@ namespace FractalExplorer
                 }
             }
 
-            int maxPower = coeffsDict.Keys.Max();
+            int maxPower = coeffsDict.Keys.Any() ? coeffsDict.Keys.Max() : 0;
             List<double> coefficients = new List<double>();
             for (int i = 0; i <= maxPower; i++)
             {
