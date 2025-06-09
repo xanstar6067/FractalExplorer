@@ -320,7 +320,18 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White; // Заглушка
+                    double t = (double)i / (roots.Count - 1); // Нормализация от 0 до 1 по количеству корней
+                    if (t < 0.5)
+                    {
+                        // Переход от черного (0, 0, 0) к темно-красному (139, 0, 0)
+                        rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
+                    }
+                    else
+                    {
+                        // Переход от темно-красного (139, 0, 0) к золотому (255, 215, 0)
+                        double t2 = (t - 0.5) / 0.5;
+                        rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
+                    }
                 }
             }
             else if (usePastel)
@@ -586,8 +597,20 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White; // Заглушка
+                    double t = (double)i / (roots.Count - 1); // Нормализация от 0 до 1 по количеству корней
+                    if (t < 0.5)
+                    {
+                        // Переход от черного (0, 0, 0) к темно-красному (139, 0, 0)
+                        rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
+                    }
+                    else
+                    {
+                        // Переход от темно-красного (139, 0, 0) к золотому (255, 215, 0)
+                        double t2 = (t - 0.5) / 0.5;
+                        rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
+                    }
                 }
+
             }
             else if (usePastel)
             {
