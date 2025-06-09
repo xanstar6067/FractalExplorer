@@ -68,6 +68,7 @@ namespace FractalExplorer
             nudZoom.ValueChanged += ParamControl_Changed;
             cbSelector.SelectedIndexChanged += cbSelector_SelectedIndexChanged;
             oldRenderBW.CheckedChanged += ParamControl_Changed;
+            // Обработчики для чекбоксов палитр
             colorBox0.CheckedChanged += ColorBox_Changed;
             colorBox1.CheckedChanged += ColorBox_Changed;
             colorBox2.CheckedChanged += ColorBox_Changed;
@@ -128,6 +129,7 @@ namespace FractalExplorer
         private void ColorBox_Changed(object sender, EventArgs e)
         {
             if (isHighResRendering) return;
+            // Взаимоисключительность чекбоксов
             if (sender == colorBox0 && colorBox0.Checked)
             {
                 colorBox1.Checked = false;
@@ -313,28 +315,29 @@ namespace FractalExplorer
                 return;
             }
 
+            // Выбор цветовой палитры
             Color[] rootColors = new Color[roots.Count];
             bool useBlackWhite = oldRenderBW.Checked;
             bool useGradient = colorBox0.Checked;
             bool usePastel = colorBox1.Checked;
             bool useContrast = colorBox2.Checked;
-            bool useJulia1 = colorBox3.Checked;
-            bool useJulia4 = colorBox4.Checked;
+            bool useRed = colorBox3.Checked;
+            bool usePurple = colorBox4.Checked;
 
             if (useGradient)
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White;
+                    rootColors[i] = Color.White; // Заглушка, цвет по итерациям
                 }
             }
             else if (usePastel)
             {
                 Color[] pastelColors = {
-            Color.FromArgb(255, 182, 193),
-            Color.FromArgb(173, 216, 230),
-            Color.FromArgb(189, 252, 201),
-        };
+                Color.FromArgb(255, 182, 193), // Светло-розовый
+                Color.FromArgb(173, 216, 230), // Светло-голубой
+                Color.FromArgb(189, 252, 201), // Мятный
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
@@ -343,27 +346,39 @@ namespace FractalExplorer
             else if (useContrast)
             {
                 Color[] contrastColors = {
-            Color.FromArgb(255, 0, 0),
-            Color.FromArgb(255, 255, 0),
-            Color.FromArgb(0, 0, 255),
-        };
+                Color.FromArgb(255, 0, 0),     // Красный
+                Color.FromArgb(255, 255, 0),   // Желтый
+                Color.FromArgb(0, 0, 255),     // Синий
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
-            else if (useJulia1)
+            else if (useRed)
             {
+                // colorBox3: Красная палитра (из FractalJulia.cs, предположительно checkBox1)
+                Color[] redColors = {
+                Color.FromArgb(255, 0, 0),     // Ярко-красный
+                Color.FromArgb(220, 20, 60),   // Малиновый
+                Color.FromArgb(178, 34, 34),   // Огненно-красный
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White;
+                    rootColors[i] = i < redColors.Length ? redColors[i] : Color.FromArgb(255, i * 20 % 100, i * 10 % 50);
                 }
             }
-            else if (useJulia4)
+            else if (usePurple)
             {
+                // colorBox4: Фиолетовая палитра (из FractalJulia.cs, предположительно checkBox4)
+                Color[] purpleColors = {
+                Color.FromArgb(128, 0, 128),   // Фиолетовый
+                Color.FromArgb(147, 112, 219), // Средний фиолетовый
+                Color.FromArgb(186, 85, 211),  // Светло-фиолетовый
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White;
+                    rootColors[i] = i < purpleColors.Length ? purpleColors[i] : Color.FromArgb(200 - i * 20 % 100, i * 20 % 100, 200);
                 }
             }
             else if (useBlackWhite)
@@ -400,7 +415,7 @@ namespace FractalExplorer
 
                 ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = threadCount, CancellationToken = token };
                 int done = 0;
-                double epsilon = 1e-6;
+                double epsilon = 1e-6; // Замена threshold
 
                 double scale_factor_w = (BASE_SCALE / renderZoom) / width;
                 double scale_factor_h = (BASE_SCALE / renderZoom) / height;
@@ -416,23 +431,14 @@ namespace FractalExplorer
                         Polynomial pDeriv = p.Derivative();
 
                         int iter = 0;
-                        double smoothIter = 0.0;
                         while (iter < maxIterations)
                         {
                             Complex pz = p.Evaluate(z);
-                            if (pz.Magnitude < epsilon)
-                            {
-                                smoothIter = iter + 1 - Math.Log(Math.Log(pz.Magnitude)) / Math.Log(2);
-                                break;
-                            }
+                            if (pz.Magnitude < epsilon) break;
                             Complex pDz = pDeriv.Evaluate(z);
                             if (pDz.Magnitude < epsilon) break;
                             z = z - pz / pDz;
                             iter++;
-                        }
-                        if (iter >= maxIterations)
-                        {
-                            smoothIter = iter;
                         }
 
                         int rootIndex = -1;
@@ -450,12 +456,25 @@ namespace FractalExplorer
                         Color pixelColor;
                         if (rootIndex >= 0 && minDist < epsilon)
                         {
-                            if (useJulia4)
+                            if (useGradient)
                             {
-                                double t = (smoothIter / maxIterations + rootIndex * 0.3) % 1.0;
-                                double angle = z.Phase;
-                                int hue = (int)(360 * t + angle * 180 / Math.PI) % 360;
-                                pixelColor = HsvToRgb(hue, 0.6, 0.9);
+                                double t = (double)iter / maxIterations;
+                                int hue = (int)(240 * t);
+                                pixelColor = HsvToRgb(hue, 0.8, 1.0);
+                            }
+                            else if (useRed)
+                            {
+                                // Красная палитра с градиентом по итерациям
+                                int red = 139 + (int)(116 * (double)iter / maxIterations);
+                                pixelColor = Color.FromArgb(red, 0, 0);
+                            }
+                            else if (usePurple)
+                            {
+                                // Фиолетовая палитра с градиентом по итерациям
+                                int r = 75 + (int)(111 * (double)iter / maxIterations);
+                                int g = (int)(85 * (double)iter / maxIterations);
+                                int b = 130 + (int)(81 * (double)iter / maxIterations);
+                                pixelColor = Color.FromArgb(r, g, b);
                             }
                             else
                             {
@@ -464,7 +483,7 @@ namespace FractalExplorer
                         }
                         else
                         {
-                            pixelColor = (usePastel || useGradient || useJulia1 || useJulia4) ? Color.FromArgb(20, 20, 20) : Color.Black;
+                            pixelColor = (usePastel || useRed || usePurple) ? Color.FromArgb(50, 50, 50) : Color.Black;
                         }
 
                         int index = rowOffset + x * 3;
@@ -520,29 +539,6 @@ namespace FractalExplorer
             }
         }
 
-        private Color InterpolateColor(Color c1, Color c2, double t)
-        {
-            t = Math.Clamp(t, 0.0, 1.0);
-
-            double r = c1.R + (c2.R - c1.R) * t;
-            double g = c1.G + (c2.G - c1.G) * t;
-            double b = c1.B + (c2.B - c1.B) * t;
-
-            return Color.FromArgb(
-                SafeToInt(r),
-                SafeToInt(g),
-                SafeToInt(b)
-            );
-        }
-
-        private int SafeToInt(double value)
-        {
-            if (double.IsNaN(value) || double.IsInfinity(value))
-                return 0;
-
-            return (int)Math.Clamp(value, 0.0, 255.0);
-        }
-
         private Color HsvToRgb(double hue, double saturation, double value)
         {
             int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
@@ -569,8 +565,8 @@ namespace FractalExplorer
         }
 
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY,
-                                            double currentZoom, int currentMaxIterations, int numThreads,
-                                            Action<int> reportProgressCallback)
+            double currentZoom, int currentMaxIterations, int numThreads,
+            Action<int> reportProgressCallback)
         {
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
 
@@ -579,8 +575,8 @@ namespace FractalExplorer
             bool useGradient = false;
             bool usePastel = false;
             bool useContrast = false;
-            bool useJulia1 = false;
-            bool useJulia4 = false;
+            bool useRed = false;
+            bool usePurple = false;
 
             if (this.InvokeRequired)
             {
@@ -591,8 +587,8 @@ namespace FractalExplorer
                     useGradient = colorBox0.Checked;
                     usePastel = colorBox1.Checked;
                     useContrast = colorBox2.Checked;
-                    useJulia1 = colorBox3.Checked;
-                    useJulia4 = colorBox4.Checked;
+                    useRed = colorBox3.Checked;
+                    usePurple = colorBox4.Checked;
                 }));
             }
             else
@@ -602,8 +598,8 @@ namespace FractalExplorer
                 useGradient = colorBox0.Checked;
                 usePastel = colorBox1.Checked;
                 useContrast = colorBox2.Checked;
-                useJulia1 = colorBox3.Checked;
-                useJulia4 = colorBox4.Checked;
+                useRed = colorBox3.Checked;
+                usePurple = colorBox4.Checked;
             }
 
             Polynomial p = ParsePolynomial(polyStr);
@@ -620,9 +616,9 @@ namespace FractalExplorer
             else if (usePastel)
             {
                 Color[] pastelColors = {
-                    Color.FromArgb(255, 182, 193),
-                    Color.FromArgb(173, 216, 230),
-                    Color.FromArgb(189, 252, 201),
+                Color.FromArgb(255, 182, 193),
+                Color.FromArgb(173, 216, 230),
+                Color.FromArgb(189, 252, 201),
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
@@ -632,27 +628,37 @@ namespace FractalExplorer
             else if (useContrast)
             {
                 Color[] contrastColors = {
-                    Color.FromArgb(255, 0, 0),
-                    Color.FromArgb(255, 255, 0),
-                    Color.FromArgb(0, 0, 255),
+                Color.FromArgb(255, 0, 0),
+                Color.FromArgb(255, 255, 0),
+                Color.FromArgb(0, 0, 255),
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
-            else if (useJulia1)
+            else if (useRed)
             {
+                Color[] redColors = {
+                Color.FromArgb(255, 0, 0),
+                Color.FromArgb(220, 20, 60),
+                Color.FromArgb(178, 34, 34),
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White;
+                    rootColors[i] = i < redColors.Length ? redColors[i] : Color.FromArgb(255, i * 20 % 100, i * 10 % 50);
                 }
             }
-            else if (useJulia4)
+            else if (usePurple)
             {
+                Color[] purpleColors = {
+                Color.FromArgb(128, 0, 128),
+                Color.FromArgb(147, 112, 219),
+                Color.FromArgb(186, 85, 211),
+                };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = Color.White;
+                    rootColors[i] = i < purpleColors.Length ? purpleColors[i] : Color.FromArgb(200 - i * 20 % 100, i * 20 % 100, 200);
                 }
             }
             else if (useBlackWhite)
@@ -695,23 +701,14 @@ namespace FractalExplorer
                     Polynomial pDeriv = p.Derivative();
 
                     int iter = 0;
-                    double smoothIter = 0.0;
                     while (iter < currentMaxIterations)
                     {
                         Complex pz = p.Evaluate(z);
-                        if (pz.Magnitude < epsilon)
-                        {
-                            smoothIter = iter + 1 - Math.Log(Math.Log(pz.Magnitude)) / Math.Log(2);
-                            break;
-                        }
+                        if (pz.Magnitude < epsilon) break;
                         Complex pDz = pDeriv.Evaluate(z);
                         if (pDz.Magnitude < epsilon) break;
                         z = z - pz / pDz;
                         iter++;
-                    }
-                    if (iter >= currentMaxIterations)
-                    {
-                        smoothIter = iter;
                     }
 
                     int rootIndex = -1;
@@ -731,42 +728,21 @@ namespace FractalExplorer
                     {
                         if (useGradient)
                         {
-                            double t = smoothIter / currentMaxIterations;
-                            t = Math.Sqrt(t);
-                            Color color1 = Color.FromArgb(135, 206, 250);
-                            Color color2 = Color.FromArgb(245, 245, 220);
-                            Color color3 = Color.FromArgb(255, 182, 193);
-                            if (t < 0.5)
-                            {
-                                pixelColor = InterpolateColor(color1, color2, t * 2);
-                            }
-                            else
-                            {
-                                pixelColor = InterpolateColor(color2, color3, (t - 0.5) * 2);
-                            }
+                            double t = (double)iter / currentMaxIterations;
+                            int hue = (int)(240 * t);
+                            pixelColor = HsvToRgb(hue, 0.8, 1.0);
                         }
-                        else if (useJulia1)
+                        else if (useRed)
                         {
-                            double t = smoothIter / currentMaxIterations;
-                            t = Math.Sqrt(t);
-                            Color color1 = Color.FromArgb(0, 0, 50);
-                            Color color2 = Color.FromArgb(0, 255, 0);
-                            Color color3 = Color.FromArgb(255, 255, 0);
-                            if (t < 0.5)
-                            {
-                                pixelColor = InterpolateColor(color1, color2, t * 2);
-                            }
-                            else
-                            {
-                                pixelColor = InterpolateColor(color2, color3, (t - 0.5) * 2);
-                            }
+                            int red = 139 + (int)(116 * (double)iter / currentMaxIterations);
+                            pixelColor = Color.FromArgb(red, 0, 0);
                         }
-                        else if (useJulia4)
+                        else if (usePurple)
                         {
-                            double t = (smoothIter / currentMaxIterations + rootIndex * 0.3) % 1.0;
-                            double angle = z.Phase;
-                            int hue = (int)(360 * t + angle * 180 / Math.PI) % 360;
-                            pixelColor = HsvToRgb(hue, 0.6, 0.9);
+                            int r = 75 + (int)(111 * (double)iter / currentMaxIterations);
+                            int g = (int)(85 * (double)iter / currentMaxIterations);
+                            int b = 130 + (int)(81 * (double)iter / currentMaxIterations);
+                            pixelColor = Color.FromArgb(r, g, b);
                         }
                         else
                         {
@@ -775,7 +751,7 @@ namespace FractalExplorer
                     }
                     else
                     {
-                        pixelColor = (usePastel || useGradient || useJulia1 || useJulia4) ? Color.FromArgb(20, 20, 20) : Color.Black;
+                        pixelColor = (usePastel || useRed || usePurple) ? Color.FromArgb(50, 50, 50) : Color.Black;
                     }
 
                     int index = rowOffset + x * 3;
@@ -868,7 +844,7 @@ namespace FractalExplorer
 
             if (saveWidth <= 0 || saveHeight <= 0)
             {
-                MessageBox.Show("Ширина и высота должны быть больше 0.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Ширина и высота должны быть положительными.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -878,7 +854,7 @@ namespace FractalExplorer
             using (SaveFileDialog saveDialog = new SaveFileDialog
             {
                 Filter = "PNG Image|*.png",
-                Title = "Сохранить фрактал Ньютона",
+                Title = "Save Newton Fractal",
                 FileName = suggestedFileName
             })
             {
@@ -887,8 +863,8 @@ namespace FractalExplorer
                     isHighResRendering = true;
                     btnSave.Enabled = false;
                     SetMainControlsEnabled(false);
-                    progressPNG.Value = 0;
-                    progressPNG.Visible = true;
+                    progressBar.Visible = true;
+                    progressBar.Value = 0;
 
                     try
                     {
@@ -900,20 +876,26 @@ namespace FractalExplorer
                         int currentThreadCount = this.threadCount;
 
                         Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(
-                            saveWidth, saveHeight, currentCenterX, currentCenterY, currentZoom,
-                            currentMaxIterations, currentThreadCount,
-                            progressPercentage =>
+                            renderWidth: saveWidth,
+                            renderHeight: saveHeight,
+                            currentCenterX: currentCenterX,
+                            currentCenterY: currentCenterY,
+                            currentZoom: currentZoom,
+                            currentMaxIterations: currentMaxIterations, // Исправлено: передаем currentMaxIterations
+                            numThreads: currentThreadCount,
+                            reportProgressCallback: progressPercentage =>
                             {
-                                if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
+                                if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                                 {
-                                    progressPNG.Invoke((Action)(() =>
+                                    progressBar.BeginInvoke((Action)(() =>
                                     {
-                                        if (progressPNG.Value <= progressPNG.Maximum)
-                                            progressPNG.Value = Math.Min(progressPNG.Maximum, progressPercentage);
+                                        if (progressBar.Value <= progressBar.Maximum)
+                                            progressBar.Value = Math.Min(progressBar.Maximum, progressPercentage);
                                     }));
                                 }
                             }
                         ));
+
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
                         highResBitmap.Dispose();
                         MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -927,9 +909,9 @@ namespace FractalExplorer
                         isHighResRendering = false;
                         btnSave.Enabled = true;
                         SetMainControlsEnabled(true);
-                        if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
+                        if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                         {
-                            progressPNG.Invoke((Action)(() => { progressPNG.Visible = false; progressPNG.Value = 0; }));
+                            progressBar.Invoke((Action)(() => { progressBar.Visible = false; progressBar.Value = 0; }));
                         }
                     }
                 }
@@ -940,7 +922,8 @@ namespace FractalExplorer
         {
             Action action = () =>
             {
-                btnRender.Enabled = enabled;
+                // Кнопку сохранения управляем отдельно
+                // btnSave.Enabled = enabled; 
                 nudIterations.Enabled = enabled;
                 cbThreads.Enabled = enabled;
                 nudZoom.Enabled = enabled;
@@ -956,143 +939,130 @@ namespace FractalExplorer
                 colorBox4.Enabled = enabled;
             };
 
-            if (this.InvokeRequired) this.Invoke(action);
-            else action();
+            if (this.InvokeRequired)
+                this.Invoke(action);
+            else
+                action();
         }
 
+        // --- УЛУЧШЕННЫЙ ПАРСЕР ПОЛИНОМОВ ---
         private Polynomial ParsePolynomial(string polyStr)
         {
-            polyStr = polyStr.Replace(" ", "");
-
-            var culture = CultureInfo.InvariantCulture;
-
-            List<string> terms = new List<string>();
-            StringBuilder currentTerm = new StringBuilder();
-            int parenthesesCount = 0;
-            bool isFirstTerm = true;
-
-            for (int i = 0; i < polyStr.Length; i++)
+            polyStr = polyStr.Replace(" ", "").Replace("-", "+-").Trim('+');
+            if (polyStr.StartsWith("+-"))
             {
-                char c = polyStr[i];
-
-                if (c == '(')
-                    parenthesesCount++;
-                else if (c == ')')
-                    parenthesesCount--;
-
-                if ((c == '+' || c == '-') && parenthesesCount == 0 && !isFirstTerm)
-                {
-                    terms.Add(currentTerm.ToString());
-                    currentTerm.Clear();
-                    currentTerm.Append(c);
-                }
-                else
-                {
-                    currentTerm.Append(c);
-                }
-
-                isFirstTerm = false;
+                polyStr = polyStr.Substring(1);
             }
 
-            if (currentTerm.Length > 0)
-                terms.Add(currentTerm.ToString());
-
-            Dictionary<int, Complex> coeffsDict = new Dictionary<int, Complex>();
+            string[] terms = polyStr.Split(new[] { '+' }, StringSplitOptions.RemoveEmptyEntries);
+            var coeffsDict = new Dictionary<int, Complex>();
+            var culture = CultureInfo.InvariantCulture;
 
             foreach (string term in terms)
             {
-                if (string.IsNullOrEmpty(term)) continue;
+                string currentTerm = term.Trim();
+                if (string.IsNullOrEmpty(currentTerm)) continue;
 
-                char sign = term[0] == '-' ? '-' : '+';
-                string termWithoutSign = (term[0] == '+' || term[0] == '-') ? term.Substring(1) : term;
-
-                Complex coeff;
+                Complex coeff = 1.0;
                 int power = 0;
 
-                Match complexWithZ = Regex.Match(termWithoutSign, @"^\((-?\d*\.?\d*)?([+-]\d*\.?\d*)?i\)(z(?:\^(\d+))?)?$");
-                Match realWithZ = Regex.Match(termWithoutSign, @"^(-?\d*\.?\d*)?(z(?:\^(\d+))?)?$");
-                Match justZ = Regex.Match(termWithoutSign, @"^(z(?:\^(\d+))?)$");
-                Match complexConst = Regex.Match(termWithoutSign, @"^\((-?\d*\.?\d+)([+-]\d*\.?\d*)?i\)$");
+                string coeffStr = currentTerm;
+                string powerStr = "0";
 
-                if (complexWithZ.Success)
+                int zIndex = currentTerm.ToLower().IndexOf('z');
+                if (zIndex != -1)
                 {
-                    double realPart = string.IsNullOrEmpty(complexWithZ.Groups[1].Value) ? 0.0 : double.Parse(complexWithZ.Groups[1].Value, culture);
-                    string imagStr = complexWithZ.Groups[2].Value;
+                    coeffStr = currentTerm.Substring(0, zIndex);
+                    power = 1; // степень по умолчанию 1, если z есть
 
-                    double imagPart;
-                    if (imagStr == "+" || string.IsNullOrEmpty(imagStr))
-                        imagPart = 1.0;
-                    else if (imagStr == "-")
-                        imagPart = -1.0;
+                    int powIndex = currentTerm.IndexOf('^');
+                    if (powIndex != -1)
+                    {
+                        powerStr = currentTerm.Substring(powIndex + 1);
+                        power = int.Parse(powerStr, culture);
+                    }
+                }
+
+                if (string.IsNullOrEmpty(coeffStr) || coeffStr == "+")
+                {
+                    coeff = 1.0;
+                }
+                else if (coeffStr == "-")
+                {
+                    coeff = -1.0;
+                }
+                else if (coeffStr.ToLower() == "i")
+                {
+                    coeff = Complex.ImaginaryOne;
+                }
+                else if (coeffStr.ToLower() == "-i")
+                {
+                    coeff = -Complex.ImaginaryOne;
+                }
+                else if (coeffStr.StartsWith("(") && coeffStr.EndsWith(")"))
+                {
+                    // Обработка комплексного коэффициента в скобках, например (1-2i)
+                    string complexPart = coeffStr.Substring(1, coeffStr.Length - 2).ToLower();
+                    // Удаляем 'i' для парсинга, но запоминаем его наличие
+                    bool hasImaginary = complexPart.Contains("i");
+                    complexPart = complexPart.Replace("i", "");
+
+                    // Ищем знак мнимой части
+                    int signIndex = complexPart.LastIndexOfAny(new[] { '+', '-' });
+                    if (signIndex > 0 && hasImaginary) // > 0 чтобы не сработать на унарный минус в начале
+                    {
+                        string realStr = complexPart.Substring(0, signIndex);
+                        string imagStr = complexPart.Substring(signIndex);
+                        if (imagStr == "+") imagStr = "1";
+                        if (imagStr == "-") imagStr = "-1";
+
+                        double real = double.Parse(realStr, culture);
+                        double imag = double.Parse(imagStr, culture);
+                        coeff = new Complex(real, imag);
+                    }
                     else
-                        imagPart = double.Parse(imagStr, culture);
-
-                    coeff = new Complex(realPart, imagPart);
-
-                    string zPart = complexWithZ.Groups[3].Value;
-                    string powerStr = complexWithZ.Groups[4].Value;
-
-                    if (!string.IsNullOrEmpty(zPart))
-                        power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
+                    {
+                        // Если не удалось разделить, пробуем парсить как одно число
+                        if (double.TryParse(complexPart, NumberStyles.Any, culture, out double val))
+                        {
+                            coeff = hasImaginary ? new Complex(0, val) : new Complex(val, 0);
+                        }
+                    }
                 }
-                else if (realWithZ.Success)
+                else // Простой числовой коэффициент
                 {
-                    string coeffStr = realWithZ.Groups[1].Value;
-                    double realPart = string.IsNullOrEmpty(coeffStr) ? 1.0 : double.Parse(coeffStr, culture);
-                    coeff = new Complex(realPart, 0.0);
-
-                    string zPart = realWithZ.Groups[2].Value;
-                    string powerStr = realWithZ.Groups[3].Value;
-
-                    if (!string.IsNullOrEmpty(zPart))
-                        power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
-                }
-                else if (justZ.Success)
-                {
-                    coeff = new Complex(1.0, 0.0);
-                    string powerStr = justZ.Groups[2].Value;
-                    power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr);
-                }
-                else if (complexConst.Success)
-                {
-                    double realPart = double.Parse(complexConst.Groups[1].Value, culture);
-                    string imagStr = complexConst.Groups[2].Value;
-
-                    double imagPart;
-                    if (imagStr == "+" || string.IsNullOrEmpty(imagStr))
-                        imagPart = 1.0;
-                    else if (imagStr == "-")
-                        imagPart = -1.0;
+                    if (coeffStr.ToLower().EndsWith("i"))
+                    {
+                        string imagOnlyStr = coeffStr.Substring(0, coeffStr.Length - 1);
+                        if (string.IsNullOrEmpty(imagOnlyStr) || imagOnlyStr == "+")
+                            coeff = Complex.ImaginaryOne;
+                        else if (imagOnlyStr == "-")
+                            coeff = -Complex.ImaginaryOne;
+                        else
+                            coeff = new Complex(0, double.Parse(imagOnlyStr, NumberStyles.Any, culture));
+                    }
                     else
-                        imagPart = double.Parse(imagStr, culture);
+                    {
+                        coeff = new Complex(double.Parse(coeffStr, NumberStyles.Any, culture), 0);
+                    }
+                }
 
-                    coeff = new Complex(realPart, imagPart);
-                    power = 0;
+                if (coeffsDict.ContainsKey(power))
+                {
+                    coeffsDict[power] += coeff;
                 }
                 else
                 {
-                    if (double.TryParse(termWithoutSign, NumberStyles.Float, culture, out double realValue))
-                    {
-                        coeff = new Complex(realValue, 0.0);
-                        power = 0;
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Неверный формат слагаемого: {term}");
-                    }
+                    coeffsDict[power] = coeff;
                 }
-
-                if (sign == '-') coeff = Complex.Negate(coeff);
-
-                coeffsDict[power] = coeffsDict.ContainsKey(power) ? coeffsDict[power] + coeff : coeff;
             }
 
             int maxPower = coeffsDict.Count > 0 ? coeffsDict.Keys.Max() : 0;
-            List<Complex> coefficients = new List<Complex>();
+            var coefficients = new List<Complex>(new Complex[maxPower + 1]);
 
-            for (int i = 0; i <= maxPower; i++)
+            foreach (var pair in coeffsDict)
             {
-                coefficients.Add(coeffsDict.ContainsKey(i) ? coeffsDict[i] : Complex.Zero);
+                coefficients[pair.Key] = pair.Value;
             }
 
             return new Polynomial(coefficients);
@@ -1101,6 +1071,8 @@ namespace FractalExplorer
         private List<Complex> FindRoots(Polynomial p, int maxIter = 100, double epsilon = 1e-6)
         {
             List<Complex> roots = new List<Complex>();
+            if (p.Degree < 1) return roots;
+
             Polynomial pDeriv = p.Derivative();
             double[] reValues = { -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0 };
             double[] imValues = { -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0 };
@@ -1114,7 +1086,7 @@ namespace FractalExplorer
                     {
                         Complex pz = p.Evaluate(z);
                         Complex pDz = pDeriv.Evaluate(z);
-                        if (pDz.Magnitude < epsilon) continue;
+                        if (pDz.Magnitude < epsilon * epsilon) continue; // Избегаем деления на ноль
                         Complex zNext = z - pz / pDz;
                         if ((zNext - z).Magnitude < epsilon)
                         {
@@ -1139,19 +1111,20 @@ namespace FractalExplorer
 
         private class Polynomial
         {
-            public List<Complex> coefficients;
+            public readonly List<Complex> coefficients;
+            public int Degree => coefficients.Count - 1;
 
             public Polynomial(List<Complex> coeffs)
             {
-                coefficients = coeffs;
+                coefficients = coeffs ?? new List<Complex>();
             }
 
             public Complex Evaluate(Complex z)
             {
                 Complex result = Complex.Zero;
-                for (int i = 0; i < coefficients.Count; i++)
+                for (int i = coefficients.Count - 1; i >= 0; i--)
                 {
-                    result += coefficients[i] * Complex.Pow(z, i);
+                    result = result * z + coefficients[i]; // Используем схему Горнера для эффективности
                 }
                 return result;
             }
@@ -1159,7 +1132,7 @@ namespace FractalExplorer
             public Polynomial Derivative()
             {
                 if (coefficients.Count <= 1) return new Polynomial(new List<Complex> { Complex.Zero });
-                List<Complex> derivCoeffs = new List<Complex>();
+                var derivCoeffs = new List<Complex>();
                 for (int i = 1; i < coefficients.Count; i++)
                 {
                     derivCoeffs.Add(i * coefficients[i]);
