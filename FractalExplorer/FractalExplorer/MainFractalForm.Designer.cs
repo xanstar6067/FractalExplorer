@@ -147,7 +147,7 @@
             richTextBox3.ReadOnly = true;
             richTextBox3.Size = new Size(605, 157);
             richTextBox3.TabIndex = 4;
-            richTextBox3.Text = "Исследуйте ";
+            richTextBox3.Text = resources.GetString("richTextBox3.Text");
             // 
             // btnLaunchSerpinsky
             // 

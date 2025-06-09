@@ -340,7 +340,7 @@
             Controls.Add(panel1);
             MinimumSize = new Size(1100, 675);
             Name = "FractalMondelbrot";
-            Text = "Множество Монделброта";
+            Text = "Множество Мандельброта";
             Load += Form1_Load;
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
