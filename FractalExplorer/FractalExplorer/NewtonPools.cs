@@ -26,27 +26,27 @@ namespace FractalExplorer
         private double renderedCenterY;
         private double renderedZoom;
         private string[] presetPolynomials = {
-    "z^3-1",
-    "z^4-1",
-    "z^3-2z+2",
-    "(1+2i)z^2+z-1",
-    "(0.5-0.3i)z^3+2",
-    "z^5 - z^2 + 1",
-    "z^6 + 3z^3 - 2",
-    "z^4 - 4z^2 + 4",
-    "0.5z^3 - 1.25z + 2",
-    "z^7 + z^4 - z + 1",
-    "(2+i)z^3 - (1-2i)z + 1",
-    "(i)z^4 + z - 1",
-    "(1+0.5i)z^2 - z + (2-3i)",
-    "(0.3+1.7i)z^3 + (1-i)",
-    "(2-i)z^5 + (3+2i)z^2 - 1",
-    "-2z^3 + 0.75z^2 - 1",
-    "z^6 - 1.5z^3 + 0.25",
-    "-0.1z^4 + z - 2",
-    "(1/2)z^3 + (3/4)z - 1",
-    "(2+3i)*(z^2) - (1-i)*z + 4"
-};
+            "z^3-1",
+            "z^4-1",
+            "z^3-2z+2",
+            "(1+2i)z^2+z-1",
+            "(0.5-0.3i)z^3+2",
+            "z^5 - z^2 + 1",
+            "z^6 + 3z^3 - 2",
+            "z^4 - 4z^2 + 4",
+            "0.5z^3 - 1.25z + 2",
+            "z^7 + z^4 - z + 1",
+            "(2+i)z^3 - (1-2i)z + 1",
+            "(i)z^4 + z - 1",
+            "(1+0.5i)z^2 - z + (2-3i)",
+            "(0.3+1.7i)z^3 + (1-i)",
+            "(2-i)z^5 + (3+2i)z^2 - 1",
+            "-2z^3 + 0.75z^2 - 1",
+            "z^6 - 1.5z^3 + 0.25",
+            "-0.1z^4 + z - 2",
+            "(1/2)z^3 + (3/4)z - 1",
+            "(2+3i)*(z^2) - (1-i)*z + 4"
+        };
 
         public NewtonPools()
         {
@@ -265,6 +265,18 @@ namespace FractalExplorer
             }
         }
 
+        // +++ НОВЫЙ МЕТОД +++
+        // Глобальный "костыль" для создания безопасного цвета
+        private Color CreateSafeColor(int r, int g, int b)
+        {
+            // Ограничиваем каждое значение снизу (0) и сверху (255)
+            r = Math.Max(0, Math.Min(255, r));
+            g = Math.Max(0, Math.Min(255, g));
+            b = Math.Max(0, Math.Min(255, b));
+
+            return Color.FromArgb(r, g, b);
+        }
+
         private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom, string polyStr)
         {
             if (token.IsCancellationRequested || isHighResRendering || fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
@@ -299,7 +311,6 @@ namespace FractalExplorer
                 return;
             }
 
-            // Выбор цветовой палитры
             Color[] rootColors = new Color[roots.Count];
             bool useBlackWhite = oldRenderBW.Checked;
             bool useGradient = colorBox0.Checked;
@@ -312,17 +323,15 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    double t = (double)i / (roots.Count - 1); // Нормализация от 0 до 1 по количеству корней
+                    double t = (double)i / (roots.Count > 1 ? roots.Count - 1 : 1);
                     if (t < 0.5)
                     {
-                        // Переход от черного (0, 0, 0) к темно-красному (139, 0, 0)
-                        rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
+                        rootColors[i] = CreateSafeColor((int)(139 * t / 0.5), 0, 0);
                     }
                     else
                     {
-                        // Переход от темно-красного (139, 0, 0) к золотому (255, 215, 0)
                         double t2 = (t - 0.5) / 0.5;
-                        rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
+                        rootColors[i] = CreateSafeColor((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
                     }
                 }
             }
@@ -335,7 +344,7 @@ namespace FractalExplorer
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
+                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : CreateSafeColor(200, 200, 200 + i * 10);
                 }
             }
             else if (useContrast)
@@ -347,31 +356,31 @@ namespace FractalExplorer
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
             else if (useFire)
             {
                 Color[] fireColors = {
-                    Color.FromArgb(200, 0, 0),    // Темно-красный
-                    Color.FromArgb(255, 100, 0),  // Оранжевый
-                    Color.FromArgb(255, 255, 100), // Светло-желтый
+                    Color.FromArgb(200, 0, 0),
+                    Color.FromArgb(255, 100, 0),
+                    Color.FromArgb(255, 255, 100),
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < fireColors.Length ? fireColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                    rootColors[i] = i < fireColors.Length ? fireColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
             else if (useContrasting)
             {
                 Color[] contrastingColors = {
-                    Color.FromArgb(10, 0, 20),     // Темно-фиолетовый
-                    Color.FromArgb(255, 0, 255),   // Пурпурный
-                    Color.FromArgb(0, 255, 255),   // Циановый
+                    Color.FromArgb(10, 0, 20),
+                    Color.FromArgb(255, 0, 255),
+                    Color.FromArgb(0, 255, 255),
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
             else if (useBlackWhite)
@@ -385,8 +394,8 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = 255 * (i + 1) / (roots.Count + 1);
-                    rootColors[i] = Color.FromArgb(shade, shade, shade);
+                    int shade = 255 * (i + 1) / (roots.Count > 0 ? roots.Count + 1 : 1);
+                    rootColors[i] = CreateSafeColor(shade, shade, shade);
                 }
             }
 
@@ -408,7 +417,7 @@ namespace FractalExplorer
 
                 ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = threadCount, CancellationToken = token };
                 int done = 0;
-                double epsilon = 1e-6; // Фиксированный порог
+                double epsilon = 1e-6;
 
                 double scale_factor_w = (BASE_SCALE / renderZoom) / width;
                 double scale_factor_h = (BASE_SCALE / renderZoom) / height;
@@ -462,7 +471,7 @@ namespace FractalExplorer
                         }
                         else
                         {
-                            pixelColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
+                            pixelColor = usePastel ? CreateSafeColor(50, 50, 50) : Color.Black;
                         }
 
                         int index = rowOffset + x * 3;
@@ -530,17 +539,17 @@ namespace FractalExplorer
             int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
 
             if (hi == 0)
-                return Color.FromArgb(v, t, p);
+                return CreateSafeColor(v, t, p);
             else if (hi == 1)
-                return Color.FromArgb(q, v, p);
+                return CreateSafeColor(q, v, p);
             else if (hi == 2)
-                return Color.FromArgb(p, v, t);
+                return CreateSafeColor(p, v, t);
             else if (hi == 3)
-                return Color.FromArgb(p, q, v);
+                return CreateSafeColor(p, q, v);
             else if (hi == 4)
-                return Color.FromArgb(t, p, v);
+                return CreateSafeColor(t, p, v);
             else
-                return Color.FromArgb(v, p, q);
+                return CreateSafeColor(v, p, q);
         }
 
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY,
@@ -589,20 +598,17 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    double t = (double)i / (roots.Count - 1); // Нормализация от 0 до 1 по количеству корней
+                    double t = (double)i / (roots.Count > 1 ? roots.Count - 1 : 1);
                     if (t < 0.5)
                     {
-                        // Переход от черного (0, 0, 0) к темно-красному (139, 0, 0)
-                        rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
+                        rootColors[i] = CreateSafeColor((int)(139 * t / 0.5), 0, 0);
                     }
                     else
                     {
-                        // Переход от темно-красного (139, 0, 0) к золотому (255, 215, 0)
                         double t2 = (t - 0.5) / 0.5;
-                        rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
+                        rootColors[i] = CreateSafeColor((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
                     }
                 }
-
             }
             else if (usePastel)
             {
@@ -613,7 +619,7 @@ namespace FractalExplorer
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
+                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : CreateSafeColor(200, 200, 200 + i * 10);
                 }
             }
             else if (useContrast)
@@ -625,31 +631,31 @@ namespace FractalExplorer
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
             else if (useFire)
             {
                 Color[] fireColors = {
-                    Color.FromArgb(200, 0, 0),    // Темно-красный
-                    Color.FromArgb(255, 100, 0),  // Оранжевый
-                    Color.FromArgb(255, 255, 100), // Светло-желтый
+                    Color.FromArgb(200, 0, 0),
+                    Color.FromArgb(255, 100, 0),
+                    Color.FromArgb(255, 255, 100),
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < fireColors.Length ? fireColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                    rootColors[i] = i < fireColors.Length ? fireColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
             else if (useContrasting)
             {
                 Color[] contrastingColors = {
-                    Color.FromArgb(10, 0, 20),     // Темно-фиолетовый
-                    Color.FromArgb(255, 0, 255),   // Пурпурный
-                    Color.FromArgb(0, 255, 255),   // Циановый
+                    Color.FromArgb(10, 0, 20),
+                    Color.FromArgb(255, 0, 255),
+                    Color.FromArgb(0, 255, 255),
                 };
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
+                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
             }
             else if (useBlackWhite)
@@ -663,8 +669,8 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = 255 * (i + 1) / (roots.Count + 1);
-                    rootColors[i] = Color.FromArgb(shade, shade, shade);
+                    int shade = 255 * (i + 1) / (roots.Count > 0 ? roots.Count + 1 : 1);
+                    rootColors[i] = CreateSafeColor(shade, shade, shade);
                 }
             }
 
@@ -730,7 +736,7 @@ namespace FractalExplorer
                     }
                     else
                     {
-                        pixelColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
+                        pixelColor = usePastel ? CreateSafeColor(50, 50, 50) : Color.Black;
                     }
 
                     int index = rowOffset + x * 3;
@@ -747,6 +753,7 @@ namespace FractalExplorer
             return bmp;
         }
 
+        // ... Остальной код без изменений ...
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (isHighResRendering) return;
@@ -917,24 +924,15 @@ namespace FractalExplorer
 
         private Polynomial ParsePolynomial(string polyStr)
         {
-            // Удаление пробелов и приведение к нижнему регистру
             polyStr = polyStr.Replace(" ", "").ToLower();
-
-            // Обработка дробей (например, 1/2 -> 0.5)
             polyStr = EvaluateFractions(polyStr);
-
-            // Обработка умножений вида (a+bi)*(z^n) или (a)*(z^n)
             polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\((z(?:\^\d+)?)\)", "$1$2");
             polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", "$1z$2");
-
-            // Удаление лишних скобок вокруг чисел или комплексных чисел
             polyStr = Regex.Replace(polyStr, @"\((-?\d*\.?\d+(?:[+-]\d*\.?\d*i)?)\)", "$1");
 
-            // Список для хранения слагаемых
             List<(Complex coeff, int power)> terms = new List<(Complex, int)>();
             var culture = CultureInfo.InvariantCulture;
 
-            // Токенизация: разбиваем на слагаемые по '+' и '-' вне скобок
             List<string> termStrings = new List<string>();
             StringBuilder currentTerm = new StringBuilder();
             int parenthesesCount = 0;
@@ -959,7 +957,6 @@ namespace FractalExplorer
             if (currentTerm.Length > 0)
                 termStrings.Add(currentTerm.ToString());
 
-            // Обработка каждого слагаемого
             foreach (string term in termStrings)
             {
                 if (string.IsNullOrEmpty(term)) continue;
@@ -970,12 +967,10 @@ namespace FractalExplorer
                 Complex coeff = Complex.Zero;
                 int power = 0;
 
-                // Разбиваем слагаемое на коэффициент и часть с z
                 int zIndex = termWithoutSign.IndexOf('z');
                 string coeffStr = zIndex >= 0 ? termWithoutSign.Substring(0, zIndex) : termWithoutSign;
                 string zPart = zIndex >= 0 ? termWithoutSign.Substring(zIndex) : "";
 
-                // Определяем степень
                 if (!string.IsNullOrEmpty(zPart))
                 {
                     if (zPart == "z")
@@ -986,15 +981,12 @@ namespace FractalExplorer
                         throw new ArgumentException($"Неверный формат части с z: {zPart}");
                 }
 
-                // Парсинг коэффициента
                 if (string.IsNullOrEmpty(coeffStr))
                 {
-                    // Если коэффициент не указан (например, z^2 или -z), то он равен 1 или -1
                     coeff = new Complex(sign == '-' ? -1.0 : 1.0, 0.0);
                 }
                 else if (coeffStr.Contains("i"))
                 {
-                    // Обработка комплексного коэффициента, например 1+2i, -3i, i
                     coeffStr = coeffStr.Trim('(', ')');
                     if (coeffStr == "i")
                         coeff = new Complex(0, sign == '-' ? -1.0 : 1.0);
@@ -1002,7 +994,6 @@ namespace FractalExplorer
                         coeff = new Complex(0, -1.0);
                     else
                     {
-                        // Разделяем на вещественную и мнимую части
                         string[] parts = coeffStr.Split(new[] { '+', '-' }, StringSplitOptions.RemoveEmptyEntries);
                         double realPart = 0.0, imagPart = 0.0;
 
@@ -1030,7 +1021,6 @@ namespace FractalExplorer
                 }
                 else
                 {
-                    // Вещественный коэффициент
                     if (double.TryParse(coeffStr, NumberStyles.Float, culture, out double realValue))
                         coeff = new Complex(realValue, 0.0);
                     else
@@ -1042,7 +1032,6 @@ namespace FractalExplorer
                 terms.Add((coeff, power));
             }
 
-            // Формируем коэффициенты полинома
             int maxPower = terms.Any() ? terms.Max(t => t.power) : 0;
             List<Complex> coefficients = new List<Complex>(new Complex[maxPower + 1]);
             foreach (var term in terms)
@@ -1053,10 +1042,8 @@ namespace FractalExplorer
             return new Polynomial(coefficients);
         }
 
-        // Вспомогательная функция для обработки дробей
         private string EvaluateFractions(string polyStr)
         {
-            // Регулярное выражение для поиска дробей вида a/b
             return Regex.Replace(polyStr, @"(\d+)/(\d+)", m =>
             {
                 double numerator = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
@@ -1069,25 +1056,21 @@ namespace FractalExplorer
         {
             List<Complex> roots = new List<Complex>();
             Polynomial pDeriv = p.Derivative();
-            // Расширяем диапазон начальных приближений для большей устойчивости поиска корней
             double[] reValues = { -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0 };
             double[] imValues = { -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0 };
 
-            // Дополнительные точки вокруг единичного круга, т.к. корни часто лежат там
-            int pointsOnCircle = Math.Max(4, p.coefficients.Count - 1) * 2; // Больше точек для полиномов высокой степени
-            if (pointsOnCircle > 0) // Убедимся, что pointsOnCircle > 0
+            int pointsOnCircle = Math.Max(4, p.coefficients.Count - 1) * 2;
+            if (pointsOnCircle > 0)
             {
                 for (int k = 0; k < pointsOnCircle; k++)
                 {
                     double angle = 2 * Math.PI * k / pointsOnCircle;
-                    reValues = reValues.Append(Math.Cos(angle) * 0.9).ToArray(); // Немного внутри единичного круга
+                    reValues = reValues.Append(Math.Cos(angle) * 0.9).ToArray();
                     imValues = imValues.Append(Math.Sin(angle) * 0.9).ToArray();
-                    reValues = reValues.Append(Math.Cos(angle) * 1.1).ToArray(); // Немного снаружи единичного круга
+                    reValues = reValues.Append(Math.Cos(angle) * 1.1).ToArray();
                     imValues = imValues.Append(Math.Sin(angle) * 1.1).ToArray();
                 }
             }
-
-            // Убираем дубликаты из reValues и imValues, если они появились
             reValues = reValues.Distinct().ToArray();
             imValues = imValues.Distinct().ToArray();
 
@@ -1102,20 +1085,16 @@ namespace FractalExplorer
                         Complex pz = p.Evaluate(z);
                         Complex pDz = pDeriv.Evaluate(z);
 
-                        if (pDz.Magnitude < epsilon / 100) // Если производная очень мала, можем быть рядом с кратным корнем или на плато
+                        if (pDz.Magnitude < epsilon / 100)
                         {
-                            // Попробовать небольшой сдвиг, если это не помогает, то выходим
-                            // Это попытка избежать деления на слишком малое число, но не всегда спасает.
-                            // Если мы уже близко к корню (pz мало), то этот break не страшен.
-                            // Если pz велико, а pDz мало - это проблема.
-                            if (pz.Magnitude < epsilon) break; // Если значение функции уже мало, считаем, что корень найден
-                            break; // В противном случае, прекращаем итерации для этой стартовой точки
+                            if (pz.Magnitude < epsilon) break;
+                            break;
                         }
 
                         Complex step = pz / pDz;
                         Complex zNext = z - step;
 
-                        if (step.Magnitude < epsilon) // Если шаг очень мал, мы сошлись
+                        if (step.Magnitude < epsilon)
                         {
                             bool isNewRoot = true;
                             foreach (Complex root in roots)
@@ -1128,8 +1107,7 @@ namespace FractalExplorer
                             }
                             if (isNewRoot)
                             {
-                                // Дополнительная проверка: убедимся, что это действительно корень
-                                if (p.Evaluate(zNext).Magnitude < epsilon * 10) // Проверяем с несколько большим допуском
+                                if (p.Evaluate(zNext).Magnitude < epsilon * 10)
                                 {
                                     roots.Add(zNext);
                                 }
@@ -1138,8 +1116,7 @@ namespace FractalExplorer
                         }
                         z = zNext;
 
-                        // Если z уходит слишком далеко, прекращаем итерации для этой стартовой точки
-                        if (z.Magnitude > 1e3) // Ограничение на величину z
+                        if (z.Magnitude > 1e3)
                         {
                             break;
                         }
@@ -1147,23 +1124,16 @@ namespace FractalExplorer
                 }
             }
 
-            // Сортировка корней для консистентного порядка
-            // Сортируем сначала по действительной части, потом по мнимой
             roots.Sort((r1, r2) =>
             {
-                // Сравниваем действительные части с учетом epsilon
-                // (Используем epsilon/10 для более точного сравнения действительных частей перед переходом к мнимым)
                 double realDiff = r1.Real - r2.Real;
-                if (Math.Abs(realDiff) < epsilon / 10.0) // Если действительные части "почти равны"
+                if (Math.Abs(realDiff) < epsilon / 10.0)
                 {
-                    // Сравниваем мнимые части
                     return r1.Imaginary.CompareTo(r2.Imaginary);
                 }
-                // Иначе сравниваем действительные части
-                return realDiff.CompareTo(0.0); // r1.Real.CompareTo(r2.Real)
+                return realDiff.CompareTo(0.0);
             });
 
-            // Дополнительный шаг: удаление очень близких корней после сортировки, если они все еще есть
             if (roots.Count > 0)
             {
                 List<Complex> distinctRoots = new List<Complex> { roots[0] };
