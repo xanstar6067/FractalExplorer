@@ -298,8 +298,8 @@
             // nudIterations
             // 
             nudIterations.Location = new Point(12, 12);
-            nudIterations.Maximum = new decimal(new int[] { 5000, 0, 0, 0 });
-            nudIterations.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
+            nudIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
+            nudIterations.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudIterations.Name = "nudIterations";
             nudIterations.Size = new Size(120, 23);
             nudIterations.TabIndex = 2;
@@ -314,7 +314,7 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
-            // NewtonPpools
+            // NewtonPools
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -322,7 +322,7 @@
             Controls.Add(fractal_bitmap);
             Controls.Add(panel1);
             MinimumSize = new Size(1100, 675);
-            Name = "NewtonPpools";
+            Name = "NewtonPools";
             Text = "Бассейны Ньютона";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
