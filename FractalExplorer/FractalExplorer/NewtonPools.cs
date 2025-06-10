@@ -923,69 +923,39 @@ namespace FractalExplorer
             else action();
         }
 
-        private string EvaluateFractions(string expr)
-        {
-            return Regex.Replace(expr, @"\(([^()]+/[^()]+)\)", m => {
-                try
-                {
-                    var result = new DataTable().Compute(m.Groups[1].Value, null);
-                    return Convert.ToDouble(result).ToString(CultureInfo.InvariantCulture);
-                }
-                catch
-                {
-                    return m.Value; // оставить как есть, если не удалось
-                }
-            });
-        }
-
-
         private Polynomial ParsePolynomial(string polyStr)
         {
-            polyStr = polyStr.Replace(" ", "");
+            // Удаление пробелов и приведение к нижнему регистру
+            polyStr = polyStr.Replace(" ", "").ToLower();
 
-            // Обработка дробей
+            // Обработка дробей (например, 1/2 -> 0.5)
             polyStr = EvaluateFractions(polyStr);
 
-            // Обработка всех скобочных умножений (в том числе с несколькими скобками)
-            while (Regex.IsMatch(polyStr, @"\([^()]+\)\*\([^()]*z\^?\d*\)?"))
-            {
-                polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\(([^()]*z\^?\d*)\)", m =>
-                {
-                    return "(" + m.Groups[1].Value + ")" + m.Groups[2].Value;
-                });
-            }
+            // Обработка умножений вида (a+bi)*(z^n) или (a)*(z^n)
+            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\((z(?:\^\d+)?)\)", "$1$2");
+            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", "$1z$2");
 
-            // Упрощённая форма (a+bi)*z^n или *z
-            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", m =>
-            {
-                return "(" + m.Groups[1].Value + ")z" + (m.Groups[2].Success ? m.Groups[2].Value : "");
-            });
+            // Удаление лишних скобок вокруг чисел или комплексных чисел
+            polyStr = Regex.Replace(polyStr, @"\((-?\d*\.?\d+(?:[+-]\d*\.?\d*i)?)\)", "$1");
 
-            // Также для случаев: (a+bi)*z
-            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z", m => "(" + m.Groups[1].Value + ")z");
-
-            // Обработка (i) как (0+1i)
-            polyStr = Regex.Replace(polyStr, @"\(i\)", "(0+1i)");
-
-            // Очистка от лишних пробелов в комплексных скобках
-            polyStr = Regex.Replace(polyStr, @"\(([0-9\.+\-]+[+-][0-9\.+\-]+)i\)", m => m.Value.Replace(" ", ""));
-
+            // Список для хранения слагаемых
+            List<(Complex coeff, int power)> terms = new List<(Complex, int)>();
             var culture = CultureInfo.InvariantCulture;
-            List<string> terms = new List<string>();
+
+            // Токенизация: разбиваем на слагаемые по '+' и '-' вне скобок
+            List<string> termStrings = new List<string>();
             StringBuilder currentTerm = new StringBuilder();
             int parenthesesCount = 0;
-            bool isFirstTerm = true;
 
             for (int i = 0; i < polyStr.Length; i++)
             {
                 char c = polyStr[i];
-
                 if (c == '(') parenthesesCount++;
                 else if (c == ')') parenthesesCount--;
 
-                if ((c == '+' || c == '-') && parenthesesCount == 0 && !isFirstTerm)
+                if ((c == '+' || c == '-') && parenthesesCount == 0 && currentTerm.Length > 0)
                 {
-                    terms.Add(currentTerm.ToString());
+                    termStrings.Add(currentTerm.ToString());
                     currentTerm.Clear();
                     currentTerm.Append(c);
                 }
@@ -993,97 +963,116 @@ namespace FractalExplorer
                 {
                     currentTerm.Append(c);
                 }
-
-                isFirstTerm = false;
             }
-
             if (currentTerm.Length > 0)
-                terms.Add(currentTerm.ToString());
+                termStrings.Add(currentTerm.ToString());
 
-            Dictionary<int, Complex> coeffsDict = new Dictionary<int, Complex>();
-
-            foreach (string term in terms)
+            // Обработка каждого слагаемого
+            foreach (string term in termStrings)
             {
                 if (string.IsNullOrEmpty(term)) continue;
 
                 char sign = term[0] == '-' ? '-' : '+';
                 string termWithoutSign = (term[0] == '+' || term[0] == '-') ? term.Substring(1) : term;
 
-                Complex coeff;
+                Complex coeff = Complex.Zero;
                 int power = 0;
 
-                Match complexWithZ = Regex.Match(termWithoutSign, @"^\((-?\d*\.?\d+)([+-]\d*\.?\d*)i\)(z(?:\^(\d+))?)?$");
-                Match realWithZ = Regex.Match(termWithoutSign, @"^(-?\d*\.?\d+)(z(?:\^(\d+))?)?$");
-                Match justZ = Regex.Match(termWithoutSign, @"^(z(?:\^(\d+))?)$");
-                Match complexConst = Regex.Match(termWithoutSign, @"^\((-?\d*\.?\d+)([+-]\d*\.?\d*)i\)$");
+                // Разбиваем слагаемое на коэффициент и часть с z
+                int zIndex = termWithoutSign.IndexOf('z');
+                string coeffStr = zIndex >= 0 ? termWithoutSign.Substring(0, zIndex) : termWithoutSign;
+                string zPart = zIndex >= 0 ? termWithoutSign.Substring(zIndex) : "";
 
-                if (complexWithZ.Success)
+                // Определяем степень
+                if (!string.IsNullOrEmpty(zPart))
                 {
-                    double realPart = double.Parse(complexWithZ.Groups[1].Value, culture);
-                    string imagStr = complexWithZ.Groups[2].Value;
-                    double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
-                    coeff = new Complex(realPart, imagPart);
+                    if (zPart == "z")
+                        power = 1;
+                    else if (zPart.StartsWith("z^") && int.TryParse(zPart.Substring(2), out int p))
+                        power = p;
+                    else
+                        throw new ArgumentException($"Неверный формат части с z: {zPart}");
+                }
 
-                    string zPart = complexWithZ.Groups[3].Value;
-                    string powerStr = complexWithZ.Groups[4].Value;
-                    if (!string.IsNullOrEmpty(zPart))
-                        power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
-                }
-                else if (realWithZ.Success)
+                // Парсинг коэффициента
+                if (string.IsNullOrEmpty(coeffStr))
                 {
-                    string coeffStr = realWithZ.Groups[1].Value;
-                    double realPart = string.IsNullOrEmpty(coeffStr) ? 1.0 : double.Parse(coeffStr, culture);
-                    coeff = new Complex(realPart, 0.0);
+                    // Если коэффициент не указан (например, z^2 или -z), то он равен 1 или -1
+                    coeff = new Complex(sign == '-' ? -1.0 : 1.0, 0.0);
+                }
+                else if (coeffStr.Contains("i"))
+                {
+                    // Обработка комплексного коэффициента, например 1+2i, -3i, i
+                    coeffStr = coeffStr.Trim('(', ')');
+                    if (coeffStr == "i")
+                        coeff = new Complex(0, sign == '-' ? -1.0 : 1.0);
+                    else if (coeffStr == "-i")
+                        coeff = new Complex(0, -1.0);
+                    else
+                    {
+                        // Разделяем на вещественную и мнимую части
+                        string[] parts = coeffStr.Split(new[] { '+', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                        double realPart = 0.0, imagPart = 0.0;
 
-                    string zPart = realWithZ.Groups[2].Value;
-                    string powerStr = realWithZ.Groups[3].Value;
-                    if (!string.IsNullOrEmpty(zPart))
-                        power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr, culture);
-                }
-                else if (justZ.Success)
-                {
-                    coeff = new Complex(1.0, 0.0);
-                    string powerStr = justZ.Groups[2].Value;
-                    power = string.IsNullOrEmpty(powerStr) ? 1 : int.Parse(powerStr);
-                }
-                else if (complexConst.Success)
-                {
-                    double realPart = double.Parse(complexConst.Groups[1].Value, culture);
-                    string imagStr = complexConst.Groups[2].Value;
-                    double imagPart = imagStr == "+" ? 1.0 : imagStr == "-" ? -1.0 : double.Parse(imagStr, culture);
-                    coeff = new Complex(realPart, imagPart);
-                    power = 0;
+                        foreach (string part in parts)
+                        {
+                            int splitIndex = coeffStr.IndexOf(part);
+                            int localSign = 1;
+                            if (splitIndex > 0 && coeffStr[splitIndex - 1] == '-') localSign = -1;
+
+                            if (part.EndsWith("i"))
+                            {
+                                string imagStr = part.Substring(0, part.Length - 1);
+                                if (string.IsNullOrEmpty(imagStr))
+                                    imagPart = localSign * 1.0;
+                                else
+                                    imagPart = localSign * double.Parse(imagStr, culture);
+                            }
+                            else
+                            {
+                                realPart = localSign * double.Parse(part, culture);
+                            }
+                        }
+                        coeff = new Complex(realPart, imagPart);
+                    }
                 }
                 else
                 {
-                    if (double.TryParse(termWithoutSign, NumberStyles.Float, culture, out double realValue))
-                    {
+                    // Вещественный коэффициент
+                    if (double.TryParse(coeffStr, NumberStyles.Float, culture, out double realValue))
                         coeff = new Complex(realValue, 0.0);
-                        power = 0;
-                    }
                     else
-                    {
-                        throw new ArgumentException($"Неверный формат слагаемого: {term}");
-                    }
+                        throw new ArgumentException($"Неверный формат коэффициента: {coeffStr}");
                 }
 
                 if (sign == '-') coeff = Complex.Negate(coeff);
 
-                coeffsDict[power] = coeffsDict.ContainsKey(power) ? coeffsDict[power] + coeff : coeff;
+                terms.Add((coeff, power));
             }
 
-            int maxPower = coeffsDict.Count > 0 ? coeffsDict.Keys.Max() : 0;
-            List<Complex> coefficients = new List<Complex>();
-
-            for (int i = 0; i <= maxPower; i++)
+            // Формируем коэффициенты полинома
+            int maxPower = terms.Any() ? terms.Max(t => t.power) : 0;
+            List<Complex> coefficients = new List<Complex>(new Complex[maxPower + 1]);
+            foreach (var term in terms)
             {
-                coefficients.Add(coeffsDict.ContainsKey(i) ? coeffsDict[i] : Complex.Zero);
+                coefficients[term.power] += term.coeff;
             }
 
             return new Polynomial(coefficients);
         }
 
-
+        // Вспомогательная функция для обработки дробей
+        private string EvaluateFractions(string polyStr)
+        {
+            // Регулярное выражение для поиска дробей вида a/b
+            return Regex.Replace(polyStr, @"(\d+)/(\d+)", m =>
+            {
+                double numerator = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+                double denominator = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+                if (denominator == 0) throw new ArgumentException("Деление на ноль в дроби");
+                return (numerator / denominator).ToString(CultureInfo.InvariantCulture);
+            });
+        }
         private List<Complex> FindRoots(Polynomial p, int maxIter = 100, double epsilon = 1e-6)
         {
             List<Complex> roots = new List<Complex>();
