@@ -1077,40 +1077,114 @@ namespace FractalExplorer
         {
             List<Complex> roots = new List<Complex>();
             Polynomial pDeriv = p.Derivative();
-            double[] reValues = { -2.0, -1.0, 0.0, 1.0, 2.0 };
-            double[] imValues = { -2.0, -1.0, 0.0, 1.0, 2.0 };
+            // Расширяем диапазон начальных приближений для большей устойчивости поиска корней
+            double[] reValues = { -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0 };
+            double[] imValues = { -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0 };
 
-            foreach (double re in reValues)
+            // Дополнительные точки вокруг единичного круга, т.к. корни часто лежат там
+            int pointsOnCircle = Math.Max(4, p.coefficients.Count - 1) * 2; // Больше точек для полиномов высокой степени
+            if (pointsOnCircle > 0) // Убедимся, что pointsOnCircle > 0
             {
-                foreach (double im in imValues)
+                for (int k = 0; k < pointsOnCircle; k++)
                 {
-                    Complex z = new Complex(re, im);
+                    double angle = 2 * Math.PI * k / pointsOnCircle;
+                    reValues = reValues.Append(Math.Cos(angle) * 0.9).ToArray(); // Немного внутри единичного круга
+                    imValues = imValues.Append(Math.Sin(angle) * 0.9).ToArray();
+                    reValues = reValues.Append(Math.Cos(angle) * 1.1).ToArray(); // Немного снаружи единичного круга
+                    imValues = imValues.Append(Math.Sin(angle) * 1.1).ToArray();
+                }
+            }
+
+            // Убираем дубликаты из reValues и imValues, если они появились
+            reValues = reValues.Distinct().ToArray();
+            imValues = imValues.Distinct().ToArray();
+
+
+            foreach (double re_init in reValues)
+            {
+                foreach (double im_init in imValues)
+                {
+                    Complex z = new Complex(re_init, im_init);
                     for (int i = 0; i < maxIter; i++)
                     {
                         Complex pz = p.Evaluate(z);
                         Complex pDz = pDeriv.Evaluate(z);
-                        if (pDz.Magnitude < epsilon) break;
-                        Complex zNext = z - pz / pDz;
-                        if ((zNext - z).Magnitude < epsilon)
+
+                        if (pDz.Magnitude < epsilon / 100) // Если производная очень мала, можем быть рядом с кратным корнем или на плато
                         {
-                            bool isNew = true;
+                            // Попробовать небольшой сдвиг, если это не помогает, то выходим
+                            // Это попытка избежать деления на слишком малое число, но не всегда спасает.
+                            // Если мы уже близко к корню (pz мало), то этот break не страшен.
+                            // Если pz велико, а pDz мало - это проблема.
+                            if (pz.Magnitude < epsilon) break; // Если значение функции уже мало, считаем, что корень найден
+                            break; // В противном случае, прекращаем итерации для этой стартовой точки
+                        }
+
+                        Complex step = pz / pDz;
+                        Complex zNext = z - step;
+
+                        if (step.Magnitude < epsilon) // Если шаг очень мал, мы сошлись
+                        {
+                            bool isNewRoot = true;
                             foreach (Complex root in roots)
                             {
                                 if ((zNext - root).Magnitude < epsilon)
                                 {
-                                    isNew = false;
+                                    isNewRoot = false;
                                     break;
                                 }
                             }
-                            if (isNew) roots.Add(zNext);
+                            if (isNewRoot)
+                            {
+                                // Дополнительная проверка: убедимся, что это действительно корень
+                                if (p.Evaluate(zNext).Magnitude < epsilon * 10) // Проверяем с несколько большим допуском
+                                {
+                                    roots.Add(zNext);
+                                }
+                            }
                             break;
                         }
                         z = zNext;
+
+                        // Если z уходит слишком далеко, прекращаем итерации для этой стартовой точки
+                        if (z.Magnitude > 1e3) // Ограничение на величину z
+                        {
+                            break;
+                        }
                     }
                 }
             }
-            // Сортировка корней по вещественной части, затем по мнимой
-            roots.Sort((a, b) => a.Real == b.Real ? a.Imaginary.CompareTo(b.Imaginary) : a.Real.CompareTo(b.Real));
+
+            // Сортировка корней для консистентного порядка
+            // Сортируем сначала по действительной части, потом по мнимой
+            roots.Sort((r1, r2) =>
+            {
+                // Сравниваем действительные части с учетом epsilon
+                // (Используем epsilon/10 для более точного сравнения действительных частей перед переходом к мнимым)
+                double realDiff = r1.Real - r2.Real;
+                if (Math.Abs(realDiff) < epsilon / 10.0) // Если действительные части "почти равны"
+                {
+                    // Сравниваем мнимые части
+                    return r1.Imaginary.CompareTo(r2.Imaginary);
+                }
+                // Иначе сравниваем действительные части
+                return realDiff.CompareTo(0.0); // r1.Real.CompareTo(r2.Real)
+            });
+
+            // Дополнительный шаг: удаление очень близких корней после сортировки, если они все еще есть
+            if (roots.Count > 0)
+            {
+                List<Complex> distinctRoots = new List<Complex> { roots[0] };
+                for (int i = 1; i < roots.Count; i++)
+                {
+                    if ((roots[i] - distinctRoots.Last()).Magnitude >= epsilon)
+                    {
+                        distinctRoots.Add(roots[i]);
+                    }
+                }
+                roots = distinctRoots;
+            }
+
             return roots;
         }
 
