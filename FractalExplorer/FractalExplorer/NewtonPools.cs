@@ -1109,6 +1109,8 @@ namespace FractalExplorer
                     }
                 }
             }
+            // Сортировка корней по вещественной части, затем по мнимой
+            roots.Sort((a, b) => a.Real == b.Real ? a.Imaginary.CompareTo(b.Imaginary) : a.Real.CompareTo(b.Real));
             return roots;
         }
 
