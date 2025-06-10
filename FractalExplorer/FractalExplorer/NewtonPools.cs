@@ -1,207 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Text;
 using System.Numerics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Globalization;
-using MathNet.Symbolics;
-using MathNet.Numerics;
-using Expr = MathNet.Symbolics.Expression;
-using Microsoft.FSharp.Collections;
 
 namespace FractalExplorer
 {
-    public class Polynomial
-    {
-        public List<Complex> coefficients;
-
-        public Polynomial(List<Complex> coeffs)
-        {
-            coefficients = coeffs ?? new List<Complex>();
-        }
-
-        public Complex Evaluate(Complex z)
-        {
-            Complex result = Complex.Zero;
-            for (int i = 0; i < coefficients.Count; i++)
-            {
-                if (coefficients[i] != Complex.Zero)
-                {
-                    result += coefficients[i] * Complex.Pow(z, i);
-                }
-            }
-            return result;
-        }
-
-        public Polynomial Derivative()
-        {
-            if (coefficients.Count <= 1)
-            {
-                return new Polynomial(new List<Complex> { Complex.Zero });
-            }
-            List<Complex> derivCoeffs = new List<Complex>();
-            for (int i = 1; i < coefficients.Count; i++)
-            {
-                derivCoeffs.Add(i * coefficients[i]);
-            }
-            if (!derivCoeffs.Any() || derivCoeffs.All(c => c == Complex.Zero))
-            {
-                return new Polynomial(new List<Complex> { Complex.Zero });
-            }
-            return new Polynomial(derivCoeffs);
-        }
-    }
-
-    public static class PolynomialParser
-    {
-        private static Complex EvaluateConstantExpression(Expr expression)
-        {
-            if (expression == Expr.I)
-            {
-                return Complex.ImaginaryOne;
-            }
-            else if (expression == Expr.Zero)
-            {
-                return Complex.Zero;
-            }
-            else if (expression == Expr.One)
-            {
-                return Complex.One;
-            }
-            else if (expression.IsNumber)
-            {
-                string exprStr = Infix.Format(expression);
-                if (double.TryParse(exprStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double real))
-                {
-                    return new Complex(real, 0);
-                }
-                else if (exprStr.Contains("I"))
-                {
-                    exprStr = exprStr.Replace("I", "").Trim();
-                    if (string.IsNullOrEmpty(exprStr) || exprStr == "-")
-                    {
-                        return new Complex(0, exprStr == "-" ? -1 : 1);
-                    }
-                    if (double.TryParse(exprStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double imag))
-                    {
-                        return new Complex(0, imag);
-                    }
-                }
-            }
-            else if (expression.IsProduct || expression.IsSum)
-            {
-                try
-                {
-                    string exprStr = Infix.Format(expression);
-                    if (exprStr.Contains("+") || exprStr.Contains("-"))
-                    {
-                        var parts = exprStr.Split(new[] { '+' }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(s => s.Trim()).ToList();
-                        double real = 0, imag = 0;
-                        foreach (var part in parts)
-                        {
-                            string p = part;
-                            if (p.Contains("I"))
-                            {
-                                p = p.Replace("I", "").Trim();
-                                if (string.IsNullOrEmpty(p) || p == "-") imag += p == "-" ? -1 : 1;
-                                else if (double.TryParse(p, NumberStyles.Any, CultureInfo.InvariantCulture, out double val))
-                                    imag += val;
-                            }
-                            else if (double.TryParse(p, NumberStyles.Any, CultureInfo.InvariantCulture, out double val))
-                            {
-                                real += val;
-                            }
-                        }
-                        return new Complex(real, imag);
-                    }
-                }
-                catch { }
-            }
-            return Complex.Zero; // Возвращаем ноль, если не удалось распознать
-        }
-
-        public static Polynomial ParsePolynomialWithMathNet(string polyStr)
-        {
-            if (string.IsNullOrWhiteSpace(polyStr))
-            {
-                return new Polynomial(new List<Complex> { Complex.Zero });
-            }
-
-            string processedPolyStr = polyStr.Replace(" ", "");
-            processedPolyStr = Regex.Replace(processedPolyStr, @"(\d)([a-zA-Z\(])", "$1*$2");
-            processedPolyStr = Regex.Replace(processedPolyStr, @"(\))([a-zA-Z\d\(])", "$1*$2");
-            processedPolyStr = Regex.Replace(processedPolyStr, @"([a-zA-Z])([\d\(])(?<!sin|cos|tan|ln|log|exp|sqrt)", "$1*$2");
-            processedPolyStr = Regex.Replace(processedPolyStr, @"(?<=[^a-zA-Z_]|^)i(?=z|\()", "i*");
-
-            Expr symbolicExpr;
-            var parseResult = Infix.ParseOrThrow(processedPolyStr);
-            symbolicExpr = parseResult;
-
-            var z_symbol = Expr.Symbol("z");
-            Expr expandedExpr = Algebraic.Expand(symbolicExpr);
-
-            List<Complex> coeffs = new List<Complex>();
-            Expr currentExpr = expandedExpr;
-            long factorial = 1;
-            int maxDegreeToTry = 20;
-
-            for (int k = 0; k < maxDegreeToTry; k++)
-            {
-                Complex termValue;
-                try
-                {
-                    termValue = EvaluateConstantExpression(currentExpr);
-                }
-                catch
-                {
-                    if (k == 0 && !polyStr.Contains("z"))
-                    {
-                        try
-                        {
-                            coeffs.Add(EvaluateConstantExpression(expandedExpr));
-                            break;
-                        }
-                        catch { }
-                    }
-                    termValue = Complex.Zero;
-                }
-
-                coeffs.Add(termValue / factorial);
-
-                if (currentExpr.Equals(Expr.Zero))
-                    break;
-
-                currentExpr = Calculus.Differentiate(currentExpr, z_symbol);
-                if (k < maxDegreeToTry - 1)
-                {
-                    factorial *= (k + 1);
-                    if (factorial <= 0) factorial = long.MaxValue;
-                }
-
-                if (currentExpr.Equals(Expr.Zero) && coeffs.Any(c => c != Complex.Zero))
-                    break;
-            }
-
-            while (coeffs.Count > 1 && coeffs.Last().Magnitude < 1e-9)
-            {
-                coeffs.RemoveAt(coeffs.Count - 1);
-            }
-            if (coeffs.Count == 0) coeffs.Add(Complex.Zero);
-
-            return new Polynomial(coeffs);
-        }
-    }
-
     public partial class NewtonPools : Form
     {
         private System.Windows.Forms.Timer renderTimer;
@@ -221,12 +26,27 @@ namespace FractalExplorer
         private double renderedCenterY;
         private double renderedZoom;
         private string[] presetPolynomials = {
-            "z^3-1", "z^4-1", "z^3-2*z+2", "(1+2*i)*z^2+z-1", "(0.5-0.3*i)*z^3+2",
-            "z^5-z^2+1", "z^6+3*z^3-2", "z^4-4*z^2+4", "0.5*z^3-1.25*z+2", "z^7+z^4-z+1",
-            "(2+i)*z^3-(1-2*i)*z+1", "i*z^4+z-1", "(1+0.5*i)*z^2-z+(2-3*i)",
-            "(0.3+1.7*i)*z^3+(1-i)", "(2-i)*z^5+(3+2*i)*z^2-1", "-2*z^3+0.75*z^2-1",
-            "z^6-1.5*z^3+0.25", "-0.1*z^4+z-2", "(1/2)*z^3+(3/4)*z-1", "(2+3*i)*z^2-(1-i)*z+4"
-        };
+    "z^3-1",
+    "z^4-1",
+    "z^3-2z+2",
+    "(1+2i)z^2+z-1",
+    "(0.5-0.3i)z^3+2",
+    "z^5 - z^2 + 1",
+    "z^6 + 3z^3 - 2",
+    "z^4 - 4z^2 + 4",
+    "0.5z^3 - 1.25z + 2",
+    "z^7 + z^4 - z + 1",
+    "(2+i)z^3 - (1-2i)z + 1",
+    "(i)z^4 + z - 1",
+    "(1+0.5i)z^2 - z + (2-3i)",
+    "(0.3+1.7i)z^3 + (1-i)",
+    "(2-i)z^5 + (3+2i)z^2 - 1",
+    "-2z^3 + 0.75z^2 - 1",
+    "z^6 - 1.5z^3 + 0.25",
+    "-0.1z^4 + z - 2",
+    "(1/2)z^3 + (3/4)z - 1",
+    "(2+3i)*(z^2) - (1-i)*z + 4"
+};
 
         public NewtonPools()
         {
@@ -236,18 +56,23 @@ namespace FractalExplorer
 
         private void InitializeForm()
         {
-            width = fractal_bitmap.Width > 0 ? fractal_bitmap.Width : 1;
-            height = fractal_bitmap.Height > 0 ? fractal_bitmap.Height : 1;
+            width = fractal_bitmap.Width;
+            height = fractal_bitmap.Height;
 
             renderTimer = new System.Windows.Forms.Timer { Interval = 300 };
             renderTimer.Tick += RenderTimer_Tick;
 
-            foreach (string poly in presetPolynomials) cbSelector.Items.Add(poly);
-            if (cbSelector.Items.Count > 0) cbSelector.SelectedIndex = 0;
-            else richTextBox1.Text = "z^3-1";
+            foreach (string poly in presetPolynomials)
+            {
+                cbSelector.Items.Add(poly);
+            }
+            cbSelector.SelectedIndex = 0;
 
             int cores = Environment.ProcessorCount;
-            for (int i = 1; i <= cores; i++) cbThreads.Items.Add(i);
+            for (int i = 1; i <= cores; i++)
+            {
+                cbThreads.Items.Add(i);
+            }
             cbThreads.Items.Add("Auto");
             cbThreads.SelectedItem = "Auto";
 
@@ -283,12 +108,11 @@ namespace FractalExplorer
             if (cbSelector.SelectedIndex >= 0)
             {
                 richTextBox1.Text = cbSelector.SelectedItem.ToString();
+                ScheduleRender();
             }
-            ScheduleRender();
         }
 
         private void Form_Resize(object sender, EventArgs e) => ResizeCanvas();
-
         private void Canvas_Resize(object sender, EventArgs e) => ResizeCanvas();
 
         private void ResizeCanvas()
@@ -305,15 +129,10 @@ namespace FractalExplorer
             if (isHighResRendering) return;
             if (sender == nudZoom)
             {
-                decimal val = nudZoom.Value;
-                double newZoom = Convert.ToDouble(val);
-                zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, newZoom));
-
+                zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
                 if (nudZoom.Value != (decimal)zoom)
                 {
-                    nudZoom.ValueChanged -= ParamControl_Changed;
                     nudZoom.Value = (decimal)zoom;
-                    nudZoom.ValueChanged += ParamControl_Changed;
                 }
             }
             ScheduleRender();
@@ -323,11 +142,11 @@ namespace FractalExplorer
         {
             if (isHighResRendering) return;
             CheckBox currentCb = sender as CheckBox;
-            if (currentCb != null && currentCb.Checked)
+            if (currentCb.Checked)
             {
                 foreach (var cb in new[] { colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 })
                 {
-                    if (cb != null && cb != currentCb) cb.Checked = false;
+                    if (cb != currentCb) cb.Checked = false;
                 }
             }
             ScheduleRender();
@@ -359,7 +178,7 @@ namespace FractalExplorer
 
             if (richTextBox1.InvokeRequired)
             {
-                richTextBox1.Invoke((Action)(() => polyStr = richTextBox1.Text));
+                polyStr = (string)richTextBox1.Invoke(new Func<string>(() => richTextBox1.Text));
             }
             else
             {
@@ -373,12 +192,7 @@ namespace FractalExplorer
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                if (this.IsHandleCreated && !this.IsDisposed)
-                {
-                    this.Invoke((Action)(() =>
-                        MessageBox.Show($"Ошибка рендеринга: {ex.Message}\n\nПодробности: {ex.InnerException?.Message}",
-                            "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error)));
-                }
+                MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -389,14 +203,7 @@ namespace FractalExplorer
         private void UpdateParameters()
         {
             maxIterations = (int)nudIterations.Value;
-            if (cbThreads.SelectedItem != null)
-            {
-                threadCount = cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
-            }
-            else
-            {
-                threadCount = Environment.ProcessorCount;
-            }
+            threadCount = cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
         private void Canvas_Paint(object sender, PaintEventArgs e)
@@ -407,41 +214,48 @@ namespace FractalExplorer
                 return;
             }
 
-            float currentPPU_X = (float)(width / (BASE_SCALE / zoom));
-            float currentPPU_Y = (float)(height / (BASE_SCALE / zoom));
+            double scaleRendered = BASE_SCALE / renderedZoom;
+            double scaleCurrent = BASE_SCALE / zoom;
 
-            float renderedPPU_X = (float)(fractal_bitmap.Image.Width / (BASE_SCALE / renderedZoom));
-            float renderedPPU_Y = (float)(fractal_bitmap.Image.Height / (BASE_SCALE / renderedZoom));
+            if (renderedZoom <= 0 || zoom <= 0 || scaleRendered <= 0 || scaleCurrent <= 0)
+            {
+                e.Graphics.Clear(Color.Black);
+                e.Graphics.DrawImageUnscaled(fractal_bitmap.Image, Point.Empty);
+                return;
+            }
 
-            double renderedImgTopLeftRe = renderedCenterX - (fractal_bitmap.Image.Width / 2.0) / renderedPPU_X;
-            double renderedImgTopLeftIm = renderedCenterY + (fractal_bitmap.Image.Height / 2.0) / renderedPPU_Y;
+            double complex_half_width_rendered = (BASE_SCALE / renderedZoom) / 2.0;
+            double complex_half_height_rendered = (BASE_SCALE / renderedZoom) / 2.0;
+            double complex_half_width_current = (BASE_SCALE / zoom) / 2.0;
+            double complex_half_height_current = (BASE_SCALE / zoom) / 2.0;
 
-            double currentViewTopLeftRe = centerX - (width / 2.0) / currentPPU_X;
-            double currentViewTopLeftIm = centerY + (height / 2.0) / currentPPU_Y;
+            double renderedImage_re_min = renderedCenterX - complex_half_width_rendered;
+            double renderedImage_im_min = renderedCenterY - complex_half_height_rendered;
+            double currentView_re_min = centerX - complex_half_width_current;
+            double currentView_im_min = centerY - complex_half_height_current;
 
-            float offsetX = (float)(renderedImgTopLeftRe - currentViewTopLeftRe) * currentPPU_X;
-            float offsetY = (float)(currentViewTopLeftIm - renderedImgTopLeftIm) * currentPPU_Y;
+            float p1_X = (float)((renderedImage_re_min - currentView_re_min) / (complex_half_width_current * 2.0) * width);
+            float p1_Y = (float)((renderedImage_im_min - currentView_im_min) / (complex_half_height_current * 2.0) * height);
 
-            float newWidth = (float)(fractal_bitmap.Image.Width * (currentPPU_X / renderedPPU_X));
-            float newHeight = (float)(fractal_bitmap.Image.Height * (currentPPU_Y / renderedPPU_Y));
+            float w_prime = (float)(width * ((BASE_SCALE / renderedZoom) / (BASE_SCALE / zoom)));
+            float h_prime = (float)(height * ((BASE_SCALE / renderedZoom) / (BASE_SCALE / zoom)));
 
-            PointF destPoint1 = new PointF(offsetX, offsetY);
-            PointF destPoint2 = new PointF(offsetX + newWidth, offsetY);
-            PointF destPoint3 = new PointF(offsetX, offsetY + newHeight);
+            PointF destPoint1 = new PointF(p1_X, p1_Y);
+            PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
+            PointF destPoint3 = new PointF(p1_X, p1_Y + h_prime);
 
             e.Graphics.Clear(Color.Black);
-            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
             e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
 
-            if (newWidth > 0 && newHeight > 0 && float.IsFinite(offsetX) && float.IsFinite(offsetY) && float.IsFinite(newWidth) && float.IsFinite(newHeight))
+            if (w_prime > 0 && h_prime > 0)
             {
                 try
                 {
                     e.Graphics.DrawImage(fractal_bitmap.Image, new PointF[] { destPoint1, destPoint2, destPoint3 });
                 }
-                catch (ArgumentException ex)
+                catch (ArgumentException)
                 {
-                    Console.WriteLine($"Canvas_Paint DrawImage error: {ex.Message}");
                     e.Graphics.DrawImageUnscaled(fractal_bitmap.Image, Point.Empty);
                 }
             }
@@ -453,97 +267,125 @@ namespace FractalExplorer
 
         private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom, string polyStr)
         {
-            int currentWidth = this.width;
-            int currentHeight = this.height;
-            if (token.IsCancellationRequested || isHighResRendering || currentWidth <= 0 || currentHeight <= 0) return;
+            if (token.IsCancellationRequested || isHighResRendering || fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
 
             Polynomial p;
             try
             {
-                p = PolynomialParser.ParsePolynomialWithMathNet(polyStr);
+                p = ParsePolynomial(polyStr);
             }
             catch (Exception ex)
             {
-                throw new Exception($"Ошибка парсинга полинома: {ex.Message}", ex);
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
+                {
+                    fractal_bitmap.Invoke((Action)(() =>
+                    {
+                        MessageBox.Show($"Ошибка парсинга полинома: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                }
+                return;
             }
 
             List<Complex> roots = FindRoots(p);
-            if (token.IsCancellationRequested) return;
-
-            if (roots.Count == 0 && !(p.coefficients.Count == 1 && p.coefficients[0] == Complex.Zero))
+            if (roots.Count == 0)
             {
-                Console.WriteLine($"Предупреждение: Не удалось найти корни для полинома '{polyStr}'.");
-            }
-
-            Color[] rootColors = new Color[Math.Max(1, roots.Count)];
-            bool useBlackWhite = false;
-            bool useGradient = false;
-            bool usePastel = false;
-            bool useContrast = false;
-            bool useFire = false;
-            bool useContrasting = false;
-
-            if (this.IsHandleCreated && !this.IsDisposed)
-            {
-                if (this.InvokeRequired)
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
                 {
-                    this.Invoke((Action)(() =>
+                    fractal_bitmap.Invoke((Action)(() =>
                     {
-                        useBlackWhite = oldRenderBW.Checked;
-                        useGradient = colorBox0.Checked;
-                        usePastel = colorBox1.Checked;
-                        useContrast = colorBox2.Checked;
-                        useFire = colorBox3.Checked;
-                        useContrasting = colorBox4.Checked;
+                        MessageBox.Show("Не удалось найти корни полинома.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }));
                 }
-                else
-                {
-                    useBlackWhite = oldRenderBW.Checked;
-                    useGradient = colorBox0.Checked;
-                    usePastel = colorBox1.Checked;
-                    useContrast = colorBox2.Checked;
-                    useFire = colorBox3.Checked;
-                    useContrasting = colorBox4.Checked;
-                }
+                return;
             }
 
-            int numColorsToGenerate = roots.Count > 0 ? roots.Count : 1;
-            for (int i = 0; i < numColorsToGenerate; i++)
+            // Выбор цветовой палитры
+            Color[] rootColors = new Color[roots.Count];
+            bool useBlackWhite = oldRenderBW.Checked;
+            bool useGradient = colorBox0.Checked;
+            bool usePastel = colorBox1.Checked;
+            bool useContrast = colorBox2.Checked;
+            bool useFire = colorBox3.Checked;
+            bool useContrasting = colorBox4.Checked;
+
+            if (useGradient)
             {
-                if (useGradient)
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    double t = (numColorsToGenerate > 1) ? (double)i / (numColorsToGenerate - 1) : 0.5;
-                    if (t < 0.5) rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
-                    else { double t2 = (t - 0.5) / 0.5; rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0); }
+                    double t = (double)i / (roots.Count - 1); // Нормализация от 0 до 1 по количеству корней
+                    if (t < 0.5)
+                    {
+                        // Переход от черного (0, 0, 0) к темно-красному (139, 0, 0)
+                        rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
+                    }
+                    else
+                    {
+                        // Переход от темно-красного (139, 0, 0) к золотому (255, 215, 0)
+                        double t2 = (t - 0.5) / 0.5;
+                        rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
+                    }
                 }
-                else if (usePastel)
+            }
+            else if (usePastel)
+            {
+                Color[] pastelColors = {
+                    Color.FromArgb(255, 182, 193),
+                    Color.FromArgb(173, 216, 230),
+                    Color.FromArgb(189, 252, 201),
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] pastelColors = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201), Color.FromArgb(255, 223, 186), Color.FromArgb(186, 255, 201) };
-                    rootColors[i] = pastelColors[i % pastelColors.Length];
+                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
                 }
-                else if (useContrast)
+            }
+            else if (useContrast)
+            {
+                Color[] contrastColors = {
+                    Color.FromArgb(255, 0, 0),
+                    Color.FromArgb(255, 255, 0),
+                    Color.FromArgb(0, 0, 255),
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] contrastColors = { Color.Red, Color.Yellow, Color.Blue, Color.Lime, Color.Magenta, Color.Cyan };
-                    rootColors[i] = contrastColors[i % contrastColors.Length];
+                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
-                else if (useFire)
+            }
+            else if (useFire)
+            {
+                Color[] fireColors = {
+                    Color.FromArgb(200, 0, 0),    // Темно-красный
+                    Color.FromArgb(255, 100, 0),  // Оранжевый
+                    Color.FromArgb(255, 255, 100), // Светло-желтый
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] fireColors = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 200, 50), Color.FromArgb(255, 255, 150) };
-                    rootColors[i] = fireColors[i % fireColors.Length];
+                    rootColors[i] = i < fireColors.Length ? fireColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
-                else if (useContrasting)
+            }
+            else if (useContrasting)
+            {
+                Color[] contrastingColors = {
+                    Color.FromArgb(10, 0, 20),     // Темно-фиолетовый
+                    Color.FromArgb(255, 0, 255),   // Пурпурный
+                    Color.FromArgb(0, 255, 255),   // Циановый
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] contrastingColors = { Color.FromArgb(10, 0, 20), Color.Purple, Color.Cyan, Color.FromArgb(20, 0, 120), Color.Fuchsia, Color.Aqua };
-                    rootColors[i] = contrastingColors[i % contrastingColors.Length];
+                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
-                else if (useBlackWhite)
+            }
+            else if (useBlackWhite)
+            {
+                for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = Color.White;
                 }
-                else
+            }
+            else
+            {
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = (numColorsToGenerate > 0) ? (255 * (i + 1) / (numColorsToGenerate + 1)) : 128;
+                    int shade = 255 * (i + 1) / (roots.Count + 1);
                     rootColors[i] = Color.FromArgb(shade, shade, shade);
                 }
             }
@@ -553,35 +395,33 @@ namespace FractalExplorer
 
             try
             {
-                bmp = new Bitmap(currentWidth, currentHeight, PixelFormat.Format24bppRgb);
+                bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
                 token.ThrowIfCancellationRequested();
 
-                Rectangle rect = new Rectangle(0, 0, currentWidth, currentHeight);
+                Rectangle rect = new Rectangle(0, 0, width, height);
                 bmpData = bmp.LockBits(rect, ImageLockMode.WriteOnly, bmp.PixelFormat);
                 token.ThrowIfCancellationRequested();
 
                 int stride = bmpData.Stride;
                 IntPtr scan0 = bmpData.Scan0;
-                byte[] buffer = new byte[Math.Abs(stride) * currentHeight];
+                byte[] buffer = new byte[Math.Abs(stride) * height];
 
                 ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = threadCount, CancellationToken = token };
                 int done = 0;
-                double epsilon = 1e-6;
+                double epsilon = 1e-6; // Фиксированный порог
 
-                double scale_factor_w = (BASE_SCALE / renderZoom) / currentWidth;
-                double scale_factor_h = (BASE_SCALE / renderZoom) / currentHeight;
+                double scale_factor_w = (BASE_SCALE / renderZoom) / width;
+                double scale_factor_h = (BASE_SCALE / renderZoom) / height;
 
-                Polynomial pDeriv = p.Derivative();
-
-                Parallel.For(0, currentHeight, po, y =>
+                Parallel.For(0, height, po, y =>
                 {
-                    if (token.IsCancellationRequested) return;
                     int rowOffset = y * stride;
-                    for (int x = 0; x < currentWidth; x++)
+                    for (int x = 0; x < width; x++)
                     {
-                        double c_re = renderCenterX + (x - currentWidth / 2.0) * scale_factor_w;
-                        double c_im = renderCenterY + (currentHeight / 2.0 - y) * scale_factor_h;
+                        double c_re = renderCenterX + (x - width / 2.0) * scale_factor_w;
+                        double c_im = renderCenterY + (y - height / 2.0) * scale_factor_h;
                         Complex z = new Complex(c_re, c_im);
+                        Polynomial pDeriv = p.Derivative();
 
                         int iter = 0;
                         while (iter < maxIterations)
@@ -589,142 +429,118 @@ namespace FractalExplorer
                             Complex pz = p.Evaluate(z);
                             if (pz.Magnitude < epsilon) break;
                             Complex pDz = pDeriv.Evaluate(z);
-                            if (pDz.Magnitude < epsilon * 1e-3) break;
-                            Complex step = pz / pDz;
-                            if (double.IsNaN(step.Real) || double.IsNaN(step.Imaginary) || double.IsInfinity(step.Real) || double.IsInfinity(step.Imaginary)) break;
-                            z = z - step;
+                            if (pDz.Magnitude < epsilon) break;
+                            z = z - pz / pDz;
                             iter++;
                         }
 
                         int rootIndex = -1;
-                        if (roots.Count > 0)
+                        double minDist = double.MaxValue;
+                        for (int r = 0; r < roots.Count; r++)
                         {
-                            double minDist = double.MaxValue;
-                            for (int r = 0; r < roots.Count; r++)
+                            double dist = (z - roots[r]).Magnitude;
+                            if (dist < minDist)
                             {
-                                double dist = (z - roots[r]).Magnitude;
-                                if (dist < minDist)
-                                {
-                                    minDist = dist;
-                                    rootIndex = r;
-                                }
+                                minDist = dist;
+                                rootIndex = r;
                             }
                         }
 
                         Color pixelColor;
-                        if (rootIndex != -1 && roots.Count > 0 && (z - roots[rootIndex]).Magnitude < epsilon * 100)
+                        if (rootIndex >= 0 && minDist < epsilon)
                         {
-                            if (useGradient && !useBlackWhite)
+                            if (useGradient)
                             {
-                                double t = Math.Min(1.0, (double)iter / Math.Max(1, maxIterations * 0.75));
-                                int baseHue = (int)(((double)rootIndex / Math.Max(1, roots.Count)) * 330) % 360;
-                                int finalHue = (baseHue + (int)(t * 30)) % 360;
-                                double saturation = 0.7 + 0.3 * Math.Sin(t * Math.PI);
-                                double value = 0.6 + 0.4 * Math.Cos(t * Math.PI * 0.5);
-                                pixelColor = HsvToRgb(finalHue, saturation, value);
+                                double t = (double)iter / maxIterations;
+                                int hue = (int)(240 * t);
+                                pixelColor = HsvToRgb(hue, 0.8, 1.0);
                             }
                             else
                             {
-                                pixelColor = rootColors[rootIndex % rootColors.Length];
-                                if (!useBlackWhite)
-                                {
-                                    double factor = Math.Max(0.2, 1.0 - 0.9 * Math.Sqrt(Math.Min(1.0, (double)iter / maxIterations)));
-                                    pixelColor = Color.FromArgb(
-                                        pixelColor.A,
-                                        (int)(pixelColor.R * factor),
-                                        (int)(pixelColor.G * factor),
-                                        (int)(pixelColor.B * factor)
-                                    );
-                                }
+                                pixelColor = rootColors[rootIndex];
                             }
                         }
                         else
                         {
-                            double t = Math.Min(1.0, (double)iter / maxIterations);
-                            int shade = (int)(50 + 100 * t);
-                            pixelColor = usePastel ? Color.FromArgb(shade, shade, shade + 10) : Color.FromArgb(shade / 2, shade / 2, shade / 2);
+                            pixelColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
                         }
 
-                        int bufferIndex = rowOffset + x * 3;
-                        buffer[bufferIndex] = pixelColor.B;
-                        buffer[bufferIndex + 1] = pixelColor.G;
-                        buffer[bufferIndex + 2] = pixelColor.R;
+                        int index = rowOffset + x * 3;
+                        buffer[index] = pixelColor.B;
+                        buffer[index + 1] = pixelColor.G;
+                        buffer[index + 2] = pixelColor.R;
                     }
 
                     int progress = Interlocked.Increment(ref done);
                     if (!token.IsCancellationRequested && progressBar.IsHandleCreated && !progressBar.IsDisposed)
                     {
-                        progressBar.Invoke((Action)(() =>
+                        progressBar.BeginInvoke((Action)(() =>
                         {
-                            if (progressBar.Maximum > 0 && currentHeight > 0)
-                                progressBar.Value = Math.Min(progressBar.Maximum, (int)(100.0 * progress / currentHeight));
+                            if (progressBar.Value <= progressBar.Maximum)
+                                progressBar.Value = Math.Min(progressBar.Maximum, (int)(100.0 * progress / height));
                         }));
                     }
                 });
 
                 token.ThrowIfCancellationRequested();
                 Marshal.Copy(buffer, 0, scan0, buffer.Length);
-            }
-            finally
-            {
-                if (bmpData != null && bmp != null)
-                {
-                    bmp.UnlockBits(bmpData);
-                }
+                bmp.UnlockBits(bmpData);
+                bmpData = null;
 
-                if (token.IsCancellationRequested)
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
+                {
+                    Bitmap oldImage = null;
+                    fractal_bitmap.Invoke((Action)(() =>
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            bmp?.Dispose();
+                            return;
+                        }
+                        oldImage = fractal_bitmap.Image as Bitmap;
+                        fractal_bitmap.Image = bmp;
+                        renderedCenterX = renderCenterX;
+                        renderedCenterY = renderCenterY;
+                        renderedZoom = renderZoom;
+                        bmp = null;
+                    }));
+                    oldImage?.Dispose();
+                }
+                else
                 {
                     bmp?.Dispose();
                 }
-                else if (bmp != null)
-                {
-                    if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
-                    {
-                        Bitmap oldImage = null;
-                        fractal_bitmap.Invoke((Action)(() =>
-                        {
-                            oldImage = fractal_bitmap.Image as Bitmap;
-                            fractal_bitmap.Image = bmp;
-                            renderedCenterX = renderCenterX;
-                            renderedCenterY = renderCenterY;
-                            renderedZoom = renderZoom;
-                        }));
-                        oldImage?.Dispose();
-                    }
-                    else
-                    {
-                        bmp.Dispose();
-                    }
-                }
-                if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
-                {
-                    progressBar.Invoke((Action)(() => { if (progressBar.Value != 0 && progressBar.Value != 100) progressBar.Value = 0; }));
-                }
+            }
+            finally
+            {
+                if (bmpData != null && bmp != null) bmp.UnlockBits(bmpData);
+                bmp?.Dispose();
             }
         }
 
         private Color HsvToRgb(double hue, double saturation, double value)
         {
-            hue = hue % 360;
-            if (hue < 0) hue += 360;
-
             int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
             double f = hue / 60 - Math.Floor(hue / 60);
 
-            value = Math.Max(0, Math.Min(1, value));
-            saturation = Math.Max(0, Math.Min(1, saturation));
+            value = value * 255;
+            int v = Convert.ToInt32(value);
+            int p = Convert.ToInt32(value * (1 - saturation));
+            int q = Convert.ToInt32(value * (1 - f * saturation));
+            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation));
 
-            int v = Convert.ToInt32(value * 255);
-            int p = Convert.ToInt32(value * (1 - saturation) * 255);
-            int q = Convert.ToInt32(value * (1 - f * saturation) * 255);
-            int t = Convert.ToInt32(value * (1 - (1 - f) * saturation) * 255);
-
-            if (hi == 0) return Color.FromArgb(255, v, t, p);
-            else if (hi == 1) return Color.FromArgb(255, q, v, p);
-            else if (hi == 2) return Color.FromArgb(255, p, v, t);
-            else if (hi == 3) return Color.FromArgb(255, p, q, v);
-            else if (hi == 4) return Color.FromArgb(255, t, p, v);
-            else return Color.FromArgb(255, v, p, q);
+            if (hi == 0)
+                return Color.FromArgb(v, t, p);
+            else if (hi == 1)
+                return Color.FromArgb(q, v, p);
+            else if (hi == 2)
+                return Color.FromArgb(p, v, t);
+            else if (hi == 3)
+                return Color.FromArgb(p, q, v);
+            else if (hi == 4)
+                return Color.FromArgb(t, p, v);
+            else
+                return Color.FromArgb(v, p, q);
         }
 
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY,
@@ -741,22 +557,9 @@ namespace FractalExplorer
             bool useFire = false;
             bool useContrasting = false;
 
-            if (this.IsHandleCreated && !this.IsDisposed)
+            if (this.InvokeRequired)
             {
-                if (this.InvokeRequired)
-                {
-                    this.Invoke((Action)(() =>
-                    {
-                        polyStr = richTextBox1.Text;
-                        useBlackWhite = oldRenderBW.Checked;
-                        useGradient = colorBox0.Checked;
-                        usePastel = colorBox1.Checked;
-                        useContrast = colorBox2.Checked;
-                        useFire = colorBox3.Checked;
-                        useContrasting = colorBox4.Checked;
-                    }));
-                }
-                else
+                this.Invoke((Action)(() =>
                 {
                     polyStr = richTextBox1.Text;
                     useBlackWhite = oldRenderBW.Checked;
@@ -765,64 +568,102 @@ namespace FractalExplorer
                     useContrast = colorBox2.Checked;
                     useFire = colorBox3.Checked;
                     useContrasting = colorBox4.Checked;
-                }
+                }));
+            }
+            else
+            {
+                polyStr = richTextBox1.Text;
+                useBlackWhite = oldRenderBW.Checked;
+                useGradient = colorBox0.Checked;
+                usePastel = colorBox1.Checked;
+                useContrast = colorBox2.Checked;
+                useFire = colorBox3.Checked;
+                useContrasting = colorBox4.Checked;
             }
 
-            Polynomial p;
-            try
-            {
-                p = PolynomialParser.ParsePolynomialWithMathNet(polyStr);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка парсинга в RenderFractalToBitmap: {ex.Message}");
-                throw;
-            }
-
+            Polynomial p = ParsePolynomial(polyStr);
             List<Complex> roots = FindRoots(p);
-            if (roots.Count == 0 && p.coefficients.Any(c => c != Complex.Zero))
+            Color[] rootColors = new Color[roots.Count];
+
+            if (useGradient)
             {
-                Console.WriteLine("Предупреждение: не удалось найти корни в RenderFractalToBitmap для ненулевого полинома.");
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    double t = (double)i / (roots.Count - 1); // Нормализация от 0 до 1 по количеству корней
+                    if (t < 0.5)
+                    {
+                        // Переход от черного (0, 0, 0) к темно-красному (139, 0, 0)
+                        rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
+                    }
+                    else
+                    {
+                        // Переход от темно-красного (139, 0, 0) к золотому (255, 215, 0)
+                        double t2 = (t - 0.5) / 0.5;
+                        rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
+                    }
+                }
+
             }
-
-            Color[] rootColors = new Color[Math.Max(1, roots.Count)];
-            int numColorsToGenerate = roots.Count > 0 ? roots.Count : 1;
-
-            for (int i = 0; i < numColorsToGenerate; i++)
+            else if (usePastel)
             {
-                if (useGradient)
+                Color[] pastelColors = {
+                    Color.FromArgb(255, 182, 193),
+                    Color.FromArgb(173, 216, 230),
+                    Color.FromArgb(189, 252, 201),
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    double t = (numColorsToGenerate > 1) ? (double)i / (numColorsToGenerate - 1) : 0.5;
-                    if (t < 0.5) rootColors[i] = Color.FromArgb((int)(139 * t / 0.5), 0, 0);
-                    else { double t2 = (t - 0.5) / 0.5; rootColors[i] = Color.FromArgb((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0); }
+                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : Color.FromArgb(200, 200, 200 + i * 10);
                 }
-                else if (usePastel)
+            }
+            else if (useContrast)
+            {
+                Color[] contrastColors = {
+                    Color.FromArgb(255, 0, 0),
+                    Color.FromArgb(255, 255, 0),
+                    Color.FromArgb(0, 0, 255),
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] pastelColors = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201), Color.FromArgb(255, 223, 186), Color.FromArgb(186, 255, 201) };
-                    rootColors[i] = pastelColors[i % pastelColors.Length];
+                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
-                else if (useContrast)
+            }
+            else if (useFire)
+            {
+                Color[] fireColors = {
+                    Color.FromArgb(200, 0, 0),    // Темно-красный
+                    Color.FromArgb(255, 100, 0),  // Оранжевый
+                    Color.FromArgb(255, 255, 100), // Светло-желтый
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] contrastColors = { Color.Red, Color.Yellow, Color.Blue, Color.Lime, Color.Magenta, Color.Cyan };
-                    rootColors[i] = contrastColors[i % contrastColors.Length];
+                    rootColors[i] = i < fireColors.Length ? fireColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
-                else if (useFire)
+            }
+            else if (useContrasting)
+            {
+                Color[] contrastingColors = {
+                    Color.FromArgb(10, 0, 20),     // Темно-фиолетовый
+                    Color.FromArgb(255, 0, 255),   // Пурпурный
+                    Color.FromArgb(0, 255, 255),   // Циановый
+                };
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    Color[] fireColors = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 200, 50), Color.FromArgb(255, 255, 150) };
-                    rootColors[i] = fireColors[i % fireColors.Length];
+                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : Color.FromArgb((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
                 }
-                else if (useContrasting)
-                {
-                    Color[] contrastingColors = { Color.FromArgb(10, 0, 20), Color.Purple, Color.Cyan, Color.FromArgb(20, 0, 120), Color.Fuchsia, Color.Aqua };
-                    rootColors[i] = contrastingColors[i % contrastingColors.Length];
-                }
-                else if (useBlackWhite)
+            }
+            else if (useBlackWhite)
+            {
+                for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = Color.White;
                 }
-                else
+            }
+            else
+            {
+                for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = (numColorsToGenerate > 0) ? (255 * (i + 1) / (numColorsToGenerate + 1)) : 128;
+                    int shade = 255 * (i + 1) / (roots.Count + 1);
                     rootColors[i] = Color.FromArgb(shade, shade, shade);
                 }
             }
@@ -839,7 +680,6 @@ namespace FractalExplorer
 
             double scale_factor_w = (BASE_SCALE / currentZoom) / renderWidth;
             double scale_factor_h = (BASE_SCALE / currentZoom) / renderHeight;
-            Polynomial pDeriv = p.Derivative();
 
             Parallel.For(0, renderHeight, po, y =>
             {
@@ -847,8 +687,9 @@ namespace FractalExplorer
                 for (int x = 0; x < renderWidth; x++)
                 {
                     double c_re = currentCenterX + (x - renderWidth / 2.0) * scale_factor_w;
-                    double c_im = currentCenterY + (renderHeight / 2.0 - y) * scale_factor_h;
+                    double c_im = currentCenterY + (y - renderHeight / 2.0) * scale_factor_h;
                     Complex z = new Complex(c_re, c_im);
+                    Polynomial pDeriv = p.Derivative();
 
                     int iter = 0;
                     while (iter < currentMaxIterations)
@@ -856,66 +697,46 @@ namespace FractalExplorer
                         Complex pz = p.Evaluate(z);
                         if (pz.Magnitude < epsilon) break;
                         Complex pDz = pDeriv.Evaluate(z);
-                        if (pDz.Magnitude < epsilon * 1e-3) break;
-                        Complex step = pz / pDz;
-                        if (double.IsNaN(step.Real) || double.IsNaN(step.Imaginary) || double.IsInfinity(step.Real) || double.IsInfinity(step.Imaginary)) break;
-                        z = z - step;
+                        if (pDz.Magnitude < epsilon) break;
+                        z = z - pz / pDz;
                         iter++;
                     }
 
                     int rootIndex = -1;
-                    if (roots.Count > 0)
+                    double minDist = double.MaxValue;
+                    for (int r = 0; r < roots.Count; r++)
                     {
-                        double minDist = double.MaxValue;
-                        for (int r = 0; r < roots.Count; r++)
+                        double dist = (z - roots[r]).Magnitude;
+                        if (dist < minDist)
                         {
-                            double dist = (z - roots[r]).Magnitude;
-                            if (dist < minDist)
-                            {
-                                minDist = dist;
-                                rootIndex = r;
-                            }
+                            minDist = dist;
+                            rootIndex = r;
                         }
                     }
 
                     Color pixelColor;
-                    if (rootIndex != -1 && roots.Count > 0 && (z - roots[rootIndex]).Magnitude < epsilon * 100)
+                    if (rootIndex >= 0 && minDist < epsilon)
                     {
-                        if (useGradient && !useBlackWhite)
+                        if (useGradient)
                         {
-                            double t = Math.Min(1.0, (double)iter / Math.Max(1, currentMaxIterations * 0.75));
-                            int baseHue = (int)(((double)rootIndex / Math.Max(1, roots.Count)) * 330) % 360;
-                            int finalHue = (baseHue + (int)(t * 30)) % 360;
-                            double saturation = 0.7 + 0.3 * Math.Sin(t * Math.PI);
-                            double value = 0.6 + 0.4 * Math.Cos(t * Math.PI * 0.5);
-                            pixelColor = HsvToRgb(finalHue, saturation, value);
+                            double t = (double)iter / currentMaxIterations;
+                            int hue = (int)(240 * t);
+                            pixelColor = HsvToRgb(hue, 0.8, 1.0);
                         }
                         else
                         {
-                            pixelColor = rootColors[rootIndex % rootColors.Length];
-                            if (!useBlackWhite)
-                            {
-                                double factor = Math.Max(0.2, 1.0 - 0.9 * Math.Sqrt(Math.Min(1.0, (double)iter / currentMaxIterations)));
-                                pixelColor = Color.FromArgb(
-                                    pixelColor.A,
-                                    (int)(pixelColor.R * factor),
-                                    (int)(pixelColor.G * factor),
-                                    (int)(pixelColor.B * factor)
-                                );
-                            }
+                            pixelColor = rootColors[rootIndex];
                         }
                     }
                     else
                     {
-                        double t = Math.Min(1.0, (double)iter / currentMaxIterations);
-                        int shade = (int)(50 + 100 * t);
-                        pixelColor = usePastel ? Color.FromArgb(shade, shade, shade + 10) : Color.FromArgb(shade / 2, shade / 2, shade / 2);
+                        pixelColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
                     }
 
-                    int bufferIndex = rowOffset + x * 3;
-                    buffer[bufferIndex] = pixelColor.B;
-                    buffer[bufferIndex + 1] = pixelColor.G;
-                    buffer[bufferIndex + 2] = pixelColor.R;
+                    int index = rowOffset + x * 3;
+                    buffer[index] = pixelColor.B;
+                    buffer[index + 1] = pixelColor.G;
+                    buffer[index + 2] = pixelColor.R;
                 }
                 long currentDone = Interlocked.Increment(ref done);
                 if (renderHeight > 0) reportProgressCallback((int)(100.0 * currentDone / renderHeight));
@@ -926,173 +747,30 @@ namespace FractalExplorer
             return bmp;
         }
 
-        private List<Complex> FindRoots(Polynomial p, int maxIter = 200, double epsilon = 1e-6)
-        {
-            List<Complex> roots = new List<Complex>();
-            if (p == null || p.coefficients == null || p.coefficients.Count == 0) return roots;
-
-            Polynomial pDeriv = p.Derivative();
-            if (p.coefficients.Count == 1)
-            {
-                if (p.coefficients[0] == Complex.Zero) { }
-                return roots;
-            }
-            if (pDeriv.coefficients.Count == 1 && pDeriv.coefficients[0] == Complex.Zero && p.coefficients.Count > 1)
-            {
-                Console.WriteLine("Предупреждение: Производная равна нулю для неконстантного полинома. Метод Ньютона не применим.");
-                return roots;
-            }
-
-            double[] reValuesBase = { -3.0, -2.5, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0 };
-            double[] imValuesBase = { -3.0, -2.5, -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0 };
-
-            List<double> reList = new List<double>(reValuesBase);
-            List<double> imList = new List<double>(imValuesBase);
-
-            int numPolyCoeffs = p.coefficients.Count;
-            int pointsOnCircle = Math.Max(8, numPolyCoeffs * 3);
-
-            if (pointsOnCircle > 0)
-            {
-                double[] radii = { 0.5, 1.0, 1.5, 2.0, 2.5, 3.0 };
-                for (int r_idx = 0; r_idx < radii.Length; r_idx++)
-                {
-                    for (int k = 0; k < pointsOnCircle / radii.Length + 1; k++)
-                    {
-                        double angle = 2 * Math.PI * k / (pointsOnCircle / radii.Length + 1);
-                        reList.Add(Math.Cos(angle) * radii[r_idx]);
-                        imList.Add(Math.Sin(angle) * radii[r_idx]);
-                    }
-                }
-            }
-
-            double[] reValues = reList.Distinct().ToArray();
-            double[] imValues = imList.Distinct().ToArray();
-
-            object lockObj = new object();
-
-            Parallel.ForEach(reValues, new ParallelOptions { MaxDegreeOfParallelism = threadCount > 0 ? threadCount : -1 }, re_init =>
-            {
-                foreach (double im_init in imValues)
-                {
-                    Complex z = new Complex(re_init, im_init);
-                    for (int i = 0; i < maxIter; i++)
-                    {
-                        Complex pz = p.Evaluate(z);
-                        if (pz.Magnitude < epsilon)
-                        {
-                            lock (lockObj) AddRootIfNew(roots, z, epsilon, p);
-                            break;
-                        }
-
-                        Complex pDz = pDeriv.Evaluate(z);
-                        if (pDz.Magnitude < epsilon * 1e-4)
-                        {
-                            break;
-                        }
-
-                        Complex step = pz / pDz;
-                        if (double.IsNaN(step.Real) || double.IsNaN(step.Imaginary) ||
-                            double.IsInfinity(step.Real) || double.IsInfinity(step.Imaginary))
-                        {
-                            break;
-                        }
-
-                        Complex zNext = z - step;
-                        if ((zNext - z).Magnitude < epsilon * 1e-2)
-                        {
-                            if (p.Evaluate(zNext).Magnitude < epsilon * 100)
-                            {
-                                lock (lockObj) AddRootIfNew(roots, zNext, epsilon, p);
-                            }
-                            break;
-                        }
-                        z = zNext;
-                        if (z.Magnitude > 1e5) break;
-                    }
-                }
-            });
-
-            if (roots.Count > 0)
-            {
-                roots.Sort((r1, r2) =>
-                {
-                    double realDiff = r1.Real - r2.Real;
-                    if (Math.Abs(realDiff) < epsilon * 10)
-                    {
-                        return r1.Imaginary.CompareTo(r2.Imaginary);
-                    }
-                    return realDiff.CompareTo(0.0);
-                });
-
-                List<Complex> distinctRoots = new List<Complex> { roots[0] };
-                for (int i = 1; i < roots.Count; i++)
-                {
-                    bool tooClose = false;
-                    foreach (var dr in distinctRoots)
-                    {
-                        if ((roots[i] - dr).Magnitude < epsilon * 20)
-                        {
-                            tooClose = true;
-                            if (p.Evaluate(roots[i]).Magnitude < p.Evaluate(dr).Magnitude)
-                            {
-                                distinctRoots.Remove(dr);
-                                distinctRoots.Add(roots[i]);
-                            }
-                            break;
-                        }
-                    }
-                    if (!tooClose)
-                    {
-                        distinctRoots.Add(roots[i]);
-                    }
-                }
-                roots = distinctRoots;
-            }
-            return roots;
-        }
-
-        private void AddRootIfNew(List<Complex> roots, Complex newRoot, double epsilon, Polynomial p)
-        {
-            for (int i = 0; i < roots.Count; i++)
-            {
-                if ((newRoot - roots[i]).Magnitude < epsilon * 20)
-                {
-                    if (p.Evaluate(newRoot).Magnitude < p.Evaluate(roots[i]).Magnitude)
-                    {
-                        roots[i] = newRoot;
-                    }
-                    return;
-                }
-            }
-            roots.Add(newRoot);
-        }
-
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
-            if (isHighResRendering || fractal_bitmap.Image == null || width <= 0 || height <= 0) return;
+            if (isHighResRendering) return;
 
-            double zoomFactor = e.Delta > 0 ? 1.25 : 1.0 / 1.25;
+            double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5;
             double oldZoom = zoom;
 
-            double mouseRe_before = centerX + (e.X - width / 2.0) * (BASE_SCALE / oldZoom / width);
-            double mouseIm_before = centerY + (height / 2.0 - e.Y) * (BASE_SCALE / oldZoom / height);
+            double scaleBeforeZoomX = BASE_SCALE / oldZoom / width;
+            double scaleBeforeZoomY = BASE_SCALE / oldZoom / height;
 
-            zoom = Math.Max((double)nudZoom.Minimum > 0 ? (double)nudZoom.Minimum : 1e-9, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
+            double mouseRe = centerX + (e.X - width / 2.0) * scaleBeforeZoomX;
+            double mouseIm = centerY + (e.Y - height / 2.0) * scaleBeforeZoomY;
 
-            if (Math.Abs(nudZoom.Value - (decimal)zoom) > 1e-9m)
-            {
-                nudZoom.ValueChanged -= ParamControl_Changed;
-                try { nudZoom.Value = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, (decimal)zoom)); }
-                catch (ArgumentOutOfRangeException) { }
-                nudZoom.ValueChanged += ParamControl_Changed;
-            }
+            zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
 
-            centerX = mouseRe_before - (e.X - width / 2.0) * (BASE_SCALE / zoom / width);
-            centerY = mouseIm_before - (height / 2.0 - e.Y) * (BASE_SCALE / zoom / height);
+            double scaleAfterZoomX = BASE_SCALE / zoom / width;
+            double scaleAfterZoomY = BASE_SCALE / zoom / height;
+
+            centerX = mouseRe - (e.X - width / 2.0) * scaleAfterZoomX;
+            centerY = mouseIm - (e.Y - height / 2.0) * scaleAfterZoomY;
 
             fractal_bitmap.Invalidate();
-            ScheduleRender();
+            if (nudZoom.Value != (decimal)zoom) nudZoom.Value = (decimal)zoom;
+            else ScheduleRender();
         }
 
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
@@ -1102,40 +780,33 @@ namespace FractalExplorer
             {
                 panning = true;
                 panStart = e.Location;
-                fractal_bitmap.Cursor = Cursors.Hand;
             }
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isHighResRendering || !panning || fractal_bitmap.Image == null || width <= 0 || height <= 0) return;
+            if (isHighResRendering || !panning) return;
 
-            double deltaX_pixels = e.X - panStart.X;
-            double deltaY_pixels = e.Y - panStart.Y;
+            double scaleX = BASE_SCALE / zoom / width;
+            double scaleY = BASE_SCALE / zoom / height;
 
-            centerX -= deltaX_pixels * (BASE_SCALE / zoom / width);
-            centerY += deltaY_pixels * (BASE_SCALE / zoom / height);
+            centerX -= (e.X - panStart.X) * scaleX;
+            centerY -= (e.Y - panStart.Y) * scaleY;
             panStart = e.Location;
 
             fractal_bitmap.Invalidate();
+            ScheduleRender();
         }
 
         private void Canvas_MouseUp(object sender, MouseEventArgs e)
         {
             if (isHighResRendering) return;
-            if (e.Button == MouseButtons.Left)
-            {
-                panning = false;
-                fractal_bitmap.Cursor = Cursors.Default;
-                ScheduleRender();
-            }
+            if (e.Button == MouseButtons.Left) panning = false;
         }
 
         private void btnRender_Click(object sender, EventArgs e)
         {
             if (isHighResRendering) return;
-            previewRenderCts?.Cancel();
-            renderTimer.Stop();
             ScheduleRender();
         }
 
@@ -1178,13 +849,13 @@ namespace FractalExplorer
                     {
                         UpdateParameters();
                         int currentMaxIterations = this.maxIterations;
-                        double currentZoomVal = this.zoom;
-                        double currentCenterXVal = this.centerX;
-                        double currentCenterYVal = this.centerY;
+                        double currentZoom = this.zoom;
+                        double currentCenterX = this.centerX;
+                        double currentCenterY = this.centerY;
                         int currentThreadCount = this.threadCount;
 
                         Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(
-                            saveWidth, saveHeight, currentCenterXVal, currentCenterYVal, currentZoomVal,
+                            saveWidth, saveHeight, currentCenterX, currentCenterY, currentZoom,
                             currentMaxIterations, currentThreadCount,
                             progressPercentage =>
                             {
@@ -1198,20 +869,13 @@ namespace FractalExplorer
                                 }
                             }
                         ));
-                        if (highResBitmap != null)
-                        {
-                            highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                            highResBitmap.Dispose();
-                            MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Не удалось создать изображение для сохранения.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
+                        highResBitmap.Dispose();
+                        MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Ошибка сохранения: {ex.Message}\n\nПодробности: {ex.InnerException?.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     finally
                     {
@@ -1222,7 +886,6 @@ namespace FractalExplorer
                         {
                             progressPNG.Invoke((Action)(() => { progressPNG.Visible = false; progressPNG.Value = 0; }));
                         }
-                        ScheduleRender();
                     }
                 }
             }
@@ -1248,10 +911,303 @@ namespace FractalExplorer
                 colorBox4.Enabled = enabled;
             };
 
-            if (this.IsHandleCreated && !this.IsDisposed)
+            if (this.InvokeRequired) this.Invoke(action);
+            else action();
+        }
+
+        private Polynomial ParsePolynomial(string polyStr)
+        {
+            // Удаление пробелов и приведение к нижнему регистру
+            polyStr = polyStr.Replace(" ", "").ToLower();
+
+            // Обработка дробей (например, 1/2 -> 0.5)
+            polyStr = EvaluateFractions(polyStr);
+
+            // Обработка умножений вида (a+bi)*(z^n) или (a)*(z^n)
+            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\((z(?:\^\d+)?)\)", "$1$2");
+            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", "$1z$2");
+
+            // Удаление лишних скобок вокруг чисел или комплексных чисел
+            polyStr = Regex.Replace(polyStr, @"\((-?\d*\.?\d+(?:[+-]\d*\.?\d*i)?)\)", "$1");
+
+            // Список для хранения слагаемых
+            List<(Complex coeff, int power)> terms = new List<(Complex, int)>();
+            var culture = CultureInfo.InvariantCulture;
+
+            // Токенизация: разбиваем на слагаемые по '+' и '-' вне скобок
+            List<string> termStrings = new List<string>();
+            StringBuilder currentTerm = new StringBuilder();
+            int parenthesesCount = 0;
+
+            for (int i = 0; i < polyStr.Length; i++)
             {
-                if (this.InvokeRequired) this.Invoke(action);
-                else action();
+                char c = polyStr[i];
+                if (c == '(') parenthesesCount++;
+                else if (c == ')') parenthesesCount--;
+
+                if ((c == '+' || c == '-') && parenthesesCount == 0 && currentTerm.Length > 0)
+                {
+                    termStrings.Add(currentTerm.ToString());
+                    currentTerm.Clear();
+                    currentTerm.Append(c);
+                }
+                else
+                {
+                    currentTerm.Append(c);
+                }
+            }
+            if (currentTerm.Length > 0)
+                termStrings.Add(currentTerm.ToString());
+
+            // Обработка каждого слагаемого
+            foreach (string term in termStrings)
+            {
+                if (string.IsNullOrEmpty(term)) continue;
+
+                char sign = term[0] == '-' ? '-' : '+';
+                string termWithoutSign = (term[0] == '+' || term[0] == '-') ? term.Substring(1) : term;
+
+                Complex coeff = Complex.Zero;
+                int power = 0;
+
+                // Разбиваем слагаемое на коэффициент и часть с z
+                int zIndex = termWithoutSign.IndexOf('z');
+                string coeffStr = zIndex >= 0 ? termWithoutSign.Substring(0, zIndex) : termWithoutSign;
+                string zPart = zIndex >= 0 ? termWithoutSign.Substring(zIndex) : "";
+
+                // Определяем степень
+                if (!string.IsNullOrEmpty(zPart))
+                {
+                    if (zPart == "z")
+                        power = 1;
+                    else if (zPart.StartsWith("z^") && int.TryParse(zPart.Substring(2), out int p))
+                        power = p;
+                    else
+                        throw new ArgumentException($"Неверный формат части с z: {zPart}");
+                }
+
+                // Парсинг коэффициента
+                if (string.IsNullOrEmpty(coeffStr))
+                {
+                    // Если коэффициент не указан (например, z^2 или -z), то он равен 1 или -1
+                    coeff = new Complex(sign == '-' ? -1.0 : 1.0, 0.0);
+                }
+                else if (coeffStr.Contains("i"))
+                {
+                    // Обработка комплексного коэффициента, например 1+2i, -3i, i
+                    coeffStr = coeffStr.Trim('(', ')');
+                    if (coeffStr == "i")
+                        coeff = new Complex(0, sign == '-' ? -1.0 : 1.0);
+                    else if (coeffStr == "-i")
+                        coeff = new Complex(0, -1.0);
+                    else
+                    {
+                        // Разделяем на вещественную и мнимую части
+                        string[] parts = coeffStr.Split(new[] { '+', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                        double realPart = 0.0, imagPart = 0.0;
+
+                        foreach (string part in parts)
+                        {
+                            int splitIndex = coeffStr.IndexOf(part);
+                            int localSign = 1;
+                            if (splitIndex > 0 && coeffStr[splitIndex - 1] == '-') localSign = -1;
+
+                            if (part.EndsWith("i"))
+                            {
+                                string imagStr = part.Substring(0, part.Length - 1);
+                                if (string.IsNullOrEmpty(imagStr))
+                                    imagPart = localSign * 1.0;
+                                else
+                                    imagPart = localSign * double.Parse(imagStr, culture);
+                            }
+                            else
+                            {
+                                realPart = localSign * double.Parse(part, culture);
+                            }
+                        }
+                        coeff = new Complex(realPart, imagPart);
+                    }
+                }
+                else
+                {
+                    // Вещественный коэффициент
+                    if (double.TryParse(coeffStr, NumberStyles.Float, culture, out double realValue))
+                        coeff = new Complex(realValue, 0.0);
+                    else
+                        throw new ArgumentException($"Неверный формат коэффициента: {coeffStr}");
+                }
+
+                if (sign == '-') coeff = Complex.Negate(coeff);
+
+                terms.Add((coeff, power));
+            }
+
+            // Формируем коэффициенты полинома
+            int maxPower = terms.Any() ? terms.Max(t => t.power) : 0;
+            List<Complex> coefficients = new List<Complex>(new Complex[maxPower + 1]);
+            foreach (var term in terms)
+            {
+                coefficients[term.power] += term.coeff;
+            }
+
+            return new Polynomial(coefficients);
+        }
+
+        // Вспомогательная функция для обработки дробей
+        private string EvaluateFractions(string polyStr)
+        {
+            // Регулярное выражение для поиска дробей вида a/b
+            return Regex.Replace(polyStr, @"(\d+)/(\d+)", m =>
+            {
+                double numerator = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+                double denominator = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+                if (denominator == 0) throw new ArgumentException("Деление на ноль в дроби");
+                return (numerator / denominator).ToString(CultureInfo.InvariantCulture);
+            });
+        }
+        private List<Complex> FindRoots(Polynomial p, int maxIter = 100, double epsilon = 1e-6)
+        {
+            List<Complex> roots = new List<Complex>();
+            Polynomial pDeriv = p.Derivative();
+            // Расширяем диапазон начальных приближений для большей устойчивости поиска корней
+            double[] reValues = { -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0 };
+            double[] imValues = { -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0 };
+
+            // Дополнительные точки вокруг единичного круга, т.к. корни часто лежат там
+            int pointsOnCircle = Math.Max(4, p.coefficients.Count - 1) * 2; // Больше точек для полиномов высокой степени
+            if (pointsOnCircle > 0) // Убедимся, что pointsOnCircle > 0
+            {
+                for (int k = 0; k < pointsOnCircle; k++)
+                {
+                    double angle = 2 * Math.PI * k / pointsOnCircle;
+                    reValues = reValues.Append(Math.Cos(angle) * 0.9).ToArray(); // Немного внутри единичного круга
+                    imValues = imValues.Append(Math.Sin(angle) * 0.9).ToArray();
+                    reValues = reValues.Append(Math.Cos(angle) * 1.1).ToArray(); // Немного снаружи единичного круга
+                    imValues = imValues.Append(Math.Sin(angle) * 1.1).ToArray();
+                }
+            }
+
+            // Убираем дубликаты из reValues и imValues, если они появились
+            reValues = reValues.Distinct().ToArray();
+            imValues = imValues.Distinct().ToArray();
+
+
+            foreach (double re_init in reValues)
+            {
+                foreach (double im_init in imValues)
+                {
+                    Complex z = new Complex(re_init, im_init);
+                    for (int i = 0; i < maxIter; i++)
+                    {
+                        Complex pz = p.Evaluate(z);
+                        Complex pDz = pDeriv.Evaluate(z);
+
+                        if (pDz.Magnitude < epsilon / 100) // Если производная очень мала, можем быть рядом с кратным корнем или на плато
+                        {
+                            // Попробовать небольшой сдвиг, если это не помогает, то выходим
+                            // Это попытка избежать деления на слишком малое число, но не всегда спасает.
+                            // Если мы уже близко к корню (pz мало), то этот break не страшен.
+                            // Если pz велико, а pDz мало - это проблема.
+                            if (pz.Magnitude < epsilon) break; // Если значение функции уже мало, считаем, что корень найден
+                            break; // В противном случае, прекращаем итерации для этой стартовой точки
+                        }
+
+                        Complex step = pz / pDz;
+                        Complex zNext = z - step;
+
+                        if (step.Magnitude < epsilon) // Если шаг очень мал, мы сошлись
+                        {
+                            bool isNewRoot = true;
+                            foreach (Complex root in roots)
+                            {
+                                if ((zNext - root).Magnitude < epsilon)
+                                {
+                                    isNewRoot = false;
+                                    break;
+                                }
+                            }
+                            if (isNewRoot)
+                            {
+                                // Дополнительная проверка: убедимся, что это действительно корень
+                                if (p.Evaluate(zNext).Magnitude < epsilon * 10) // Проверяем с несколько большим допуском
+                                {
+                                    roots.Add(zNext);
+                                }
+                            }
+                            break;
+                        }
+                        z = zNext;
+
+                        // Если z уходит слишком далеко, прекращаем итерации для этой стартовой точки
+                        if (z.Magnitude > 1e3) // Ограничение на величину z
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Сортировка корней для консистентного порядка
+            // Сортируем сначала по действительной части, потом по мнимой
+            roots.Sort((r1, r2) =>
+            {
+                // Сравниваем действительные части с учетом epsilon
+                // (Используем epsilon/10 для более точного сравнения действительных частей перед переходом к мнимым)
+                double realDiff = r1.Real - r2.Real;
+                if (Math.Abs(realDiff) < epsilon / 10.0) // Если действительные части "почти равны"
+                {
+                    // Сравниваем мнимые части
+                    return r1.Imaginary.CompareTo(r2.Imaginary);
+                }
+                // Иначе сравниваем действительные части
+                return realDiff.CompareTo(0.0); // r1.Real.CompareTo(r2.Real)
+            });
+
+            // Дополнительный шаг: удаление очень близких корней после сортировки, если они все еще есть
+            if (roots.Count > 0)
+            {
+                List<Complex> distinctRoots = new List<Complex> { roots[0] };
+                for (int i = 1; i < roots.Count; i++)
+                {
+                    if ((roots[i] - distinctRoots.Last()).Magnitude >= epsilon)
+                    {
+                        distinctRoots.Add(roots[i]);
+                    }
+                }
+                roots = distinctRoots;
+            }
+
+            return roots;
+        }
+
+        private class Polynomial
+        {
+            public List<Complex> coefficients;
+
+            public Polynomial(List<Complex> coeffs)
+            {
+                coefficients = coeffs;
+            }
+
+            public Complex Evaluate(Complex z)
+            {
+                Complex result = Complex.Zero;
+                for (int i = 0; i < coefficients.Count; i++)
+                {
+                    result += coefficients[i] * Complex.Pow(z, i);
+                }
+                return result;
+            }
+
+            public Polynomial Derivative()
+            {
+                if (coefficients.Count <= 1) return new Polynomial(new List<Complex> { Complex.Zero });
+                List<Complex> derivCoeffs = new List<Complex>();
+                for (int i = 1; i < coefficients.Count; i++)
+                {
+                    derivCoeffs.Add(i * coefficients[i]);
+                }
+                return new Polynomial(derivCoeffs);
             }
         }
 
