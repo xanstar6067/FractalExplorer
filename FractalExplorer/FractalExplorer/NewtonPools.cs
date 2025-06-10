@@ -1,9 +1,16 @@
-﻿using System.Text;
-using System.Numerics;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
+using System.Linq;
+using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Drawing.Imaging;
 
 namespace FractalExplorer
 {
@@ -265,11 +272,8 @@ namespace FractalExplorer
             }
         }
 
-        // +++ НОВЫЙ МЕТОД +++
-        // Глобальный "костыль" для создания безопасного цвета
         private Color CreateSafeColor(int r, int g, int b)
         {
-            // Ограничиваем каждое значение снизу (0) и сверху (255)
             r = Math.Max(0, Math.Min(255, r));
             g = Math.Max(0, Math.Min(255, g));
             b = Math.Max(0, Math.Min(255, b));
@@ -312,18 +316,25 @@ namespace FractalExplorer
             }
 
             Color[] rootColors = new Color[roots.Count];
-            bool useBlackWhite = oldRenderBW.Checked;
-            bool useGradient = colorBox0.Checked;
-            bool usePastel = colorBox1.Checked;
-            bool useContrast = colorBox2.Checked;
-            bool useFire = colorBox3.Checked;
-            bool useContrasting = colorBox4.Checked;
+            bool useBlackWhite = false;
+            this.Invoke((Action)(() => useBlackWhite = oldRenderBW.Checked));
+            bool useGradient = false;
+            this.Invoke((Action)(() => useGradient = colorBox0.Checked));
+            bool usePastel = false;
+            this.Invoke((Action)(() => usePastel = colorBox1.Checked));
+            bool useContrast = false;
+            this.Invoke((Action)(() => useContrast = colorBox2.Checked));
+            bool useFire = false;
+            this.Invoke((Action)(() => useFire = colorBox3.Checked));
+            bool useContrasting = false;
+            this.Invoke((Action)(() => useContrasting = colorBox4.Checked));
+
 
             if (useGradient)
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    double t = (double)i / (roots.Count > 1 ? roots.Count - 1 : 1);
+                    double t = (roots.Count > 1) ? (double)i / (roots.Count - 1) : 0;
                     if (t < 0.5)
                     {
                         rootColors[i] = CreateSafeColor((int)(139 * t / 0.5), 0, 0);
@@ -337,11 +348,7 @@ namespace FractalExplorer
             }
             else if (usePastel)
             {
-                Color[] pastelColors = {
-                    Color.FromArgb(255, 182, 193),
-                    Color.FromArgb(173, 216, 230),
-                    Color.FromArgb(189, 252, 201),
-                };
+                Color[] pastelColors = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < pastelColors.Length ? pastelColors[i] : CreateSafeColor(200, 200, 200 + i * 10);
@@ -349,11 +356,7 @@ namespace FractalExplorer
             }
             else if (useContrast)
             {
-                Color[] contrastColors = {
-                    Color.FromArgb(255, 0, 0),
-                    Color.FromArgb(255, 255, 0),
-                    Color.FromArgb(0, 0, 255),
-                };
+                Color[] contrastColors = { Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(0, 0, 255) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastColors.Length ? contrastColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -361,11 +364,7 @@ namespace FractalExplorer
             }
             else if (useFire)
             {
-                Color[] fireColors = {
-                    Color.FromArgb(200, 0, 0),
-                    Color.FromArgb(255, 100, 0),
-                    Color.FromArgb(255, 255, 100),
-                };
+                Color[] fireColors = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < fireColors.Length ? fireColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -373,11 +372,7 @@ namespace FractalExplorer
             }
             else if (useContrasting)
             {
-                Color[] contrastingColors = {
-                    Color.FromArgb(10, 0, 20),
-                    Color.FromArgb(255, 0, 255),
-                    Color.FromArgb(0, 255, 255),
-                };
+                Color[] contrastingColors = { Color.FromArgb(10, 0, 20), Color.FromArgb(255, 0, 255), Color.FromArgb(0, 255, 255) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -394,10 +389,11 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = 255 * (i + 1) / (roots.Count > 0 ? roots.Count + 1 : 1);
+                    int shade = (roots.Count > 0) ? (255 * (i + 1) / (roots.Count + 1)) : 255;
                     rootColors[i] = CreateSafeColor(shade, shade, shade);
                 }
             }
+
 
             Bitmap bmp = null;
             BitmapData bmpData = null;
@@ -456,7 +452,7 @@ namespace FractalExplorer
                         }
 
                         Color pixelColor;
-                        if (rootIndex >= 0 && minDist < epsilon)
+                        if (rootIndex != -1 && minDist < epsilon)
                         {
                             if (useGradient)
                             {
@@ -598,7 +594,7 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    double t = (double)i / (roots.Count > 1 ? roots.Count - 1 : 1);
+                    double t = (roots.Count > 1) ? (double)i / (roots.Count - 1) : 0;
                     if (t < 0.5)
                     {
                         rootColors[i] = CreateSafeColor((int)(139 * t / 0.5), 0, 0);
@@ -612,11 +608,7 @@ namespace FractalExplorer
             }
             else if (usePastel)
             {
-                Color[] pastelColors = {
-                    Color.FromArgb(255, 182, 193),
-                    Color.FromArgb(173, 216, 230),
-                    Color.FromArgb(189, 252, 201),
-                };
+                Color[] pastelColors = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < pastelColors.Length ? pastelColors[i] : CreateSafeColor(200, 200, 200 + i * 10);
@@ -624,11 +616,7 @@ namespace FractalExplorer
             }
             else if (useContrast)
             {
-                Color[] contrastColors = {
-                    Color.FromArgb(255, 0, 0),
-                    Color.FromArgb(255, 255, 0),
-                    Color.FromArgb(0, 0, 255),
-                };
+                Color[] contrastColors = { Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(0, 0, 255) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastColors.Length ? contrastColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -636,11 +624,7 @@ namespace FractalExplorer
             }
             else if (useFire)
             {
-                Color[] fireColors = {
-                    Color.FromArgb(200, 0, 0),
-                    Color.FromArgb(255, 100, 0),
-                    Color.FromArgb(255, 255, 100),
-                };
+                Color[] fireColors = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < fireColors.Length ? fireColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -648,11 +632,7 @@ namespace FractalExplorer
             }
             else if (useContrasting)
             {
-                Color[] contrastingColors = {
-                    Color.FromArgb(10, 0, 20),
-                    Color.FromArgb(255, 0, 255),
-                    Color.FromArgb(0, 255, 255),
-                };
+                Color[] contrastingColors = { Color.FromArgb(10, 0, 20), Color.FromArgb(255, 0, 255), Color.FromArgb(0, 255, 255) };
                 for (int i = 0; i < roots.Count; i++)
                 {
                     rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
@@ -669,10 +649,11 @@ namespace FractalExplorer
             {
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    int shade = 255 * (i + 1) / (roots.Count > 0 ? roots.Count + 1 : 1);
+                    int shade = (roots.Count > 0) ? (255 * (i + 1) / (roots.Count + 1)) : 255;
                     rootColors[i] = CreateSafeColor(shade, shade, shade);
                 }
             }
+
 
             Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -721,7 +702,7 @@ namespace FractalExplorer
                     }
 
                     Color pixelColor;
-                    if (rootIndex >= 0 && minDist < epsilon)
+                    if (rootIndex != -1 && minDist < epsilon)
                     {
                         if (useGradient)
                         {
@@ -739,6 +720,7 @@ namespace FractalExplorer
                         pixelColor = usePastel ? CreateSafeColor(50, 50, 50) : Color.Black;
                     }
 
+
                     int index = rowOffset + x * 3;
                     buffer[index] = pixelColor.B;
                     buffer[index + 1] = pixelColor.G;
@@ -753,7 +735,6 @@ namespace FractalExplorer
             return bmp;
         }
 
-        // ... Остальной код без изменений ...
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (isHighResRendering) return;
@@ -825,8 +806,12 @@ namespace FractalExplorer
                 return;
             }
 
-            int saveWidth = (int)nudW.Value;
-            int saveHeight = (int)nudH.Value;
+            int saveWidth = 0;
+            int saveHeight = 0;
+            this.Invoke((Action)(() => {
+                saveWidth = (int)nudW.Value;
+                saveHeight = (int)nudH.Value;
+            }));
 
             if (saveWidth <= 0 || saveHeight <= 0)
             {
@@ -922,136 +907,164 @@ namespace FractalExplorer
             else action();
         }
 
+        // --- НАЧАЛО НОВОГО МОДУЛЯ ПАРСИНГА ---
+
         private Polynomial ParsePolynomial(string polyStr)
         {
-            polyStr = polyStr.Replace(" ", "").ToLower();
-            polyStr = EvaluateFractions(polyStr);
-            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*\((z(?:\^\d+)?)\)", "$1$2");
-            polyStr = Regex.Replace(polyStr, @"\(([^()]+)\)\*z(\^\d+)?", "$1z$2");
-            polyStr = Regex.Replace(polyStr, @"\((-?\d*\.?\d+(?:[+-]\d*\.?\d*i)?)\)", "$1");
-
-            List<(Complex coeff, int power)> terms = new List<(Complex, int)>();
-            var culture = CultureInfo.InvariantCulture;
-
-            List<string> termStrings = new List<string>();
-            StringBuilder currentTerm = new StringBuilder();
-            int parenthesesCount = 0;
-
-            for (int i = 0; i < polyStr.Length; i++)
+            try
             {
-                char c = polyStr[i];
-                if (c == '(') parenthesesCount++;
-                else if (c == ')') parenthesesCount--;
+                Dictionary<int, Complex> coeffs = new Dictionary<int, Complex>();
+                polyStr = PreprocessPolynomialString(polyStr);
+                var terms = ExtractTerms(polyStr);
 
-                if ((c == '+' || c == '-') && parenthesesCount == 0 && currentTerm.Length > 0)
+                foreach (var term in terms)
                 {
-                    termStrings.Add(currentTerm.ToString());
-                    currentTerm.Clear();
-                    currentTerm.Append(c);
+                    var (power, coeff) = ParseTerm(term);
+                    if (coeffs.ContainsKey(power))
+                        coeffs[power] += coeff;
+                    else
+                        coeffs[power] = coeff;
                 }
-                else
+
+                int maxPower = coeffs.Keys.Any() ? coeffs.Keys.Max() : 0;
+                List<Complex> coefficients = new List<Complex>();
+                for (int i = 0; i <= maxPower; i++)
                 {
-                    currentTerm.Append(c);
+                    coefficients.Add(coeffs.ContainsKey(i) ? coeffs[i] : Complex.Zero);
                 }
+                return new Polynomial(coefficients);
             }
-            if (currentTerm.Length > 0)
-                termStrings.Add(currentTerm.ToString());
-
-            foreach (string term in termStrings)
+            catch (Exception ex)
             {
-                if (string.IsNullOrEmpty(term)) continue;
-
-                char sign = term[0] == '-' ? '-' : '+';
-                string termWithoutSign = (term[0] == '+' || term[0] == '-') ? term.Substring(1) : term;
-
-                Complex coeff = Complex.Zero;
-                int power = 0;
-
-                int zIndex = termWithoutSign.IndexOf('z');
-                string coeffStr = zIndex >= 0 ? termWithoutSign.Substring(0, zIndex) : termWithoutSign;
-                string zPart = zIndex >= 0 ? termWithoutSign.Substring(zIndex) : "";
-
-                if (!string.IsNullOrEmpty(zPart))
-                {
-                    if (zPart == "z")
-                        power = 1;
-                    else if (zPart.StartsWith("z^") && int.TryParse(zPart.Substring(2), out int p))
-                        power = p;
-                    else
-                        throw new ArgumentException($"Неверный формат части с z: {zPart}");
-                }
-
-                if (string.IsNullOrEmpty(coeffStr))
-                {
-                    coeff = new Complex(sign == '-' ? -1.0 : 1.0, 0.0);
-                }
-                else if (coeffStr.Contains("i"))
-                {
-                    coeffStr = coeffStr.Trim('(', ')');
-                    if (coeffStr == "i")
-                        coeff = new Complex(0, sign == '-' ? -1.0 : 1.0);
-                    else if (coeffStr == "-i")
-                        coeff = new Complex(0, -1.0);
-                    else
-                    {
-                        string[] parts = coeffStr.Split(new[] { '+', '-' }, StringSplitOptions.RemoveEmptyEntries);
-                        double realPart = 0.0, imagPart = 0.0;
-
-                        foreach (string part in parts)
-                        {
-                            int splitIndex = coeffStr.IndexOf(part);
-                            int localSign = 1;
-                            if (splitIndex > 0 && coeffStr[splitIndex - 1] == '-') localSign = -1;
-
-                            if (part.EndsWith("i"))
-                            {
-                                string imagStr = part.Substring(0, part.Length - 1);
-                                if (string.IsNullOrEmpty(imagStr))
-                                    imagPart = localSign * 1.0;
-                                else
-                                    imagPart = localSign * double.Parse(imagStr, culture);
-                            }
-                            else
-                            {
-                                realPart = localSign * double.Parse(part, culture);
-                            }
-                        }
-                        coeff = new Complex(realPart, imagPart);
-                    }
-                }
-                else
-                {
-                    if (double.TryParse(coeffStr, NumberStyles.Float, culture, out double realValue))
-                        coeff = new Complex(realValue, 0.0);
-                    else
-                        throw new ArgumentException($"Неверный формат коэффициента: {coeffStr}");
-                }
-
-                if (sign == '-') coeff = Complex.Negate(coeff);
-
-                terms.Add((coeff, power));
+                // В случае ошибки парсинга, возвращаем полином P(z) = 0, чтобы избежать падения
+                return new Polynomial(new List<Complex> { Complex.Zero });
             }
-
-            int maxPower = terms.Any() ? terms.Max(t => t.power) : 0;
-            List<Complex> coefficients = new List<Complex>(new Complex[maxPower + 1]);
-            foreach (var term in terms)
-            {
-                coefficients[term.power] += term.coeff;
-            }
-
-            return new Polynomial(coefficients);
         }
 
-        private string EvaluateFractions(string polyStr)
+        private string PreprocessPolynomialString(string polyStr)
         {
-            return Regex.Replace(polyStr, @"(\d+)/(\d+)", m =>
+            polyStr = polyStr.Replace(" ", "");
+            polyStr = polyStr.Replace("i", "I");
+
+            polyStr = Regex.Replace(polyStr, @"\((\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)\)", match =>
             {
-                double numerator = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-                double denominator = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
-                if (denominator == 0) throw new ArgumentException("Деление на ноль в дроби");
-                return (numerator / denominator).ToString(CultureInfo.InvariantCulture);
+                if (double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double num) &&
+                    double.TryParse(match.Groups[2].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double den) && den != 0)
+                {
+                    return (num / den).ToString(CultureInfo.InvariantCulture);
+                }
+                return match.Value;
             });
+
+            polyStr = Regex.Replace(polyStr, @"(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)", match =>
+            {
+                if (double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double num) &&
+                    double.TryParse(match.Groups[2].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double den) && den != 0)
+                {
+                    return (num / den).ToString(CultureInfo.InvariantCulture);
+                }
+                return match.Value;
+            });
+
+            polyStr = Regex.Replace(polyStr, @"\(([+-]?\d*\.?\d*[+-]\d*\.?\d*I)\)", "$1");
+            polyStr = Regex.Replace(polyStr, @"\(([+-]?\d*\.?\d*)\)", "$1");
+            polyStr = polyStr.Replace("--", "+").Replace("+-", "-").Replace("-+", "-");
+            polyStr = Regex.Replace(polyStr, @"(\d+(?:\.\d+)?)\*\(z", "$1*z");
+            polyStr = polyStr.Replace("*z", "z");
+            polyStr = polyStr.Replace("*(", "");
+
+            if (!polyStr.StartsWith("+") && !polyStr.StartsWith("-"))
+                polyStr = "+" + polyStr;
+
+            return polyStr;
         }
+
+        private List<string> ExtractTerms(string polyStr)
+        {
+            var terms = new List<string>();
+            var matches = Regex.Matches(polyStr, @"[+-](?:[^+-]*(?:\([^)]*\)[^+-]*)*[^+-]*)");
+
+            foreach (Match match in matches)
+            {
+                string term = match.Value.Trim();
+                if (!string.IsNullOrEmpty(term))
+                    terms.Add(term);
+            }
+
+            if (terms.Count == 0 && !string.IsNullOrEmpty(polyStr))
+            {
+                matches = Regex.Matches(polyStr, @"[+-][^+-]+");
+                foreach (Match match in matches)
+                {
+                    string term = match.Value.Trim();
+                    if (!string.IsNullOrEmpty(term))
+                        terms.Add(term);
+                }
+            }
+            return terms;
+        }
+
+        private (int power, Complex coeff) ParseTerm(string term)
+        {
+            int power = 0;
+            Complex coeff;
+
+            var powerMatch = Regex.Match(term, @"z\^(\d+)");
+            if (powerMatch.Success)
+            {
+                power = int.Parse(powerMatch.Groups[1].Value);
+            }
+            else if (term.Contains("z"))
+            {
+                power = 1;
+            }
+
+            string coeffStr = Regex.Replace(term, @"z(\^\d+)?", "").Trim();
+            coeffStr = coeffStr.Replace("*", "");
+            coeff = ParseComplexNumber(coeffStr);
+            return (power, coeff);
+        }
+
+        private Complex ParseComplexNumber(string numStr)
+        {
+            numStr = numStr.Trim();
+
+            if (string.IsNullOrEmpty(numStr) || numStr == "+") return Complex.One;
+            if (numStr == "-") return -Complex.One;
+            if (numStr == "I" || numStr == "+I") return Complex.ImaginaryOne;
+            if (numStr == "-I") return -Complex.ImaginaryOne;
+
+            var imagMatch = Regex.Match(numStr, @"^([+-]?\d*\.?\d*)I$");
+            if (imagMatch.Success)
+            {
+                string coeffStr = imagMatch.Groups[1].Value;
+                if (string.IsNullOrEmpty(coeffStr) || coeffStr == "+") return Complex.ImaginaryOne;
+                if (coeffStr == "-") return -Complex.ImaginaryOne;
+                if (double.TryParse(coeffStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double imagValue))
+                    return new Complex(0, imagValue);
+            }
+
+            var complexMatch = Regex.Match(numStr, @"^([+-]?\d*\.?\d*)([+-]\d*\.?\d*)I$");
+            if (complexMatch.Success)
+            {
+                string realStr = complexMatch.Groups[1].Value;
+                string imagStr = complexMatch.Groups[2].Value;
+                double.TryParse(realStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double realPart);
+                double imagPart = 0;
+                if (imagStr == "+") imagPart = 1;
+                else if (imagStr == "-") imagPart = -1;
+                else double.TryParse(imagStr, NumberStyles.Float, CultureInfo.InvariantCulture, out imagPart);
+                return new Complex(realPart, imagPart);
+            }
+
+            if (double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double realValue))
+                return new Complex(realValue, 0);
+
+            throw new FormatException($"Не удалось распознать коэффициент: '{numStr}'");
+        }
+
+        // --- КОНЕЦ НОВОГО МОДУЛЯ ПАРСИНГА ---
+
         private List<Complex> FindRoots(Polynomial p, int maxIter = 100, double epsilon = 1e-6)
         {
             List<Complex> roots = new List<Complex>();
