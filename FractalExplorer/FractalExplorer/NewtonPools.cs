@@ -794,7 +794,7 @@ namespace FractalExplorer
 
             // Обновляем координаты центра на основе движения мыши
             centerX -= (e.X - panStart.X) * scale;
-            centerY += (e.Y - panStart.Y) * scale; // Знак += здесь правильный для вашей системы координат
+            centerY -= (e.Y - panStart.Y) * scale; // Знак += здесь правильный для вашей системы координат
 
             panStart = e.Location;
 
