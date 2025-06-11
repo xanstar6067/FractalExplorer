@@ -774,8 +774,10 @@ namespace FractalExplorer
             double scaleX = BASE_SCALE / zoom / width;
             double scaleY = BASE_SCALE / zoom / height;
 
-            centerX -= (e.X - panStart.X) * scaleX;
-            centerY -= (e.Y - panStart.Y) * scaleY;
+            // Обновляем координаты центра на основе движения мыши
+            centerX -= (e.X - panStart.X) * scaleX;  // Горизонтальное движение остается прежним
+            centerY += (e.Y - panStart.Y) * scaleY;  // Вертикальное движение теперь с +=
+
             panStart = e.Location;
 
             fractal_bitmap.Invalidate();
