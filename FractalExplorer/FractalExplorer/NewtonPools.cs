@@ -244,6 +244,7 @@ namespace FractalExplorer
             }
         }
 
+        // ИСПРАВЛЕННЫЙ МЕТОД
         private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom)
         {
             if (token.IsCancellationRequested || isHighResRendering || f_ast == null || f_deriv_ast == null || fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0)
@@ -285,16 +286,17 @@ namespace FractalExplorer
                 int done = 0;
                 const double epsilon = 1e-6;
 
-                double scale_factor_w = (BASE_SCALE / renderZoom) / width;
-                double scale_factor_h = (BASE_SCALE / renderZoom) / height;
+                // ИСПРАВЛЕНО: Используем единый масштаб для обеих осей, чтобы избежать искажений.
+                double scale = (BASE_SCALE / renderZoom) / width;
 
                 Parallel.For(0, height, po, y =>
                 {
                     int rowOffset = y * stride;
                     for (int x = 0; x < width; x++)
                     {
-                        double c_re = renderCenterX + (x - width / 2.0) * scale_factor_w;
-                        double c_im = renderCenterY + (y - height / 2.0) * scale_factor_h;
+                        // ИСПРАВЛЕНО: Используем единый 'scale' для X и Y.
+                        double c_re = renderCenterX + (x - width / 2.0) * scale;
+                        double c_im = renderCenterY + (y - height / 2.0) * scale;
                         Complex z = new Complex(c_re, c_im);
 
                         var variables = new Dictionary<string, Complex> { { "z", z } };
@@ -608,7 +610,6 @@ namespace FractalExplorer
             if (cbSelector.SelectedIndex >= 0)
             {
                 richTextBox1.Text = cbSelector.SelectedItem.ToString();
-                // ScheduleRender() вызовется автоматически событием TextChanged
                 ScheduleRender();
             }
         }
@@ -673,6 +674,7 @@ namespace FractalExplorer
             threadCount = cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
+        // ИСПРАВЛЕННЫЙ МЕТОД
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             if (fractal_bitmap.Image == null || width <= 0 || height <= 0)
@@ -681,41 +683,46 @@ namespace FractalExplorer
                 return;
             }
 
-            double scaleRendered = BASE_SCALE / renderedZoom;
-            double scaleCurrent = BASE_SCALE / zoom;
-
-            if (renderedZoom <= 0 || zoom <= 0 || scaleRendered <= 0 || scaleCurrent <= 0)
-            {
-                e.Graphics.Clear(Color.Black);
-                e.Graphics.DrawImageUnscaled(fractal_bitmap.Image, Point.Empty);
-                return;
-            }
-
-            double complex_half_width_rendered = (BASE_SCALE / renderedZoom) / 2.0;
-            double complex_half_height_rendered = (BASE_SCALE / renderedZoom) / 2.0 * ((double)height / width); // Aspect ratio correction
-            double complex_half_width_current = (BASE_SCALE / zoom) / 2.0;
-            double complex_half_height_current = (BASE_SCALE / zoom) / 2.0 * ((double)height / width); // Aspect ratio correction
-
-            double renderedImage_re_min = renderedCenterX - complex_half_width_rendered;
-            double renderedImage_im_min = renderedCenterY - complex_half_height_rendered;
-            double currentView_re_min = centerX - complex_half_width_current;
-            double currentView_im_min = centerY - complex_half_height_current;
-
-            float p1_X = (float)((renderedImage_re_min - currentView_re_min) / (complex_half_width_current * 2.0) * width);
-            float p1_Y = (float)((currentView_im_min - renderedImage_im_min) / (complex_half_height_current * 2.0) * height); // Inverted Y-axis
-
-            float w_prime = (float)(width * (scaleCurrent / scaleRendered));
-            float h_prime = (float)(height * (scaleCurrent / scaleRendered));
-
-            var destRect = new RectangleF(p1_X, p1_Y, w_prime, h_prime);
-
+            // Очищаем фон
             e.Graphics.Clear(Color.Black);
-            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
-            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
 
+            // Включаем качественную интерполяцию для плавного зума
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+
+            // 1. Вычисляем масштаб для ТЕКУЩЕГО вида (заданного centerX и zoom)
+            double currentScale = (BASE_SCALE / zoom) / width;
+
+            // 2. Вычисляем масштаб, при котором было ОТРИСОВАНО имеющееся изображение
+            double renderedScale = (BASE_SCALE / renderedZoom) / width;
+
+            // 3. Рассчитываем, во сколько раз нужно растянуть/сжать старое изображение
+            float drawScaleRatio = (float)(renderedScale / currentScale);
+
+            // 4. Определяем новый размер отрисованного изображения в пикселях.
+            //    Так как фрактал имеет равное соотношение сторон, используем ширину.
+            //    Если бы канвас был неквадратный, это бы сохранило пропорции.
+            float newWidth = width * drawScaleRatio;
+            float newHeight = height * drawScaleRatio;
+
+            // 5. Находим разницу между центром старого и нового вида в комплексных координатах
+            double deltaRe = renderedCenterX - centerX;
+            double deltaIm = renderedCenterY - centerY;
+
+            // 6. Преобразуем эту разницу в пиксельный сдвиг, используя НОВЫЙ масштаб
+            float offsetX = (float)(deltaRe / currentScale);
+            float offsetY = (float)(deltaIm / currentScale);
+
+            // 7. Вычисляем финальную позицию для отрисовки (левый верхний угол)
+            // Позиция зависит от сдвига центра и изменения масштаба
+            float drawX = (width - newWidth) / 2.0f + offsetX;
+            float drawY = (height - newHeight) / 2.0f + offsetY;
+
+            // 8. Отрисовываем старое изображение с новыми параметрами
+            var destRect = new RectangleF(drawX, drawY, newWidth, newHeight);
             e.Graphics.DrawImage(fractal_bitmap.Image, destRect);
         }
 
+        // ИСПРАВЛЕННЫЙ МЕТОД
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (isHighResRendering)
@@ -723,33 +730,43 @@ namespace FractalExplorer
                 return;
             }
 
+            // Определяем коэффициент приближения/отдаления
             double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5;
             double oldZoom = zoom;
 
-            double scaleBeforeZoomX = BASE_SCALE / oldZoom / width;
-            double scaleBeforeZoomY = BASE_SCALE / oldZoom / height;
+            // Вычисляем масштаб ДО зума. Масштаб должен быть ОДИНАКОВЫМ для обеих осей,
+            // чтобы избежать искажений. Мы базируем его на ширине.
+            double scaleBefore = (BASE_SCALE / oldZoom) / width;
 
-            double mouseRe = centerX + (e.X - width / 2.0) * scaleBeforeZoomX;
-            double mouseIm = centerY + (e.Y - height / 2.0) * scaleBeforeZoomY;
+            // 1. Находим комплексную координату, которая находится точно под курсором мыши
+            double mouseRe = centerX + (e.X - width / 2.0) * scaleBefore;
+            // Для оси Y используем тот же масштаб.
+            double mouseIm = centerY + (e.Y - height / 2.0) * scaleBefore;
 
+            // 2. Применяем новый уровень зума
             zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
 
-            double scaleAfterZoomX = BASE_SCALE / zoom / width;
-            double scaleAfterZoomY = BASE_SCALE / zoom / height;
+            // 3. Вычисляем новый центр. Цель — сместить центр так,
+            // чтобы комплексная точка (mouseRe, mouseIm) снова оказалась под курсором.
+            // Для этого мы вычисляем вектор от этой точки до нового центра, используя НОВЫЙ масштаб.
+            double scaleAfter = (BASE_SCALE / zoom) / width;
+            centerX = mouseRe - (e.X - width / 2.0) * scaleAfter;
+            centerY = mouseIm - (e.Y - height / 2.0) * scaleAfter;
 
-            centerX = mouseRe - (e.X - width / 2.0) * scaleAfterZoomX;
-            centerY = mouseIm - (e.Y - height / 2.0) * scaleAfterZoomY;
+            // Обновляем UI и планируем перерисовку
+            fractal_bitmap.Invalidate(); // Быстрый предпросмотр с новым центром/зумом
 
-            fractal_bitmap.Invalidate();
+            // Обновляем значение в NumericUpDown, что вызовет событие и полный рендер
             if (nudZoom.Value != (decimal)zoom)
             {
                 nudZoom.Value = (decimal)zoom;
             }
-            else
+            else // Если значение не изменилось (достигнут лимит), вызываем рендер вручную
             {
                 ScheduleRender();
             }
         }
+
 
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
         {
@@ -764,6 +781,7 @@ namespace FractalExplorer
             }
         }
 
+        // ИСПРАВЛЕННЫЙ МЕТОД
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (isHighResRendering || !panning)
@@ -771,12 +789,12 @@ namespace FractalExplorer
                 return;
             }
 
-            double scaleX = BASE_SCALE / zoom / width;
-            double scaleY = BASE_SCALE / zoom / height;
+            // Используем единый масштаб, основанный на ширине, чтобы избежать искажений
+            double scale = BASE_SCALE / zoom / width;
 
             // Обновляем координаты центра на основе движения мыши
-            centerX -= (e.X - panStart.X) * scaleX;  // Горизонтальное движение остается прежним
-            centerY += (e.Y - panStart.Y) * scaleY;  // Вертикальное движение теперь с +=
+            centerX -= (e.X - panStart.X) * scale;
+            centerY += (e.Y - panStart.Y) * scale; // Знак += здесь правильный для вашей системы координат
 
             panStart = e.Location;
 
@@ -894,6 +912,7 @@ namespace FractalExplorer
             }
         }
 
+        // ИСПРАВЛЕННЫЙ МЕТОД
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY, double currentZoom, int currentMaxIterations, int numThreads, Action<int> reportProgressCallback)
         {
             if (renderWidth <= 0 || renderHeight <= 0 || f_ast == null || f_deriv_ast == null)
@@ -921,16 +940,17 @@ namespace FractalExplorer
             long done = 0;
             const double epsilon = 1e-6;
 
-            double scale_factor_w = (BASE_SCALE / currentZoom) / renderWidth;
-            double scale_factor_h = (BASE_SCALE / currentZoom) / renderHeight;
+            // ИСПРАВЛЕНО: Используем единый масштаб для обеих осей
+            double scale = (BASE_SCALE / currentZoom) / renderWidth;
 
             Parallel.For(0, renderHeight, po, y =>
             {
                 int rowOffset = y * stride;
                 for (int x = 0; x < renderWidth; x++)
                 {
-                    double c_re = currentCenterX + (x - renderWidth / 2.0) * scale_factor_w;
-                    double c_im = currentCenterY + (y - renderHeight / 2.0) * scale_factor_h;
+                    // ИСПРАВЛЕНО: Используем единый 'scale' для X и Y
+                    double c_re = currentCenterX + (x - renderWidth / 2.0) * scale;
+                    double c_im = currentCenterY + (y - renderHeight / 2.0) * scale;
                     Complex z = new Complex(c_re, c_im);
 
                     var variables = new Dictionary<string, Complex> { { "z", z } };
@@ -1136,7 +1156,7 @@ namespace FractalExplorer
         public abstract ExpressionNode Differentiate(string varName);
         public abstract string Print(string indent = "");
         public override string ToString() => this.PrintSimple();
-        public abstract string PrintSimple(); // ИСПРАВЛЕНО: public вместо protected
+        public abstract string PrintSimple();
     }
 
     public class NumberNode : ExpressionNode
