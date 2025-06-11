@@ -53,6 +53,7 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
+            richTextDebudOutput = new RichTextBox();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
@@ -92,6 +93,7 @@
             // 
             // panel2
             // 
+            panel2.Controls.Add(richTextDebudOutput);
             panel2.Controls.Add(cbSelector);
             panel2.Controls.Add(richTextBox1);
             panel2.Controls.Add(label1);
@@ -105,7 +107,7 @@
             // 
             cbSelector.Dock = DockStyle.Bottom;
             cbSelector.FormattingEnabled = true;
-            cbSelector.Location = new Point(0, 32);
+            cbSelector.Location = new Point(0, 107);
             cbSelector.Name = "cbSelector";
             cbSelector.Size = new Size(231, 23);
             cbSelector.TabIndex = 34;
@@ -113,16 +115,16 @@
             // richTextBox1
             // 
             richTextBox1.Dock = DockStyle.Bottom;
-            richTextBox1.Location = new Point(0, 55);
+            richTextBox1.Location = new Point(0, 130);
             richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(231, 170);
+            richTextBox1.Size = new Size(231, 95);
             richTextBox1.TabIndex = 33;
             richTextBox1.Text = "";
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(36, 14);
+            label1.Location = new Point(36, 89);
             label1.Name = "label1";
             label1.Size = new Size(163, 15);
             label1.TabIndex = 35;
@@ -314,6 +316,15 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
+            // richTextDebudOutput
+            // 
+            richTextDebudOutput.Dock = DockStyle.Top;
+            richTextDebudOutput.Location = new Point(0, 0);
+            richTextDebudOutput.Name = "richTextDebudOutput";
+            richTextDebudOutput.Size = new Size(231, 72);
+            richTextDebudOutput.TabIndex = 36;
+            richTextDebudOutput.Text = "";
+            // 
             // NewtonPools
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -367,5 +378,6 @@
         private CheckBox colorBox4;
         private CheckBox colorBox3;
         private Panel panel2;
+        private RichTextBox richTextDebudOutput;
     }
 }
