@@ -104,7 +104,7 @@ namespace FractalExplorer
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
             cbSelector.SelectedIndexChanged += cbSelector_SelectedIndexChanged;
-            richTextBox1.TextChanged += (s, e) => ScheduleRender(); // Рендер при изменении текста
+            //richTextBox1.TextChanged += (s, e) => ScheduleRender(); // Рендер при изменении текста
             oldRenderBW.CheckedChanged += ParamControl_Changed;
             colorBox0.CheckedChanged += ColorBox_Changed;
             colorBox1.CheckedChanged += ColorBox_Changed;
@@ -609,6 +609,7 @@ namespace FractalExplorer
             {
                 richTextBox1.Text = cbSelector.SelectedItem.ToString();
                 // ScheduleRender() вызовется автоматически событием TextChanged
+                ScheduleRender();
             }
         }
 
