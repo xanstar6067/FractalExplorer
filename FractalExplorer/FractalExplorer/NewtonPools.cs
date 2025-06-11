@@ -1161,7 +1161,7 @@ namespace FractalExplorer
             {
                 return value;
             }
-            throw new Exception($"Значение для переменной '{Name}' не предоставлено.");
+            throw new Exception($"Значение для переменной '{Name}' не предоставлено.(Возможно вы хотели a*b, укажите операцию явно)");
         }
         public override ExpressionNode Differentiate(string varName)
         {
