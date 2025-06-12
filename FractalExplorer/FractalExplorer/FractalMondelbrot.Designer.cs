@@ -167,7 +167,7 @@
             // 
             // nudW
             // 
-            nudW.Location = new Point(12, 289);
+            nudW.Location = new Point(14, 266);
             nudW.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudW.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudW.Name = "nudW";
@@ -177,7 +177,7 @@
             // 
             // nudH
             // 
-            nudH.Location = new Point(124, 289);
+            nudH.Location = new Point(126, 266);
             nudH.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudH.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudH.Name = "nudH";
@@ -187,7 +187,7 @@
             // 
             // progressPNG
             // 
-            progressPNG.Location = new Point(3, 318);
+            progressPNG.Location = new Point(5, 295);
             progressPNG.Name = "progressPNG";
             progressPNG.Size = new Size(218, 23);
             progressPNG.TabIndex = 21;
@@ -275,7 +275,7 @@
             // 
             // btnSave
             // 
-            btnSave.Location = new Point(28, 260);
+            btnSave.Location = new Point(30, 237);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(164, 23);
             btnSave.TabIndex = 11;
