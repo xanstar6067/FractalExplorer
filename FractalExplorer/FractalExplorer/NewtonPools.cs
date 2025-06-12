@@ -139,7 +139,7 @@ namespace FractalExplorer
             string expression = richTextBox1.Text;
             if (string.IsNullOrWhiteSpace(expression))
             {
-                richTextDebudOutput.Text = "Ошибка: Поле для формулы пустое.";
+                richTextDebugOutput.Text = "Ошибка: Поле для формулы пустое.";
                 return false;
             }
 
@@ -168,7 +168,7 @@ namespace FractalExplorer
                 sb.AppendLine("--- AST f'(z) ---");
                 sb.AppendLine(f_deriv_ast.Print());
 
-                richTextDebudOutput.Text = sb.ToString();
+                richTextDebugOutput.Text = sb.ToString();
 
                 return true;
             }
@@ -177,7 +177,7 @@ namespace FractalExplorer
                 // Вывод ошибки парсинга
                 f_ast = null;
                 f_deriv_ast = null;
-                richTextDebudOutput.Text = $"ОШИБКА ПАРСИНГА:\n{ex.Message}";
+                richTextDebugOutput.Text = $"ОШИБКА ПАРСИНГА:\n{ex.Message}";
                 return false;
             }
         }

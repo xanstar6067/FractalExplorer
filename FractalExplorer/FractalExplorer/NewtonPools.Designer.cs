@@ -30,8 +30,13 @@
         {
             panel1 = new Panel();
             panel2 = new Panel();
+            panel5 = new Panel();
             cbSelector = new ComboBox();
+            panel4 = new Panel();
             richTextBox1 = new RichTextBox();
+            panel3 = new Panel();
+            label2 = new Label();
+            richTextDebugOutput = new RichTextBox();
             label1 = new Label();
             colorBox4 = new CheckBox();
             colorBox3 = new CheckBox();
@@ -53,9 +58,11 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
-            richTextDebudOutput = new RichTextBox();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
+            panel5.SuspendLayout();
+            panel4.SuspendLayout();
+            panel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudH).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
@@ -93,38 +100,85 @@
             // 
             // panel2
             // 
-            panel2.Controls.Add(richTextDebudOutput);
-            panel2.Controls.Add(cbSelector);
-            panel2.Controls.Add(richTextBox1);
+            panel2.Controls.Add(panel5);
+            panel2.Controls.Add(panel4);
+            panel2.Controls.Add(panel3);
+            panel2.Controls.Add(richTextDebugOutput);
             panel2.Controls.Add(label1);
             panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 411);
+            panel2.Location = new Point(0, 430);
             panel2.Name = "panel2";
-            panel2.Size = new Size(231, 225);
+            panel2.Size = new Size(231, 206);
             panel2.TabIndex = 40;
+            // 
+            // panel5
+            // 
+            panel5.Controls.Add(cbSelector);
+            panel5.Dock = DockStyle.Bottom;
+            panel5.Location = new Point(0, 18);
+            panel5.Name = "panel5";
+            panel5.Size = new Size(231, 24);
+            panel5.TabIndex = 41;
             // 
             // cbSelector
             // 
             cbSelector.Dock = DockStyle.Bottom;
             cbSelector.FormattingEnabled = true;
-            cbSelector.Location = new Point(0, 107);
+            cbSelector.Location = new Point(0, 1);
             cbSelector.Name = "cbSelector";
             cbSelector.Size = new Size(231, 23);
             cbSelector.TabIndex = 34;
             // 
+            // panel4
+            // 
+            panel4.Controls.Add(richTextBox1);
+            panel4.Dock = DockStyle.Bottom;
+            panel4.Location = new Point(0, 42);
+            panel4.Name = "panel4";
+            panel4.Size = new Size(231, 64);
+            panel4.TabIndex = 41;
+            // 
             // richTextBox1
             // 
-            richTextBox1.Dock = DockStyle.Bottom;
-            richTextBox1.Location = new Point(0, 130);
+            richTextBox1.Dock = DockStyle.Fill;
+            richTextBox1.Location = new Point(0, 0);
             richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(231, 95);
+            richTextBox1.Size = new Size(231, 64);
             richTextBox1.TabIndex = 33;
             richTextBox1.Text = "";
+            // 
+            // panel3
+            // 
+            panel3.Controls.Add(label2);
+            panel3.Dock = DockStyle.Bottom;
+            panel3.Location = new Point(0, 106);
+            panel3.Name = "panel3";
+            panel3.Size = new Size(231, 23);
+            panel3.TabIndex = 37;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(87, 5);
+            label2.Name = "label2";
+            label2.Size = new Size(52, 15);
+            label2.TabIndex = 38;
+            label2.Text = "Отладка";
+            // 
+            // richTextDebugOutput
+            // 
+            richTextDebugOutput.Dock = DockStyle.Bottom;
+            richTextDebugOutput.Location = new Point(0, 129);
+            richTextDebugOutput.Name = "richTextDebugOutput";
+            richTextDebugOutput.ReadOnly = true;
+            richTextDebugOutput.Size = new Size(231, 77);
+            richTextDebugOutput.TabIndex = 36;
+            richTextDebugOutput.Text = "";
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(36, 89);
+            label1.Location = new Point(36, 0);
             label1.Name = "label1";
             label1.Size = new Size(163, 15);
             label1.TabIndex = 35;
@@ -133,7 +187,7 @@
             // colorBox4
             // 
             colorBox4.AutoSize = true;
-            colorBox4.Location = new Point(62, 372);
+            colorBox4.Location = new Point(63, 370);
             colorBox4.Name = "colorBox4";
             colorBox4.Size = new Size(61, 19);
             colorBox4.TabIndex = 39;
@@ -143,7 +197,7 @@
             // colorBox3
             // 
             colorBox3.AutoSize = true;
-            colorBox3.Location = new Point(5, 372);
+            colorBox3.Location = new Point(5, 370);
             colorBox3.Name = "colorBox3";
             colorBox3.Size = new Size(61, 19);
             colorBox3.TabIndex = 38;
@@ -153,7 +207,7 @@
             // colorBox2
             // 
             colorBox2.AutoSize = true;
-            colorBox2.Location = new Point(160, 347);
+            colorBox2.Location = new Point(164, 347);
             colorBox2.Name = "colorBox2";
             colorBox2.Size = new Size(61, 19);
             colorBox2.TabIndex = 37;
@@ -163,7 +217,7 @@
             // colorBox1
             // 
             colorBox1.AutoSize = true;
-            colorBox1.Location = new Point(113, 347);
+            colorBox1.Location = new Point(103, 347);
             colorBox1.Name = "colorBox1";
             colorBox1.Size = new Size(61, 19);
             colorBox1.TabIndex = 36;
@@ -237,7 +291,7 @@
             // colorBox0
             // 
             colorBox0.AutoSize = true;
-            colorBox0.Location = new Point(52, 347);
+            colorBox0.Location = new Point(46, 347);
             colorBox0.Name = "colorBox0";
             colorBox0.Size = new Size(61, 19);
             colorBox0.TabIndex = 15;
@@ -316,15 +370,6 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
-            // richTextDebudOutput
-            // 
-            richTextDebudOutput.Dock = DockStyle.Top;
-            richTextDebudOutput.Location = new Point(0, 0);
-            richTextDebudOutput.Name = "richTextDebudOutput";
-            richTextDebudOutput.Size = new Size(231, 72);
-            richTextDebudOutput.TabIndex = 36;
-            richTextDebudOutput.Text = "";
-            // 
             // NewtonPools
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -339,6 +384,10 @@
             panel1.PerformLayout();
             panel2.ResumeLayout(false);
             panel2.PerformLayout();
+            panel5.ResumeLayout(false);
+            panel4.ResumeLayout(false);
+            panel3.ResumeLayout(false);
+            panel3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)nudW).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudH).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
@@ -378,6 +427,10 @@
         private CheckBox colorBox4;
         private CheckBox colorBox3;
         private Panel panel2;
-        private RichTextBox richTextDebudOutput;
+        private RichTextBox richTextDebugOutput;
+        private Panel panel3;
+        private Label label2;
+        private Panel panel4;
+        private Panel panel5;
     }
 }
