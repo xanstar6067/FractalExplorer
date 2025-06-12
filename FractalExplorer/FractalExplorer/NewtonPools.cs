@@ -89,7 +89,7 @@ namespace FractalExplorer
                 cbSelector.Items.Add(poly);
             }
             cbSelector.SelectedIndex = 0;
-            richTextBox1.Text = cbSelector.SelectedItem.ToString(); // Устанавливаем текст при запуске
+            richTextInput.Text = cbSelector.SelectedItem.ToString(); // Устанавливаем текст при запуске
 
             int cores = Environment.ProcessorCount;
             for (int i = 1; i <= cores; i++)
@@ -136,7 +136,7 @@ namespace FractalExplorer
         /// <returns>True, если формула успешно обработана, иначе False.</returns>
         private bool ProcessFormula()
         {
-            string expression = richTextBox1.Text;
+            string expression = richTextInput.Text;
             if (string.IsNullOrWhiteSpace(expression))
             {
                 richTextDebugOutput.Text = "Ошибка: Поле для формулы пустое.";
@@ -609,7 +609,7 @@ namespace FractalExplorer
         {
             if (cbSelector.SelectedIndex >= 0)
             {
-                richTextBox1.Text = cbSelector.SelectedItem.ToString();
+                richTextInput.Text = cbSelector.SelectedItem.ToString();
                 ScheduleRender();
             }
         }
@@ -1031,7 +1031,7 @@ namespace FractalExplorer
                 nudW.Enabled = enabled;
                 nudH.Enabled = enabled;
                 cbSelector.Enabled = enabled;
-                richTextBox1.Enabled = enabled;
+                richTextInput.Enabled = enabled;
                 oldRenderBW.Enabled = enabled;
                 colorBox0.Enabled = enabled;
                 colorBox1.Enabled = enabled;

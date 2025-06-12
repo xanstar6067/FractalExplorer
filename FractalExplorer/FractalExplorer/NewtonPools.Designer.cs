@@ -33,7 +33,7 @@
             panel5 = new Panel();
             cbSelector = new ComboBox();
             panel4 = new Panel();
-            richTextBox1 = new RichTextBox();
+            richTextInput = new RichTextBox();
             panel3 = new Panel();
             label2 = new Label();
             richTextDebugOutput = new RichTextBox();
@@ -58,6 +58,7 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
+            panel6 = new Panel();
             panel1.SuspendLayout();
             panel2.SuspendLayout();
             panel5.SuspendLayout();
@@ -68,23 +69,19 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).BeginInit();
+            panel6.SuspendLayout();
             SuspendLayout();
             // 
             // panel1
             // 
+            panel1.Controls.Add(panel6);
             panel1.Controls.Add(panel2);
-            panel1.Controls.Add(colorBox4);
-            panel1.Controls.Add(colorBox3);
-            panel1.Controls.Add(colorBox2);
-            panel1.Controls.Add(colorBox1);
             panel1.Controls.Add(nudW);
             panel1.Controls.Add(nudH);
             panel1.Controls.Add(progressPNG);
             panel1.Controls.Add(label8);
-            panel1.Controls.Add(oldRenderBW);
             panel1.Controls.Add(label5);
             panel1.Controls.Add(nudZoom);
-            panel1.Controls.Add(colorBox0);
             panel1.Controls.Add(btnRender);
             panel1.Controls.Add(progressBar);
             panel1.Controls.Add(label6);
@@ -106,16 +103,16 @@
             panel2.Controls.Add(richTextDebugOutput);
             panel2.Controls.Add(label1);
             panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 430);
+            panel2.Location = new Point(0, 427);
             panel2.Name = "panel2";
-            panel2.Size = new Size(231, 206);
+            panel2.Size = new Size(231, 209);
             panel2.TabIndex = 40;
             // 
             // panel5
             // 
             panel5.Controls.Add(cbSelector);
             panel5.Dock = DockStyle.Bottom;
-            panel5.Location = new Point(0, 18);
+            panel5.Location = new Point(0, 21);
             panel5.Name = "panel5";
             panel5.Size = new Size(231, 24);
             panel5.TabIndex = 41;
@@ -131,27 +128,27 @@
             // 
             // panel4
             // 
-            panel4.Controls.Add(richTextBox1);
+            panel4.Controls.Add(richTextInput);
             panel4.Dock = DockStyle.Bottom;
-            panel4.Location = new Point(0, 42);
+            panel4.Location = new Point(0, 45);
             panel4.Name = "panel4";
             panel4.Size = new Size(231, 64);
             panel4.TabIndex = 41;
             // 
-            // richTextBox1
+            // richTextInput
             // 
-            richTextBox1.Dock = DockStyle.Fill;
-            richTextBox1.Location = new Point(0, 0);
-            richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new Size(231, 64);
-            richTextBox1.TabIndex = 33;
-            richTextBox1.Text = "";
+            richTextInput.Dock = DockStyle.Fill;
+            richTextInput.Location = new Point(0, 0);
+            richTextInput.Name = "richTextInput";
+            richTextInput.Size = new Size(231, 64);
+            richTextInput.TabIndex = 33;
+            richTextInput.Text = "";
             // 
             // panel3
             // 
             panel3.Controls.Add(label2);
             panel3.Dock = DockStyle.Bottom;
-            panel3.Location = new Point(0, 106);
+            panel3.Location = new Point(0, 109);
             panel3.Name = "panel3";
             panel3.Size = new Size(231, 23);
             panel3.TabIndex = 37;
@@ -168,7 +165,7 @@
             // richTextDebugOutput
             // 
             richTextDebugOutput.Dock = DockStyle.Bottom;
-            richTextDebugOutput.Location = new Point(0, 129);
+            richTextDebugOutput.Location = new Point(0, 132);
             richTextDebugOutput.Name = "richTextDebugOutput";
             richTextDebugOutput.ReadOnly = true;
             richTextDebugOutput.Size = new Size(231, 77);
@@ -187,7 +184,7 @@
             // colorBox4
             // 
             colorBox4.AutoSize = true;
-            colorBox4.Location = new Point(63, 370);
+            colorBox4.Location = new Point(66, 26);
             colorBox4.Name = "colorBox4";
             colorBox4.Size = new Size(61, 19);
             colorBox4.TabIndex = 39;
@@ -197,7 +194,7 @@
             // colorBox3
             // 
             colorBox3.AutoSize = true;
-            colorBox3.Location = new Point(5, 370);
+            colorBox3.Location = new Point(8, 26);
             colorBox3.Name = "colorBox3";
             colorBox3.Size = new Size(61, 19);
             colorBox3.TabIndex = 38;
@@ -207,7 +204,7 @@
             // colorBox2
             // 
             colorBox2.AutoSize = true;
-            colorBox2.Location = new Point(164, 347);
+            colorBox2.Location = new Point(170, 3);
             colorBox2.Name = "colorBox2";
             colorBox2.Size = new Size(61, 19);
             colorBox2.TabIndex = 37;
@@ -217,7 +214,7 @@
             // colorBox1
             // 
             colorBox1.AutoSize = true;
-            colorBox1.Location = new Point(103, 347);
+            colorBox1.Location = new Point(109, 3);
             colorBox1.Name = "colorBox1";
             colorBox1.Size = new Size(61, 19);
             colorBox1.TabIndex = 36;
@@ -226,7 +223,7 @@
             // 
             // nudW
             // 
-            nudW.Location = new Point(12, 289);
+            nudW.Location = new Point(16, 239);
             nudW.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudW.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudW.Name = "nudW";
@@ -236,7 +233,7 @@
             // 
             // nudH
             // 
-            nudH.Location = new Point(124, 289);
+            nudH.Location = new Point(128, 239);
             nudH.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudH.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudH.Name = "nudH";
@@ -246,7 +243,7 @@
             // 
             // progressPNG
             // 
-            progressPNG.Location = new Point(3, 318);
+            progressPNG.Location = new Point(7, 268);
             progressPNG.Name = "progressPNG";
             progressPNG.Size = new Size(218, 23);
             progressPNG.TabIndex = 21;
@@ -254,7 +251,7 @@
             // label8
             // 
             label8.AutoSize = true;
-            label8.Location = new Point(87, 191);
+            label8.Location = new Point(89, 163);
             label8.Name = "label8";
             label8.Size = new Size(67, 15);
             label8.TabIndex = 20;
@@ -263,7 +260,7 @@
             // oldRenderBW
             // 
             oldRenderBW.AutoSize = true;
-            oldRenderBW.Location = new Point(5, 347);
+            oldRenderBW.Location = new Point(8, 3);
             oldRenderBW.Name = "oldRenderBW";
             oldRenderBW.Size = new Size(41, 19);
             oldRenderBW.TabIndex = 17;
@@ -273,7 +270,7 @@
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(13, 68);
+            label5.Location = new Point(15, 40);
             label5.Name = "label5";
             label5.Size = new Size(86, 15);
             label5.TabIndex = 16;
@@ -282,7 +279,7 @@
             // nudZoom
             // 
             nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
-            nudZoom.Location = new Point(12, 86);
+            nudZoom.Location = new Point(14, 58);
             nudZoom.Maximum = new decimal(new int[] { 268435455, 1042612833, 542101086, 0 });
             nudZoom.Name = "nudZoom";
             nudZoom.Size = new Size(196, 23);
@@ -291,7 +288,7 @@
             // colorBox0
             // 
             colorBox0.AutoSize = true;
-            colorBox0.Location = new Point(46, 347);
+            colorBox0.Location = new Point(47, 3);
             colorBox0.Name = "colorBox0";
             colorBox0.Size = new Size(61, 19);
             colorBox0.TabIndex = 15;
@@ -300,7 +297,7 @@
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(34, 165);
+            btnRender.Location = new Point(36, 137);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(164, 23);
             btnRender.TabIndex = 2;
@@ -310,7 +307,7 @@
             // 
             // progressBar
             // 
-            progressBar.Location = new Point(5, 209);
+            progressBar.Location = new Point(7, 181);
             progressBar.Name = "progressBar";
             progressBar.Size = new Size(218, 23);
             progressBar.TabIndex = 14;
@@ -318,7 +315,7 @@
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(12, 113);
+            label6.Location = new Point(14, 85);
             label6.Name = "label6";
             label6.Size = new Size(69, 15);
             label6.TabIndex = 13;
@@ -327,14 +324,14 @@
             // cbThreads
             // 
             cbThreads.FormattingEnabled = true;
-            cbThreads.Location = new Point(12, 131);
+            cbThreads.Location = new Point(14, 103);
             cbThreads.Name = "cbThreads";
             cbThreads.Size = new Size(195, 23);
             cbThreads.TabIndex = 12;
             // 
             // btnSave
             // 
-            btnSave.Location = new Point(28, 260);
+            btnSave.Location = new Point(32, 210);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(164, 23);
             btnSave.TabIndex = 11;
@@ -370,6 +367,20 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
+            // panel6
+            // 
+            panel6.Controls.Add(colorBox2);
+            panel6.Controls.Add(colorBox0);
+            panel6.Controls.Add(colorBox4);
+            panel6.Controls.Add(oldRenderBW);
+            panel6.Controls.Add(colorBox3);
+            panel6.Controls.Add(colorBox1);
+            panel6.Dock = DockStyle.Bottom;
+            panel6.Location = new Point(0, 323);
+            panel6.Name = "panel6";
+            panel6.Size = new Size(231, 104);
+            panel6.TabIndex = 42;
+            // 
             // NewtonPools
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -393,6 +404,8 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).EndInit();
+            panel6.ResumeLayout(false);
+            panel6.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -421,7 +434,7 @@
         private CheckBox checkBox3;
         private CheckBox colorBox2;
         private CheckBox colorBox1;
-        private RichTextBox richTextBox1;
+        private RichTextBox richTextInput;
         private Label label1;
         private ComboBox cbSelector;
         private CheckBox colorBox4;
@@ -432,5 +445,6 @@
         private Label label2;
         private Panel panel4;
         private Panel panel5;
+        private Panel panel6;
     }
 }

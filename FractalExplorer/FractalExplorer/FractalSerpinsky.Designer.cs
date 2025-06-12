@@ -32,20 +32,20 @@
             abortRender = new Button();
             panel3 = new Panel();
             label2 = new Label();
+            label1 = new Label();
             colorColor = new CheckBox();
+            renderBW = new CheckBox();
+            colorGrayscale = new CheckBox();
+            colorBackground = new CheckBox();
+            colorFractal = new CheckBox();
             FractalTypeIsChaos = new CheckBox();
             FractalTypeIsGeometry = new CheckBox();
-            colorFractal = new CheckBox();
-            colorBackground = new CheckBox();
-            label1 = new Label();
             panel2 = new Panel();
             canvasPalette = new PictureBox();
-            colorGrayscale = new CheckBox();
             nudW2 = new NumericUpDown();
             nudH2 = new NumericUpDown();
             progressPNGSerpinsky = new ProgressBar();
             label8 = new Label();
-            renderBW = new CheckBox();
             label5 = new Label();
             nudZoom = new NumericUpDown();
             btnRender = new Button();
@@ -127,6 +127,15 @@
             label2.TabIndex = 38;
             label2.Text = "Кликни для настройки цвета";
             // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(67, 7);
+            label1.Name = "label1";
+            label1.Size = new Size(91, 15);
+            label1.TabIndex = 32;
+            label1.Text = "Выберите цвет.";
+            // 
             // colorColor
             // 
             colorColor.AutoSize = true;
@@ -136,6 +145,46 @@
             colorColor.TabIndex = 37;
             colorColor.Text = "Цвет";
             colorColor.UseVisualStyleBackColor = true;
+            // 
+            // renderBW
+            // 
+            renderBW.AutoSize = true;
+            renderBW.Location = new Point(15, 25);
+            renderBW.Name = "renderBW";
+            renderBW.Size = new Size(41, 19);
+            renderBW.TabIndex = 17;
+            renderBW.Text = "ЧБ";
+            renderBW.UseVisualStyleBackColor = true;
+            // 
+            // colorGrayscale
+            // 
+            colorGrayscale.AutoSize = true;
+            colorGrayscale.Location = new Point(60, 25);
+            colorGrayscale.Name = "colorGrayscale";
+            colorGrayscale.Size = new Size(112, 19);
+            colorGrayscale.TabIndex = 30;
+            colorGrayscale.Text = "Оттенки серого";
+            colorGrayscale.UseVisualStyleBackColor = true;
+            // 
+            // colorBackground
+            // 
+            colorBackground.AutoSize = true;
+            colorBackground.Location = new Point(76, 44);
+            colorBackground.Name = "colorBackground";
+            colorBackground.Size = new Size(49, 19);
+            colorBackground.TabIndex = 33;
+            colorBackground.Text = "Фон";
+            colorBackground.UseVisualStyleBackColor = true;
+            // 
+            // colorFractal
+            // 
+            colorFractal.AutoSize = true;
+            colorFractal.Location = new Point(131, 44);
+            colorFractal.Name = "colorFractal";
+            colorFractal.Size = new Size(66, 19);
+            colorFractal.TabIndex = 34;
+            colorFractal.Text = "Фигура";
+            colorFractal.UseVisualStyleBackColor = true;
             // 
             // FractalTypeIsChaos
             // 
@@ -157,35 +206,6 @@
             FractalTypeIsGeometry.Text = "Геометрический";
             FractalTypeIsGeometry.UseVisualStyleBackColor = true;
             // 
-            // colorFractal
-            // 
-            colorFractal.AutoSize = true;
-            colorFractal.Location = new Point(131, 44);
-            colorFractal.Name = "colorFractal";
-            colorFractal.Size = new Size(66, 19);
-            colorFractal.TabIndex = 34;
-            colorFractal.Text = "Фигура";
-            colorFractal.UseVisualStyleBackColor = true;
-            // 
-            // colorBackground
-            // 
-            colorBackground.AutoSize = true;
-            colorBackground.Location = new Point(76, 44);
-            colorBackground.Name = "colorBackground";
-            colorBackground.Size = new Size(49, 19);
-            colorBackground.TabIndex = 33;
-            colorBackground.Text = "Фон";
-            colorBackground.UseVisualStyleBackColor = true;
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(67, 7);
-            label1.Name = "label1";
-            label1.Size = new Size(91, 15);
-            label1.TabIndex = 32;
-            label1.Text = "Выберите цвет.";
-            // 
             // panel2
             // 
             panel2.BorderStyle = BorderStyle.FixedSingle;
@@ -205,16 +225,6 @@
             canvasPalette.TabIndex = 3;
             canvasPalette.TabStop = false;
             canvasPalette.Click += cancasPalette_Click;
-            // 
-            // colorGrayscale
-            // 
-            colorGrayscale.AutoSize = true;
-            colorGrayscale.Location = new Point(60, 25);
-            colorGrayscale.Name = "colorGrayscale";
-            colorGrayscale.Size = new Size(112, 19);
-            colorGrayscale.TabIndex = 30;
-            colorGrayscale.Text = "Оттенки серого";
-            colorGrayscale.UseVisualStyleBackColor = true;
             // 
             // nudW2
             // 
@@ -251,16 +261,6 @@
             label8.Size = new Size(67, 15);
             label8.TabIndex = 20;
             label8.Text = "Обработка";
-            // 
-            // renderBW
-            // 
-            renderBW.AutoSize = true;
-            renderBW.Location = new Point(15, 25);
-            renderBW.Name = "renderBW";
-            renderBW.Size = new Size(41, 19);
-            renderBW.TabIndex = 17;
-            renderBW.Text = "ЧБ";
-            renderBW.UseVisualStyleBackColor = true;
             // 
             // label5
             // 
