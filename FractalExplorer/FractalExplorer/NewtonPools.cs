@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿// --- START OF FILE NewtonPools.cs ---
+
+using System.Text;
 using System.Numerics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -29,6 +31,12 @@ namespace FractalExplorer
         // --- Новые поля для хранения AST ---
         private ExpressionNode f_ast = null; // AST для f(z)
         private ExpressionNode f_deriv_ast = null; // AST для f'(z)
+
+        // --- Новые поля для кастомных цветов ---
+        private color_setting_NewtonPools colorSettingsForm;
+        private List<Color> userDefinedRootColors = new List<Color>();
+        private Color userDefinedBackgroundColor = Color.Black;
+        private bool useCustomPalette = false;
 
         private readonly string[] presetPolynomials = {
     // --- Классические полиномы ---
@@ -111,6 +119,8 @@ namespace FractalExplorer
             colorBox2.CheckedChanged += ColorBox_Changed;
             colorBox3.CheckedChanged += ColorBox_Changed;
             colorBox4.CheckedChanged += ColorBox_Changed;
+            colorCustom.CheckedChanged += ColorBox_Changed; // Новая подписка
+            custom_color.Click += custom_color_Click; // Новая подписка
 
             fractal_bitmap.MouseWheel += Canvas_MouseWheel;
             fractal_bitmap.MouseDown += Canvas_MouseDown;
@@ -264,6 +274,8 @@ namespace FractalExplorer
             Color[] rootColors = GetRootColors(roots);
             bool usePastel = this.Invoke(new Func<bool>(() => colorBox1.Checked));
             bool useGradient = this.Invoke(new Func<bool>(() => colorBox0.Checked));
+            bool useUserPalette = this.Invoke(new Func<bool>(() => useCustomPalette));
+            Color bgColor = useUserPalette ? userDefinedBackgroundColor : (usePastel ? CreateSafeColor(50, 50, 50) : Color.Black);
 
 
             Bitmap bmp = null;
@@ -339,7 +351,7 @@ namespace FractalExplorer
                         Color pixelColor;
                         if (rootIndex >= 0 && minDist < epsilon)
                         {
-                            if (useGradient)
+                            if (useGradient && !useUserPalette) // Градиент только если не выбрана своя палитра
                             {
                                 double t = (double)iter / maxIterations;
                                 int hue = (int)(240 * t);
@@ -347,12 +359,13 @@ namespace FractalExplorer
                             }
                             else
                             {
+                                // Используем либо цвет из палитры, либо кастомный цвет
                                 pixelColor = rootColors[rootIndex];
                             }
                         }
                         else
                         {
-                            pixelColor = usePastel ? CreateSafeColor(50, 50, 50) : Color.Black;
+                            pixelColor = bgColor;
                         }
 
                         int index = rowOffset + x * 3;
@@ -505,8 +518,21 @@ namespace FractalExplorer
 
         private Color[] GetRootColors(List<Complex> roots)
         {
-            var rootColors = new Color[roots.Count];
             // Безопасное чтение UI контролов из любого потока
+            bool useUserDefPalette = this.Invoke(new Func<bool>(() => useCustomPalette));
+
+            if (useUserDefPalette)
+            {
+                var customColors = new Color[roots.Count];
+                for (int i = 0; i < roots.Count; i++)
+                {
+                    // Если у пользователя определено меньше цветов, чем найдено корней, используем запасной вариант
+                    customColors[i] = i < userDefinedRootColors.Count ? userDefinedRootColors[i] : Color.Gray;
+                }
+                return customColors;
+            }
+
+            var rootColors = new Color[roots.Count];
             bool useBlackWhite = this.Invoke(new Func<bool>(() => oldRenderBW.Checked));
             bool useGradient = this.Invoke(new Func<bool>(() => colorBox0.Checked));
             bool usePastel = this.Invoke(new Func<bool>(() => colorBox1.Checked));
@@ -655,16 +681,38 @@ namespace FractalExplorer
             {
                 return;
             }
+            // Это новый блок для управления чекбоксами
             if (sender is CheckBox currentCb && currentCb.Checked)
             {
-                foreach (var cb in new[] { colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 })
+                if (currentCb == colorCustom)
                 {
-                    if (cb != currentCb)
+                    useCustomPalette = true;
+                    // Если выбрали кастомную палитру, снимаем галочки с остальных
+                    foreach (var cb in new[] { oldRenderBW, colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 })
                     {
                         cb.Checked = false;
                     }
                 }
+                else
+                {
+                    useCustomPalette = false;
+                    colorCustom.Checked = false; // Снимаем галочку с кастомной палитры
+                    // Старая логика для остальных чекбоксов
+                    foreach (var cb in new[] { colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 })
+                    {
+                        if (cb != currentCb)
+                        {
+                            cb.Checked = false;
+                        }
+                    }
+                }
             }
+            // Если снимаем галочку с кастомной палитры
+            else if (sender == colorCustom && !colorCustom.Checked)
+            {
+                useCustomPalette = false;
+            }
+
             ScheduleRender();
         }
 
@@ -672,6 +720,50 @@ namespace FractalExplorer
         {
             maxIterations = (int)nudIterations.Value;
             threadCount = cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+            useCustomPalette = colorCustom.Checked;
+        }
+
+        // --- Новый обработчик для кнопки открытия настроек цвета ---
+        private void custom_color_Click(object sender, EventArgs e)
+        {
+            if (!ProcessFormula())
+            {
+                MessageBox.Show("Не удалось обработать формулу. Невозможно определить количество корней для настройки палитры.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Находим корни только чтобы узнать их количество
+            var roots = FindRoots(f_ast, f_deriv_ast);
+            int rootCount = roots.Count;
+
+            // Создаем форму, если ее еще нет, или она была закрыта
+            if (colorSettingsForm == null || colorSettingsForm.IsDisposed)
+            {
+                colorSettingsForm = new color_setting_NewtonPools();
+                // Подписываемся на событие изменения цветов
+                colorSettingsForm.ColorsChanged += ColorSettingsForm_ColorsChanged;
+            }
+
+            // Передаем в форму текущие цвета и нужное количество
+            colorSettingsForm.PopulateColorPickers(userDefinedRootColors, userDefinedBackgroundColor, rootCount);
+
+            // Показываем форму
+            colorSettingsForm.Show();
+            colorSettingsForm.Activate();
+        }
+
+        // --- Новый обработчик события от формы настроек ---
+        private void ColorSettingsForm_ColorsChanged(object sender, CustomPalette newPalette)
+        {
+            // Обновляем нашу палитру
+            this.userDefinedRootColors = newPalette.RootColors;
+            this.userDefinedBackgroundColor = newPalette.BackgroundColor;
+
+            // Если режим кастомной палитры активен, перерисовываем
+            if (useCustomPalette)
+            {
+                ScheduleRender();
+            }
         }
 
         // ИСПРАВЛЕННЫЙ МЕТОД
@@ -929,6 +1021,9 @@ namespace FractalExplorer
             Color[] rootColors = GetRootColors(roots);
             bool usePastel = this.Invoke(new Func<bool>(() => colorBox1.Checked));
             bool useGradient = this.Invoke(new Func<bool>(() => colorBox0.Checked));
+            bool useUserPalette = this.Invoke(new Func<bool>(() => useCustomPalette));
+            Color bgColor = useUserPalette ? userDefinedBackgroundColor : (usePastel ? CreateSafeColor(50, 50, 50) : Color.Black);
+
 
             var bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -987,7 +1082,7 @@ namespace FractalExplorer
                     Color pixelColor;
                     if (rootIndex >= 0 && minDist < epsilon)
                     {
-                        if (useGradient)
+                        if (useGradient && !useUserPalette)
                         {
                             double t = (double)iter / currentMaxIterations;
                             int hue = (int)(240 * t);
@@ -1000,7 +1095,7 @@ namespace FractalExplorer
                     }
                     else
                     {
-                        pixelColor = usePastel ? CreateSafeColor(50, 50, 50) : Color.Black;
+                        pixelColor = bgColor;
                     }
 
                     int index = rowOffset + x * 3;
@@ -1038,6 +1133,8 @@ namespace FractalExplorer
                 colorBox2.Enabled = enabled;
                 colorBox3.Enabled = enabled;
                 colorBox4.Enabled = enabled;
+                colorCustom.Enabled = enabled; // Управление новым чекбоксом
+                custom_color.Enabled = enabled; // Управление новой кнопкой
             };
 
             if (this.InvokeRequired)
@@ -1056,15 +1153,12 @@ namespace FractalExplorer
             previewRenderCts?.Cancel();
             previewRenderCts?.Dispose();
             renderTimer?.Dispose();
+            // Закрываем форму настроек, если она была открыта
+            colorSettingsForm?.Close();
             base.OnFormClosed(e);
         }
 
         #endregion
-
-        private void custom_color_Click(object sender, EventArgs e)
-        {
-
-        }
     }
 
     #region Parser Implementation (Интегрировано из ParserMath)
