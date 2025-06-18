@@ -30,6 +30,8 @@
         {
             panel1 = new Panel();
             panel6 = new Panel();
+            custom_color = new Button();
+            colorCustom = new CheckBox();
             colorBox2 = new CheckBox();
             colorBox0 = new CheckBox();
             colorBox4 = new CheckBox();
@@ -59,8 +61,6 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
-            colorCustom = new CheckBox();
-            custom_color = new Button();
             panel1.SuspendLayout();
             panel6.SuspendLayout();
             panel2.SuspendLayout();
@@ -112,6 +112,26 @@
             panel6.Name = "panel6";
             panel6.Size = new Size(231, 104);
             panel6.TabIndex = 42;
+            // 
+            // custom_color
+            // 
+            custom_color.Location = new Point(32, 73);
+            custom_color.Name = "custom_color";
+            custom_color.Size = new Size(164, 23);
+            custom_color.TabIndex = 43;
+            custom_color.Text = "Настроить цвета";
+            custom_color.UseVisualStyleBackColor = true;
+            custom_color.Click += custom_color_Click;
+            // 
+            // colorCustom
+            // 
+            colorCustom.AutoSize = true;
+            colorCustom.Location = new Point(58, 50);
+            colorCustom.Name = "colorCustom";
+            colorCustom.Size = new Size(98, 19);
+            colorCustom.TabIndex = 40;
+            colorCustom.Text = "Выбери свой";
+            colorCustom.UseVisualStyleBackColor = true;
             // 
             // colorBox2
             // 
@@ -384,26 +404,6 @@
             fractal_bitmap.Size = new Size(853, 636);
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
-            // 
-            // colorCustom
-            // 
-            colorCustom.AutoSize = true;
-            colorCustom.Location = new Point(8, 51);
-            colorCustom.Name = "colorCustom";
-            colorCustom.Size = new Size(98, 19);
-            colorCustom.TabIndex = 40;
-            colorCustom.Text = "Выбери свой";
-            colorCustom.UseVisualStyleBackColor = true;
-            // 
-            // custom_color
-            // 
-            custom_color.Location = new Point(32, 75);
-            custom_color.Name = "custom_color";
-            custom_color.Size = new Size(164, 23);
-            custom_color.TabIndex = 43;
-            custom_color.Text = "Настроить цвета";
-            custom_color.UseVisualStyleBackColor = true;
-            custom_color.Click += custom_color_Click;
             // 
             // NewtonPools
             // 

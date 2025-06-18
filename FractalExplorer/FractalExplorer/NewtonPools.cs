@@ -1,6 +1,4 @@
-﻿// --- START OF FILE NewtonPools.cs ---
-
-using System.Text;
+﻿using System.Text;
 using System.Numerics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;

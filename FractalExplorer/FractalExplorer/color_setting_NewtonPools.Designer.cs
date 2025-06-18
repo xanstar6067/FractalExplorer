@@ -1,6 +1,4 @@
-﻿// --- START OF FILE color_setting_NewtonPools.Designer.cs ---
-
-namespace FractalExplorer
+﻿namespace FractalExplorer
 {
     partial class color_setting_NewtonPools
     {
@@ -30,97 +28,96 @@ namespace FractalExplorer
         /// </summary>
         private void InitializeComponent()
         {
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.flpRootColorPickers = new System.Windows.Forms.FlowLayoutPanel();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.panelBackgroundColor = new System.Windows.Forms.Panel();
-            this.label1 = new System.Windows.Forms.Label();
-            this.btnClose = new System.Windows.Forms.Button();
-            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            this.SuspendLayout();
+            groupBox1 = new GroupBox();
+            flpRootColorPickers = new FlowLayoutPanel();
+            groupBox2 = new GroupBox();
+            panelBackgroundColor = new Panel();
+            label1 = new Label();
+            btnClose = new Button();
+            colorDialog1 = new ColorDialog();
+            groupBox1.SuspendLayout();
+            groupBox2.SuspendLayout();
+            SuspendLayout();
             // 
             // groupBox1
             // 
-            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox1.Controls.Add(this.flpRootColorPickers);
-            this.groupBox1.Location = new System.Drawing.Point(12, 12);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(460, 203);
-            this.groupBox1.TabIndex = 0;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Цвета для корней";
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox1.Controls.Add(flpRootColorPickers);
+            groupBox1.Location = new Point(12, 12);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(460, 203);
+            groupBox1.TabIndex = 0;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Цвета для корней";
             // 
             // flpRootColorPickers
             // 
-            this.flpRootColorPickers.AutoScroll = true;
-            this.flpRootColorPickers.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flpRootColorPickers.Location = new System.Drawing.Point(3, 19);
-            this.flpRootColorPickers.Name = "flpRootColorPickers";
-            this.flpRootColorPickers.Size = new System.Drawing.Size(454, 181);
-            this.flpRootColorPickers.TabIndex = 0;
+            flpRootColorPickers.AutoScroll = true;
+            flpRootColorPickers.Dock = DockStyle.Fill;
+            flpRootColorPickers.Location = new Point(3, 19);
+            flpRootColorPickers.Name = "flpRootColorPickers";
+            flpRootColorPickers.Size = new Size(454, 181);
+            flpRootColorPickers.TabIndex = 0;
             // 
             // groupBox2
             // 
-            this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox2.Controls.Add(this.panelBackgroundColor);
-            this.groupBox2.Controls.Add(this.label1);
-            this.groupBox2.Location = new System.Drawing.Point(12, 221);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(460, 58);
-            this.groupBox2.TabIndex = 1;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Цвет фона";
+            groupBox2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Controls.Add(panelBackgroundColor);
+            groupBox2.Controls.Add(label1);
+            groupBox2.Location = new Point(12, 221);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Size = new Size(460, 58);
+            groupBox2.TabIndex = 1;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Цвет фона";
             // 
             // panelBackgroundColor
             // 
-            this.panelBackgroundColor.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelBackgroundColor.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.panelBackgroundColor.Location = new System.Drawing.Point(180, 22);
-            this.panelBackgroundColor.Name = "panelBackgroundColor";
-            this.panelBackgroundColor.Size = new System.Drawing.Size(50, 23);
-            this.panelBackgroundColor.TabIndex = 1;
-            this.panelBackgroundColor.Click += new System.EventHandler(this.panelBackgroundColor_Click);
+            panelBackgroundColor.BorderStyle = BorderStyle.FixedSingle;
+            panelBackgroundColor.Cursor = Cursors.Hand;
+            panelBackgroundColor.Location = new Point(180, 22);
+            panelBackgroundColor.Name = "panelBackgroundColor";
+            panelBackgroundColor.Size = new Size(50, 23);
+            panelBackgroundColor.TabIndex = 1;
+            panelBackgroundColor.Click += panelBackgroundColor_Click;
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 26);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(168, 15);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "Цвет для несошедшихся точек:";
+            label1.AutoSize = true;
+            label1.Location = new Point(6, 26);
+            label1.Name = "label1";
+            label1.Size = new Size(180, 15);
+            label1.TabIndex = 0;
+            label1.Text = "Цвет для несошедшихся точек:";
             // 
             // btnClose
             // 
-            this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClose.Location = new System.Drawing.Point(397, 285);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(75, 23);
-            this.btnClose.TabIndex = 2;
-            this.btnClose.Text = "Закрыть";
-            this.btnClose.UseVisualStyleBackColor = true;
-            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
+            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnClose.Location = new Point(397, 285);
+            btnClose.Name = "btnClose";
+            btnClose.Size = new Size(75, 23);
+            btnClose.TabIndex = 2;
+            btnClose.Text = "Закрыть";
+            btnClose.UseVisualStyleBackColor = true;
+            btnClose.Click += btnClose_Click;
             // 
             // color_setting_NewtonPools
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(484, 320);
-            this.Controls.Add(this.btnClose);
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox1);
-            this.MinimumSize = new System.Drawing.Size(350, 250);
-            this.Name = "color_setting_NewtonPools";
-            this.Text = "Настройка цветов палитры";
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(484, 320);
+            Controls.Add(btnClose);
+            Controls.Add(groupBox2);
+            Controls.Add(groupBox1);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            MinimumSize = new Size(350, 250);
+            Name = "color_setting_NewtonPools";
+            Text = "Настройка цветов палитры";
+            groupBox1.ResumeLayout(false);
+            groupBox2.ResumeLayout(false);
+            groupBox2.PerformLayout();
+            ResumeLayout(false);
 
         }
 

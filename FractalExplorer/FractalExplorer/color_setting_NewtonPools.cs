@@ -1,19 +1,10 @@
-﻿// --- START OF FILE color_setting_NewtonPools.cs ---
-
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Collections.Generic;
 
 namespace FractalExplorer
 {
-    // Класс для удобной передачи данных о палитре
-    public class CustomPalette
-    {
-        public List<Color> RootColors { get; set; }
-        public Color BackgroundColor { get; set; }
-    }
-
     public partial class color_setting_NewtonPools : Form
     {
         // Делегат и событие для уведомления главной формы об изменениях
@@ -166,5 +157,11 @@ namespace FractalExplorer
                 this.Hide();
             }
         }
+    }
+    // Класс для удобной передачи данных о палитре
+    public class CustomPalette
+    {
+        public List<Color> RootColors { get; set; }
+        public Color BackgroundColor { get; set; }
     }
 }
