@@ -1060,6 +1060,11 @@ namespace FractalExplorer
         }
 
         #endregion
+
+        private void custom_color_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 
     #region Parser Implementation (Интегрировано из ParserMath)

@@ -29,6 +29,13 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            panel6 = new Panel();
+            colorBox2 = new CheckBox();
+            colorBox0 = new CheckBox();
+            colorBox4 = new CheckBox();
+            oldRenderBW = new CheckBox();
+            colorBox3 = new CheckBox();
+            colorBox1 = new CheckBox();
             panel2 = new Panel();
             panel5 = new Panel();
             cbSelector = new ComboBox();
@@ -38,18 +45,12 @@
             label2 = new Label();
             richTextDebugOutput = new RichTextBox();
             label1 = new Label();
-            colorBox4 = new CheckBox();
-            colorBox3 = new CheckBox();
-            colorBox2 = new CheckBox();
-            colorBox1 = new CheckBox();
             nudW = new NumericUpDown();
             nudH = new NumericUpDown();
             progressPNG = new ProgressBar();
             label8 = new Label();
-            oldRenderBW = new CheckBox();
             label5 = new Label();
             nudZoom = new NumericUpDown();
-            colorBox0 = new CheckBox();
             btnRender = new Button();
             progressBar = new ProgressBar();
             label6 = new Label();
@@ -58,8 +59,10 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             fractal_bitmap = new PictureBox();
-            panel6 = new Panel();
+            colorCustom = new CheckBox();
+            custom_color = new Button();
             panel1.SuspendLayout();
+            panel6.SuspendLayout();
             panel2.SuspendLayout();
             panel5.SuspendLayout();
             panel4.SuspendLayout();
@@ -69,7 +72,6 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).BeginInit();
-            panel6.SuspendLayout();
             SuspendLayout();
             // 
             // panel1
@@ -94,6 +96,82 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 0;
+            // 
+            // panel6
+            // 
+            panel6.Controls.Add(custom_color);
+            panel6.Controls.Add(colorCustom);
+            panel6.Controls.Add(colorBox2);
+            panel6.Controls.Add(colorBox0);
+            panel6.Controls.Add(colorBox4);
+            panel6.Controls.Add(oldRenderBW);
+            panel6.Controls.Add(colorBox3);
+            panel6.Controls.Add(colorBox1);
+            panel6.Dock = DockStyle.Bottom;
+            panel6.Location = new Point(0, 323);
+            panel6.Name = "panel6";
+            panel6.Size = new Size(231, 104);
+            panel6.TabIndex = 42;
+            // 
+            // colorBox2
+            // 
+            colorBox2.AutoSize = true;
+            colorBox2.Location = new Point(170, 3);
+            colorBox2.Name = "colorBox2";
+            colorBox2.Size = new Size(61, 19);
+            colorBox2.TabIndex = 37;
+            colorBox2.Text = "Цвет 3";
+            colorBox2.UseVisualStyleBackColor = true;
+            // 
+            // colorBox0
+            // 
+            colorBox0.AutoSize = true;
+            colorBox0.Location = new Point(47, 3);
+            colorBox0.Name = "colorBox0";
+            colorBox0.Size = new Size(61, 19);
+            colorBox0.TabIndex = 15;
+            colorBox0.Text = "Цвет 1";
+            colorBox0.UseVisualStyleBackColor = true;
+            // 
+            // colorBox4
+            // 
+            colorBox4.AutoSize = true;
+            colorBox4.Location = new Point(66, 26);
+            colorBox4.Name = "colorBox4";
+            colorBox4.Size = new Size(61, 19);
+            colorBox4.TabIndex = 39;
+            colorBox4.Text = "Цвет 5";
+            colorBox4.UseVisualStyleBackColor = true;
+            // 
+            // oldRenderBW
+            // 
+            oldRenderBW.AutoSize = true;
+            oldRenderBW.Location = new Point(8, 3);
+            oldRenderBW.Name = "oldRenderBW";
+            oldRenderBW.Size = new Size(41, 19);
+            oldRenderBW.TabIndex = 17;
+            oldRenderBW.Text = "ЧБ";
+            oldRenderBW.UseVisualStyleBackColor = true;
+            // 
+            // colorBox3
+            // 
+            colorBox3.AutoSize = true;
+            colorBox3.Location = new Point(8, 26);
+            colorBox3.Name = "colorBox3";
+            colorBox3.Size = new Size(61, 19);
+            colorBox3.TabIndex = 38;
+            colorBox3.Text = "Цвет 4";
+            colorBox3.UseVisualStyleBackColor = true;
+            // 
+            // colorBox1
+            // 
+            colorBox1.AutoSize = true;
+            colorBox1.Location = new Point(109, 3);
+            colorBox1.Name = "colorBox1";
+            colorBox1.Size = new Size(61, 19);
+            colorBox1.TabIndex = 36;
+            colorBox1.Text = "Цвет 2";
+            colorBox1.UseVisualStyleBackColor = true;
             // 
             // panel2
             // 
@@ -181,46 +259,6 @@
             label1.TabIndex = 35;
             label1.Text = "Выбери полином/формулу.";
             // 
-            // colorBox4
-            // 
-            colorBox4.AutoSize = true;
-            colorBox4.Location = new Point(66, 26);
-            colorBox4.Name = "colorBox4";
-            colorBox4.Size = new Size(61, 19);
-            colorBox4.TabIndex = 39;
-            colorBox4.Text = "Цвет 5";
-            colorBox4.UseVisualStyleBackColor = true;
-            // 
-            // colorBox3
-            // 
-            colorBox3.AutoSize = true;
-            colorBox3.Location = new Point(8, 26);
-            colorBox3.Name = "colorBox3";
-            colorBox3.Size = new Size(61, 19);
-            colorBox3.TabIndex = 38;
-            colorBox3.Text = "Цвет 4";
-            colorBox3.UseVisualStyleBackColor = true;
-            // 
-            // colorBox2
-            // 
-            colorBox2.AutoSize = true;
-            colorBox2.Location = new Point(170, 3);
-            colorBox2.Name = "colorBox2";
-            colorBox2.Size = new Size(61, 19);
-            colorBox2.TabIndex = 37;
-            colorBox2.Text = "Цвет 3";
-            colorBox2.UseVisualStyleBackColor = true;
-            // 
-            // colorBox1
-            // 
-            colorBox1.AutoSize = true;
-            colorBox1.Location = new Point(109, 3);
-            colorBox1.Name = "colorBox1";
-            colorBox1.Size = new Size(61, 19);
-            colorBox1.TabIndex = 36;
-            colorBox1.Text = "Цвет 2";
-            colorBox1.UseVisualStyleBackColor = true;
-            // 
             // nudW
             // 
             nudW.Location = new Point(16, 239);
@@ -257,16 +295,6 @@
             label8.TabIndex = 20;
             label8.Text = "Обработка";
             // 
-            // oldRenderBW
-            // 
-            oldRenderBW.AutoSize = true;
-            oldRenderBW.Location = new Point(8, 3);
-            oldRenderBW.Name = "oldRenderBW";
-            oldRenderBW.Size = new Size(41, 19);
-            oldRenderBW.TabIndex = 17;
-            oldRenderBW.Text = "ЧБ";
-            oldRenderBW.UseVisualStyleBackColor = true;
-            // 
             // label5
             // 
             label5.AutoSize = true;
@@ -284,16 +312,6 @@
             nudZoom.Name = "nudZoom";
             nudZoom.Size = new Size(196, 23);
             nudZoom.TabIndex = 2;
-            // 
-            // colorBox0
-            // 
-            colorBox0.AutoSize = true;
-            colorBox0.Location = new Point(47, 3);
-            colorBox0.Name = "colorBox0";
-            colorBox0.Size = new Size(61, 19);
-            colorBox0.TabIndex = 15;
-            colorBox0.Text = "Цвет 1";
-            colorBox0.UseVisualStyleBackColor = true;
             // 
             // btnRender
             // 
@@ -367,19 +385,25 @@
             fractal_bitmap.TabIndex = 1;
             fractal_bitmap.TabStop = false;
             // 
-            // panel6
+            // colorCustom
             // 
-            panel6.Controls.Add(colorBox2);
-            panel6.Controls.Add(colorBox0);
-            panel6.Controls.Add(colorBox4);
-            panel6.Controls.Add(oldRenderBW);
-            panel6.Controls.Add(colorBox3);
-            panel6.Controls.Add(colorBox1);
-            panel6.Dock = DockStyle.Bottom;
-            panel6.Location = new Point(0, 323);
-            panel6.Name = "panel6";
-            panel6.Size = new Size(231, 104);
-            panel6.TabIndex = 42;
+            colorCustom.AutoSize = true;
+            colorCustom.Location = new Point(8, 51);
+            colorCustom.Name = "colorCustom";
+            colorCustom.Size = new Size(98, 19);
+            colorCustom.TabIndex = 40;
+            colorCustom.Text = "Выбери свой";
+            colorCustom.UseVisualStyleBackColor = true;
+            // 
+            // custom_color
+            // 
+            custom_color.Location = new Point(32, 75);
+            custom_color.Name = "custom_color";
+            custom_color.Size = new Size(164, 23);
+            custom_color.TabIndex = 43;
+            custom_color.Text = "Настроить цвета";
+            custom_color.UseVisualStyleBackColor = true;
+            custom_color.Click += custom_color_Click;
             // 
             // NewtonPools
             // 
@@ -393,6 +417,8 @@
             Text = "Бассейны Ньютона";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
+            panel6.ResumeLayout(false);
+            panel6.PerformLayout();
             panel2.ResumeLayout(false);
             panel2.PerformLayout();
             panel5.ResumeLayout(false);
@@ -404,8 +430,6 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).EndInit();
-            panel6.ResumeLayout(false);
-            panel6.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -446,5 +470,7 @@
         private Panel panel4;
         private Panel panel5;
         private Panel panel6;
+        private Button custom_color;
+        private CheckBox colorCustom;
     }
 }
