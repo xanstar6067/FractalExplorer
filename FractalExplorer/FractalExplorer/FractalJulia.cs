@@ -170,9 +170,11 @@ namespace FractalDraving
             nudThreshold1.DecimalPlaces = 1;
             nudThreshold1.Increment = 0.1m;
 
-            nudZoom.DecimalPlaces = 2;
-            nudZoom.Increment = 0.1m;
-            nudZoom.Value = 1m; // Значение по умолчанию для масштаба
+            // *** ИЗМЕНЕНИЯ ДЛЯ ZOOM ***
+            nudZoom.DecimalPlaces = 4;    // Увеличим точность для малых значений
+            nudZoom.Increment = 0.1m;       // Шаг изменения 0.1
+            nudZoom.Minimum = 0.01m;        // Устанавливаем минимальный порог для отдаления
+            nudZoom.Value = 1m;             // Значение по умолчанию для масштаба
 
             nudBaseScale.Minimum = 1m;
             nudBaseScale.Maximum = 10m;
@@ -227,7 +229,7 @@ namespace FractalDraving
                 return;
             }
 
-            // Определяем границы отрендерованного изображения (canvas.Image) на комплексной плоскости
+            // Определяем границы отрендеренного изображения (canvas.Image) на комплексной плоскости
             // Минимальная вещественная часть отрендерованного изображения
             double renderedImage_re_min = renderedCenterX - scaleRendered / 2.0;
             // Минимальная мнимая часть отрендерованного изображения (Y в комплексной плоскости соответствует экранному Y)
@@ -736,14 +738,12 @@ namespace FractalDraving
             // Если изменился масштаб (zoom) через соответствующий NumericUpDown (nudZoom).
             if (sender == nudZoom)
             {
-                // Ограничиваем значение zoom в допустимых пределах:
-                // минимум 1, максимум из свойства nudZoom.Maximum.
-                // Это предотвращает слишком большой или некорректный (например, нулевой или отрицательный) зум.
-                zoom = Math.Max(1, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
+                // *** ИЗМЕНЕНИЯ ДЛЯ ZOOM ***
+                // Ограничиваем значение zoom в допустимых пределах, используя свойства Minimum/Maximum контрола
+                // Было: zoom = Math.Max(1, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
+                zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
+
                 // Обновляем значение в элементе управления nudZoom, если оно было скорректировано.
-                // Это также вызовет событие ValueChanged для nudZoom, но так как мы уже в его обработчике
-                // (или в обработчике другого контрола), рекурсии не будет, если значение не изменилось.
-                // Если значение изменилось, ScheduleRender будет вызван.
                 nudZoom.Value = (decimal)zoom;
             }
 
@@ -1485,10 +1485,10 @@ namespace FractalDraving
             double mouseRe = centerX + (e.X - width / 2.0) * scaleBeforeZoom / width;
             double mouseIm = centerY + (e.Y - height / 2.0) * scaleBeforeZoom / height;
 
-            // Обновление уровня масштаба (zoom) с учетом zoomFactor.
-            // Результат ограничивается минимальным значением 1 и максимальным значением,
-            // заданным в свойстве Maximum элемента nudZoom.
-            zoom = Math.Max(1, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
+            // *** ИЗМЕНЕНИЯ ДЛЯ ZOOM ***
+            // Обновление уровня масштаба (zoom) с учетом zoomFactor и нового минимального предела.
+            // Было: zoom = Math.Max(1, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
+            zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
 
             // Пересчет центра отображения (centerX, centerY) таким образом,
             // чтобы точка (mouseRe, mouseIm), которая была под курсором до зума,
