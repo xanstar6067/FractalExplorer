@@ -30,6 +30,7 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainFractalForm));
             tabPageJulia = new TabPage();
+            btnLaunchBurningShipComplex = new Button();
             richTextBox2 = new RichTextBox();
             btnLaunchJulia = new Button();
             tabPageMandelbrot = new TabPage();
@@ -42,7 +43,6 @@
             tabPageNewtonPools = new TabPage();
             richTextBox4 = new RichTextBox();
             btnLaunchNewton = new Button();
-            btnLaunchBurningShipComplex = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
@@ -63,6 +63,16 @@
             tabPageJulia.Text = "Множество Жюлиа";
             tabPageJulia.UseVisualStyleBackColor = true;
             // 
+            // btnLaunchBurningShipComplex
+            // 
+            btnLaunchBurningShipComplex.Location = new Point(8, 76);
+            btnLaunchBurningShipComplex.Name = "btnLaunchBurningShipComplex";
+            btnLaunchBurningShipComplex.Size = new Size(131, 54);
+            btnLaunchBurningShipComplex.TabIndex = 4;
+            btnLaunchBurningShipComplex.Text = "Запустить\r\nГорящий корабль";
+            btnLaunchBurningShipComplex.UseVisualStyleBackColor = true;
+            btnLaunchBurningShipComplex.Click += btnLaunchBurningShipComplex_Click;
+            // 
             // richTextBox2
             // 
             richTextBox2.BackColor = SystemColors.Window;
@@ -78,7 +88,7 @@
             // 
             btnLaunchJulia.Location = new Point(8, 15);
             btnLaunchJulia.Name = "btnLaunchJulia";
-            btnLaunchJulia.Size = new Size(131, 44);
+            btnLaunchJulia.Size = new Size(131, 55);
             btnLaunchJulia.TabIndex = 0;
             btnLaunchJulia.Text = "Запустить\r\nЖюлиа";
             btnLaunchJulia.UseVisualStyleBackColor = true;
@@ -202,16 +212,6 @@
             btnLaunchNewton.Text = "Запустить";
             btnLaunchNewton.UseVisualStyleBackColor = true;
             btnLaunchNewton.Click += btnLaunchNewton_Click;
-            // 
-            // btnLaunchBurningShipComplex
-            // 
-            btnLaunchBurningShipComplex.Location = new Point(8, 76);
-            btnLaunchBurningShipComplex.Name = "btnLaunchBurningShipComplex";
-            btnLaunchBurningShipComplex.Size = new Size(131, 54);
-            btnLaunchBurningShipComplex.TabIndex = 4;
-            btnLaunchBurningShipComplex.Text = "Запустить\r\nГорящий корабль";
-            btnLaunchBurningShipComplex.UseVisualStyleBackColor = true;
-            btnLaunchBurningShipComplex.Click += btnLaunchBurningShipComplex_Click;
             // 
             // MainFractalForm
             // 
