@@ -42,6 +42,7 @@
             tabPageNewtonPools = new TabPage();
             richTextBox4 = new RichTextBox();
             btnLaunchNewton = new Button();
+            btnLaunchBurningShipComplex = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
@@ -51,6 +52,7 @@
             // 
             // tabPageJulia
             // 
+            tabPageJulia.Controls.Add(btnLaunchBurningShipComplex);
             tabPageJulia.Controls.Add(richTextBox2);
             tabPageJulia.Controls.Add(btnLaunchJulia);
             tabPageJulia.Location = new Point(4, 26);
@@ -78,7 +80,7 @@
             btnLaunchJulia.Name = "btnLaunchJulia";
             btnLaunchJulia.Size = new Size(131, 44);
             btnLaunchJulia.TabIndex = 0;
-            btnLaunchJulia.Text = "Запустить";
+            btnLaunchJulia.Text = "Запустить\r\nЖюлиа";
             btnLaunchJulia.UseVisualStyleBackColor = true;
             btnLaunchJulia.Click += btnLaunchJulia_Click;
             // 
@@ -201,6 +203,16 @@
             btnLaunchNewton.UseVisualStyleBackColor = true;
             btnLaunchNewton.Click += btnLaunchNewton_Click;
             // 
+            // btnLaunchBurningShipComplex
+            // 
+            btnLaunchBurningShipComplex.Location = new Point(8, 76);
+            btnLaunchBurningShipComplex.Name = "btnLaunchBurningShipComplex";
+            btnLaunchBurningShipComplex.Size = new Size(131, 54);
+            btnLaunchBurningShipComplex.TabIndex = 4;
+            btnLaunchBurningShipComplex.Text = "Запустить\r\nГорящий корабль";
+            btnLaunchBurningShipComplex.UseVisualStyleBackColor = true;
+            btnLaunchBurningShipComplex.Click += btnLaunchBurningShipComplex_Click;
+            // 
             // MainFractalForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -235,5 +247,6 @@
         private TabPage tabPageNewtonPools;
         private RichTextBox richTextBox4;
         private Button btnLaunchNewton;
+        private Button btnLaunchBurningShipComplex;
     }
 }

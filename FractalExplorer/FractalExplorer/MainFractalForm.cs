@@ -60,5 +60,10 @@ namespace FractalExplorer
 
             NewtonPpoolsForm.Show();
         }
+
+        private void btnLaunchBurningShipComplex_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
