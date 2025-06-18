@@ -69,9 +69,9 @@ namespace FractalExplorer
 
         private void button1_Click(object sender, EventArgs e)
         {
-            
-            //var form = new burningShipComplex();
-            //FractalMondelbrotForm.Show();
+
+            var form = new FractalMondelbrotShip();
+            form.Show();
         }
     }
 }
