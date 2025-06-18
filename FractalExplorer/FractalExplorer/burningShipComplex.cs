@@ -60,7 +60,8 @@ namespace FractalDraving
         private const int MANDELBROT_PREVIEW_ITERATIONS = 75; // Количество итераций для предпросмотра
 
         // Форма для выбора параметра 'c' с помощью множества Мандельброта (можно использовать ту же форму)
-        private MandelbrotSelectorForm mandelbrotCSelectorWindow;
+        //private MandelbrotSelectorForm mandelbrotCSelectorWindow;
+        private BurningShipCSelectorForm mandelbrotCSelectorWindow;
 
         // Поля для хранения параметров отрисованного битмапа
         private double renderedCenterX;
@@ -376,7 +377,8 @@ namespace FractalDraving
             double initialIm = (double)nudIm1.Value;
             if (mandelbrotCSelectorWindow == null || mandelbrotCSelectorWindow.IsDisposed)
             {
-                mandelbrotCSelectorWindow = new MandelbrotSelectorForm(this, initialRe, initialIm);
+                //mandelbrotCSelectorWindow = new MandelbrotSelectorForm(this, initialRe, initialIm);
+                mandelbrotCSelectorWindow = new BurningShipCSelectorForm(this, initialRe, initialIm);
                 mandelbrotCSelectorWindow.CoordinatesSelected += MandelbrotCSelectorWindow_CoordinatesSelected;
                 mandelbrotCSelectorWindow.FormClosed += (s, args) => { mandelbrotCSelectorWindow = null; };
                 mandelbrotCSelectorWindow.Show(this);
