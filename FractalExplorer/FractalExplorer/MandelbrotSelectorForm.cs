@@ -1,4 +1,6 @@
-﻿using System.Drawing.Imaging;
+﻿// --- START OF FILE MandelbrotSelectorForm.cs ---
+
+using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -11,8 +13,8 @@ namespace FractalDraving
     /// </summary>
     public class MandelbrotSelectorForm : Form
     {
-        // Ссылка на главную форму (FractalJulia), которая является владельцем этого окна.
-        private readonly FractalJulia ownerForm;
+        // Ссылка на главную форму, которая является владельцем этого окна и реализует IFractalForm.
+        private readonly IFractalForm ownerForm; // <--- ИЗМЕНЕНИЕ ЗДЕСЬ
         // Элемент PictureBox для отображения множества Мандельброта.
         private PictureBox mandelbrotDisplay;
         // Bitmap с текущим изображением множества Мандельброта.
@@ -58,7 +60,7 @@ namespace FractalDraving
         /// <summary>
         /// Конструктор формы выбора параметра 'c' (MandelbrotSelectorForm).
         /// </summary>
-        public MandelbrotSelectorForm(FractalJulia owner, double initialRe = double.NaN, double initialIm = double.NaN)
+        public MandelbrotSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN) // <--- И ИЗМЕНЕНИЕ ЗДЕСЬ
         {
             this.ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
             this.Text = "Выбор точки C (Множество Мандельброта)";
@@ -431,7 +433,7 @@ namespace FractalDraving
                     {
                         // Обработка исключения переполнения.
                         string errorMessage = $"Переполнение: {ex.Message}";
-                        
+
                         // Выводим сообщение в отладку
                         //System.Diagnostics.Debug.WriteLine(errorMessage);
 
