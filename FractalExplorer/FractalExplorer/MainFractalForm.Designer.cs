@@ -43,6 +43,7 @@
             tabPageNewtonPools = new TabPage();
             richTextBox4 = new RichTextBox();
             btnLaunchNewton = new Button();
+            button1 = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
@@ -96,6 +97,7 @@
             // 
             // tabPageMandelbrot
             // 
+            tabPageMandelbrot.Controls.Add(button1);
             tabPageMandelbrot.Controls.Add(richTextBox1);
             tabPageMandelbrot.Controls.Add(btnLaunchMondelbrot);
             tabPageMandelbrot.Location = new Point(4, 26);
@@ -123,9 +125,9 @@
             // 
             btnLaunchMondelbrot.Location = new Point(8, 15);
             btnLaunchMondelbrot.Name = "btnLaunchMondelbrot";
-            btnLaunchMondelbrot.Size = new Size(131, 44);
+            btnLaunchMondelbrot.Size = new Size(131, 55);
             btnLaunchMondelbrot.TabIndex = 0;
-            btnLaunchMondelbrot.Text = "Запустить";
+            btnLaunchMondelbrot.Text = "Запустить\r\nМандельброта";
             btnLaunchMondelbrot.UseVisualStyleBackColor = true;
             btnLaunchMondelbrot.Click += btnLaunchMondelbrot_Click;
             // 
@@ -213,6 +215,16 @@
             btnLaunchNewton.UseVisualStyleBackColor = true;
             btnLaunchNewton.Click += btnLaunchNewton_Click;
             // 
+            // button1
+            // 
+            button1.Location = new Point(8, 76);
+            button1.Name = "button1";
+            button1.Size = new Size(131, 55);
+            button1.TabIndex = 3;
+            button1.Text = "Запустить\r\nГорящий корабль";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
             // MainFractalForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -248,5 +260,6 @@
         private RichTextBox richTextBox4;
         private Button btnLaunchNewton;
         private Button btnLaunchBurningShipComplex;
+        private Button button1;
     }
 }
