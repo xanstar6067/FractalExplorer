@@ -7,7 +7,7 @@ namespace FractalDraving
     /// <summary>
     /// Главная форма приложения для отображения и взаимодействия с фракталом Жюлиа.
     /// </summary>
-    public partial class FractalJulia : Form
+    public partial class FractalJulia : Form, IFractalForm
     {
         // Таймер для отложенного рендеринга предварительного просмотра фрактала
         private System.Windows.Forms.Timer renderTimer;
