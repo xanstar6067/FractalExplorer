@@ -78,7 +78,14 @@ namespace FractalDraving
         /// </summary>
         protected virtual void OnPostInitialize() { }
 
-
+        /// <summary>
+        /// Возвращает уникальную часть имени файла для сохранения, специфичную для фрактала.
+        /// </summary>
+        protected virtual string GetSaveFileNameDetails()
+        {
+            // Имя по умолчанию, если не переопределено
+            return "fractal";
+        }
         #endregion
 
         #region Constructor and Form Load
@@ -167,10 +174,10 @@ namespace FractalDraving
             };
             _paletteCheckBoxes = allCheckBoxes.Where(cb => cb != null).ToArray();
 
-            if (mondelbrotClassicBox != null)
+            /*if (mondelbrotClassicBox != null)
                 mondelbrotClassicBox.Checked = true;
             else
-                colorBox.Checked = true;
+                colorBox.Checked = true;*/
         }
 
         private void InitializeEventHandlers()
@@ -604,7 +611,20 @@ namespace FractalDraving
             int saveWidth = (int)nudSaveWidth.Value;
             int saveHeight = (int)nudSaveHeight.Value;
 
-            using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить фрактал (Высокое разрешение)" })
+            // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+            // Формируем имя файла
+            string fractalDetails = GetSaveFileNameDetails(); // Получаем детали от дочерней формы
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string suggestedFileName = $"{fractalDetails}_{timestamp}.png";
+
+            using (var saveDialog = new SaveFileDialog
+            {
+                Filter = "PNG Image|*.png",
+                Title = "Сохранить фрактал (Высокое разрешение)",
+                FileName = suggestedFileName // Используем сгенерированное имя
+            })
+            // --- КОНЕЦ ИЗМЕНЕНИЙ ---
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
@@ -615,7 +635,7 @@ namespace FractalDraving
 
                     try
                     {
-                        // Создаем новый движок с текущими параметрами для потокобезопасности
+                        // (Остальная часть метода без изменений)
                         FractalEngineBase renderEngine = CreateEngine();
                         renderEngine.MaxIterations = (int)nudIterations.Value;
                         renderEngine.ThresholdSquared = nudThreshold.Value * nudThreshold.Value;
@@ -627,9 +647,8 @@ namespace FractalDraving
                             renderEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value);
                         }
 
-                        // Копируем функцию палитры
-                        HandlePaletteSelectionLogic(); // Обновляем палитру в основном движке
-                        renderEngine.Palette = _fractalEngine.Palette; // Копируем ее в движок для рендера
+                        HandlePaletteSelectionLogic();
+                        renderEngine.Palette = _fractalEngine.Palette;
 
                         int threadCount = GetThreadCount();
 
@@ -674,25 +693,29 @@ namespace FractalDraving
 
         private void PaletteCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            // ИСПРАВЛЕНИЕ: Явное указание типа
             System.Windows.Forms.CheckBox currentCb = sender as System.Windows.Forms.CheckBox;
             if (currentCb == null) return;
+
+            // Отписываемся от всех, чтобы избежать рекурсии
             foreach (var cb in _paletteCheckBoxes) cb.CheckedChanged -= PaletteCheckBox_CheckedChanged;
 
+            // Логика "радиокнопок": если выбрали один, остальные выключаются
             if (currentCb.Checked)
             {
                 _lastSelectedPaletteCheckBox = currentCb;
-                foreach (var cb in _paletteCheckBoxes.Where(cb => cb != currentCb)) cb.Checked = false;
+                foreach (var cb in _paletteCheckBoxes.Where(cb => cb != currentCb))
+                {
+                    cb.Checked = false;
+                }
             }
             else
             {
-                if (_paletteCheckBoxes.All(cb => !cb.Checked))
-                {
-                    var defaultCb = mondelbrotClassicBox ?? colorBox;
-                    if (defaultCb != null) defaultCb.Checked = true;
-                }
+                // Если пользователь отжал единственный выбранный чекбокс,
+                // то ни один не остается выбранным.
+                _lastSelectedPaletteCheckBox = null;
             }
 
+            // Подписываемся обратно
             foreach (var cb in _paletteCheckBoxes) cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
 
             HandlePaletteSelectionLogic();
@@ -701,18 +724,26 @@ namespace FractalDraving
 
         private void HandlePaletteSelectionLogic()
         {
-            _lastSelectedPaletteCheckBox = _paletteCheckBoxes.FirstOrDefault(cb => cb.Checked);
+            // Находим активный чекбокс. Это и есть наша палитра.
+            var activePaletteCheckBox = _paletteCheckBoxes.FirstOrDefault(cb => cb.Checked);
 
-            if (oldRenderBW != null)
-                colorBox.Enabled = !oldRenderBW.Checked;
-
-            var paletteFunc = GetPaletteFuncByName(_lastSelectedPaletteCheckBox?.Name);
-            if (_fractalEngine != null)
+            // Если какой-то чекбокс выбран, используем его палитру.
+            if (activePaletteCheckBox != null)
             {
-                _fractalEngine.Palette = paletteFunc;
+                var paletteFunc = GetPaletteFuncByName(activePaletteCheckBox.Name);
+                if (_fractalEngine != null)
+                {
+                    _fractalEngine.Palette = paletteFunc;
+                }
+            }
+            else // Если НИ ОДИН чекбокс не выбран, используем палитру по умолчанию (оттенки серого).
+            {
+                if (_fractalEngine != null)
+                {
+                    _fractalEngine.Palette = GetDefaultPaletteColor;
+                }
             }
         }
-
         private Func<int, int, int, Color> GetPaletteFuncByName(string name)
         {
             switch (name)

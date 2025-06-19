@@ -26,5 +26,9 @@
             lblLoupeZoom.Visible = false;
             nudBaseScale.Visible = false;
         }
+        protected override string GetSaveFileNameDetails()
+        {
+            return "burningship_mandelbrot";
+        }
     }
 }

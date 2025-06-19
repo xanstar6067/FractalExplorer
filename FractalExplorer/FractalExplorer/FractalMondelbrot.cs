@@ -23,5 +23,10 @@ namespace FractalDraving
             lblLoupeZoom.Visible = false;
             nudBaseScale.Visible = false;
         }
+
+        protected override string GetSaveFileNameDetails()
+        {
+            return "mandelbrot";
+        }
     }
 }

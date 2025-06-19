@@ -157,6 +157,14 @@ namespace FractalDraving
                 _burningShipCSelectorWindow.SetSelectedCoordinates(initialRe, initialIm, true);
             }
         }
+
+        protected override string GetSaveFileNameDetails()
+        {
+            // Форматируем Re и Im для имени файла
+            string reStr = nudRe.Value.ToString("F15", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
+            string imStr = nudIm.Value.ToString("F15", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
+            return $"burningship_julia_re{reStr}_im{imStr}";
+        }
         #endregion
     }
 }
