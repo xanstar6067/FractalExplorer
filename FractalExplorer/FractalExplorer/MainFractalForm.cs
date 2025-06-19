@@ -21,44 +21,26 @@ namespace FractalExplorer
 
         private void btnLaunchMondelbrot_Click(object sender, EventArgs e)
         {
-            FractalMondelbrot FractalMondelbrotForm = new FractalMondelbrot();
-
-            FractalMondelbrotForm.Show();
+            var form = new FractalMondelbrot();
+            form.Show();
         }
 
         private void btnLaunchJulia_Click(object sender, EventArgs e)
         {
-            // 1. Создаем экземпляр вашей формы FractalJulia
-            FractalJulia juliaForm = new FractalJulia();
-
-            // 2. Показываем форму
-            // Есть два основных способа:
-
-            // Способ А: Показать как немодальное окно (пользователь может взаимодействовать и с LauncherForm)
-            juliaForm.Show();
-
-            // Способ Б: Показать как модальное окно (LauncherForm будет заблокирована, пока juliaForm открыта)
-            // juliaForm.ShowDialog();
-
-            // Выберите один из способов (Show() или ShowDialog()) и закомментируйте или удалите другой.
-            // Обычно для таких случаев лучше Show(), чтобы пользователь мог запустить оба фрактала одновременно.
+            var form = new FractalJulia();
+            form.Show();
         }
 
         private void btnLaunchSerpinsky_Click(object sender, EventArgs e)
         {
-            // FractalSerpinsky
-            FractalSerpinsky FractalSerpinskyForm = new FractalSerpinsky();
-
-            FractalSerpinskyForm.Show();
-
+            var form = new FractalSerpinsky();
+            form.Show();
         }
 
         private void btnLaunchNewton_Click(object sender, EventArgs e)
         {
-            // FractalNewtonPool
-            NewtonPools NewtonPpoolsForm = new NewtonPools();
-
-            NewtonPpoolsForm.Show();
+            var form = new NewtonPools();
+            form.Show();
         }
 
         private void btnLaunchBurningShipComplex_Click(object sender, EventArgs e)
@@ -69,9 +51,9 @@ namespace FractalExplorer
 
         private void button1_Click(object sender, EventArgs e)
         {
-
             var form = new FractalMondelbrotShip();
             form.Show();
         }
     }
 }
+
