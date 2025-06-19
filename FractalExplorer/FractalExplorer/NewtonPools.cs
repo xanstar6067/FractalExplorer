@@ -11,7 +11,7 @@ namespace FractalExplorer
         // --- Системные и UI компоненты ---
         private readonly System.Windows.Forms.Timer renderTimer;
         private int maxIterations;
-        private int threadCount;
+        // private int threadCount; // <-- УБРАНО: Больше не нужно хранить, будем получать по запросу
         private int width, height;
         private Point panStart;
         private bool panning = false;
@@ -37,42 +37,42 @@ namespace FractalExplorer
         private bool useCustomPalette = false;
 
         private readonly string[] presetPolynomials = {
-    // --- Классические полиномы ---
-    "z^3-1",
-    "z^4-1",
-    "z^5-1",
-    "z^6-1",
-    "z^3-2*z+2",
-    "z^5 - z^2 + 1",
-    "z^6 + 3*z^3 - 2",
-    "z^4 - 4*z^2 + 4", // (z^2-2)^2
-    "z^7 + z^4 - z + 1",
-    "z^8 + 15*z^4 - 16", // (z^4+16)(z^4-1)
-    "z^4 + z^3 + z^2 + z + 1",
+            // --- Классические полиномы ---
+            "z^3-1",
+            "z^4-1",
+            "z^5-1",
+            "z^6-1",
+            "z^3-2*z+2",
+            "z^5 - z^2 + 1",
+            "z^6 + 3*z^3 - 2",
+            "z^4 - 4*z^2 + 4", // (z^2-2)^2
+            "z^7 + z^4 - z + 1",
+            "z^8 + 15*z^4 - 16", // (z^4+16)(z^4-1)
+            "z^4 + z^3 + z^2 + z + 1",
 
-    // --- С комплексными и дробными коэффициентами ---
-    "z^2 - i",
-    "(z^2-1)*(z-2*i)",
-    "(1+2*i)*z^2+z-1",
-    "(0.5-0.3*i)*z^3+2",
-    "0.5*z^3 - 1.25*z + 2",
-    "(2+i)*z^3 - (1-2*i)*z + 1",
-    "i*z^4 + z - 1",
-    "(1+0.5*i)*z^2 - z + (2-3*i)",
-    "(0.3+1.7*i)*z^3 + (1-i)",
-    "(2-i)*z^5 + (3+2*i)*z^2 - 1",
-    "-2*z^3 + 0.75*z^2 - 1",
-    "z^6 - 1.5*z^3 + 0.25",
-    "-0.1*z^4 + z - 2",
-    "(1/2)*z^3 + (3/4)*z - 1",
-    "(2+3*i)*(z^2) - (1-i)*z + 4",
+            // --- С комплексными и дробными коэффициентами ---
+            "z^2 - i",
+            "(z^2-1)*(z-2*i)",
+            "(1+2*i)*z^2+z-1",
+            "(0.5-0.3*i)*z^3+2",
+            "0.5*z^3 - 1.25*z + 2",
+            "(2+i)*z^3 - (1-2*i)*z + 1",
+            "i*z^4 + z - 1",
+            "(1+0.5*i)*z^2 - z + (2-3*i)",
+            "(0.3+1.7*i)*z^3 + (1-i)",
+            "(2-i)*z^5 + (3+2*i)*z^2 - 1",
+            "-2*z^3 + 0.75*z^2 - 1",
+            "z^6 - 1.5*z^3 + 0.25",
+            "-0.1*z^4 + z - 2",
+            "(1/2)*z^3 + (3/4)*z - 1",
+            "(2+3*i)*(z^2) - (1-i)*z + 4",
 
-    // --- Дробно-рациональные функции (для теста деления) ---
-    "(z^2-1)/(z^2+1)",
-    "(z^3-1)/(z^3+1)",
-    "z^2 / (z-1)^2",
-    "(z^4-1)/(z*z-2*z+1)" // (z^4-1)/(z-1)^2
-};
+            // --- Дробно-рациональные функции (для теста деления) ---
+            "(z^2-1)/(z^2+1)",
+            "(z^3-1)/(z^3+1)",
+            "z^2 / (z-1)^2",
+            "(z^4-1)/(z*z-2*z+1)" // (z^4-1)/(z-1)^2
+        };
 
         public NewtonPools()
         {
@@ -138,10 +138,6 @@ namespace FractalExplorer
 
         #region Основная логика (Парсинг и Рендеринг)
 
-        /// <summary>
-        /// Центральный метод обработки формулы: парсинг, дифференцирование и вывод отладки.
-        /// </summary>
-        /// <returns>True, если формула успешно обработана, иначе False.</returns>
         private bool ProcessFormula()
         {
             string expression = richTextInput.Text;
@@ -252,7 +248,6 @@ namespace FractalExplorer
             }
         }
 
-        // ИСПРАВЛЕННЫЙ МЕТОД
         private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom)
         {
             if (token.IsCancellationRequested || isHighResRendering || f_ast == null || f_deriv_ast == null || fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0)
@@ -292,11 +287,10 @@ namespace FractalExplorer
                 IntPtr scan0 = bmpData.Scan0;
                 byte[] buffer = new byte[Math.Abs(stride) * height];
 
-                var po = new ParallelOptions { MaxDegreeOfParallelism = threadCount, CancellationToken = token };
+                // ИЗМЕНЕНИЕ: Получаем количество потоков через новый метод
+                var po = new ParallelOptions { MaxDegreeOfParallelism = GetThreadCount(), CancellationToken = token };
                 int done = 0;
                 const double epsilon = 1e-6;
-
-                // ИСПРАВЛЕНО: Используем единый масштаб для обеих осей, чтобы избежать искажений.
                 double scale = (BASE_SCALE / renderZoom) / width;
 
                 Parallel.For(0, height, po, y =>
@@ -304,35 +298,24 @@ namespace FractalExplorer
                     int rowOffset = y * stride;
                     for (int x = 0; x < width; x++)
                     {
-                        // ИСПРАВЛЕНО: Используем единый 'scale' для X и Y.
                         double c_re = renderCenterX + (x - width / 2.0) * scale;
                         double c_im = renderCenterY + (y - height / 2.0) * scale;
                         Complex z = new Complex(c_re, c_im);
-
                         var variables = new Dictionary<string, Complex> { { "z", z } };
-
                         int iter = 0;
                         while (iter < maxIterations)
                         {
-                            // Используем AST для вычислений
                             Complex f_val = f_ast.Evaluate(variables);
-                            if (f_val.Magnitude < epsilon)
-                            {
-                                break;
-                            }
+                            if (f_val.Magnitude < epsilon) break;
 
                             Complex f_deriv_val = f_deriv_ast.Evaluate(variables);
-                            if (f_deriv_val.Magnitude < epsilon)
-                            {
-                                break; // Избегаем деления на ноль
-                            }
+                            if (f_deriv_val == Complex.Zero) break;
 
                             z -= f_val / f_deriv_val;
                             variables["z"] = z;
                             iter++;
                         }
 
-                        // Находим ближайший корень
                         int rootIndex = -1;
                         double minDist = double.MaxValue;
                         for (int r = 0; r < roots.Count; r++)
@@ -386,24 +369,20 @@ namespace FractalExplorer
                 token.ThrowIfCancellationRequested();
                 Marshal.Copy(buffer, 0, scan0, buffer.Length);
                 bmp.UnlockBits(bmpData);
-                bmpData = null; // Важно, чтобы избежать двойного UnlockBits в finally
+                bmpData = null;
 
                 if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
                 {
                     Bitmap oldImage = null;
                     fractal_bitmap.Invoke((Action)(() =>
                     {
-                        if (token.IsCancellationRequested)
-                        {
-                            bmp?.Dispose();
-                            return;
-                        }
+                        if (token.IsCancellationRequested) { bmp?.Dispose(); return; }
                         oldImage = fractal_bitmap.Image as Bitmap;
                         fractal_bitmap.Image = bmp;
                         renderedCenterX = renderCenterX;
                         renderedCenterY = renderCenterY;
                         renderedZoom = renderZoom;
-                        bmp = null; // Передаем владение bmp в PictureBox
+                        bmp = null;
                     }));
                     oldImage?.Dispose();
                 }
@@ -414,21 +393,14 @@ namespace FractalExplorer
             }
             finally
             {
-                if (bmpData != null && bmp != null)
-                {
-                    bmp.UnlockBits(bmpData);
-                }
+                if (bmpData != null && bmp != null) { bmp.UnlockBits(bmpData); }
                 bmp?.Dispose();
             }
         }
 
-        /// <summary>
-        /// Находит корни функции, используя метод Ньютона из разных стартовых точек.
-        /// </summary>
         private List<Complex> FindRoots(ExpressionNode func, ExpressionNode deriv, int maxIter = 100, double epsilon = 1e-6)
         {
             var roots = new List<Complex>();
-            // Используем различные стартовые точки для поиска корней
             var startPoints = new List<Complex>();
             for (double r = 0.1; r < 2.5; r += 0.4)
             {
@@ -474,19 +446,11 @@ namespace FractalExplorer
                         }
                         break;
                     }
-                    if (z.Magnitude > 1e4)
-                    {
-                        break; // Уход в бесконечность
-                    }
+                    if (z.Magnitude > 1e4) break;
                 }
             }
 
-            // Сортировка и удаление дубликатов
-            roots = roots
-                .OrderBy(r => r.Real)
-                .ThenBy(r => r.Imaginary)
-                .ToList();
-
+            roots = roots.OrderBy(r => r.Real).ThenBy(r => r.Imaginary).ToList();
             if (roots.Count > 1)
             {
                 var distinctRoots = new List<Complex> { roots[0] };
@@ -516,15 +480,12 @@ namespace FractalExplorer
 
         private Color[] GetRootColors(List<Complex> roots)
         {
-            // Безопасное чтение UI контролов из любого потока
             bool useUserDefPalette = this.Invoke(new Func<bool>(() => useCustomPalette));
-
             if (useUserDefPalette)
             {
                 var customColors = new Color[roots.Count];
                 for (int i = 0; i < roots.Count; i++)
                 {
-                    // Если у пользователя определено меньше цветов, чем найдено корней, используем запасной вариант
                     customColors[i] = i < userDefinedRootColors.Count ? userDefinedRootColors[i] : Color.Gray;
                 }
                 return customColors;
@@ -543,63 +504,37 @@ namespace FractalExplorer
                 for (int i = 0; i < roots.Count; i++)
                 {
                     double t = (roots.Count > 1) ? (double)i / (roots.Count - 1) : 1.0;
-                    if (t < 0.5)
-                    {
-                        rootColors[i] = CreateSafeColor((int)(139 * t / 0.5), 0, 0);
-                    }
-                    else
-                    {
-                        double t2 = (t - 0.5) / 0.5;
-                        rootColors[i] = CreateSafeColor((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0);
-                    }
+                    if (t < 0.5) { rootColors[i] = CreateSafeColor((int)(139 * t / 0.5), 0, 0); }
+                    else { double t2 = (t - 0.5) / 0.5; rootColors[i] = CreateSafeColor((int)(139 + (255 - 139) * t2), (int)(215 * t2), 0); }
                 }
             }
             else if (usePastel)
             {
                 Color[] pastelColors = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201), };
-                for (int i = 0; i < roots.Count; i++)
-                {
-                    rootColors[i] = i < pastelColors.Length ? pastelColors[i] : CreateSafeColor(200, 200, 200 + i * 10);
-                }
+                for (int i = 0; i < roots.Count; i++) { rootColors[i] = i < pastelColors.Length ? pastelColors[i] : CreateSafeColor(200, 200, 200 + i * 10); }
             }
             else if (useContrast)
             {
                 Color[] contrastColors = { Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(0, 0, 255), };
-                for (int i = 0; i < roots.Count; i++)
-                {
-                    rootColors[i] = i < contrastColors.Length ? contrastColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
-                }
+                for (int i = 0; i < roots.Count; i++) { rootColors[i] = i < contrastColors.Length ? contrastColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255); }
             }
             else if (useFire)
             {
                 Color[] fireColors = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), };
-                for (int i = 0; i < roots.Count; i++)
-                {
-                    rootColors[i] = i < fireColors.Length ? fireColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
-                }
+                for (int i = 0; i < roots.Count; i++) { rootColors[i] = i < fireColors.Length ? fireColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255); }
             }
             else if (useContrasting)
             {
                 Color[] contrastingColors = { Color.FromArgb(10, 0, 20), Color.FromArgb(255, 0, 255), Color.FromArgb(0, 255, 255), };
-                for (int i = 0; i < roots.Count; i++)
-                {
-                    rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255);
-                }
+                for (int i = 0; i < roots.Count; i++) { rootColors[i] = i < contrastingColors.Length ? contrastingColors[i] : CreateSafeColor((i * 97) % 255, (i * 149) % 255, (i * 211) % 255); }
             }
             else if (useBlackWhite)
             {
-                for (int i = 0; i < roots.Count; i++)
-                {
-                    rootColors[i] = Color.White;
-                }
+                for (int i = 0; i < roots.Count; i++) { rootColors[i] = Color.White; }
             }
             else
             {
-                for (int i = 0; i < roots.Count; i++)
-                {
-                    int shade = 255 * (i + 1) / (roots.Count > 0 ? roots.Count + 1 : 1);
-                    rootColors[i] = CreateSafeColor(shade, shade, shade);
-                }
+                for (int i = 0; i < roots.Count; i++) { int shade = 255 * (i + 1) / (roots.Count > 0 ? roots.Count + 1 : 1); rootColors[i] = CreateSafeColor(shade, shade, shade); }
             }
 
             return rootColors;
@@ -627,8 +562,6 @@ namespace FractalExplorer
             };
         }
 
-        // --- Обработчики событий UI ---
-
         private void cbSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cbSelector.SelectedIndex >= 0)
@@ -643,14 +576,8 @@ namespace FractalExplorer
 
         private void ResizeCanvas()
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
-            if (fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0)
-            {
-                return;
-            }
+            if (isHighResRendering) return;
+            if (fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
             width = fractal_bitmap.Width;
             height = fractal_bitmap.Height;
             ScheduleRender();
@@ -658,70 +585,62 @@ namespace FractalExplorer
 
         private void ParamControl_Changed(object sender, EventArgs e)
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
+            if (isHighResRendering) return;
             if (sender == nudZoom)
             {
                 zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
-                if (nudZoom.Value != (decimal)zoom)
-                {
-                    nudZoom.Value = (decimal)zoom;
-                }
+                if (nudZoom.Value != (decimal)zoom) { nudZoom.Value = (decimal)zoom; }
             }
             ScheduleRender();
         }
 
         private void ColorBox_Changed(object sender, EventArgs e)
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
-            // Это новый блок для управления чекбоксами
+            if (isHighResRendering) return;
             if (sender is CheckBox currentCb && currentCb.Checked)
             {
                 if (currentCb == colorCustom)
                 {
                     useCustomPalette = true;
-                    // Если выбрали кастомную палитру, снимаем галочки с остальных
-                    foreach (var cb in new[] { oldRenderBW, colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 })
-                    {
-                        cb.Checked = false;
-                    }
+                    foreach (var cb in new[] { oldRenderBW, colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 }) { cb.Checked = false; }
                 }
                 else
                 {
                     useCustomPalette = false;
-                    colorCustom.Checked = false; // Снимаем галочку с кастомной палитры
-                    // Старая логика для остальных чекбоксов
-                    foreach (var cb in new[] { colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 })
-                    {
-                        if (cb != currentCb)
-                        {
-                            cb.Checked = false;
-                        }
-                    }
+                    colorCustom.Checked = false;
+                    foreach (var cb in new[] { colorBox0, colorBox1, colorBox2, colorBox3, colorBox4 }) { if (cb != currentCb) { cb.Checked = false; } }
                 }
             }
-            // Если снимаем галочку с кастомной палитры
-            else if (sender == colorCustom && !colorCustom.Checked)
-            {
-                useCustomPalette = false;
-            }
-
+            else if (sender == colorCustom && !colorCustom.Checked) { useCustomPalette = false; }
             ScheduleRender();
         }
 
         private void UpdateParameters()
         {
             maxIterations = (int)nudIterations.Value;
-            threadCount = cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
             useCustomPalette = colorCustom.Checked;
         }
 
-        // --- Новый обработчик для кнопки открытия настроек цвета ---
+        /// <summary>
+        /// НОВЫЙ МЕТОД: централизованное получение количества потоков.
+        /// </summary>
+        private int GetThreadCount()
+        {
+            if (this.InvokeRequired)
+            {
+                return this.Invoke(new Func<int>(() =>
+                {
+                    if (cbThreads.SelectedItem == null) return Environment.ProcessorCount;
+                    return cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+                }));
+            }
+            else
+            {
+                if (cbThreads.SelectedItem == null) return Environment.ProcessorCount;
+                return cbThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+            }
+        }
+
         private void custom_color_Click(object sender, EventArgs e)
         {
             if (!ProcessFormula())
@@ -730,41 +649,27 @@ namespace FractalExplorer
                 return;
             }
 
-            // Находим корни только чтобы узнать их количество
             var roots = FindRoots(f_ast, f_deriv_ast);
             int rootCount = roots.Count;
 
-            // Создаем форму, если ее еще нет, или она была закрыта
             if (colorSettingsForm == null || colorSettingsForm.IsDisposed)
             {
                 colorSettingsForm = new color_setting_NewtonPoolsForm();
-                // Подписываемся на событие изменения цветов
                 colorSettingsForm.ColorsChanged += ColorSettingsForm_ColorsChanged;
             }
 
-            // Передаем в форму текущие цвета и нужное количество
             colorSettingsForm.PopulateColorPickers(userDefinedRootColors, userDefinedBackgroundColor, rootCount);
-
-            // Показываем форму
             colorSettingsForm.Show();
             colorSettingsForm.Activate();
         }
 
-        // --- Новый обработчик события от формы настроек ---
         private void ColorSettingsForm_ColorsChanged(object sender, CustomPalette newPalette)
         {
-            // Обновляем нашу палитру
             this.userDefinedRootColors = newPalette.RootColors;
             this.userDefinedBackgroundColor = newPalette.BackgroundColor;
-
-            // Если режим кастомной палитры активен, перерисовываем
-            if (useCustomPalette)
-            {
-                ScheduleRender();
-            }
+            if (useCustomPalette) { ScheduleRender(); }
         }
 
-        // ИСПРАВЛЕННЫЙ МЕТОД
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             if (fractal_bitmap.Image == null || width <= 0 || height <= 0)
@@ -773,143 +678,68 @@ namespace FractalExplorer
                 return;
             }
 
-            // Очищаем фон
             e.Graphics.Clear(Color.Black);
-
-            // Включаем качественную интерполяцию для плавного зума
             e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
-
-            // 1. Вычисляем масштаб для ТЕКУЩЕГО вида (заданного centerX и zoom)
             double currentScale = (BASE_SCALE / zoom) / width;
-
-            // 2. Вычисляем масштаб, при котором было ОТРИСОВАНО имеющееся изображение
             double renderedScale = (BASE_SCALE / renderedZoom) / width;
-
-            // 3. Рассчитываем, во сколько раз нужно растянуть/сжать старое изображение
             float drawScaleRatio = (float)(renderedScale / currentScale);
-
-            // 4. Определяем новый размер отрисованного изображения в пикселях.
-            //    Так как фрактал имеет равное соотношение сторон, используем ширину.
-            //    Если бы канвас был неквадратный, это бы сохранило пропорции.
             float newWidth = width * drawScaleRatio;
             float newHeight = height * drawScaleRatio;
-
-            // 5. Находим разницу между центром старого и нового вида в комплексных координатах
             double deltaRe = renderedCenterX - centerX;
             double deltaIm = renderedCenterY - centerY;
-
-            // 6. Преобразуем эту разницу в пиксельный сдвиг, используя НОВЫЙ масштаб
             float offsetX = (float)(deltaRe / currentScale);
             float offsetY = (float)(deltaIm / currentScale);
-
-            // 7. Вычисляем финальную позицию для отрисовки (левый верхний угол)
-            // Позиция зависит от сдвига центра и изменения масштаба
             float drawX = (width - newWidth) / 2.0f + offsetX;
             float drawY = (height - newHeight) / 2.0f + offsetY;
 
-            // 8. Отрисовываем старое изображение с новыми параметрами
             var destRect = new RectangleF(drawX, drawY, newWidth, newHeight);
             e.Graphics.DrawImage(fractal_bitmap.Image, destRect);
         }
 
-        // ИСПРАВЛЕННЫЙ МЕТОД
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
-
-            // Определяем коэффициент приближения/отдаления
+            if (isHighResRendering) return;
             double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5;
             double oldZoom = zoom;
-
-            // Вычисляем масштаб ДО зума. Масштаб должен быть ОДИНАКОВЫМ для обеих осей,
-            // чтобы избежать искажений. Мы базируем его на ширине.
             double scaleBefore = (BASE_SCALE / oldZoom) / width;
-
-            // 1. Находим комплексную координату, которая находится точно под курсором мыши
             double mouseRe = centerX + (e.X - width / 2.0) * scaleBefore;
-            // Для оси Y используем тот же масштаб.
             double mouseIm = centerY + (e.Y - height / 2.0) * scaleBefore;
-
-            // 2. Применяем новый уровень зума
             zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
-
-            // 3. Вычисляем новый центр. Цель — сместить центр так,
-            // чтобы комплексная точка (mouseRe, mouseIm) снова оказалась под курсором.
-            // Для этого мы вычисляем вектор от этой точки до нового центра, используя НОВЫЙ масштаб.
             double scaleAfter = (BASE_SCALE / zoom) / width;
             centerX = mouseRe - (e.X - width / 2.0) * scaleAfter;
             centerY = mouseIm - (e.Y - height / 2.0) * scaleAfter;
-
-            // Обновляем UI и планируем перерисовку
-            fractal_bitmap.Invalidate(); // Быстрый предпросмотр с новым центром/зумом
-
-            // Обновляем значение в NumericUpDown, что вызовет событие и полный рендер
-            if (nudZoom.Value != (decimal)zoom)
-            {
-                nudZoom.Value = (decimal)zoom;
-            }
-            else // Если значение не изменилось (достигнут лимит), вызываем рендер вручную
-            {
-                ScheduleRender();
-            }
+            fractal_bitmap.Invalidate();
+            if (nudZoom.Value != (decimal)zoom) { nudZoom.Value = (decimal)zoom; }
+            else { ScheduleRender(); }
         }
-
 
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
-            if (e.Button == MouseButtons.Left)
-            {
-                panning = true;
-                panStart = e.Location;
-            }
+            if (isHighResRendering) return;
+            if (e.Button == MouseButtons.Left) { panning = true; panStart = e.Location; }
         }
 
-        // ИСПРАВЛЕННЫЙ МЕТОД
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isHighResRendering || !panning)
-            {
-                return;
-            }
-
-            // Используем единый масштаб, основанный на ширине, чтобы избежать искажений
+            if (isHighResRendering || !panning) return;
             double scale = BASE_SCALE / zoom / width;
-
-            // Обновляем координаты центра на основе движения мыши
             centerX -= (e.X - panStart.X) * scale;
+            // ИСПРАВЛЕНИЕ ЗНАКА ДЛЯ КОРРЕКТНОГО ПЕРЕМЕЩЕНИЯ
             centerY -= (e.Y - panStart.Y) * scale;
-
             panStart = e.Location;
-
             fractal_bitmap.Invalidate();
             ScheduleRender();
         }
 
         private void Canvas_MouseUp(object sender, MouseEventArgs e)
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
-            if (e.Button == MouseButtons.Left)
-            {
-                panning = false;
-            }
+            if (isHighResRendering) return;
+            if (e.Button == MouseButtons.Left) { panning = false; }
         }
 
         private void btnRender_Click(object sender, EventArgs e)
         {
-            if (isHighResRendering)
-            {
-                return;
-            }
+            if (isHighResRendering) return;
             ScheduleRender();
         }
 
@@ -954,11 +784,9 @@ namespace FractalExplorer
                 try
                 {
                     UpdateParameters();
-                    int currentMaxIterations = this.maxIterations;
                     double currentZoom = this.zoom;
                     double currentCenterX = this.centerX;
                     double currentCenterY = this.centerY;
-                    int currentThreadCount = this.threadCount;
 
                     if (!ProcessFormula())
                     {
@@ -968,7 +796,7 @@ namespace FractalExplorer
 
                     Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(
                         saveWidth, saveHeight, currentCenterX, currentCenterY, currentZoom,
-                        currentMaxIterations, currentThreadCount,
+                        this.maxIterations, GetThreadCount(), // <-- ИЗМЕНЕНИЕ: Используем GetThreadCount()
                         progressPercentage =>
                         {
                             if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
@@ -1002,7 +830,6 @@ namespace FractalExplorer
             }
         }
 
-        // ИСПРАВЛЕННЫЙ МЕТОД
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY, double currentZoom, int currentMaxIterations, int numThreads, Action<int> reportProgressCallback)
         {
             if (renderWidth <= 0 || renderHeight <= 0 || f_ast == null || f_deriv_ast == null)
@@ -1032,8 +859,6 @@ namespace FractalExplorer
             var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
             long done = 0;
             const double epsilon = 1e-6;
-
-            // ИСПРАВЛЕНО: Используем единый масштаб для обеих осей
             double scale = (BASE_SCALE / currentZoom) / renderWidth;
 
             Parallel.For(0, renderHeight, po, y =>
@@ -1041,25 +866,17 @@ namespace FractalExplorer
                 int rowOffset = y * stride;
                 for (int x = 0; x < renderWidth; x++)
                 {
-                    // ИСПРАВЛЕНО: Используем единый 'scale' для X и Y
                     double c_re = currentCenterX + (x - renderWidth / 2.0) * scale;
                     double c_im = currentCenterY + (y - renderHeight / 2.0) * scale;
                     Complex z = new Complex(c_re, c_im);
-
                     var variables = new Dictionary<string, Complex> { { "z", z } };
                     int iter = 0;
                     while (iter < currentMaxIterations)
                     {
                         Complex pz = f_ast.Evaluate(variables);
-                        if (pz.Magnitude < epsilon)
-                        {
-                            break;
-                        }
+                        if (pz.Magnitude < epsilon) break;
                         Complex pDz = f_deriv_ast.Evaluate(variables);
-                        if (pDz.Magnitude < epsilon)
-                        {
-                            break;
-                        }
+                        if (pDz == Complex.Zero) break;
                         z -= pz / pDz;
                         variables["z"] = z;
                         iter++;
@@ -1070,36 +887,19 @@ namespace FractalExplorer
                     for (int r = 0; r < roots.Count; r++)
                     {
                         double dist = (z - roots[r]).Magnitude;
-                        if (dist < minDist)
-                        {
-                            minDist = dist;
-                            rootIndex = r;
-                        }
+                        if (dist < minDist) { minDist = dist; rootIndex = r; }
                     }
 
                     Color pixelColor;
                     if (rootIndex >= 0 && minDist < epsilon)
                     {
-                        if (useGradient && !useUserPalette)
-                        {
-                            double t = (double)iter / currentMaxIterations;
-                            int hue = (int)(240 * t);
-                            pixelColor = HsvToRgb(hue, 0.8, 1.0);
-                        }
-                        else
-                        {
-                            pixelColor = rootColors[rootIndex];
-                        }
+                        if (useGradient && !useUserPalette) { double t = (double)iter / currentMaxIterations; int hue = (int)(240 * t); pixelColor = HsvToRgb(hue, 0.8, 1.0); }
+                        else { pixelColor = rootColors[rootIndex]; }
                     }
-                    else
-                    {
-                        pixelColor = bgColor;
-                    }
+                    else { pixelColor = bgColor; }
 
                     int index = rowOffset + x * 3;
-                    buffer[index] = pixelColor.B;
-                    buffer[index + 1] = pixelColor.G;
-                    buffer[index + 2] = pixelColor.R;
+                    buffer[index] = pixelColor.B; buffer[index + 1] = pixelColor.G; buffer[index + 2] = pixelColor.R;
                 }
                 long currentDone = Interlocked.Increment(ref done);
                 if (renderHeight > 0)
@@ -1131,18 +931,11 @@ namespace FractalExplorer
                 colorBox2.Enabled = enabled;
                 colorBox3.Enabled = enabled;
                 colorBox4.Enabled = enabled;
-                colorCustom.Enabled = enabled; // Управление новым чекбоксом
-                custom_color.Enabled = enabled; // Управление новой кнопкой
+                colorCustom.Enabled = enabled;
+                custom_color.Enabled = enabled;
             };
 
-            if (this.InvokeRequired)
-            {
-                this.Invoke(action);
-            }
-            else
-            {
-                action();
-            }
+            if (this.InvokeRequired) { this.Invoke(action); } else { action(); }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -1151,7 +944,6 @@ namespace FractalExplorer
             previewRenderCts?.Cancel();
             previewRenderCts?.Dispose();
             renderTimer?.Dispose();
-            // Закрываем форму настроек, если она была открыта
             colorSettingsForm?.Close();
             base.OnFormClosed(e);
         }
@@ -1184,20 +976,14 @@ namespace FractalExplorer
                 if (char.IsDigit(current) || current == '.')
                 {
                     var start = _pos;
-                    while (_pos < _text.Length && (char.IsDigit(_text[_pos]) || _text[_pos] == '.'))
-                    {
-                        _pos++;
-                    }
+                    while (_pos < _text.Length && (char.IsDigit(_text[_pos]) || _text[_pos] == '.')) { _pos++; }
                     tokens.Add(new Token(TokenType.Number, _text.Substring(start, _pos - start)));
                     continue;
                 }
                 if (char.IsLetter(current))
                 {
                     var start = _pos;
-                    while (_pos < _text.Length && char.IsLetterOrDigit(_text[_pos]))
-                    {
-                        _pos++;
-                    }
+                    while (_pos < _text.Length && char.IsLetterOrDigit(_text[_pos])) { _pos++; }
                     tokens.Add(new Token(TokenType.Variable, _text.Substring(start, _pos - start)));
                     continue;
                 }
@@ -1234,7 +1020,6 @@ namespace FractalExplorer
                 {
                     var current = tokens[i];
                     var next = tokens[i + 1];
-                    // e.g. 2z -> 2*z  or (x+1)z -> (x+1)*z or z(x) -> z*(x)
                     if ((current.Type == TokenType.Number || current.Type == TokenType.Variable || current.Type == TokenType.RightParen) &&
                         (next.Type == TokenType.Variable || next.Type == TokenType.LeftParen))
                     {
@@ -1246,7 +1031,6 @@ namespace FractalExplorer
         }
     }
 
-    // ---- Абстрактное синтаксическое дерево (AST) ----
     public abstract class ExpressionNode
     {
         public abstract Complex Evaluate(Dictionary<string, Complex> variables);
@@ -1272,27 +1056,15 @@ namespace FractalExplorer
         public VariableNode(string name) => Name = name;
         public override Complex Evaluate(Dictionary<string, Complex> variables)
         {
-            if (Name == "i")
-            {
-                return Complex.ImaginaryOne;
-            }
-            if (variables.TryGetValue(Name, out var value))
-            {
-                return value;
-            }
+            if (Name == "i") return Complex.ImaginaryOne;
+            if (variables.TryGetValue(Name, out var value)) return value;
             throw new Exception($"Значение для переменной '{Name}' не предоставлено.(Возможно вы хотели a*b, укажите операцию явно)");
         }
         public override ExpressionNode Differentiate(string varName)
         {
-            if (Name == varName)
-            {
-                return new NumberNode(Complex.One); // d/dz(z) = 1
-            }
-            if (Name == "i")
-            {
-                return new NumberNode(Complex.Zero); // d/dz(i) = 0
-            }
-            return new NumberNode(Complex.Zero); // d/dz(a) = 0
+            if (Name == varName) return new NumberNode(Complex.One);
+            if (Name == "i") return new NumberNode(Complex.Zero);
+            return new NumberNode(Complex.Zero);
         }
         public override string Print(string indent = "") => $"{indent}Variable({Name})";
         public override string PrintSimple() => Name;
@@ -1320,48 +1092,22 @@ namespace FractalExplorer
         }
         public override ExpressionNode Differentiate(string varName)
         {
-            var u = Left;
-            var v = Right;
-            var du = Left.Differentiate(varName);
-            var dv = Right.Differentiate(varName);
-
+            var u = Left; var v = Right;
+            var du = Left.Differentiate(varName); var dv = Right.Differentiate(varName);
             return Operator switch
             {
-                // (u+v)' = u' + v'
                 "+" => new BinaryOpNode(du, "+", dv),
-                // (u-v)' = u' - v'
                 "-" => new BinaryOpNode(du, "-", dv),
-                // (u*v)' = u'v + uv' (Product Rule)
-                "*" => new BinaryOpNode(
-                    new BinaryOpNode(du, "*", v),
-                    "+",
-                    new BinaryOpNode(u, "*", dv)
-                ),
-                // (u/v)' = (u'v - uv') / v^2 (Quotient Rule)
-                "/" => new BinaryOpNode(
-                    new BinaryOpNode(
-                        new BinaryOpNode(du, "*", v),
-                        "-",
-                        new BinaryOpNode(u, "*", dv)
-                    ),
-                    "/",
-                    new BinaryOpNode(v, "^", new NumberNode(new Complex(2, 0)))
-                ),
-                // (u^c)' = c * u^(c-1) * u' (Power Rule, for constant exponent)
-                "^" when v is NumberNode c => new BinaryOpNode(
-                    new BinaryOpNode(c, "*", du),
-                    "*",
-                    new BinaryOpNode(u, "^", new NumberNode(c.Value - 1))
-                ),
+                "*" => new BinaryOpNode(new BinaryOpNode(du, "*", v), "+", new BinaryOpNode(u, "*", dv)),
+                "/" => new BinaryOpNode(new BinaryOpNode(new BinaryOpNode(du, "*", v), "-", new BinaryOpNode(u, "*", dv)), "/", new BinaryOpNode(v, "^", new NumberNode(new Complex(2, 0)))),
+                "^" when v is NumberNode c => new BinaryOpNode(new BinaryOpNode(c, "*", du), "*", new BinaryOpNode(u, "^", new NumberNode(c.Value - 1))),
                 _ => throw new Exception($"Дифференцирование для оператора '{Operator}' не поддерживается."),
             };
         }
         public override string Print(string indent = "")
         {
-            var sb = new StringBuilder();
-            sb.AppendLine($"{indent}Op({Operator})");
-            sb.AppendLine(Left.Print(indent + "  L:"));
-            sb.Append(Right.Print(indent + "  R:"));
+            var sb = new StringBuilder(); sb.AppendLine($"{indent}Op({Operator})");
+            sb.AppendLine(Left.Print(indent + "  L:")); sb.Append(Right.Print(indent + "  R:"));
             return sb.ToString();
         }
         public override string PrintSimple() => $"({Left.PrintSimple()} {Operator} {Right.PrintSimple()})";
@@ -1375,24 +1121,13 @@ namespace FractalExplorer
         public override Complex Evaluate(Dictionary<string, Complex> variables)
         {
             var operandVal = Operand.Evaluate(variables);
-            return Operator switch
-            {
-                "-" => -operandVal,
-                "+" => operandVal,
-                _ => throw new Exception($"Неизвестный унарный оператор '{Operator}'"),
-            };
+            return Operator switch { "-" => -operandVal, "+" => operandVal, _ => throw new Exception($"Неизвестный унарный оператор '{Operator}'"), };
         }
-        public override ExpressionNode Differentiate(string varName)
-        {
-            // (-u)' = -u'
-            return new UnaryOpNode(Operator, Operand.Differentiate(varName));
-        }
+        public override ExpressionNode Differentiate(string varName) => new UnaryOpNode(Operator, Operand.Differentiate(varName));
         public override string Print(string indent = "")
         {
-            var sb = new StringBuilder();
-            sb.AppendLine($"{indent}UnaryOp({Operator})");
-            sb.Append(Operand.Print(indent + "   "));
-            return sb.ToString();
+            var sb = new StringBuilder(); sb.AppendLine($"{indent}UnaryOp({Operator})");
+            sb.Append(Operand.Print(indent + "   ")); return sb.ToString();
         }
         public override string PrintSimple() => $"({Operator}{Operand.PrintSimple()})";
     }
@@ -1401,109 +1136,51 @@ namespace FractalExplorer
     {
         private readonly List<Token> _tokens;
         private int _pos;
-        public Parser(List<Token> tokens)
-        {
-            _tokens = tokens;
-            _pos = 0;
-        }
-
+        public Parser(List<Token> tokens) { _tokens = tokens; _pos = 0; }
         private Token Current => _pos < _tokens.Count ? _tokens[_pos] : new Token(TokenType.Operator, "");
         private void Advance() => _pos++;
-
         public ExpressionNode Parse()
         {
             var result = ParseExpression();
-            if (_pos < _tokens.Count)
-            {
-                throw new Exception($"Неожиданный токен '{Current.Value}' после завершения выражения.");
-            }
+            if (_pos < _tokens.Count) throw new Exception($"Неожиданный токен '{Current.Value}' после завершения выражения.");
             return result;
         }
-
-        // Addition and Subtraction (lowest precedence)
         private ExpressionNode ParseExpression()
         {
             var node = ParseTerm();
-            while (Current.Value == "+" || Current.Value == "-")
-            {
-                var op = Current;
-                Advance();
-                var right = ParseTerm();
-                node = new BinaryOpNode(node, op.Value, right);
-            }
+            while (Current.Value == "+" || Current.Value == "-") { var op = Current; Advance(); var right = ParseTerm(); node = new BinaryOpNode(node, op.Value, right); }
             return node;
         }
-
-        // Multiplication and Division
         private ExpressionNode ParseTerm()
         {
             var node = ParseFactor();
-            while (Current.Value == "*" || Current.Value == "/")
-            {
-                var op = Current;
-                Advance();
-                var right = ParseFactor();
-                node = new BinaryOpNode(node, op.Value, right);
-            }
+            while (Current.Value == "*" || Current.Value == "/") { var op = Current; Advance(); var right = ParseFactor(); node = new BinaryOpNode(node, op.Value, right); }
             return node;
         }
-
-        // Exponentiation (highest precedence, right-associative)
         private ExpressionNode ParseFactor()
         {
             var node = ParsePrimary();
-            if (Current.Value == "^")
-            {
-                var op = Current;
-                Advance();
-                // Recursive call to ParseFactor for right-associativity
-                var right = ParseFactor();
-                node = new BinaryOpNode(node, op.Value, right);
-            }
+            if (Current.Value == "^") { var op = Current; Advance(); var right = ParseFactor(); node = new BinaryOpNode(node, op.Value, right); }
             return node;
         }
-
-        // Numbers, variables, parentheses, unary operators
         private ExpressionNode ParsePrimary()
         {
             var token = Current;
-
-            if (token.Value == "+" || token.Value == "-")
-            {
-                Advance();
-                return new UnaryOpNode(token.Value, ParsePrimary());
-            }
-
+            if (token.Value == "+" || token.Value == "-") { Advance(); return new UnaryOpNode(token.Value, ParsePrimary()); }
             if (token.Type == TokenType.Number)
             {
                 Advance();
-                // Try parsing with comma, then dot as fallback for international compatibility
-                if (!double.TryParse(token.Value.Replace('.', ','), out var number) &&
-                    !double.TryParse(token.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out number))
-                {
-                    throw new Exception($"Не удалось распознать число '{token.Value}'");
-                }
+                if (!double.TryParse(token.Value.Replace('.', ','), out var number) && !double.TryParse(token.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out number))
+                { throw new Exception($"Не удалось распознать число '{token.Value}'"); }
                 return new NumberNode(new Complex(number, 0));
             }
-
-            if (token.Type == TokenType.Variable)
-            {
-                Advance();
-                return new VariableNode(token.Value);
-            }
-
+            if (token.Type == TokenType.Variable) { Advance(); return new VariableNode(token.Value); }
             if (token.Type == TokenType.LeftParen)
             {
-                Advance();
-                var node = ParseExpression();
-                if (Current.Type != TokenType.RightParen)
-                {
-                    throw new Exception("Ожидалась закрывающая скобка ')'");
-                }
-                Advance();
-                return node;
+                Advance(); var node = ParseExpression();
+                if (Current.Type != TokenType.RightParen) throw new Exception("Ожидалась закрывающая скобка ')'");
+                Advance(); return node;
             }
-
             throw new Exception($"Неожиданный токен '{token.Value}'");
         }
     }
