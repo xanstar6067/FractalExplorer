@@ -18,7 +18,6 @@ namespace FractalDraving
 
         public FractalJuliaBurningShip()
         {
-            InitializeComponent();
             this.Text = "Фрактал Горящий Корабль (Жюлиа)";
         }
 

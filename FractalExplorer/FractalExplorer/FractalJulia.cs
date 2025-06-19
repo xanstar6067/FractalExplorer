@@ -19,7 +19,6 @@ namespace FractalDraving
 
         public FractalJulia()
         {
-            InitializeComponent();
             this.Text = "Фрактал Жюлиа";
         }
 

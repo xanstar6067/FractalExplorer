@@ -4,7 +4,6 @@ namespace FractalDraving
     {
         public FractalMondelbrot()
         {
-            InitializeComponent();
             this.Text = "Множество Мандельброта";
         }
 

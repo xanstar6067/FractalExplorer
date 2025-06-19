@@ -4,7 +4,6 @@
     {
         public FractalMondelbrotBurningShip()
         {
-            InitializeComponent();
             this.Text = "Множество Горящий Корабль";
         }
 
