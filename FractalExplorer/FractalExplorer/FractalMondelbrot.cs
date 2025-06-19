@@ -1,5 +1,5 @@
 using System.Drawing.Imaging;
-using System.Numerics; // Пространство имен для работы с комплексными числами
+// using System.Numerics; // Заменено на ComplexDecimal
 using System.Runtime.InteropServices; // Для использования Marshal.Copy
 
 namespace FractalDraving
@@ -7,7 +7,7 @@ namespace FractalDraving
     /// <summary>
     /// Главная форма приложения для отображения и взаимодействия с фракталом Мандельброта.
     /// </summary>
-    public partial class FractalMondelbrot : Form // Имя класса можно будет позже изменить
+    public partial class FractalMondelbrot : Form
     {
         // Таймер для отложенного рендеринга предварительного просмотра фрактала
         private System.Windows.Forms.Timer renderTimer;
@@ -16,6 +16,8 @@ namespace FractalDraving
         private int maxIterations;
         // Порог для определения "ухода в бесконечность" при итерациях
         private double threshold;
+        // ИЗМЕНЕНИЕ: Квадрат порога для оптимизации вычислений
+        private decimal thresholdSquared;
         // Количество потоков для параллельного рендеринга
         private int threadCount;
         // Ширина и высота области отрисовки (canvas)
@@ -26,13 +28,13 @@ namespace FractalDraving
         // Флаг, указывающий, происходит ли панорамирование в данный момент
         private bool panning = false;
 
-        // Текущий уровень масштабирования фрактала
-        private double zoom = 1.0;
-        // Координаты центра отображаемой области фрактала
-        private double centerX = 0.0;
-        private double centerY = 0.0;
-        // Базовый масштаб для вычисления отображаемой области фрактала
-        private const double BASE_SCALE = 3.0;
+        // ИЗМЕНЕНИЕ: Текущий уровень масштабирования фрактала
+        private decimal zoom = 1.0m;
+        // ИЗМЕНЕНИЕ: Координаты центра отображаемой области фрактала
+        private decimal centerX = 0.0m;
+        private decimal centerY = 0.0m;
+        // ИЗМЕНЕНИЕ: Базовый масштаб для вычисления отображаемой области фрактала
+        private const decimal BASE_SCALE = 3.0m;
 
         // Флаг, указывающий, выполняется ли рендеринг в высоком разрешении (для сохранения)
         private bool isHighResRendering = false;
@@ -47,18 +49,19 @@ namespace FractalDraving
         // Последний выбранный чекбокс палитры
         private CheckBox lastSelectedPaletteCheckBox = null;
 
-        // Поля для хранения параметров отрисованного битмапа
-        private double renderedCenterX;
-        private double renderedCenterY;
-        private double renderedZoom;
+        // ИЗМЕНЕНИЕ: Поля для хранения параметров отрисованного битмапа
+        private decimal renderedCenterX;
+        private decimal renderedCenterY;
+        private decimal renderedZoom;
 
         public FractalMondelbrot()
         {
             InitializeComponent();
-            // centerX = -0.5; 
+            // ИЗМЕНЕНИЕ: Установка начального центра с использованием decimal
+            centerX = -0.5m;
         }
 
-        private async void Form1_Load(object sender, EventArgs e)
+        private void Form1_Load(object sender, EventArgs e)
         {
             width = canvas2.Width;
             height = canvas2.Height;
@@ -106,17 +109,17 @@ namespace FractalDraving
             nudIterations.Minimum = 50;
             nudIterations.Maximum = 100000;
 
-
             nudThreshold.Minimum = 2m;
             nudThreshold.Maximum = 1000m;
             nudThreshold.DecimalPlaces = 1;
             nudThreshold.Increment = 0.1m;
             nudThreshold.Value = 2m;
 
-            nudZoom.DecimalPlaces = 2;
+            // ИЗМЕНЕНИЕ: Увеличение точности и диапазона для Zoom
+            nudZoom.DecimalPlaces = 4;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.1m;
-            
+            //nudZoom.Maximum = 1000000000000m; // Значительно увеличен максимум
             nudZoom.Value = 0.5m;
 
             this.Resize += Form1_Resize;
@@ -138,8 +141,9 @@ namespace FractalDraving
                 return;
             }
 
-            double scaleRendered = BASE_SCALE / renderedZoom;
-            double scaleCurrent = BASE_SCALE / zoom;
+            // ИЗМЕНЕНИЕ: Используем decimal для всех вычислений масштаба
+            decimal scaleRendered = BASE_SCALE / renderedZoom;
+            decimal scaleCurrent = BASE_SCALE / zoom;
 
             if (renderedZoom <= 0 || zoom <= 0 || scaleRendered <= 0 || scaleCurrent <= 0)
             {
@@ -148,23 +152,23 @@ namespace FractalDraving
                 return;
             }
 
-            double complex_half_width_rendered = (BASE_SCALE / renderedZoom) / 2.0;
-            double complex_half_height_rendered = (BASE_SCALE / renderedZoom) / 2.0;
+            decimal complex_half_width_rendered = scaleRendered / 2.0m;
+            decimal complex_half_height_rendered = scaleRendered / 2.0m;
 
-            double complex_half_width_current = (BASE_SCALE / zoom) / 2.0;
-            double complex_half_height_current = (BASE_SCALE / zoom) / 2.0;
+            decimal complex_half_width_current = scaleCurrent / 2.0m;
+            decimal complex_half_height_current = scaleCurrent / 2.0m;
 
-            double renderedImage_re_min = renderedCenterX - complex_half_width_rendered;
-            double renderedImage_im_min = renderedCenterY - complex_half_height_rendered;
+            decimal renderedImage_re_min = renderedCenterX - complex_half_width_rendered;
+            decimal renderedImage_im_min = renderedCenterY - complex_half_height_rendered;
 
-            double currentView_re_min = centerX - complex_half_width_current;
-            double currentView_im_min = centerY - complex_half_height_current;
+            decimal currentView_re_min = centerX - complex_half_width_current;
+            decimal currentView_im_min = centerY - complex_half_height_current;
 
-            float p1_X = (float)((renderedImage_re_min - currentView_re_min) / (complex_half_width_current * 2.0) * width);
-            float p1_Y = (float)((renderedImage_im_min - currentView_im_min) / (complex_half_height_current * 2.0) * height);
+            float p1_X = (float)((renderedImage_re_min - currentView_re_min) / (complex_half_width_current * 2.0m) * width);
+            float p1_Y = (float)((renderedImage_im_min - currentView_im_min) / (complex_half_height_current * 2.0m) * height);
 
-            float w_prime = (float)(width * ((BASE_SCALE / renderedZoom) / (BASE_SCALE / zoom)));
-            float h_prime = (float)(height * ((BASE_SCALE / renderedZoom) / (BASE_SCALE / zoom)));
+            float w_prime = (float)(width * (scaleRendered / scaleCurrent));
+            float h_prime = (float)(height * (scaleRendered / scaleCurrent));
 
             PointF destPoint1 = new PointF(p1_X, p1_Y);
             PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
@@ -194,32 +198,18 @@ namespace FractalDraving
 
         private void PaletteCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            CheckBox currentCb = sender as CheckBox;
-            if (currentCb == null) return;
-
-            foreach (var cb in paletteCheckBoxes.Where(cb => cb != null))
-            {
-                cb.CheckedChanged -= PaletteCheckBox_CheckedChanged;
-            }
-
+            CheckBox currentCb = sender as CheckBox; if (currentCb == null) return;
+            foreach (var cb in paletteCheckBoxes.Where(cb => cb != null)) cb.CheckedChanged -= PaletteCheckBox_CheckedChanged;
             if (currentCb.Checked)
             {
                 lastSelectedPaletteCheckBox = currentCb;
-                foreach (var cb in paletteCheckBoxes.Where(cb => cb != null && cb != currentCb))
-                {
-                    cb.Checked = false;
-                }
+                foreach (var cb in paletteCheckBoxes.Where(cb => cb != null && cb != currentCb)) cb.Checked = false;
             }
             else
             {
                 lastSelectedPaletteCheckBox = paletteCheckBoxes.FirstOrDefault(cb => cb != null && cb.Checked);
             }
-
-            foreach (var cb in paletteCheckBoxes.Where(cb => cb != null))
-            {
-                cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
-            }
-
+            foreach (var cb in paletteCheckBoxes.Where(cb => cb != null)) cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
             HandleColorBoxEnableState();
             ScheduleRender();
         }
@@ -227,21 +217,10 @@ namespace FractalDraving
         private void HandleColorBoxEnableState()
         {
             if (paletteCheckBoxes == null || colorBox == null || oldRenderBW == null) return;
-
             bool isAnyNewPaletteCbChecked = paletteCheckBoxes.Skip(2).Any(cb => cb != null && cb.Checked);
-
-            if (isAnyNewPaletteCbChecked)
-            {
-                colorBox.Enabled = true;
-            }
-            else if (colorBox.Checked && !oldRenderBW.Checked)
-            {
-                colorBox.Enabled = true;
-            }
-            else
-            {
-                colorBox.Enabled = !oldRenderBW.Checked;
-            }
+            if (isAnyNewPaletteCbChecked) colorBox.Enabled = true;
+            else if (colorBox.Checked && !oldRenderBW.Checked) colorBox.Enabled = true;
+            else colorBox.Enabled = !oldRenderBW.Checked;
         }
 
         private void Form1_Resize(object sender, EventArgs e) => ResizeCanvas();
@@ -251,7 +230,6 @@ namespace FractalDraving
         {
             if (isHighResRendering) return;
             if (canvas2.Width <= 0 || canvas2.Height <= 0) return;
-
             width = canvas2.Width;
             height = canvas2.Height;
             ScheduleRender();
@@ -260,17 +238,11 @@ namespace FractalDraving
         private void ParamControl_Changed(object sender, EventArgs e)
         {
             if (isHighResRendering) return;
-
             if (sender == nudZoom)
             {
-                zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, (double)nudZoom.Value));
-                if (nudZoom.Value != (decimal)zoom)
-                {
-                    nudZoom.Value = (decimal)zoom;
-                }
+                // ИЗМЕНЕНИЕ: Работаем с decimal напрямую
+                zoom = nudZoom.Value;
             }
-            // nudRe, nudIm, nudBaseScale больше не вызывают этот обработчик,
-            // или если бы вызывали, то для них нет специальной логики здесь.
             ScheduleRender();
         }
 
@@ -286,34 +258,26 @@ namespace FractalDraving
         {
             renderTimer.Stop();
             if (isHighResRendering) return;
-
-            if (isRenderingPreview)
-            {
-                renderTimer.Start();
-                return;
-            }
+            if (isRenderingPreview) { renderTimer.Start(); return; }
 
             isRenderingPreview = true;
-
             previewRenderCts?.Dispose();
             previewRenderCts = new CancellationTokenSource();
             CancellationToken token = previewRenderCts.Token;
 
             UpdateParameters();
 
-            double currentRenderCenterX = centerX;
-            double currentRenderCenterY = centerY;
-            double currentRenderZoom = zoom;
+            // ИЗМЕНЕНИЕ: Захватываем переменные типа decimal
+            decimal currentRenderCenterX = centerX;
+            decimal currentRenderCenterY = centerY;
+            decimal currentRenderZoom = zoom;
 
             try
             {
                 await Task.Run(() => RenderFractal(token, currentRenderCenterX, currentRenderCenterY, currentRenderZoom), token);
             }
             catch (OperationCanceledException) { /* normal */ }
-            catch (Exception ex)
-            {
-                // Console.WriteLine($"Render Error: {ex.Message}"); 
-            }
+            catch (Exception) { /* Console.WriteLine($"Render Error: {ex.Message}"); */ }
             finally
             {
                 isRenderingPreview = false;
@@ -324,25 +288,24 @@ namespace FractalDraving
         {
             maxIterations = (int)nudIterations.Value;
             threshold = (double)nudThreshold.Value;
+            // ИЗМЕНЕНИЕ: Вычисляем квадрат порога
+            thresholdSquared = nudThreshold.Value * nudThreshold.Value;
             threadCount = cbThreads.SelectedItem.ToString() == "Auto"
                 ? Environment.ProcessorCount
                 : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
+        #region Palettes
         private delegate Color PaletteFunction(double t, int iter, int maxIterations, int maxColorIter);
-
         private Color GetPixelColor(int iter, int currentMaxIterations, int currentMaxColorIter)
         {
             if (iter == currentMaxIterations)
             {
                 return (lastSelectedPaletteCheckBox?.Name == "checkBox6") ? Color.FromArgb(50, 50, 50) : Color.Black;
             }
-
             double t_capped = (double)Math.Min(iter, currentMaxColorIter) / currentMaxColorIter;
             double t_log = Math.Log(Math.Min(iter, currentMaxColorIter) + 1) / Math.Log(currentMaxColorIter + 1);
-
             PaletteFunction selectedPaletteFunc = GetDefaultPaletteColor;
-
             if (lastSelectedPaletteCheckBox != null)
             {
                 if (lastSelectedPaletteCheckBox == colorBox) selectedPaletteFunc = GetPaletteColorBoxColor;
@@ -355,128 +318,24 @@ namespace FractalDraving
                 else if (lastSelectedPaletteCheckBox.Name == "checkBox6") selectedPaletteFunc = GetPalette6Color;
                 else if (lastSelectedPaletteCheckBox.Name == "mondelbrotClassicBox") selectedPaletteFunc = GetPaletteMandelbrotClassicColor;
             }
-
             double t_param = (selectedPaletteFunc == GetDefaultPaletteColor) ? t_log : t_capped;
             return selectedPaletteFunc(t_param, iter, currentMaxIterations, currentMaxColorIter);
         }
+        private Color GetPaletteMandelbrotClassicColor(double t_ignored, int iter, int maxIter, int maxClrIter) { double t_classic = (double)iter / maxIter; byte r_val, g_val, b_val; if (t_classic < 0.5) { double t_half = t_classic * 2.0; r_val = (byte)(t_half * 200); g_val = (byte)(t_half * 50); b_val = (byte)(t_half * 30); } else { double t_half = (t_classic - 0.5) * 2.0; r_val = (byte)(200 + t_half * 55); g_val = (byte)(50 + t_half * 205); b_val = (byte)(30 + t_half * 225); } return Color.FromArgb(r_val, g_val, b_val); }
+        private Color GetDefaultPaletteColor(double t_log, int iter, int maxIter, int maxClrIter) { int cVal = (int)(255.0 * (1 - t_log)); return Color.FromArgb(cVal, cVal, cVal); }
+        private Color GetPaletteColorBoxColor(double t_capped, int iter, int maxIter, int maxClrIter) { return ColorFromHSV(360.0 * t_capped, 0.6, 1.0); }
+        private Color GetPaletteOldBWColor(double t_capped, int iter, int maxIter, int maxClrIter) { int cVal = 255 - (int)(255.0 * t_capped); return Color.FromArgb(cVal, cVal, cVal); }
+        private Color LerpColor(Color a, Color b, double t) { t = Math.Max(0, Math.Min(1, t)); return Color.FromArgb((int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t)); }
+        private Color GetPalette1Color(double t, int iter, int maxIter, int maxClrIter) { Color c1 = Color.Black; Color c2 = Color.FromArgb(200, 0, 0); Color c3 = Color.FromArgb(255, 100, 0); Color c4 = Color.FromArgb(255, 255, 100); Color c5 = Color.White; if (t < 0.25) return LerpColor(c1, c2, t / 0.25); if (t < 0.50) return LerpColor(c2, c3, (t - 0.25) / 0.25); if (t < 0.75) return LerpColor(c3, c4, (t - 0.50) / 0.25); return LerpColor(c4, c5, (t - 0.75) / 0.25); }
+        private Color GetPalette2Color(double t, int iter, int maxIter, int maxClrIter) { Color c1 = Color.Black; Color c2 = Color.FromArgb(0, 0, 100); Color c3 = Color.FromArgb(0, 120, 200); Color c4 = Color.FromArgb(170, 220, 255); Color c5 = Color.White; if (t < 0.25) return LerpColor(c1, c2, t / 0.25); if (t < 0.50) return LerpColor(c2, c3, (t - 0.25) / 0.25); if (t < 0.75) return LerpColor(c3, c4, (t - 0.50) / 0.25); return LerpColor(c4, c5, (t - 0.75) / 0.25); }
+        private Color GetPalette3Color(double t, int iter, int maxIter, int maxClrIter) { double r_comp = Math.Sin(t * Math.PI * 3.0 + 0.5) * 0.45 + 0.5; double g_comp = Math.Sin(t * Math.PI * 3.0 + Math.PI * 2.0 / 3.0 + 0.5) * 0.45 + 0.5; double b_comp = Math.Sin(t * Math.PI * 3.0 + Math.PI * 4.0 / 3.0 + 0.5) * 0.45 + 0.5; return Color.FromArgb((int)(r_comp * 255), (int)(g_comp * 255), (int)(b_comp * 255)); }
+        private Color GetPalette4Color(double t, int iter, int maxIter, int maxClrIter) { Color c1 = Color.FromArgb(10, 0, 20); Color c2 = Color.FromArgb(255, 0, 255); Color c3 = Color.FromArgb(0, 255, 255); Color c4 = Color.FromArgb(230, 230, 250); if (t < 0.1) return LerpColor(c1, c2, t / 0.1); if (t < 0.4) return LerpColor(c2, c1, (t - 0.1) / 0.3); if (t < 0.5) return LerpColor(c1, c3, (t - 0.4) / 0.1); if (t < 0.8) return LerpColor(c3, c1, (t - 0.5) / 0.3); return LerpColor(c1, c4, (t - 0.8) / 0.2); }
+        private Color GetPalette5Color(double t, int iter, int maxIter, int maxClrIter) { int baseGray = 50 + (int)(t * 150); double shine = Math.Sin(t * Math.PI * 5); int finalGray = Math.Max(0, Math.Min(255, baseGray + (int)(shine * 40))); return Color.FromArgb(finalGray, finalGray, Math.Min(255, finalGray + (int)(t * 25))); }
+        private Color GetPalette6Color(double t, int iter, int maxIter, int maxClrIter) { double hue = (t * 200.0 + 180.0) % 360.0; double sat = Math.Max(0.2, Math.Min(0.6, 0.35 + (Math.Sin(t * Math.PI * 2) * 0.1))); double val = Math.Max(0.7, Math.Min(0.95, 0.80 + (Math.Cos(t * Math.PI * 2.5) * 0.15))); return ColorFromHSV(hue, sat, val); }
+        #endregion
 
-        private Color GetPaletteMandelbrotClassicColor(double t_ignored, int iter, int maxIter, int maxClrIter)
-        {
-            double t_classic = (double)iter / maxIter;
-            byte r_val, g_val, b_val;
-
-            if (t_classic < 0.5)
-            {
-                double t_half = t_classic * 2.0;
-                r_val = (byte)(t_half * 200);
-                g_val = (byte)(t_half * 50);
-                b_val = (byte)(t_half * 30);
-            }
-            else
-            {
-                double t_half = (t_classic - 0.5) * 2.0;
-                r_val = (byte)(200 + t_half * 55);
-                g_val = (byte)(50 + t_half * 205);
-                b_val = (byte)(30 + t_half * 225);
-            }
-            return Color.FromArgb(r_val, g_val, b_val);
-        }
-
-
-        private Color GetDefaultPaletteColor(double t_log, int iter, int maxIter, int maxClrIter)
-        {
-            int cVal = (int)(255.0 * (1 - t_log));
-            return Color.FromArgb(cVal, cVal, cVal);
-        }
-
-        private Color GetPaletteColorBoxColor(double t_capped, int iter, int maxIter, int maxClrIter)
-        {
-            return ColorFromHSV(360.0 * t_capped, 0.6, 1.0);
-        }
-
-        private Color GetPaletteOldBWColor(double t_capped, int iter, int maxIter, int maxClrIter)
-        {
-            int cVal = 255 - (int)(255.0 * t_capped);
-            return Color.FromArgb(cVal, cVal, cVal);
-        }
-
-        private Color LerpColor(Color a, Color b, double t)
-        {
-            t = Math.Max(0, Math.Min(1, t));
-            return Color.FromArgb(
-                (int)(a.R + (b.R - a.R) * t),
-                (int)(a.G + (b.G - a.G) * t),
-                (int)(a.B + (b.B - a.B) * t)
-            );
-        }
-
-        private Color GetPalette1Color(double t, int iter, int maxIter, int maxClrIter)
-        {
-            Color c1 = Color.Black;
-            Color c2 = Color.FromArgb(200, 0, 0);
-            Color c3 = Color.FromArgb(255, 100, 0);
-            Color c4 = Color.FromArgb(255, 255, 100);
-            Color c5 = Color.White;
-
-            if (t < 0.25) return LerpColor(c1, c2, t / 0.25);
-            if (t < 0.50) return LerpColor(c2, c3, (t - 0.25) / 0.25);
-            if (t < 0.75) return LerpColor(c3, c4, (t - 0.50) / 0.25);
-            return LerpColor(c4, c5, (t - 0.75) / 0.25);
-        }
-
-        private Color GetPalette2Color(double t, int iter, int maxIter, int maxClrIter)
-        {
-            Color c1 = Color.Black;
-            Color c2 = Color.FromArgb(0, 0, 100);
-            Color c3 = Color.FromArgb(0, 120, 200);
-            Color c4 = Color.FromArgb(170, 220, 255);
-            Color c5 = Color.White;
-
-            if (t < 0.25) return LerpColor(c1, c2, t / 0.25);
-            if (t < 0.50) return LerpColor(c2, c3, (t - 0.25) / 0.25);
-            if (t < 0.75) return LerpColor(c3, c4, (t - 0.50) / 0.25);
-            return LerpColor(c4, c5, (t - 0.75) / 0.25);
-        }
-
-        private Color GetPalette3Color(double t, int iter, int maxIter, int maxClrIter)
-        {
-            double r_comp = Math.Sin(t * Math.PI * 3.0 + 0.5) * 0.45 + 0.5;
-            double g_comp = Math.Sin(t * Math.PI * 3.0 + Math.PI * 2.0 / 3.0 + 0.5) * 0.45 + 0.5;
-            double b_comp = Math.Sin(t * Math.PI * 3.0 + Math.PI * 4.0 / 3.0 + 0.5) * 0.45 + 0.5;
-            return Color.FromArgb((int)(r_comp * 255), (int)(g_comp * 255), (int)(b_comp * 255));
-        }
-
-        private Color GetPalette4Color(double t, int iter, int maxIter, int maxClrIter)
-        {
-            Color c1 = Color.FromArgb(10, 0, 20);
-            Color c2 = Color.FromArgb(255, 0, 255);
-            Color c3 = Color.FromArgb(0, 255, 255);
-            Color c4 = Color.FromArgb(230, 230, 250);
-
-            if (t < 0.1) return LerpColor(c1, c2, t / 0.1);
-            if (t < 0.4) return LerpColor(c2, c1, (t - 0.1) / 0.3);
-            if (t < 0.5) return LerpColor(c1, c3, (t - 0.4) / 0.1);
-            if (t < 0.8) return LerpColor(c3, c1, (t - 0.5) / 0.3);
-            return LerpColor(c1, c4, (t - 0.8) / 0.2);
-        }
-
-        private Color GetPalette5Color(double t, int iter, int maxIter, int maxClrIter)
-        {
-            int baseGray = 50 + (int)(t * 150);
-            double shine = Math.Sin(t * Math.PI * 5);
-            int finalGray = Math.Max(0, Math.Min(255, baseGray + (int)(shine * 40)));
-            return Color.FromArgb(finalGray, finalGray, Math.Min(255, finalGray + (int)(t * 25)));
-        }
-
-        private Color GetPalette6Color(double t, int iter, int maxIter, int maxClrIter)
-        {
-            double hue = (t * 200.0 + 180.0) % 360.0;
-            double sat = Math.Max(0.2, Math.Min(0.6, 0.35 + (Math.Sin(t * Math.PI * 2) * 0.1)));
-            double val = Math.Max(0.7, Math.Min(0.95, 0.80 + (Math.Cos(t * Math.PI * 2.5) * 0.15)));
-            return ColorFromHSV(hue, sat, val);
-        }
-
-        private void RenderFractal(CancellationToken token, double renderCenterX, double renderCenterY, double renderZoom)
+        // ИЗМЕНЕНИЕ: Сигнатура метода для приема decimal
+        private void RenderFractal(CancellationToken token, decimal renderCenterX, decimal renderCenterY, decimal renderZoom)
         {
             if (token.IsCancellationRequested) return;
             if (isHighResRendering || canvas2.Width <= 0 || canvas2.Height <= 0) return;
@@ -501,22 +360,25 @@ namespace FractalDraving
                 int done = 0;
                 const int currentMaxColorIter = 1000;
 
-                double current_render_scale_factor_w = (BASE_SCALE / renderZoom) / width;
-                double current_render_scale_factor_h = (BASE_SCALE / renderZoom) / height;
+                // ИЗМЕНЕНИЕ: Вычисляем масштаб с использованием decimal
+                decimal current_render_scale_factor_w = (BASE_SCALE / renderZoom) / width;
+                decimal current_render_scale_factor_h = (BASE_SCALE / renderZoom) / height;
 
                 Parallel.For(0, height, po, y =>
                 {
                     int rowOffset = y * stride;
                     for (int x = 0; x < width; x++)
                     {
-                        double c_re = renderCenterX + (x - width / 2.0) * current_render_scale_factor_w;
-                        double c_im = renderCenterY + (y - height / 2.0) * current_render_scale_factor_h;
-                        Complex c0 = new Complex(c_re, c_im);
+                        // ИЗМЕНЕНИЕ: Вычисляем координаты с высокой точностью decimal
+                        decimal c_re = renderCenterX + (x - width / 2.0m) * current_render_scale_factor_w;
+                        decimal c_im = renderCenterY + (y - height / 2.0m) * current_render_scale_factor_h;
+                        ComplexDecimal c0 = new ComplexDecimal(c_re, c_im);
 
-                        Complex z = Complex.Zero;
+                        ComplexDecimal z = ComplexDecimal.Zero;
                         int iter_val = 0;
 
-                        while (iter_val < maxIterations && z.Magnitude <= threshold)
+                        // ИЗМЕНЕНИЕ: Используем ComplexDecimal и thresholdSquared
+                        while (iter_val < maxIterations && z.MagnitudeSquared <= thresholdSquared)
                         {
                             z = z * z + c0;
                             iter_val++;
@@ -524,25 +386,13 @@ namespace FractalDraving
 
                         Color pixelColor = GetPixelColor(iter_val, maxIterations, currentMaxColorIter);
                         int index = rowOffset + x * 3;
-                        buffer[index] = pixelColor.B;
-                        buffer[index + 1] = pixelColor.G;
-                        buffer[index + 2] = pixelColor.R;
+                        buffer[index] = pixelColor.B; buffer[index + 1] = pixelColor.G; buffer[index + 2] = pixelColor.R;
                     }
 
                     int progress = Interlocked.Increment(ref done);
                     if (!token.IsCancellationRequested && progressBar.IsHandleCreated && !progressBar.IsDisposed && height > 0)
                     {
-                        try
-                        {
-                            progressBar.BeginInvoke((Action)(() =>
-                            {
-                                if (progressBar.IsHandleCreated && !progressBar.IsDisposed && progressBar.Value <= progressBar.Maximum)
-                                {
-                                    progressBar.Value = Math.Min(progressBar.Maximum, (int)(100.0 * progress / height));
-                                }
-                            }));
-                        }
-                        catch (InvalidOperationException) { }
+                        try { progressBar.BeginInvoke((Action)(() => { if (progressBar.IsHandleCreated && !progressBar.IsDisposed && progressBar.Value <= progressBar.Maximum) progressBar.Value = Math.Min(progressBar.Maximum, (int)(100.0 * progress / height)); })); } catch (InvalidOperationException) { }
                     }
                 });
 
@@ -557,16 +407,10 @@ namespace FractalDraving
                     Bitmap oldImage = null;
                     canvas2.Invoke((Action)(() =>
                     {
-                        if (token.IsCancellationRequested)
-                        {
-                            bmp?.Dispose();
-                            return;
-                        }
+                        if (token.IsCancellationRequested) { bmp?.Dispose(); return; }
                         oldImage = canvas2.Image as Bitmap;
                         canvas2.Image = bmp;
-                        renderedCenterX = renderCenterX;
-                        renderedCenterY = renderCenterY;
-                        renderedZoom = renderZoom;
+                        renderedCenterX = renderCenterX; renderedCenterY = renderCenterY; renderedZoom = renderZoom;
                         bmp = null;
                     }));
                     oldImage?.Dispose();
@@ -578,26 +422,18 @@ namespace FractalDraving
             }
             finally
             {
-                if (bmpData != null && bmp != null)
-                {
-                    try { bmp.UnlockBits(bmpData); } catch { }
-                }
-                if (bmp != null)
-                {
-                    bmp.Dispose();
-                }
+                if (bmpData != null && bmp != null) { try { bmp.UnlockBits(bmpData); } catch { } }
+                if (bmp != null) bmp.Dispose();
             }
         }
 
-        private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY,
-                                             double currentZoom, double currentBaseScale,
+        // ИЗМЕНЕНИЕ: Сигнатура метода для приема decimal
+        private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, decimal currentCenterX, decimal currentCenterY,
+                                             decimal currentZoom, decimal currentBaseScale,
                                              int currentMaxIterations_param, double currentThreshold_param, int numThreads,
                                              Action<int> reportProgressCallback)
         {
-            if (renderWidth <= 0 || renderHeight <= 0)
-            {
-                return new Bitmap(1, 1);
-            }
+            if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
 
             Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -609,37 +445,34 @@ namespace FractalDraving
             long done = 0;
             const int currentMaxColorIter_param = 1000;
 
-            double scale_factor_w = (currentBaseScale / currentZoom) / renderWidth;
-            double scale_factor_h = (currentBaseScale / currentZoom) / renderHeight;
+            // ИЗМЕНЕНИЕ: Используем decimal
+            decimal currentThresholdSquared_param = (decimal)currentThreshold_param * (decimal)currentThreshold_param;
+            decimal scale_factor_w = (currentBaseScale / currentZoom) / renderWidth;
+            decimal scale_factor_h = (currentBaseScale / currentZoom) / renderHeight;
 
             Parallel.For(0, renderHeight, po, y =>
             {
                 int rowOffset = y * stride;
                 for (int x = 0; x < renderWidth; x++)
                 {
-                    double c_re = currentCenterX + (x - renderWidth / 2.0) * scale_factor_w;
-                    double c_im = currentCenterY + (y - renderHeight / 2.0) * scale_factor_h;
-                    Complex c0 = new Complex(c_re, c_im);
+                    decimal c_re = currentCenterX + (x - renderWidth / 2.0m) * scale_factor_w;
+                    decimal c_im = currentCenterY + (y - renderHeight / 2.0m) * scale_factor_h;
+                    ComplexDecimal c0 = new ComplexDecimal(c_re, c_im);
 
-                    Complex z = Complex.Zero;
+                    ComplexDecimal z = ComplexDecimal.Zero;
                     int iter_val = 0;
 
-                    while (iter_val < currentMaxIterations_param && z.Magnitude <= currentThreshold_param)
+                    while (iter_val < currentMaxIterations_param && z.MagnitudeSquared <= currentThresholdSquared_param)
                     {
                         z = z * z + c0;
                         iter_val++;
                     }
                     Color pixelColor = GetPixelColor(iter_val, currentMaxIterations_param, currentMaxColorIter_param);
                     int index = rowOffset + x * 3;
-                    buffer[index] = pixelColor.B;
-                    buffer[index + 1] = pixelColor.G;
-                    buffer[index + 2] = pixelColor.R;
+                    buffer[index] = pixelColor.B; buffer[index + 1] = pixelColor.G; buffer[index + 2] = pixelColor.R;
                 }
                 long currentDone = Interlocked.Increment(ref done);
-                if (renderHeight > 0)
-                {
-                    reportProgressCallback((int)(100.0 * currentDone / renderHeight));
-                }
+                if (renderHeight > 0) reportProgressCallback((int)(100.0 * currentDone / renderHeight));
             });
 
             Marshal.Copy(buffer, 0, scan0, buffer.Length);
@@ -647,272 +480,122 @@ namespace FractalDraving
             return bmp;
         }
 
-        private Color ColorFromHSV(double hue, double saturation, double value)
-        {
-            hue = (hue % 360 + 360) % 360;
-            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-            double f = hue / 60 - Math.Floor(hue / 60);
-
-            value = Math.Max(0, Math.Min(1, value));
-            saturation = Math.Max(0, Math.Min(1, saturation));
-
-            int v_comp = Convert.ToInt32(value * 255);
-            int p_comp = Convert.ToInt32(v_comp * (1 - saturation));
-            int q_comp = Convert.ToInt32(v_comp * (1 - f * saturation));
-            int t_comp = Convert.ToInt32(v_comp * (1 - (1 - f) * saturation));
-
-            switch (hi)
-            {
-                case 0: return Color.FromArgb(v_comp, t_comp, p_comp);
-                case 1: return Color.FromArgb(q_comp, v_comp, p_comp);
-                case 2: return Color.FromArgb(p_comp, v_comp, t_comp);
-                case 3: return Color.FromArgb(p_comp, q_comp, v_comp);
-                case 4: return Color.FromArgb(t_comp, p_comp, v_comp);
-                default: return Color.FromArgb(v_comp, p_comp, q_comp);
-            }
-        }
+        private Color ColorFromHSV(double hue, double saturation, double value) { hue = (hue % 360 + 360) % 360; int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6; double f = hue / 60 - Math.Floor(hue / 60); value = Math.Max(0, Math.Min(1, value)); saturation = Math.Max(0, Math.Min(1, saturation)); int v_comp = Convert.ToInt32(value * 255); int p_comp = Convert.ToInt32(v_comp * (1 - saturation)); int q_comp = Convert.ToInt32(v_comp * (1 - f * saturation)); int t_comp = Convert.ToInt32(v_comp * (1 - (1 - f) * saturation)); switch (hi) { case 0: return Color.FromArgb(v_comp, t_comp, p_comp); case 1: return Color.FromArgb(q_comp, v_comp, p_comp); case 2: return Color.FromArgb(p_comp, v_comp, t_comp); case 3: return Color.FromArgb(p_comp, q_comp, v_comp); case 4: return Color.FromArgb(t_comp, p_comp, v_comp); default: return Color.FromArgb(v_comp, p_comp, q_comp); } }
 
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (isHighResRendering) return;
 
-            double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5;
-            double oldZoom = zoom;
+            // ИЗМЕНЕНИЕ: Используем decimal для всех вычислений
+            decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
+            decimal oldZoom = zoom;
 
-            double scaleBeforeZoomX = BASE_SCALE / oldZoom / width;
-            double scaleBeforeZoomY = BASE_SCALE / oldZoom / height;
+            decimal scaleBeforeZoomX = (BASE_SCALE / oldZoom) / width;
+            decimal scaleBeforeZoomY = (BASE_SCALE / oldZoom) / height;
 
-            double mouseRe = centerX + (e.X - width / 2.0) * scaleBeforeZoomX;
-            double mouseIm = centerY + (e.Y - height / 2.0) * scaleBeforeZoomY;
+            decimal mouseRe = centerX + (e.X - width / 2.0m) * scaleBeforeZoomX;
+            decimal mouseIm = centerY + (e.Y - height / 2.0m) * scaleBeforeZoomY;
 
-            zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor));
+            zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, zoom * zoomFactor));
 
-            double scaleAfterZoomX = BASE_SCALE / zoom / width;
-            double scaleAfterZoomY = BASE_SCALE / zoom / height;
+            decimal scaleAfterZoomX = (BASE_SCALE / zoom) / width;
+            decimal scaleAfterZoomY = (BASE_SCALE / zoom) / height;
 
-            centerX = mouseRe - (e.X - width / 2.0) * scaleAfterZoomX;
-            centerY = mouseIm - (e.Y - height / 2.0) * scaleAfterZoomY;
+            centerX = mouseRe - (e.X - width / 2.0m) * scaleAfterZoomX;
+            centerY = mouseIm - (e.Y - height / 2.0m) * scaleAfterZoomY;
 
             canvas2.Invalidate();
 
-            if (nudZoom.Value != (decimal)zoom)
-            {
-                nudZoom.Value = (decimal)zoom;
-            }
-            else
-            {
-                ScheduleRender();
-            }
+            if (nudZoom.Value != zoom) nudZoom.Value = zoom;
+            else ScheduleRender();
         }
 
-        private void Canvas_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (isHighResRendering) return;
-            if (e.Button == MouseButtons.Left)
-            {
-                panning = true;
-                panStart = e.Location;
-            }
-        }
+        private void Canvas_MouseDown(object sender, MouseEventArgs e) { if (isHighResRendering) return; if (e.Button == MouseButtons.Left) { panning = true; panStart = e.Location; } }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (isHighResRendering || !panning) return;
 
-            double scaleX = BASE_SCALE / zoom / width;
-            double scaleY = BASE_SCALE / zoom / height;
+            // ИЗМЕНЕНИЕ: Используем decimal для всех вычислений
+            decimal scaleX = (BASE_SCALE / zoom) / width;
+            decimal scaleY = (BASE_SCALE / zoom) / height;
 
-            centerX -= (e.X - panStart.X) * scaleX;
-            centerY -= (e.Y - panStart.Y) * scaleY;
+            centerX -= (decimal)(e.X - panStart.X) * scaleX;
+            centerY -= (decimal)(e.Y - panStart.Y) * scaleY;
             panStart = e.Location;
 
             canvas2.Invalidate();
             ScheduleRender();
         }
 
-        private void Canvas_MouseUp(object sender, MouseEventArgs e)
-        {
-            if (isHighResRendering) return;
-            if (e.Button == MouseButtons.Left)
-            {
-                panning = false;
-            }
-        }
-
-        private void BtnSave_Click(object sender, EventArgs e)
-        {
-            if (isHighResRendering)
-            {
-                MessageBox.Show("Идет сохранение в высоком разрешении. Пожалуйста, подождите.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            using (var dlg = new SaveFileDialog { Filter = "PNG Image|*.png" })
-            {
-                if (dlg.ShowDialog() == DialogResult.OK)
-                {
-                    if (canvas2.Image != null)
-                    {
-                        canvas2.Image.Save(dlg.FileName, ImageFormat.Png);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Нет изображения для сохранения!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-
-        private void btnRender_Click(object sender, EventArgs e)
-        {
-            if (isHighResRendering) return;
-            ScheduleRender();
-        }
+        private void Canvas_MouseUp(object sender, MouseEventArgs e) { if (isHighResRendering) return; if (e.Button == MouseButtons.Left) panning = false; }
+        private void BtnSave_Click(object sender, EventArgs e) { if (isHighResRendering) { MessageBox.Show("Идет сохранение в высоком разрешении. Пожалуйста, подождите.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information); return; } using (var dlg = new SaveFileDialog { Filter = "PNG Image|*.png" }) { if (dlg.ShowDialog() == DialogResult.OK) { if (canvas2.Image != null) { canvas2.Image.Save(dlg.FileName, ImageFormat.Png); } else { MessageBox.Show("Нет изображения для сохранения!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); } } } }
+        private void btnRender_Click(object sender, EventArgs e) { if (isHighResRendering) return; ScheduleRender(); }
 
         private void SetMainControlsEnabled(bool enabled)
         {
             Action action = () =>
             {
                 if (btnRender != null) btnRender.Enabled = enabled;
-                // REMOVED: Управление Enabled для nudRe, nudIm, nudBaseScale
-                // if (nudRe != null) nudRe.Enabled = enabled; // Если контрол еще существует в дизайнере, можно оставить с проверкой if (nudRe != null)
-                // if (nudIm != null) nudIm.Enabled = enabled;
-                // if (nudBaseScale != null) nudBaseScale.Enabled = enabled;
-
                 nudIterations.Enabled = enabled;
                 nudThreshold.Enabled = enabled;
                 cbThreads.Enabled = enabled;
                 nudZoom.Enabled = enabled;
-
                 if (nudW != null) nudW.Enabled = enabled;
                 if (nudH != null) nudH.Enabled = enabled;
-
-                foreach (var cb in paletteCheckBoxes.Where(cb => cb != null))
-                {
-                    cb.Enabled = enabled;
-                }
-                if (enabled)
-                {
-                    HandleColorBoxEnableState();
-                }
-                else if (colorBox != null)
-                {
-                    colorBox.Enabled = false;
-                }
+                foreach (var cb in paletteCheckBoxes.Where(cb => cb != null)) cb.Enabled = enabled;
+                if (enabled) HandleColorBoxEnableState(); else if (colorBox != null) colorBox.Enabled = false;
             };
-
-            if (this.InvokeRequired)
-            {
-                this.Invoke(action);
-            }
-            else
-            {
-                action();
-            }
+            if (this.InvokeRequired) this.Invoke(action); else action();
         }
 
         private async void btnSave_Click_1(object sender, EventArgs e)
         {
-            if (isHighResRendering)
-            {
-                MessageBox.Show("Процесс сохранения в высоком разрешении уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            if (isHighResRendering) { MessageBox.Show("Процесс сохранения в высоком разрешении уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            int saveWidth = (int)nudW.Value; int saveHeight = (int)nudH.Value;
+            if (saveWidth <= 0 || saveHeight <= 0) { MessageBox.Show("Ширина и высота изображения для сохранения должны быть больше 0.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
 
-            int saveWidth = (int)nudW.Value; // Используем nudW2 для Мандельброта
-            int saveHeight = (int)nudH.Value; // Используем nudH2 для Мандельброта
-
-            if (saveWidth <= 0 || saveHeight <= 0)
-            {
-                MessageBox.Show("Ширина и высота изображения для сохранения должны быть больше 0.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // Формируем имя файла с датой и временем
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string suggestedFileName = $"fractal_mandelbrot_{timestamp}.png";
 
-            using (SaveFileDialog saveDialog = new SaveFileDialog
-            {
-                Filter = "PNG Image|*.png",
-                Title = "Сохранить фрактал Мандельброта (Высокое разрешение)",
-                FileName = suggestedFileName // Устанавливаем новое имя файла по умолчанию
-            })
+            using (SaveFileDialog saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить фрактал Мандельброта (Высокое разрешение)", FileName = suggestedFileName })
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
-                    Button currentActionSaveButton = sender as Button;
-                    isHighResRendering = true;
-                    if (currentActionSaveButton != null) currentActionSaveButton.Enabled = false;
-                    SetMainControlsEnabled(false);
-
-                    if (progressPNG != null) // Используем progressPNG2 для Мандельброта
-                    {
-                        progressPNG.Value = 0;
-                        progressPNG.Visible = true;
-                    }
-
+                    Button currentActionSaveButton = sender as Button; isHighResRendering = true; if (currentActionSaveButton != null) currentActionSaveButton.Enabled = false; SetMainControlsEnabled(false);
+                    if (progressPNG != null) { progressPNG.Value = 0; progressPNG.Visible = true; }
                     try
                     {
                         UpdateParameters();
+                        // ИЗМЕНЕНИЕ: Захватываем переменные типа decimal
                         int currentMaxIterations_Capture = this.maxIterations;
                         double currentThreshold_Capture = this.threshold;
-                        double currentZoom_Capture = this.zoom;
-                        double currentCenterX_Capture = this.centerX;
-                        double currentCenterY_Capture = this.centerY;
+                        decimal currentZoom_Capture = this.zoom;
+                        decimal currentCenterX_Capture = this.centerX;
+                        decimal currentCenterY_Capture = this.centerY;
                         int currentThreadCount_Capture = this.threadCount;
 
                         Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(
                             saveWidth, saveHeight,
                             currentCenterX_Capture, currentCenterY_Capture, currentZoom_Capture,
-                            BASE_SCALE, // BASE_SCALE для Мандельброта
-                            currentMaxIterations_Capture, currentThreshold_Capture,
-                            currentThreadCount_Capture,
+                            BASE_SCALE, currentMaxIterations_Capture,
+                            currentThreshold_Capture, currentThreadCount_Capture,
                             progressPercentage =>
                             {
-                                if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) // Используем progressPNG2
+                                if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
                                 {
-                                    try
-                                    {
-                                        progressPNG.Invoke((Action)(() =>
-                                        {
-                                            if (progressPNG.Maximum > 0 && progressPNG.Value <= progressPNG.Maximum)
-                                            {
-                                                progressPNG.Value = Math.Min(progressPNG.Maximum, progressPercentage);
-                                            }
-                                        }));
-                                    }
-                                    catch (ObjectDisposedException) { }
-                                    catch (InvalidOperationException) { }
+                                    try { progressPNG.Invoke((Action)(() => { if (progressPNG.Maximum > 0 && progressPNG.Value <= progressPNG.Maximum) progressPNG.Value = Math.Min(progressPNG.Maximum, progressPercentage); })); } catch (ObjectDisposedException) { } catch (InvalidOperationException) { }
                                 }
-                            }
-                        ));
-                        highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                        highResBitmap.Dispose();
+                            }));
+
+                        highResBitmap.Save(saveDialog.FileName, ImageFormat.Png); highResBitmap.Dispose();
                         MessageBox.Show("Изображение успешно сохранено в высоком разрешении!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка при сохранении изображения: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    catch (Exception ex) { MessageBox.Show($"Ошибка при сохранении изображения: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                     finally
                     {
-                        isHighResRendering = false;
-                        if (currentActionSaveButton != null) currentActionSaveButton.Enabled = true;
-                        SetMainControlsEnabled(true);
-
-                        if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) // Используем progressPNG2
-                        {
-                            try
-                            {
-                                progressPNG.Invoke((Action)(() =>
-                                {
-                                    progressPNG.Visible = false;
-                                    progressPNG.Value = 0;
-                                }));
-                            }
-                            catch (ObjectDisposedException) { }
-                            catch (InvalidOperationException) { }
-                        }
+                        isHighResRendering = false; if (currentActionSaveButton != null) currentActionSaveButton.Enabled = true; SetMainControlsEnabled(true);
+                        if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) { try { progressPNG.Invoke((Action)(() => { progressPNG.Visible = false; progressPNG.Value = 0; })); } catch (ObjectDisposedException) { } catch (InvalidOperationException) { } }
                     }
                 }
             }
@@ -924,7 +607,6 @@ namespace FractalDraving
             previewRenderCts?.Cancel();
             previewRenderCts?.Dispose();
             renderTimer?.Dispose();
-
             base.OnFormClosed(e);
         }
     }

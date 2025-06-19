@@ -140,7 +140,7 @@ namespace FractalDraving
             nudZoom.DecimalPlaces = 3;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.001m;
-            nudZoom.Maximum = 1000000000000m;
+            //nudZoom.Maximum = 1000000000000m;
 
             nudZoom.Value = this.zoom;
 
