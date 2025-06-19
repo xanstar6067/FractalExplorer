@@ -377,7 +377,7 @@ namespace FractalDraving
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
-            if (_previewBitmap == null) return;
+            if (_previewBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return; // Добавил проверку canvas.Width/Height
 
             if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
             {
@@ -385,56 +385,87 @@ namespace FractalDraving
                 return;
             }
 
-            decimal scaleRendered = BaseScale / _renderedZoom;
-            decimal scaleCurrent = BaseScale / _zoom;
+            // _renderedZoom - зум, для которого _previewBitmap был отрендерен
+            // _zoom - текущий целевой зум
+            // BaseScale - базовая комплексная ширина/высота при зуме 1.0
 
-            if (_renderedZoom <= 0 || _zoom <= 0 || scaleRendered <= 0 || scaleCurrent <= 0)
+            // Комплексная ширина видимой области для отрендеренного изображения
+            decimal renderedComplexWidth = BaseScale / _renderedZoom;
+            // Комплексная ширина текущей видимой области
+            decimal currentComplexWidth = BaseScale / _zoom;
+
+            if (_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0)
             {
                 e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
                 return;
             }
 
-            decimal renderedImage_re_min = _renderedCenterX - scaleRendered / 2.0m;
-            decimal renderedImage_im_max = _renderedCenterY + scaleRendered / 2.0m * canvas.Height / canvas.Width;
+            // Единицы комплексной плоскости на пиксель для отрендеренного и текущего вида
+            decimal units_per_pixel_rendered = renderedComplexWidth / _previewBitmap.Width; // Используем _previewBitmap.Width
+            decimal units_per_pixel_current = currentComplexWidth / canvas.Width;
 
-            decimal currentView_re_min = _centerX - scaleCurrent / 2.0m;
-            decimal currentView_im_max = _centerY + scaleCurrent / 2.0m * canvas.Height / canvas.Width;
+            // Координаты углов отрендерованного изображения в комплексной плоскости
+            decimal rendered_re_min = _renderedCenterX - (renderedComplexWidth / 2.0m);
+            decimal rendered_im_max = _renderedCenterY + (_previewBitmap.Height * units_per_pixel_rendered / 2.0m); // Высота в компл. коорд.
 
-            decimal offsetX = (renderedImage_re_min - currentView_re_min) / scaleCurrent * canvas.Width;
-            decimal offsetY = (currentView_im_max - renderedImage_im_max) / scaleCurrent * canvas.Width;
+            // Координаты углов текущего вида в комплексной плоскости
+            decimal current_re_min = _centerX - (currentComplexWidth / 2.0m);
+            decimal current_im_max = _centerY + (canvas.Height * units_per_pixel_current / 2.0m); // Высота в компл. коорд.
 
-            decimal newWidth = canvas.Width * (scaleRendered / scaleCurrent);
-            decimal newHeight = canvas.Height * (scaleRendered / scaleCurrent);
+            // Смещение отрендеренного изображения в пикселях текущего вида
+            decimal offsetX_pixels = (rendered_re_min - current_re_min) / units_per_pixel_current;
+            decimal offsetY_pixels = (current_im_max - rendered_im_max) / units_per_pixel_current; // Y инвертирован
 
-            const decimal reasonableLimit = 7.9E+28M;
-            if (Math.Abs(offsetX) >= reasonableLimit || Math.Abs(offsetY) >= reasonableLimit ||
-                Math.Abs(newWidth) >= reasonableLimit || Math.Abs(newHeight) >= reasonableLimit)
+            // Новый размер отрендеренного изображения в пикселях текущего вида
+            decimal newWidth_pixels = _previewBitmap.Width * (units_per_pixel_rendered / units_per_pixel_current);
+            decimal newHeight_pixels = _previewBitmap.Height * (units_per_pixel_rendered / units_per_pixel_current);
+
+
+            const decimal reasonableLimit = 7.9E+28M; // decimal.MaxValue очень большое, возьмем что-то более приземленное для float
+            const float floatReasonableLimit = 1E+18f; // Ограничение для float
+
+            if (Math.Abs(offsetX_pixels) >= reasonableLimit || Math.Abs(offsetY_pixels) >= reasonableLimit ||
+                Math.Abs(newWidth_pixels) >= reasonableLimit || Math.Abs(newHeight_pixels) >= reasonableLimit)
             {
+                // Слишком большие значения, не пытаемся рисовать
                 return;
             }
 
             try
             {
-                float p1_X = (float)offsetX;
-                float p1_Y = (float)offsetY;
-                float w_prime = (float)newWidth;
-                float h_prime = (float)newHeight;
+                float p1_X = (float)offsetX_pixels;
+                float p1_Y = (float)offsetY_pixels;
+                float w_prime = (float)newWidth_pixels;
+                float h_prime = (float)newHeight_pixels;
 
-                if (!float.IsFinite(p1_X) || !float.IsFinite(p1_Y) || !float.IsFinite(w_prime) || !float.IsFinite(h_prime))
+                if (!float.IsFinite(p1_X) || !float.IsFinite(p1_Y) || !float.IsFinite(w_prime) || !float.IsFinite(h_prime) ||
+                    Math.Abs(p1_X) > floatReasonableLimit || Math.Abs(p1_Y) > floatReasonableLimit || // Доп. проверка для float
+                    Math.Abs(w_prime) > floatReasonableLimit || Math.Abs(h_prime) > floatReasonableLimit)
                 {
-                    return;
+                    return; // Некорректные значения для float
                 }
+
 
                 PointF destPoint1 = new PointF(p1_X, p1_Y);
                 PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
                 PointF destPoint3 = new PointF(p1_X, p1_Y + h_prime);
 
-                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+                // Сохраняем текущее состояние графики, если планируем менять много параметров
+                // var originalState = e.Graphics.Save();
+
+                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear; // Или NearestNeighbor для скорости при панорамировании
                 e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
 
                 e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
+
+                // e.Graphics.Restore(originalState); // Восстанавливаем состояние
             }
             catch (OverflowException)
+            {
+                // Ошибка приведения decimal к float, если значения слишком большие
+                return;
+            }
+            catch (ArgumentException) // Может возникнуть в DrawImage, если прямоугольник некорректен
             {
                 return;
             }
