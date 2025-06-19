@@ -31,7 +31,7 @@ namespace FractalExplorer
         private ExpressionNode f_deriv_ast = null; // AST для f'(z)
 
         // --- Новые поля для кастомных цветов ---
-        private color_setting_NewtonPools colorSettingsForm;
+        private color_setting_NewtonPoolsForm colorSettingsForm;
         private List<Color> userDefinedRootColors = new List<Color>();
         private Color userDefinedBackgroundColor = Color.Black;
         private bool useCustomPalette = false;
@@ -737,7 +737,7 @@ namespace FractalExplorer
             // Создаем форму, если ее еще нет, или она была закрыта
             if (colorSettingsForm == null || colorSettingsForm.IsDisposed)
             {
-                colorSettingsForm = new color_setting_NewtonPools();
+                colorSettingsForm = new color_setting_NewtonPoolsForm();
                 // Подписываемся на событие изменения цветов
                 colorSettingsForm.ColorsChanged += ColorSettingsForm_ColorsChanged;
             }

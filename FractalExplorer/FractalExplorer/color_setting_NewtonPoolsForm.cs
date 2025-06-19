@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace FractalExplorer
 {
-    public partial class color_setting_NewtonPools : Form
+    public partial class color_setting_NewtonPoolsForm : Form
     {
         // Делегат и событие для уведомления главной формы об изменениях
         public delegate void ColorsChangedEventHandler(object sender, CustomPalette newPalette);
@@ -15,7 +15,7 @@ namespace FractalExplorer
         private List<Color> _currentRootColors = new List<Color>();
         private Color _currentBackgroundColor = Color.Black;
 
-        public color_setting_NewtonPools()
+        public color_setting_NewtonPoolsForm()
         {
             InitializeComponent();
             // Перехватываем событие закрытия формы, чтобы скрыть ее, а не уничтожить

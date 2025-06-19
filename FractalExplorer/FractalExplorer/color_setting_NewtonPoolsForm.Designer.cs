@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer
 {
-    partial class color_setting_NewtonPools
+    partial class color_setting_NewtonPoolsForm
     {
         /// <summary>
         /// Required designer variable.
