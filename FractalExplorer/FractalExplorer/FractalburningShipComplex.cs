@@ -9,7 +9,7 @@ namespace FractalDraving
     /// <summary>
     /// Главная форма приложения для отображения и взаимодействия с фракталом "Горящий Корабль" (версия Жюлиа).
     /// </summary>
-    public partial class burningShipComplex : Form, IFractalForm
+    public partial class FractalburningShipComplex : Form, IFractalForm
     {
         // Таймер для отложенного рендеринга предварительного просмотра фрактала
         private System.Windows.Forms.Timer renderTimer;
@@ -82,7 +82,7 @@ namespace FractalDraving
         /// <summary>
         /// Конструктор формы фрактала "Горящий Корабль" (Жюлиа).
         /// </summary>
-        public burningShipComplex()
+        public FractalburningShipComplex()
         {
             InitializeComponent(); // Инициализация компонентов формы, созданных дизайнером
             this.Text = "Фрактал Горящий Корабль (Жюлиа)"; // Изменяем заголовок окна
