@@ -2,7 +2,7 @@
 
 namespace FractalDraving
 {
-    partial class FractalburningShipJulia
+    partial class FractalJuliaBurningShip
     {
         /// <summary>
         ///  Required designer variable.

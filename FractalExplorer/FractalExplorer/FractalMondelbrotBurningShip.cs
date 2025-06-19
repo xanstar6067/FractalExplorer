@@ -14,7 +14,7 @@ namespace FractalDraving
     /// <summary>
     /// Главная форма приложения для отображения и взаимодействия с фракталом "Горящий Корабль" (Мандельброт-версия).
     /// </summary>
-    public partial class FractalMondelbrotShip : Form
+    public partial class FractalMondelbrotBurningShip : Form
     {
         // Таймер для отложенного рендеринга предварительного просмотра фрактала
         private System.Windows.Forms.Timer renderTimer;
@@ -68,7 +68,7 @@ namespace FractalDraving
         private const decimal INITIAL_MAX_IM_BS = 1.0m;
 
 
-        public FractalMondelbrotShip()
+        public FractalMondelbrotBurningShip()
         {
             InitializeComponent();
             // ИЗМЕНЕНИЕ: Используем decimal для вычислений

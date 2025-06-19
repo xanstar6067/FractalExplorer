@@ -1,6 +1,6 @@
 ﻿namespace FractalDraving // Изменено с FractalExplorer на FractalDraving
 {
-    partial class FractalMondelbrotShip
+    partial class FractalMondelbrotBurningShip
     {
         /// <summary>
         /// Required designer variable.

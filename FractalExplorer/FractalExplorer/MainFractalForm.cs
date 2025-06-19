@@ -45,13 +45,13 @@ namespace FractalExplorer
 
         private void btnLaunchBurningShipJulia_Click(object sender, EventArgs e)
         {
-            var form = new FractalburningShipJulia();
+            var form = new FractalJuliaBurningShip();
             form.Show();
         }
 
         private void btnLaunchBurningShipMandelbrot_Click(object sender, EventArgs e)
         {
-            var form = new FractalMondelbrotShip();
+            var form = new FractalMondelbrotBurningShip();
             form.Show();
         }
     }
