@@ -185,7 +185,17 @@ namespace FractalDraving
 
         private void ScheduleRender()
         {
+            // Если идет сохранение в высоком разрешении или окно свернуто, ничего не делаем
             if (_isHighResRendering || this.WindowState == FormWindowState.Minimized) return;
+
+            // Если рендер превью уже идет, запросим его отмену
+            if (_isRenderingPreview)
+            {
+                _previewRenderCts?.Cancel();
+                // Флаг _isRenderingPreview будет сброшен в finally блока StartPreviewRender
+            }
+
+            // Перезапускаем таймер дебаунсинга
             _renderDebounceTimer.Stop();
             _renderDebounceTimer.Start();
         }
@@ -193,12 +203,24 @@ namespace FractalDraving
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
-            if (_isHighResRendering || _isRenderingPreview)
+
+            // Если идет сохранение в высоком разрешении, откладываем рендер превью
+            if (_isHighResRendering)
             {
-                ScheduleRender();
+                ScheduleRender(); // Повторно запланировать
                 return;
             }
 
+            // Если предыдущий рендер превью (возможно, отмененный) еще не полностью завершился
+            // (т.е. его блок finally еще не выполнился и _isRenderingPreview все еще true),
+            // то дадим ему еще немного времени и повторно запланируем.
+            if (_isRenderingPreview)
+            {
+                ScheduleRender(); // Повторно запланировать
+                return;
+            }
+
+            // Теперь _isRenderingPreview должен быть false, можно начинать новый рендер
             await StartPreviewRender();
         }
 
@@ -509,6 +531,17 @@ namespace FractalDraving
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
+                    // Если идет рендер превью, отменяем его перед началом сохранения
+                    if (_isRenderingPreview)
+                    {
+                        _previewRenderCts?.Cancel();
+                        // Дадим шанс рендеру превью обработать отмену.
+                        // Небольшая задержка или ожидание завершения может быть полезна,
+                        // но для простоты положимся на то, что RenderDebounceTimer_Tick
+                        // не запустит новый StartPreviewRender, пока _isHighResRendering true.
+                        // И сам StartPreviewRender должен быстро завершиться при отмене.
+                    }
+
                     _isHighResRendering = true;
                     pnlControls.Enabled = false;
                     pbHighResProgress.Value = 0;
@@ -517,18 +550,27 @@ namespace FractalDraving
                     try
                     {
                         FractalEngineBase renderEngine = CreateEngine();
-                        renderEngine.MaxIterations = (int)nudIterations.Value;
-                        renderEngine.ThresholdSquared = nudThreshold.Value * nudThreshold.Value;
-                        renderEngine.Scale = BaseScale / _zoom;
-                        renderEngine.CenterX = _centerX;
-                        renderEngine.CenterY = _centerY;
-                        if (nudRe != null && nudIm != null)
+                        // ... (настройка renderEngine) ...
+                        UpdateEngineParameters(); // Убедимся, что параметры движка взяты из UI
+                        renderEngine.MaxIterations = _fractalEngine.MaxIterations;
+                        renderEngine.ThresholdSquared = _fractalEngine.ThresholdSquared;
+                        renderEngine.CenterX = _fractalEngine.CenterX;
+                        renderEngine.CenterY = _fractalEngine.CenterY;
+                        renderEngine.Scale = _fractalEngine.Scale;
+                        if (this is FractalJulia || this is FractalJuliaBurningShip) // Для типов Жюлиа
                         {
                             renderEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value);
                         }
+                        else
+                        {
+                            renderEngine.C = _fractalEngine.C; // Для других типов, если C используется (хотя обычно нет для Мандельброта)
+                        }
 
-                        HandlePaletteSelectionLogic();
+
+                        HandlePaletteSelectionLogic(); // Установить текущую палитру
                         renderEngine.Palette = _fractalEngine.Palette;
+                        renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
+
 
                         int threadCount = GetThreadCount();
 
@@ -563,6 +605,9 @@ namespace FractalDraving
                                 pbHighResProgress.Value = 0;
                             }));
                         }
+                        // После завершения сохранения, запланировать обновление превью,
+                        // так как его параметры могли измениться или оно было отменено.
+                        ScheduleRender();
                     }
                 }
             }
