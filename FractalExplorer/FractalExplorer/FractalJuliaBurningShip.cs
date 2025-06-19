@@ -39,6 +39,9 @@ namespace FractalDraving
             lblIm.Visible = true;
             nudIm.Visible = true;
 
+            nudRe.Value = -1.7551867961883m;
+            nudIm.Value = 0.01068m;
+
             mandelbrotPreviewCanvas.Click += mandelbrotCanvas_Click;
             mandelbrotPreviewCanvas.Paint += mandelbrotCanvas_Paint;
 

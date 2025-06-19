@@ -263,7 +263,7 @@ namespace FractalDraving
                     // Формула Горящего Корабля (Мандельброт-версия)
                     while (iter < maxIter && z.Magnitude < 2.0) // Порог 2.0 для Мандельброт-подобных
                     {
-                        z = new Complex(Math.Abs(z.Real), Math.Abs(z.Imaginary)); // Взять абсолютные значения
+                        z = new Complex(Math.Abs(z.Real), -Math.Abs(z.Imaginary)); // Взять абсолютные значения
                         z = z * z + c0;                                          // Стандартная итерация
                         iter++;
                     }
