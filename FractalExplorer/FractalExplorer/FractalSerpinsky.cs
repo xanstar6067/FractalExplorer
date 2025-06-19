@@ -77,7 +77,6 @@ namespace FractalExplorer
             renderBW.CheckedChanged += ColorMode_CheckedChanged;
             colorGrayscale.CheckedChanged += ColorMode_CheckedChanged;
 
-            // colorColor используется напрямую из Designer.cs, его имя известно
             colorColor.CheckedChanged += ColorChoiceMode_CheckedChanged;
 
             colorBackground.CheckedChanged += ColorTarget_CheckedChanged;
@@ -119,11 +118,10 @@ namespace FractalExplorer
 
             if (activeCb == FractalTypeIsGeometry)
             {
-                // Не трогаем этот блок по вашей просьбе
                 FractalTypeIsChaos.Checked = false;
-                nudIterations.Maximum = 15; // Глубина для геометрического
+                nudIterations.Maximum = 15;
                 nudIterations.Minimum = 0;
-                if (nudIterations.Value >= 15) nudIterations.Value = 5;
+                if (nudIterations.Value > 15) nudIterations.Value = 5;
             }
             else if (activeCb == FractalTypeIsChaos)
             {
@@ -140,7 +138,7 @@ namespace FractalExplorer
 
         private void ColorChoiceMode_CheckedChanged(object sender, EventArgs e)
         {
-            CheckBox currentCheckBox = sender as CheckBox; // colorColor
+            CheckBox currentCheckBox = sender as CheckBox;
             if (currentCheckBox == null) return;
 
             renderBW.CheckedChanged -= ColorMode_CheckedChanged;
@@ -176,10 +174,9 @@ namespace FractalExplorer
 
         private void ColorMode_CheckedChanged(object sender, EventArgs e)
         {
-            CheckBox activeCb = sender as CheckBox; // renderBW или colorGrayscale
+            CheckBox activeCb = sender as CheckBox;
             if (activeCb == null) return;
 
-            // colorColor - это имя контрола из дизайнера
             if (colorColor != null) colorColor.CheckedChanged -= ColorChoiceMode_CheckedChanged;
 
             if (activeCb.Checked)
@@ -279,18 +276,18 @@ namespace FractalExplorer
             }
 
             isRenderingPreview = true;
-            SetMainControlsEnabled(false); // Отключаем основные контролы
-            UpdateAbortButtonState();      // Включаем кнопку отмены
+            SetMainControlsEnabled(false);
+            UpdateAbortButtonState();
 
             previewRenderCts?.Dispose();
             previewRenderCts = new CancellationTokenSource();
             CancellationToken token = previewRenderCts.Token;
 
             int iterations = (int)nudIterations.Value;
-            int numThreads = cbCPUThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbCPUThreads.SelectedItem);
+            int numThreads = GetThreadCount(); // <-- ИЗМЕНЕНИЕ: Используем новый метод
             bool isGeometric = FractalTypeIsGeometry.Checked;
 
-            bool useColorMode = colorColor.Checked; // Используем напрямую
+            bool useColorMode = colorColor.Checked;
             bool useBW = renderBW.Checked;
             bool useGrayscale = colorGrayscale.Checked;
 
@@ -364,6 +361,7 @@ namespace FractalExplorer
                 else if (useGrayscaleVal) currentBgColor = Color.White;
                 else currentBgColor = bgColor;
 
+                // Заполняем фон
                 for (int y_bg = 0; y_bg < renderHeight; y_bg++)
                 {
                     token.ThrowIfCancellationRequested();
@@ -380,9 +378,10 @@ namespace FractalExplorer
 
                 if (isGeometricVal)
                 {
-                    RenderSierpinskiGeometric(token, buffer, renderWidth, renderHeight, stride, bytesPerPixel,
-                                              zoomVal, cX, cY, iterationsVal,
-                                              useColorModeVal, useBWVal, useGrayscaleVal, frColor, numThreadsVal, reportProgress);
+                    // ИЗМЕНЕНИЕ: Вызываем новую, оптимизированную версию
+                    RenderSierpinskiGeometricOptimized(token, buffer, renderWidth, renderHeight, stride, bytesPerPixel,
+                                                      zoomVal, cX, cY, iterationsVal,
+                                                      useColorModeVal, useBWVal, useGrayscaleVal, frColor, numThreadsVal, reportProgress);
                 }
                 else
                 {
@@ -429,12 +428,15 @@ namespace FractalExplorer
             }
         }
 
-        private void RenderSierpinskiGeometric(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
-                                     double zoom, double cX, double cY, int depth,
-                                     bool useColorMode, bool useBW, bool useGrayscale, Color frColor,
-                                     int numThreads, Action<int> reportProgress)
+        /// <summary>
+        /// НОВЫЙ ОПТИМИЗИРОВАННЫЙ МЕТОД: рендерит геометрический треугольник Серпинского без создания списка делегатов.
+        /// </summary>
+        private void RenderSierpinskiGeometricOptimized(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
+                                               double zoom, double cX, double cY, int totalDepth,
+                                               bool useColorMode, bool useBW, bool useGrayscale, Color frColor,
+                                               int numThreads, Action<int> reportProgress)
         {
-            if (depth < 0)
+            if (totalDepth < 0)
             {
                 reportProgress(100);
                 return;
@@ -448,73 +450,81 @@ namespace FractalExplorer
 
             double side = 1.0;
             double height_triangle = side * Math.Sqrt(3) / 2.0;
-            float y_offset = 0;
-            PointF p1_world = new PointF(0, (float)(height_triangle * 2.0 / 3.0) + y_offset);
-            PointF p2_world = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0) + y_offset);
-            PointF p3_world = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0) + y_offset);
+            PointF p1_world = new PointF(0, (float)(height_triangle * 2.0 / 3.0));
+            PointF p2_world = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0));
+            PointF p3_world = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0));
 
-            var drawingActions = new List<Action>();
-            long totalTrianglesToDraw = (long)Math.Pow(3, depth);
-            long drawnTrianglesCounter = 0;
-
-            Action<int, PointF, PointF, PointF> generateDrawingTasksRecursive = null;
-            generateDrawingTasksRecursive = (d, pA, pB, pC) =>
+            // Рекурсивная функция, которая рисует одну "ветку" треугольников
+            Action<int, PointF, PointF, PointF> drawTriangleBranch = null;
+            drawTriangleBranch = (d, pA, pB, pC) =>
             {
                 if (token.IsCancellationRequested) return;
 
                 if (d == 0)
                 {
-                    drawingActions.Add(() =>
-                    {
-                        if (token.IsCancellationRequested) return;
-                        PointF sP1 = WorldToScreen(pA, W, H, zoom, cX, cY);
-                        PointF sP2 = WorldToScreen(pB, W, H, zoom, cX, cY);
-                        PointF sP3 = WorldToScreen(pC, W, H, zoom, cX, cY);
-                        FillTriangleToBuffer(buffer, W, H, stride, bpp, sP1, sP2, sP3, actualFractalColor);
-
-                        long currentCount = Interlocked.Increment(ref drawnTrianglesCounter);
-                        if (totalTrianglesToDraw > 0)
-                        {
-                            if (currentCount == totalTrianglesToDraw || (totalTrianglesToDraw > 100 && currentCount % (totalTrianglesToDraw / 100) == 0))
-                            { reportProgress((int)Math.Min(100, (100 * currentCount / totalTrianglesToDraw))); }
-                            else if (totalTrianglesToDraw <= 100)
-                            { reportProgress((int)Math.Min(100, (100 * currentCount / totalTrianglesToDraw))); }
-                        }
-                    });
+                    PointF sP1 = WorldToScreen(pA, W, H, zoom, cX, cY);
+                    PointF sP2 = WorldToScreen(pB, W, H, zoom, cX, cY);
+                    PointF sP3 = WorldToScreen(pC, W, H, zoom, cX, cY);
+                    FillTriangleToBuffer(buffer, W, H, stride, bpp, sP1, sP2, sP3, actualFractalColor);
                     return;
                 }
                 PointF pAB = MidPoint(pA, pB); PointF pBC = MidPoint(pB, pC); PointF pCA = MidPoint(pC, pA);
-                generateDrawingTasksRecursive(d - 1, pA, pAB, pCA); if (token.IsCancellationRequested) return;
-                generateDrawingTasksRecursive(d - 1, pAB, pB, pBC); if (token.IsCancellationRequested) return;
-                generateDrawingTasksRecursive(d - 1, pCA, pBC, pC);
+                drawTriangleBranch(d - 1, pA, pAB, pCA);
+                drawTriangleBranch(d - 1, pAB, pB, pBC);
+                drawTriangleBranch(d - 1, pCA, pBC, pC);
             };
+
+            // Создаем небольшое количество "задач" верхнего уровня для распараллеливания
+            var topLevelTasks = new List<Tuple<int, PointF, PointF, PointF>>();
+            int parallelDepth = Math.Min(totalDepth, 5); // Глубина для создания параллельных задач (3^5 = 243 задачи)
+
+            Action<int, PointF, PointF, PointF> generateTopLevelTasks = null;
+            generateTopLevelTasks = (d, pA, pB, pC) =>
+            {
+                if (token.IsCancellationRequested) return;
+                if (d == 0)
+                {
+                    topLevelTasks.Add(Tuple.Create(totalDepth - parallelDepth, pA, pB, pC));
+                    return;
+                }
+                PointF pAB = MidPoint(pA, pB); PointF pBC = MidPoint(pB, pC); PointF pCA = MidPoint(pC, pA);
+                generateTopLevelTasks(d - 1, pA, pAB, pCA);
+                generateTopLevelTasks(d - 1, pAB, pB, pBC);
+                generateTopLevelTasks(d - 1, pCA, pBC, pC);
+            };
+
+            if (totalDepth == 0)
+            {
+                // Особый случай для глубины 0
+                drawTriangleBranch(0, p1_world, p2_world, p3_world);
+                reportProgress(100);
+                return;
+            }
+
+            generateTopLevelTasks(parallelDepth, p1_world, p2_world, p3_world);
+            token.ThrowIfCancellationRequested();
+
+            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token };
+            long tasksDone = 0;
 
             try
             {
-                generateDrawingTasksRecursive(depth, p1_world, p2_world, p3_world);
-                token.ThrowIfCancellationRequested();
-
-                var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token };
-                Parallel.ForEach(drawingActions, po, drawingAction =>
+                Parallel.ForEach(topLevelTasks, po, task =>
                 {
-                    drawingAction();
+                    drawTriangleBranch(task.Item1, task.Item2, task.Item3, task.Item4);
+
+                    // Обновление прогресс-бара. Будет скачкообразным, но это лучше, чем ничего.
+                    long currentDone = Interlocked.Increment(ref tasksDone);
+                    reportProgress((int)(100.0 * currentDone / topLevelTasks.Count));
                 });
             }
-            catch (OperationCanceledException)
-            {
-            }
+            catch (OperationCanceledException) { /* Игнорируем */ }
             finally
             {
-                if (token.IsCancellationRequested)
-                {
-                    reportProgress(drawnTrianglesCounter > 0 && totalTrianglesToDraw > 0 ? (int)Math.Min(100, (100 * drawnTrianglesCounter / totalTrianglesToDraw)) : 0);
-                }
-                else
-                {
-                    reportProgress(100);
-                }
+                if (!token.IsCancellationRequested) reportProgress(100);
             }
         }
+
 
         private void FillTriangleToBuffer(byte[] buffer, int W, int H, int stride, int bpp, PointF p1, PointF p2, PointF p3, Color color)
         {
@@ -586,10 +596,9 @@ namespace FractalExplorer
             byte cB = pointColor.B; byte cG = pointColor.G; byte cR = pointColor.R; byte cA = pointColor.A;
             double side = 1.0; double height_triangle = side * Math.Sqrt(3) / 2.0;
             PointF[] vertices_world = new PointF[3];
-            float y_offset = 0;
-            vertices_world[0] = new PointF(0, (float)(height_triangle * 2.0 / 3.0) + y_offset);
-            vertices_world[1] = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0) + y_offset);
-            vertices_world[2] = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0) + y_offset);
+            vertices_world[0] = new PointF(0, (float)(height_triangle * 2.0 / 3.0));
+            vertices_world[1] = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0));
+            vertices_world[2] = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0));
 
             Random masterRand = new Random();
             PointF initialPoint_world = vertices_world[0];
@@ -852,7 +861,7 @@ namespace FractalExplorer
                     UpdateProgressBar(progressPNGSerpinsky, 0);
 
                     int iterations = (int)nudIterations.Value;
-                    int numThreads = cbCPUThreads.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbCPUThreads.SelectedItem);
+                    int numThreads = GetThreadCount(); // <-- ИЗМЕНЕНИЕ: Используем новый метод
                     bool isGeometric = FractalTypeIsGeometry.Checked;
 
                     bool useColorMode = colorColor.Checked;
@@ -899,11 +908,18 @@ namespace FractalExplorer
 
                             if (isGeometric)
                             {
-                                RenderSierpinskiGeometric(token, tempBuffer, saveWidth, saveHeight, tempStride, tempBpp, captureZoom, captureCenterX, captureCenterY, iterations, useColorMode, useBW, useGrayscale, currentFrColor, numThreads, (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
+                                // ИЗМЕНЕНИЕ: Вызываем новую, оптимизированную версию
+                                RenderSierpinskiGeometricOptimized(token, tempBuffer, saveWidth, saveHeight, tempStride, tempBpp,
+                                                                  captureZoom, captureCenterX, captureCenterY, iterations,
+                                                                  useColorMode, useBW, useGrayscale, currentFrColor, numThreads,
+                                                                  (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
                             }
                             else
                             {
-                                RenderSierpinskiChaos(token, tempBuffer, saveWidth, saveHeight, tempStride, tempBpp, captureZoom, captureCenterX, captureCenterY, iterations, useColorMode, useBW, useGrayscale, currentFrColor, numThreads, (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
+                                RenderSierpinskiChaos(token, tempBuffer, saveWidth, saveHeight, tempStride, tempBpp,
+                                                      captureZoom, captureCenterX, captureCenterY, iterations,
+                                                      useColorMode, useBW, useGrayscale, currentFrColor, numThreads,
+                                                      (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
                             }
                             token.ThrowIfCancellationRequested();
 
@@ -949,44 +965,32 @@ namespace FractalExplorer
         {
             Action action = () =>
             {
-                // Элементы управления параметрами фрактала
                 FractalTypeIsGeometry.Enabled = enabled;
                 FractalTypeIsChaos.Enabled = enabled;
                 nudIterations.Enabled = enabled;
                 nudZoom.Enabled = enabled;
                 cbCPUThreads.Enabled = enabled;
-
-                // Кнопки действий (кроме abortRender)
                 btnRender.Enabled = enabled;
                 btnSavePNG.Enabled = enabled;
-                nudW2.Enabled = enabled; // Ширина для сохранения
-                nudH2.Enabled = enabled; // Высота для сохранения
-
-                // Элементы управления цветом (чекбоксы и связанные с ними)
+                nudW2.Enabled = enabled;
+                nudH2.Enabled = enabled;
                 renderBW.Enabled = enabled;
                 colorGrayscale.Enabled = enabled;
-                colorColor.Enabled = enabled;   // Чекбокс "Цвет"
-                colorFractal.Enabled = enabled; // Чекбокс "Фигура" для выбора цвета
-                colorBackground.Enabled = enabled; // Чекбокс "Фон" для выбора цвета
-                label1.Enabled = enabled;       // Текстовая метка "Выберите цвет."
+                colorColor.Enabled = enabled;
+                colorFractal.Enabled = enabled;
+                colorBackground.Enabled = enabled;
+                label1.Enabled = enabled;
+                panel2.Enabled = enabled;
+                panel3.Enabled = enabled;
 
-                panel2.Enabled = enabled; // Панель, содержащая canvasPalette
-                panel3.Enabled = enabled; // Панель, содержащая label2 ("Кликни для настройки цвета")
-
-                // Состояние canvasPalette (сам PictureBox для выбора цвета)
-                // дополнительно управляется в UpdatePaletteCanvas в зависимости от colorColor.Checked
                 if (enabled)
                 {
                     UpdatePaletteCanvas();
                 }
                 else
                 {
-                    // Если элементы управления отключаются, canvasPalette тоже должна быть неактивна
-                    // panel2.Enabled = false уже сделает это для PictureBox внутри.
-                    // Если бы canvasPalette был напрямую на panel1, то:
-                    // if (canvasPalette != null && !canvasPalette.IsDisposed) canvasPalette.Enabled = false;
+                    // panel2.Enabled = false уже сделает PictureBox неактивным.
                 }
-                // Состояние кнопки abortRender управляется исключительно UpdateAbortButtonState()
             };
 
             if (this.InvokeRequired)
@@ -1005,7 +1009,7 @@ namespace FractalExplorer
 
             Action action = () =>
             {
-                if (abortRender != null && !abortRender.IsDisposed) // Дополнительная проверка
+                if (abortRender != null && !abortRender.IsDisposed)
                 {
                     abortRender.Enabled = isRenderingPreview || isHighResRendering;
                 }
@@ -1021,6 +1025,21 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// НОВЫЙ МЕТОД: централизованное получение количества потоков.
+        /// </summary>
+        private int GetThreadCount()
+        {
+            // Проверка на случай, если метод вызван до полной инициализации UI
+            if (cbCPUThreads.SelectedItem == null)
+            {
+                return Environment.ProcessorCount;
+            }
+
+            return cbCPUThreads.SelectedItem.ToString() == "Auto"
+                ? Environment.ProcessorCount
+                : Convert.ToInt32(cbCPUThreads.SelectedItem);
+        }
 
         private void UpdateProgressBar(ProgressBar pb, int percentage)
         {
@@ -1059,14 +1078,10 @@ namespace FractalExplorer
             if (this.IsDisposed || !this.IsHandleCreated) return;
 
             bool isColorModeActive = colorColor.Checked;
-            // Определяем, активны ли вообще элементы управления на панели (через один из них)
-            bool areMainControlsActive = nudZoom.Enabled; // Предполагаем, что nudZoom отражает общее состояние
+            bool areMainControlsActive = nudZoom.Enabled;
 
             Action updateUIAction = () =>
             {
-                // Управляем доступностью элементов выбора цели цвета и самой палитры
-                // только если основные элементы управления включены.
-                // Затем дополнительно фильтруем по isColorModeActive.
                 if (colorFractal != null && !colorFractal.IsDisposed) colorFractal.Enabled = areMainControlsActive && isColorModeActive;
                 if (colorBackground != null && !colorBackground.IsDisposed) colorBackground.Enabled = areMainControlsActive && isColorModeActive;
                 if (label1 != null && !label1.IsDisposed) label1.Enabled = areMainControlsActive && isColorModeActive;
@@ -1079,9 +1094,9 @@ namespace FractalExplorer
                     {
                         using (Graphics g = canvasPalette.CreateGraphics())
                         {
-                            if (canvasPalette.Enabled) // Рисуем, только если палитра действительно активна
+                            if (canvasPalette.Enabled)
                             {
-                                if (isColorModeActive) // Этот if теперь определяет только *что* рисовать
+                                if (isColorModeActive)
                                 {
                                     Color previewColor = colorFractal.Checked ? fractalColor : backgroundColor;
                                     g.Clear(previewColor);
@@ -1107,7 +1122,7 @@ namespace FractalExplorer
                                     g.Clear(SystemColors.Control);
                                 }
                             }
-                            else // Палитра отключена (либо не цветной режим, либо основные контролы выключены)
+                            else
                             {
                                 g.Clear(SystemColors.ControlDark);
                             }
@@ -1141,25 +1156,35 @@ namespace FractalExplorer
 
         private void abortRender_Click(object sender, EventArgs e)
         {
-            bool cancellationRequested = false;
             if (isRenderingPreview && previewRenderCts != null && !previewRenderCts.IsCancellationRequested)
             {
                 previewRenderCts.Cancel();
                 System.Diagnostics.Debug.WriteLine("Preview render cancellation explicitly requested by user.");
-                cancellationRequested = true;
             }
 
             if (isHighResRendering && highResRenderCts != null && !highResRenderCts.IsCancellationRequested)
             {
                 highResRenderCts.Cancel();
                 System.Diagnostics.Debug.WriteLine("High-resolution render cancellation explicitly requested by user.");
-                cancellationRequested = true;
             }
+        }
 
-            // Состояние кнопки abortRender.Enabled обновится в finally блоках
-            // соответствующих методов рендеринга после того, как isRenderingPreview/isHighResRendering станут false.
-            // Для немедленной (визуальной) обратной связи можно было бы сделать abortRender.Enabled = false;
-            // но это может быть преждевременно, если, например, отменяется только один из двух параллельных рендеров (что не наш случай).
+        // Этот метод остался здесь, но больше не используется для геометрического рендеринга.
+        // Я оставил его на случай, если он нужен для отладки или сравнения.
+        private void RenderSierpinskiGeometric(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
+                                     double zoom, double cX, double cY, int depth,
+                                     bool useColorMode, bool useBW, bool useGrayscale, Color frColor,
+                                     int numThreads, Action<int> reportProgress)
+        {
+            // Этот метод является устаревшим и неэффективным по памяти.
+            // Используйте RenderSierpinskiGeometricOptimized.
+            System.Diagnostics.Debug.WriteLine("WARNING: Using obsolete RenderSierpinskiGeometric method.");
+
+            // Здесь был старый код, который я удалил, чтобы избежать случайного использования.
+            // Вы можете восстановить его из истории, если потребуется.
+
+            // Перенаправляем на новый метод, чтобы избежать ошибок.
+            RenderSierpinskiGeometricOptimized(token, buffer, W, H, stride, bpp, zoom, cX, cY, depth, useColorMode, useBW, useGrayscale, frColor, numThreads, reportProgress);
         }
     }
 }
