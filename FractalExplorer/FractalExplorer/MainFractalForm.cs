@@ -63,7 +63,7 @@ namespace FractalExplorer
 
         private void btnLaunchBurningShipComplex_Click(object sender, EventArgs e)
         {
-            var form = new FractalburningShipComplex();
+            var form = new FractalburningShipJulia();
             form.Show();
         }
 
