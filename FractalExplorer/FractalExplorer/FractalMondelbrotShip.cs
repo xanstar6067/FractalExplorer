@@ -113,6 +113,7 @@ namespace FractalDraving
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
 
+            canvas2.MouseUp += Canvas2_MouseUp;
             canvas2.MouseWheel += Canvas_MouseWheel;
             canvas2.MouseDown += Canvas_MouseDown;
             canvas2.MouseMove += Canvas_MouseMove;
@@ -153,6 +154,22 @@ namespace FractalDraving
 
             HandleColorBoxEnableState();
             ScheduleRender();
+        }
+
+        private void Canvas2_MouseUp(object? sender, MouseEventArgs e)
+        {
+            //throw new NotImplementedException();
+            if (isHighResRendering) return;
+            // ИСПРАВЛЕНИЕ: Проверяем, что кнопка отпущена во время панорамирования
+            if (e.Button == MouseButtons.Left && panning)
+            {
+                panning = false;
+                // ИСПРАВЛЕНИЕ: Освобождаем захват мыши
+                canvas2.Capture = false;
+                // ИСПРАВЛЕНИЕ: Гарантированно запускаем финальный рендер
+                ScheduleRender();
+            }
+
         }
 
         #region UI_Handlers_And_Palettes
