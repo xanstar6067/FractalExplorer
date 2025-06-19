@@ -18,28 +18,23 @@ namespace FractalDraving
     {
         #region Fields
 
-        // --- Константы и параметры рендеринга ---
         private const int TILE_SIZE = 32;
         private Bitmap _previewBitmap;
         private CancellationTokenSource _previewRenderCts;
         private volatile bool _isHighResRendering = false;
         private volatile bool _isRenderingPreview = false;
 
-        // --- Движок и параметры фрактала ---
         protected FractalEngineBase _fractalEngine;
         protected decimal _zoom = 1.0m;
         protected decimal _centerX = 0.0m;
         protected decimal _centerY = 0.0m;
-        // ИСПРАВЛЕНИЕ: Явное указание типа для устранения неоднозначности
         protected System.Windows.Forms.CheckBox[] _paletteCheckBoxes;
         protected System.Windows.Forms.CheckBox _lastSelectedPaletteCheckBox = null;
 
-        // --- Параметры отрисованного изображения ---
         private decimal _renderedCenterX;
         private decimal _renderedCenterY;
         private decimal _renderedZoom;
 
-        // --- UI и взаимодействие ---
         private Point _panStart;
         private bool _panning = false;
         private System.Windows.Forms.Timer _renderDebounceTimer;
@@ -48,42 +43,15 @@ namespace FractalDraving
 
         #region Abstract and Virtual Members
 
-        /// <summary>
-        /// Создает экземпляр конкретного движка для фрактала.
-        /// </summary>
         protected abstract FractalEngineBase CreateEngine();
-
-        /// <summary>
-        /// Базовый масштаб для фрактала (влияет на начальный вид и зум).
-        /// </summary>
         protected virtual decimal BaseScale => 3.0m;
-
-        /// <summary>
-        /// Начальный центр по оси X.
-        /// </summary>
         protected virtual decimal InitialCenterX => -0.5m;
-
-        /// <summary>
-        /// Начальный центр по оси Y.
-        /// </summary>
         protected virtual decimal InitialCenterY => 0.0m;
-
-        /// <summary>
-        /// Обновляет специфичные для формы параметры движка (например, константу C для Жюлиа).
-        /// </summary>
         protected virtual void UpdateEngineSpecificParameters() { }
-
-        /// <summary>
-        /// Выполняется после инициализации общих компонентов.
-        /// </summary>
         protected virtual void OnPostInitialize() { }
 
-        /// <summary>
-        /// Возвращает уникальную часть имени файла для сохранения, специфичную для фрактала.
-        /// </summary>
         protected virtual string GetSaveFileNameDetails()
         {
-            // Имя по умолчанию, если не переопределено
             return "fractal";
         }
         #endregion
@@ -120,7 +88,6 @@ namespace FractalDraving
 
         private void InitializeControls()
         {
-            // Настройка потоков
             int cores = Environment.ProcessorCount;
             cbThreads.Items.Clear();
             for (int i = 1; i <= cores; i++)
@@ -130,7 +97,6 @@ namespace FractalDraving
             cbThreads.Items.Add("Auto");
             cbThreads.SelectedItem = "Auto";
 
-            // Настройка NumericUpDown-ов
             nudIterations.Minimum = 50;
             nudIterations.Maximum = 100000;
             nudIterations.Value = 500;
@@ -166,18 +132,12 @@ namespace FractalDraving
 
         private void InitializePaletteCheckBoxes()
         {
-            // ИСПРАВЛЕНИЕ: Явное указание типа для устранения неоднозначности
             var allCheckBoxes = new List<System.Windows.Forms.CheckBox>
             {
                 colorBox, oldRenderBW, mondelbrotClassicBox,
                 checkBox1, checkBox2, checkBox3, checkBox4, checkBox5, checkBox6
             };
             _paletteCheckBoxes = allCheckBoxes.Where(cb => cb != null).ToArray();
-
-            /*if (mondelbrotClassicBox != null)
-                mondelbrotClassicBox.Checked = true;
-            else
-                colorBox.Checked = true;*/
         }
 
         private void InitializeEventHandlers()
@@ -187,7 +147,6 @@ namespace FractalDraving
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
 
-            // ИСПРАВЛЕНИЕ: Корректная подписка на события
             if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
 
@@ -209,8 +168,13 @@ namespace FractalDraving
             this.FormClosed += (s, e) => {
                 _renderDebounceTimer?.Stop();
                 _renderDebounceTimer?.Dispose();
-                _previewRenderCts?.Cancel();
-                _previewRenderCts?.Dispose();
+
+                if (_previewRenderCts != null)
+                {
+                    _previewRenderCts.Cancel();
+                    System.Threading.Thread.Sleep(50);
+                    _previewRenderCts.Dispose();
+                }
                 _previewBitmap?.Dispose();
             };
         }
@@ -238,6 +202,7 @@ namespace FractalDraving
             await StartPreviewRender();
         }
 
+        // <<< НАЧАЛО ИСПРАВЛЕННОГО БЛОКА >>>
         private async Task StartPreviewRender()
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -274,51 +239,52 @@ namespace FractalDraving
 
             try
             {
-                // Блокируем битмап, чтобы получить доступ к его памяти
+                token.ThrowIfCancellationRequested();
+
                 bmpData = renderingBitmap.LockBits(
                     new Rectangle(0, 0, renderingBitmap.Width, renderingBitmap.Height),
                     ImageLockMode.WriteOnly,
                     renderingBitmap.PixelFormat);
 
-                // Создаем ОДИН большой буфер для всего изображения
                 int bytes = Math.Abs(bmpData.Stride) * renderingBitmap.Height;
                 byte[] buffer = new byte[bytes];
-                // Важно: Изначально буфер пуст (черный), так что можно не очищать его нулями.
-
                 int bytesPerPixel = Image.GetPixelFormatSize(renderingBitmap.PixelFormat) / 8;
 
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
-                    if (ct.IsCancellationRequested) return;
+                    ct.ThrowIfCancellationRequested();
 
-                    // --- ИЗМЕНЕНИЕ: Вызываем НОВЫЙ RenderTile ---
-                    // Передаем ему большой буфер и параметры битмапа
                     renderEngineCopy.RenderTile(buffer, bmpData.Stride, bytesPerPixel, tile, canvas.Width, canvas.Height);
 
-                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                    if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
+
+                    canvas.Invoke((Action)(() =>
                     {
-                        canvas.Invoke((Action)(() => {
+                        if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                        {
                             pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
-                        }));
-                    }
+                        }
+                    }));
                     await Task.Yield();
                 }, token);
 
-                // После завершения всех потоков, копируем ВЕСЬ буфер в битмап ОДНИМ действием
-                if (!token.IsCancellationRequested)
-                {
-                    Marshal.Copy(buffer, 0, bmpData.Scan0, bytes);
-                }
-
-                // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+                token.ThrowIfCancellationRequested();
+                Marshal.Copy(buffer, 0, bmpData.Scan0, bytes);
 
                 renderingBitmap.UnlockBits(bmpData);
-                bmpData = null; // Помечаем, что данные разблокированы
+                bmpData = null;
 
-                if (!token.IsCancellationRequested && canvas.IsHandleCreated && !canvas.IsDisposed)
+                token.ThrowIfCancellationRequested();
+                if (canvas.IsHandleCreated && !canvas.IsDisposed)
                 {
                     canvas.Invoke((Action)(() =>
                     {
+                        if (token.IsCancellationRequested)
+                        {
+                            renderingBitmap.Dispose();
+                            return;
+                        }
+
                         _previewBitmap?.Dispose();
                         _previewBitmap = renderingBitmap;
 
@@ -336,19 +302,25 @@ namespace FractalDraving
             }
             catch (OperationCanceledException)
             {
-                renderingBitmap.Dispose();
+                if (renderingBitmap != null) renderingBitmap.Dispose();
             }
             catch (Exception ex)
             {
-                renderingBitmap.Dispose();
-                MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (renderingBitmap != null) renderingBitmap.Dispose();
+                if (this.IsHandleCreated && !this.IsDisposed)
+                {
+                    MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             finally
             {
-                // Если вышли из `try` с ошибкой, а bmpData все еще заблокирован
                 if (bmpData != null)
                 {
-                    renderingBitmap.UnlockBits(bmpData);
+                    try
+                    {
+                        renderingBitmap.UnlockBits(bmpData);
+                    }
+                    catch { /* Игнорируем, если битмап уже уничтожен */ }
                 }
 
                 _isRenderingPreview = false;
@@ -358,116 +330,7 @@ namespace FractalDraving
                 }
             }
         }
-
-        /*private async Task StartPreviewRender()
-        {
-            if (canvas.Width <= 0 || canvas.Height <= 0) return;
-
-            _isRenderingPreview = true;
-            _previewRenderCts?.Cancel();
-            _previewRenderCts = new CancellationTokenSource();
-            var token = _previewRenderCts.Token;
-
-            // --- ИЗМЕНЕНИЯ НАЧИНАЮТСЯ ЗДЕСЬ ---
-
-            // 1. Создаем ЛОКАЛЬНЫЙ, временный битмап для рендеринга
-            var renderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
-
-            // 2. Копируем текущие параметры в переменные, чтобы избежать их изменения во время рендеринга
-            UpdateEngineParameters();
-            var currentRenderedCenterX = _centerX;
-            var currentRenderedCenterY = _centerY;
-            var currentRenderedZoom = _zoom;
-
-            // 3. Создаем локальную копию движка для потокобезопасности
-            var renderEngineCopy = CreateEngine();
-            renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
-            renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
-            renderEngineCopy.CenterX = _fractalEngine.CenterX;
-            renderEngineCopy.CenterY = _fractalEngine.CenterY;
-            renderEngineCopy.Scale = _fractalEngine.Scale;
-            renderEngineCopy.C = _fractalEngine.C;
-            renderEngineCopy.Palette = _fractalEngine.Palette;
-
-            var tiles = GenerateTiles(canvas.Width, canvas.Height);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
-
-            pbRenderProgress.Value = 0;
-            pbRenderProgress.Maximum = tiles.Count;
-            int progress = 0;
-
-            try
-            {
-                // 4. Блокируем ЛОКАЛЬНЫЙ битмап, а не поле класса
-                BitmapData bmpData = renderingBitmap.LockBits(
-                    new Rectangle(0, 0, renderingBitmap.Width, renderingBitmap.Height),
-                    ImageLockMode.WriteOnly,
-                    renderingBitmap.PixelFormat);
-
-                await dispatcher.RenderAsync(async (tile, ct) =>
-                {
-                    if (ct.IsCancellationRequested) return;
-
-                    // Используем копию движка для рендеринга в локальный битмап
-                    renderEngineCopy.RenderTile(bmpData, tile, canvas.Width, canvas.Height);
-
-                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
-                    {
-                        // Мы не можем обновлять по плиткам, так как рисуем в отдельный битмап.
-                        // Вместо этого просто обновляем прогресс-бар.
-                        canvas.Invoke((Action)(() => {
-                            pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
-                        }));
-                    }
-                    await Task.Yield();
-                }, token);
-
-                // 5. Разблокируем ЛОКАЛЬНЫЙ битмап, когда все готово
-                renderingBitmap.UnlockBits(bmpData);
-
-                // 6. Только теперь, когда битмап полностью готов и разблокирован,
-                //    передаем его в UI поток для отображения.
-                if (!token.IsCancellationRequested && canvas.IsHandleCreated && !canvas.IsDisposed)
-                {
-                    canvas.Invoke((Action)(() =>
-                    {
-                        // Заменяем старый битмап на новый
-                        _previewBitmap?.Dispose();
-                        _previewBitmap = renderingBitmap;
-
-                        // Сохраняем параметры, с которыми был сделан этот рендер
-                        _renderedCenterX = currentRenderedCenterX;
-                        _renderedCenterY = currentRenderedCenterY;
-                        _renderedZoom = currentRenderedZoom;
-
-                        // Запрашиваем полную перерисовку холста с новым битмапом
-                        canvas.Invalidate();
-                    }));
-                }
-                else
-                {
-                    // Если была отмена, просто уничтожаем временный битмап
-                    renderingBitmap.Dispose();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                renderingBitmap.Dispose(); // Убедимся, что битмап уничтожен при отмене
-            }
-            catch (Exception ex)
-            {
-                renderingBitmap.Dispose(); // И при ошибке тоже
-                MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                _isRenderingPreview = false;
-                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
-                {
-                    pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
-                }
-            }
-        }*/
+        // <<< КОНЕЦ ИСПРАВЛЕННОГО БЛОКА >>>
 
         private List<TileInfo> GenerateTiles(int width, int height)
         {
@@ -509,10 +372,6 @@ namespace FractalDraving
                 return;
             }
 
-            // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
-
-            // Вычисляем, где находится левый верхний угол ОТРИСОВАННОГО изображения
-            // в системе координат ТЕКУЩЕГО вида.
             decimal renderedImage_re_min = _renderedCenterX - scaleRendered / 2.0m;
             decimal renderedImage_im_max = _renderedCenterY + scaleRendered / 2.0m * canvas.Height / canvas.Width;
 
@@ -525,20 +384,13 @@ namespace FractalDraving
             decimal newWidth = canvas.Width * (scaleRendered / scaleCurrent);
             decimal newHeight = canvas.Height * (scaleRendered / scaleCurrent);
 
-            // ПРАВИЛЬНАЯ ПРОВЕРКА НА ПЕРЕПОЛНЕНИЕ
-            // Мы не можем хранить float.MaxValue в decimal, но можем использовать максимальное значение decimal
-            // как предел. Если вычисленные значения больше, то они точно не поместятся в float.
-            const decimal reasonableLimit = 7.9E+28M; // Это Decimal.MaxValue, можно взять чуть меньше для запаса
+            const decimal reasonableLimit = 7.9E+28M;
             if (Math.Abs(offsetX) >= reasonableLimit || Math.Abs(offsetY) >= reasonableLimit ||
                 Math.Abs(newWidth) >= reasonableLimit || Math.Abs(newHeight) >= reasonableLimit)
             {
-                // Значения слишком велики даже для decimal, не говоря уже о float.
-                // Безопасно выходим, чтобы не упасть.
                 return;
             }
 
-            // Теперь, когда мы знаем, что значения в пределах decimal, можно пробовать преобразовать их в float.
-            // Используем try-catch как последнюю линию обороны.
             try
             {
                 float p1_X = (float)offsetX;
@@ -546,10 +398,9 @@ namespace FractalDraving
                 float w_prime = (float)newWidth;
                 float h_prime = (float)newHeight;
 
-                // Дополнительная проверка на аномально большие значения float, которые могут быть проблемой для GDI+
                 if (!float.IsFinite(p1_X) || !float.IsFinite(p1_Y) || !float.IsFinite(w_prime) || !float.IsFinite(h_prime))
                 {
-                    return; // Выходим, если значения стали бесконечностью или NaN
+                    return;
                 }
 
                 PointF destPoint1 = new PointF(p1_X, p1_Y);
@@ -563,12 +414,8 @@ namespace FractalDraving
             }
             catch (OverflowException)
             {
-                // Эта ошибка возникает при преобразовании decimal в float.
-                // Перехватываем ее и просто ничего не делаем, чтобы избежать падения.
                 return;
             }
-
-            // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
         }
 
         private void ParamControl_Changed(object sender, EventArgs e)
@@ -586,8 +433,8 @@ namespace FractalDraving
             if (_isHighResRendering) return;
 
             decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
-            decimal oldZoom = _zoom;
-            decimal scaleBeforeZoom = BaseScale / oldZoom;
+
+            decimal scaleBeforeZoom = BaseScale / _zoom;
 
             decimal mouseRe = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
             decimal mouseIm = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
@@ -621,7 +468,7 @@ namespace FractalDraving
 
             decimal scale = BaseScale / _zoom;
             _centerX -= (decimal)(e.X - _panStart.X) * scale / canvas.Width;
-            _centerY += (decimal)(e.Y - _panStart.Y) * scale / canvas.Height; // Y-ось инвертирована
+            _centerY += (decimal)(e.Y - _panStart.Y) * scale / canvas.Height;
             _panStart = e.Location;
 
             canvas.Invalidate();
@@ -649,10 +496,7 @@ namespace FractalDraving
             int saveWidth = (int)nudSaveWidth.Value;
             int saveHeight = (int)nudSaveHeight.Value;
 
-            // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-            // Формируем имя файла
-            string fractalDetails = GetSaveFileNameDetails(); // Получаем детали от дочерней формы
+            string fractalDetails = GetSaveFileNameDetails();
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string suggestedFileName = $"{fractalDetails}_{timestamp}.png";
 
@@ -660,9 +504,8 @@ namespace FractalDraving
             {
                 Filter = "PNG Image|*.png",
                 Title = "Сохранить фрактал (Высокое разрешение)",
-                FileName = suggestedFileName // Используем сгенерированное имя
+                FileName = suggestedFileName
             })
-            // --- КОНЕЦ ИЗМЕНЕНИЙ ---
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
@@ -673,7 +516,6 @@ namespace FractalDraving
 
                     try
                     {
-                        // (Остальная часть метода без изменений)
                         FractalEngineBase renderEngine = CreateEngine();
                         renderEngine.MaxIterations = (int)nudIterations.Value;
                         renderEngine.ThresholdSquared = nudThreshold.Value * nudThreshold.Value;
@@ -734,10 +576,8 @@ namespace FractalDraving
             System.Windows.Forms.CheckBox currentCb = sender as System.Windows.Forms.CheckBox;
             if (currentCb == null) return;
 
-            // Отписываемся от всех, чтобы избежать рекурсии
             foreach (var cb in _paletteCheckBoxes) cb.CheckedChanged -= PaletteCheckBox_CheckedChanged;
 
-            // Логика "радиокнопок": если выбрали один, остальные выключаются
             if (currentCb.Checked)
             {
                 _lastSelectedPaletteCheckBox = currentCb;
@@ -748,12 +588,9 @@ namespace FractalDraving
             }
             else
             {
-                // Если пользователь отжал единственный выбранный чекбокс,
-                // то ни один не остается выбранным.
                 _lastSelectedPaletteCheckBox = null;
             }
 
-            // Подписываемся обратно
             foreach (var cb in _paletteCheckBoxes) cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
 
             HandlePaletteSelectionLogic();
@@ -762,10 +599,8 @@ namespace FractalDraving
 
         private void HandlePaletteSelectionLogic()
         {
-            // Находим активный чекбокс. Это и есть наша палитра.
             var activePaletteCheckBox = _paletteCheckBoxes.FirstOrDefault(cb => cb.Checked);
 
-            // Если какой-то чекбокс выбран, используем его палитру.
             if (activePaletteCheckBox != null)
             {
                 var paletteFunc = GetPaletteFuncByName(activePaletteCheckBox.Name);
@@ -774,7 +609,7 @@ namespace FractalDraving
                     _fractalEngine.Palette = paletteFunc;
                 }
             }
-            else // Если НИ ОДИН чекбокс не выбран, используем палитру по умолчанию (оттенки серого).
+            else
             {
                 if (_fractalEngine != null)
                 {
