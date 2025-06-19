@@ -43,13 +43,13 @@ namespace FractalExplorer
             form.Show();
         }
 
-        private void btnLaunchBurningShipComplex_Click(object sender, EventArgs e)
+        private void btnLaunchBurningShipJulia_Click(object sender, EventArgs e)
         {
             var form = new FractalburningShipJulia();
             form.Show();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void btnLaunchBurningShipMandelbrot_Click(object sender, EventArgs e)
         {
             var form = new FractalMondelbrotShip();
             form.Show();

@@ -72,7 +72,7 @@
             btnLaunchBurningShipComplex.TabIndex = 4;
             btnLaunchBurningShipComplex.Text = "Запустить\r\nГорящий корабль";
             btnLaunchBurningShipComplex.UseVisualStyleBackColor = true;
-            btnLaunchBurningShipComplex.Click += btnLaunchBurningShipComplex_Click;
+            btnLaunchBurningShipComplex.Click += btnLaunchBurningShipJulia_Click;
             // 
             // richTextBox2
             // 
@@ -223,7 +223,7 @@
             button1.TabIndex = 3;
             button1.Text = "Запустить\r\nГорящий корабль";
             button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
+            button1.Click += btnLaunchBurningShipMandelbrot_Click;
             // 
             // MainFractalForm
             // 
