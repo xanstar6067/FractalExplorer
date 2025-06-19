@@ -95,7 +95,6 @@ namespace FractalDraving
             return $"{Real} + {Imaginary}i";
         }
 
-        // Дополнительно: арифметика с decimal (полезно в некоторых случаях)
         public static ComplexDecimal operator +(ComplexDecimal a, decimal b)
         {
             return new ComplexDecimal(a.Real + b, a.Imaginary);
