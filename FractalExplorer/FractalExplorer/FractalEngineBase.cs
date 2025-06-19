@@ -80,8 +80,8 @@ namespace FractalDraving
         /// <returns>Массив байт с данными пикселей плитки.</returns>
         public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
-            // Определяем формат и выделяем память под буфер плитки
-            bytesPerPixel = 3; // Для 24bppRgb
+            // Меняем на 4 байта на пиксель для поддержки формата 32bppArgb
+            bytesPerPixel = 4;
             byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
 
             decimal half_width_pixels = canvasWidth / 2.0m;
@@ -91,7 +91,6 @@ namespace FractalDraving
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
                 int canvasY = tile.Bounds.Y + y;
-                // Пропускаем пиксели, которые выходят за пределы холста (на случай неровных размеров)
                 if (canvasY >= canvasHeight) continue;
 
                 for (int x = 0; x < tile.Bounds.Width; x++)
@@ -99,21 +98,17 @@ namespace FractalDraving
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
-                    // Преобразуем пиксельные координаты в комплексные
                     decimal re = this.CenterX + (canvasX - half_width_pixels) * units_per_pixel;
                     decimal im = this.CenterY - (canvasY - half_height_pixels) * units_per_pixel;
 
-                    // Вызываем специфичный для фрактала метод расчета
                     int iter = GetIterationsForPoint(re, im);
-
-                    // Получаем цвет на основе итераций
                     Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
 
-                    // Записываем цвет в локальный буфер тайла
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
                     buffer[bufferIndex] = pixelColor.B;
                     buffer[bufferIndex + 1] = pixelColor.G;
                     buffer[bufferIndex + 2] = pixelColor.R;
+                    buffer[bufferIndex + 3] = 255; // Alpha-канал, 255 = полностью непрозрачный
                 }
             }
             return buffer;
