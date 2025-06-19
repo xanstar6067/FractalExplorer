@@ -227,7 +227,7 @@ namespace FractalDraving
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = new ComplexDecimal(Math.Abs(z.Real), Math.Abs(z.Imaginary));
+                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
                 z = z * z + c;
                 iter++;
             }
@@ -248,7 +248,7 @@ namespace FractalDraving
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = new ComplexDecimal(Math.Abs(z.Real), Math.Abs(z.Imaginary));
+                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
                 z = z * z + c;
                 iter++;
             }
