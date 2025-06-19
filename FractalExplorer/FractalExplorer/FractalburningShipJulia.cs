@@ -1,7 +1,7 @@
-﻿// --- START OF FILE burningShipComplex.cs ---
+﻿// --- START OF FILE FractalburningShipJulia.cs ---
 
 using System.Drawing.Imaging;
-using System.Numerics; // Пространство имен для работы с комплексными числами
+// using System.Numerics; // ИЗМЕНЕНИЕ: Заменено на наш ComplexDecimal
 using System.Runtime.InteropServices; // Для использования Marshal.Copy
 
 namespace FractalDraving
@@ -14,12 +14,15 @@ namespace FractalDraving
         // Таймер для отложенного рендеринга предварительного просмотра фрактала
         private System.Windows.Forms.Timer renderTimer;
 
+        // ИЗМЕНЕНИЕ: Используем ComplexDecimal вместо Complex
         // Комплексное число 'c', определяющее конкретный фрактал
-        private Complex c;
+        private ComplexDecimal c;
         // Максимальное количество итераций для определения принадлежности точки множеству
         private int maxIterations;
         // Порог для определения "ухода в бесконечность" при итерациях
         private double threshold;
+        // ИЗМЕНЕНИЕ: Квадрат порога для оптимизации вычислений
+        private decimal thresholdSquared;
         // Количество потоков для параллельного рендеринга
         private int threadCount;
         // Ширина и высота области отрисовки (canvas)
@@ -60,7 +63,6 @@ namespace FractalDraving
         private const int MANDELBROT_PREVIEW_ITERATIONS = 75; // Количество итераций для предпросмотра
 
         // Форма для выбора параметра 'c' с помощью множества Мандельброта (можно использовать ту же форму)
-        //private MandelbrotSelectorForm mandelbrotCSelectorWindow;
         private BurningShipCSelectorForm mandelbrotCSelectorWindow;
 
         // Поля для хранения параметров отрисованного битмапа
@@ -152,12 +154,12 @@ namespace FractalDraving
             // Настройка NumericUpDown
             nudRe1.Minimum = -2m;
             nudRe1.Maximum = 2m;
-            nudRe1.DecimalPlaces = 3;
+            nudRe1.DecimalPlaces = 15; // ИЗМЕНЕНИЕ: Больше точности для decimal
             nudRe1.Increment = 0.001m;
 
             nudIm1.Minimum = -2m;
             nudIm1.Maximum = 2m;
-            nudIm1.DecimalPlaces = 3;
+            nudIm1.DecimalPlaces = 15; // ИЗМЕНЕНИЕ: Больше точности для decimal
             nudIm1.Increment = 0.001m;
 
             nudIterations1.Minimum = 50;
@@ -168,10 +170,12 @@ namespace FractalDraving
             nudThreshold1.Maximum = 10m;
             nudThreshold1.DecimalPlaces = 1;
             nudThreshold1.Increment = 0.1m;
+            nudThreshold1.Value = 2m;
 
             nudZoom.DecimalPlaces = 4;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.01m;
+            nudZoom.Maximum = 1000000000000m; // ИЗМЕНЕНИЕ: Увеличен макс. зум
             nudZoom.Value = 1m;
 
             nudBaseScale.Minimum = 1m;
@@ -191,12 +195,7 @@ namespace FractalDraving
             ScheduleRender();
         }
 
-        // --- Все методы ниже до RenderFractal остаются без изменений ---
-        // Canvas_Paint, NudBaseScale_ValueChanged, RenderAndDisplayMandelbrotSet и т.д.
-        // Я скопирую их для полноты, но они идентичны вашему коду FractalJulia.cs.
-        // Единственное изменение будет в RenderMandelbrotSetInternal.
-
-        #region Unchanged_Methods
+        #region Unchanged_Drawing_Methods
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             if (canvas1.Image == null || width <= 0 || height <= 0)
@@ -283,6 +282,9 @@ namespace FractalDraving
             double reRange = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE;
             double imRange = MANDELBROT_MAX_IM - MANDELBROT_MIN_IM;
 
+            // ИЗМЕНЕНИЕ: Квадрат порога для итераций предпросмотра
+            decimal previewThresholdSquared = 4m; // (2*2)
+
             Parallel.For(0, canvasHeight, y_coord =>
             {
                 int rowOffset = y_coord * stride;
@@ -290,14 +292,17 @@ namespace FractalDraving
                 {
                     double c_re = MANDELBROT_MIN_RE + (x_coord / (double)canvasWidth) * reRange;
                     double c_im = MANDELBROT_MAX_IM - (y_coord / (double)canvasHeight) * imRange;
-                    Complex c0 = new Complex(c_re, c_im);
-                    Complex z = Complex.Zero;
+
+                    // ИЗМЕНЕНИЕ: Используем ComplexDecimal
+                    ComplexDecimal c0 = new ComplexDecimal((decimal)c_re, (decimal)c_im);
+                    ComplexDecimal z = ComplexDecimal.Zero;
                     int iter = 0;
 
-                    // *** ИЗМЕНЕНИЕ: Формула Горящего Корабля (Мандельброт-версия) ***
-                    while (iter < iterationsLimit && z.Magnitude < 2)
+                    // ИЗМЕНЕНИЕ: Формула Горящего Корабля (Мандельброт-версия) с ComplexDecimal
+                    // и проверка по квадрату модуля
+                    while (iter < iterationsLimit && z.MagnitudeSquared < previewThresholdSquared)
                     {
-                        z = new Complex(Math.Abs(z.Real), Math.Abs(z.Imaginary)); // Взять абсолютные значения
+                        z = new ComplexDecimal(Math.Abs(z.Real), Math.Abs(z.Imaginary)); // Взять абсолютные значения
                         z = z * z + c0; // Затем применить стандартную формулу
                         iter++;
                     }
@@ -330,8 +335,7 @@ namespace FractalDraving
             return bmp;
         }
 
-        // --- Еще несколько методов без изменений до RenderFractal ---
-        #region Unchanged_Methods_2
+        #region Unchanged_UI_Handlers
         private void MandelbrotCSelectorWindow_CoordinatesSelected(double re, double im)
         {
             re = Math.Max((double)nudRe1.Minimum, Math.Min((double)nudRe1.Maximum, re));
@@ -377,7 +381,6 @@ namespace FractalDraving
             double initialIm = (double)nudIm1.Value;
             if (mandelbrotCSelectorWindow == null || mandelbrotCSelectorWindow.IsDisposed)
             {
-                //mandelbrotCSelectorWindow = new MandelbrotSelectorForm(this, initialRe, initialIm);
                 mandelbrotCSelectorWindow = new BurningShipCSelectorForm(this, initialRe, initialIm);
                 mandelbrotCSelectorWindow.CoordinatesSelected += MandelbrotCSelectorWindow_CoordinatesSelected;
                 mandelbrotCSelectorWindow.FormClosed += (s, args) => { mandelbrotCSelectorWindow = null; };
@@ -468,14 +471,19 @@ namespace FractalDraving
             catch (Exception) { /* log error */ }
             finally { isRenderingPreview = false; }
         }
+        #endregion
+
         private void UpdateParameters()
         {
-            c = new Complex((double)nudRe1.Value, (double)nudIm1.Value);
+            // ИЗМЕНЕНИЕ: Используем ComplexDecimal и вычисляем квадрат порога
+            c = new ComplexDecimal(nudRe1.Value, nudIm1.Value);
             maxIterations = (int)nudIterations1.Value;
             threshold = (double)nudThreshold1.Value;
+            thresholdSquared = (decimal)threshold * (decimal)threshold;
             threadCount = cbThreads1.SelectedItem.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads1.SelectedItem);
         }
-        // Палитры остаются без изменений
+
+        #region Palettes
         private delegate Color PaletteFunction(double t, int iter, int maxIterations, int maxColorIter);
         private Color GetPixelColor(int iter, int currentMaxIterations, int currentMaxColorIter)
         {
@@ -542,16 +550,16 @@ namespace FractalDraving
                         double scale = BASE_SCALE / renderZoom;
                         double re = renderCenterX + (x - width / 2.0) * scale / width;
                         double im = renderCenterY + (y - height / 2.0) * scale / height;
-                        Complex z_val = new Complex(re, im);
+
+                        // ИЗМЕНЕНИЕ: Используем ComplexDecimal и кастуем координаты
+                        ComplexDecimal z_val = new ComplexDecimal((decimal)re, (decimal)im);
                         int iter_val = 0;
 
-                        // *** ГЛАВНОЕ ИЗМЕНЕНИЕ: ФОРМУЛА "ГОРЯЩЕГО КОРАБЛЯ" (ЖЮЛИА) ***
-                        while (iter_val < maxIterations && z_val.Magnitude <= threshold)
+                        // ИЗМЕНЕНИЕ: Формула "Горящего Корабля" (Жюлиа) с ComplexDecimal
+                        // и проверка по квадрату модуля.
+                        while (iter_val < maxIterations && z_val.MagnitudeSquared <= thresholdSquared)
                         {
-                            // 1. Взять абсолютные значения компонент z
-                            z_val = new Complex(Math.Abs(z_val.Real), Math.Abs(z_val.Imaginary));
-
-                            // 2. Применить стандартную формулу к модифицированному z
+                            z_val = new ComplexDecimal(Math.Abs(z_val.Real), Math.Abs(z_val.Imaginary));
                             z_val = z_val * z_val + c;
                             iter_val++;
                         }
@@ -605,7 +613,9 @@ namespace FractalDraving
         /// Рендерит фрактал в Bitmap для сохранения.
         /// </summary>
         private Bitmap RenderFractalToBitmap(int renderWidth, int renderHeight, double currentCenterX, double currentCenterY,
-                                             double currentZoom, double currentBaseScale, Complex currentC_param,
+                                             double currentZoom, double currentBaseScale,
+                                             // ИЗМЕНЕНИЕ: Тип параметра C
+                                             ComplexDecimal currentC_param,
                                              int currentMaxIterations_param, double currentThreshold_param, int numThreads,
                                              Action<int> reportProgressCallback)
         {
@@ -619,6 +629,9 @@ namespace FractalDraving
             long done = 0;
             const int currentMaxColorIter_param = 1000;
 
+            // ИЗМЕНЕНИЕ: Вычисляем квадрат порога для сохранения
+            decimal currentThresholdSquared_param = (decimal)currentThreshold_param * (decimal)currentThreshold_param;
+
             Parallel.For(0, renderHeight, po, y =>
             {
                 int rowOffset = y * stride;
@@ -627,16 +640,15 @@ namespace FractalDraving
                     double scale = currentBaseScale / currentZoom;
                     double re = currentCenterX + (x - renderWidth / 2.0) * scale / renderWidth;
                     double im = currentCenterY + (y - renderHeight / 2.0) * scale / renderHeight;
-                    Complex z_val = new Complex(re, im);
+
+                    // ИЗМЕНЕНИЕ: Используем ComplexDecimal
+                    ComplexDecimal z_val = new ComplexDecimal((decimal)re, (decimal)im);
                     int iter_val = 0;
 
-                    // *** ГЛАВНОЕ ИЗМЕНЕНИЕ: ФОРМУЛА "ГОРЯЩЕГО КОРАБЛЯ" (ЖЮЛИА) ***
-                    while (iter_val < currentMaxIterations_param && z_val.Magnitude <= currentThreshold_param)
+                    // ИЗМЕНЕНИЕ: Формула и проверка с ComplexDecimal
+                    while (iter_val < currentMaxIterations_param && z_val.MagnitudeSquared <= currentThresholdSquared_param)
                     {
-                        // 1. Взять абсолютные значения компонент z
-                        z_val = new Complex(Math.Abs(z_val.Real), Math.Abs(z_val.Imaginary));
-
-                        // 2. Применить стандартную формулу к модифицированному z
+                        z_val = new ComplexDecimal(Math.Abs(z_val.Real), Math.Abs(z_val.Imaginary));
                         z_val = z_val * z_val + currentC_param;
                         iter_val++;
                     }
@@ -654,8 +666,7 @@ namespace FractalDraving
             return bmp;
         }
 
-        // --- Остальные методы (ColorFromHSV, Mouse/Save/Control handlers) без изменений ---
-        #region Unchanged_Methods_3
+        #region Unchanged_Handlers_and_Helpers
         private Color ColorFromHSV(double hue, double saturation, double value) { hue = (hue % 360 + 360) % 360; int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6; double f = hue / 60 - Math.Floor(hue / 60); value = Math.Max(0, Math.Min(1, value)); saturation = Math.Max(0, Math.Min(1, saturation)); int v_comp = Convert.ToInt32(value * 255); int p_comp = Convert.ToInt32(v_comp * (1 - saturation)); int q_comp = Convert.ToInt32(v_comp * (1 - f * saturation)); int t_comp = Convert.ToInt32(v_comp * (1 - (1 - f) * saturation)); switch (hi) { case 0: return Color.FromArgb(v_comp, t_comp, p_comp); case 1: return Color.FromArgb(q_comp, v_comp, p_comp); case 2: return Color.FromArgb(p_comp, v_comp, t_comp); case 3: return Color.FromArgb(p_comp, q_comp, v_comp); case 4: return Color.FromArgb(t_comp, p_comp, v_comp); default: return Color.FromArgb(v_comp, p_comp, q_comp); } }
         private void Canvas_MouseWheel(object sender, MouseEventArgs e) { if (isHighResRendering) return; double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5; double oldZoom = zoom; double scaleBeforeZoom = BASE_SCALE / oldZoom; double mouseRe = centerX + (e.X - width / 2.0) * scaleBeforeZoom / width; double mouseIm = centerY + (e.Y - height / 2.0) * scaleBeforeZoom / height; zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, zoom * zoomFactor)); double scaleAfterZoom = BASE_SCALE / zoom; centerX = mouseRe - (e.X - width / 2.0) * scaleAfterZoom / width; centerY = mouseIm - (e.Y - height / 2.0) * scaleAfterZoom / height; canvas1.Invalidate(); if (nudZoom.Value != (decimal)zoom) nudZoom.Value = (decimal)zoom; else ScheduleRender(); }
         private void Canvas_MouseDown(object sender, MouseEventArgs e) { if (isHighResRendering) return; if (e.Button == MouseButtons.Left) { panning = true; panStart = e.Location; } }
@@ -669,10 +680,10 @@ namespace FractalDraving
             if (isHighResRendering) { MessageBox.Show("Процесс сохранения в высоком разрешении уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
             int saveWidth = (int)nudW.Value; int saveHeight = (int)nudH.Value;
             if (saveWidth <= 0 || saveHeight <= 0) { MessageBox.Show("Ширина и высота изображения для сохранения должны быть больше 0.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
-            string reValueString = nudRe1.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
-            string imValueString = nudIm1.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
+            // ИЗМЕНЕНИЕ: Форматирование decimal с большим количеством знаков
+            string reValueString = nudRe1.Value.ToString("F15", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
+            string imValueString = nudIm1.Value.ToString("F15", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            // *** ИЗМЕНЕНИЕ: Имя файла по умолчанию ***
             string suggestedFileName = $"fractal_burningship_re{reValueString}_im{imValueString}_{timestamp}.png";
             using (SaveFileDialog saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить фрактал Горящий Корабль (Высокое разрешение)", FileName = suggestedFileName })
             {
@@ -682,7 +693,10 @@ namespace FractalDraving
                     if (progressPNG != null) { progressPNG.Value = 0; progressPNG.Visible = true; }
                     try
                     {
-                        UpdateParameters(); Complex currentC_Capture = this.c; int currentMaxIterations_Capture = this.maxIterations; double currentThreshold_Capture = this.threshold; double currentZoom_Capture = this.zoom; double currentCenterX_Capture = this.centerX; double currentCenterY_Capture = this.centerY; int currentThreadCount_Capture = this.threadCount;
+                        UpdateParameters();
+                        // ИЗМЕНЕНИЕ: Захватываем ComplexDecimal
+                        ComplexDecimal currentC_Capture = this.c;
+                        int currentMaxIterations_Capture = this.maxIterations; double currentThreshold_Capture = this.threshold; double currentZoom_Capture = this.zoom; double currentCenterX_Capture = this.centerX; double currentCenterY_Capture = this.centerY; int currentThreadCount_Capture = this.threadCount;
                         Bitmap highResBitmap = await Task.Run(() => RenderFractalToBitmap(saveWidth, saveHeight, currentCenterX_Capture, currentCenterY_Capture, currentZoom_Capture, BASE_SCALE, currentC_Capture, currentMaxIterations_Capture, currentThreshold_Capture, currentThreadCount_Capture, progressPercentage => { if (progressPNG != null && progressPNG.IsHandleCreated && !progressPNG.IsDisposed) { try { progressPNG.Invoke((Action)(() => { if (progressPNG.Maximum > 0 && progressPNG.Value <= progressPNG.Maximum) progressPNG.Value = Math.Min(progressPNG.Maximum, progressPercentage); })); } catch (ObjectDisposedException) { } catch (InvalidOperationException) { } } }));
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png); highResBitmap.Dispose();
                         MessageBox.Show("Изображение успешно сохранено в высоком разрешении!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -700,3 +714,4 @@ namespace FractalDraving
         #endregion
     }
 }
+// --- END OF FILE FractalburningShipJulia.cs ---
