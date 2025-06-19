@@ -20,7 +20,7 @@
         }
 
         #region Windows Form Designer generated code
-        private void InitializeComponent()
+        protected void InitializeComponent()
         {
             this.pnlControls = new System.Windows.Forms.Panel();
             this.mandelbrotPreviewPanel = new System.Windows.Forms.Panel();
