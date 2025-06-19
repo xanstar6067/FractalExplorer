@@ -503,34 +503,72 @@ namespace FractalDraving
             decimal scaleRendered = BaseScale / _renderedZoom;
             decimal scaleCurrent = BaseScale / _zoom;
 
-            if (_renderedZoom <= 0 || _zoom <= 0)
+            if (_renderedZoom <= 0 || _zoom <= 0 || scaleRendered <= 0 || scaleCurrent <= 0)
             {
                 e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
                 return;
             }
 
-            decimal complex_half_width_rendered = scaleRendered / 2.0m;
-            decimal complex_half_height_rendered = scaleRendered * canvas.Height / canvas.Width / 2.0m;
+            // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
 
-            decimal complex_half_width_current = scaleCurrent / 2.0m;
-            decimal complex_half_height_current = scaleCurrent * canvas.Height / canvas.Width / 2.0m;
+            // Вычисляем, где находится левый верхний угол ОТРИСОВАННОГО изображения
+            // в системе координат ТЕКУЩЕГО вида.
+            decimal renderedImage_re_min = _renderedCenterX - scaleRendered / 2.0m;
+            decimal renderedImage_im_max = _renderedCenterY + scaleRendered / 2.0m * canvas.Height / canvas.Width;
 
-            decimal renderedImage_re_min = _renderedCenterX - complex_half_width_rendered;
-            decimal renderedImage_im_min = _renderedCenterY + complex_half_height_rendered; // Y-ось инвертирована
+            decimal currentView_re_min = _centerX - scaleCurrent / 2.0m;
+            decimal currentView_im_max = _centerY + scaleCurrent / 2.0m * canvas.Height / canvas.Width;
 
-            decimal currentView_re_min = _centerX - complex_half_width_current;
-            decimal currentView_im_max = _centerY + complex_half_height_current; // Y-ось инвертирована
+            decimal offsetX = (renderedImage_re_min - currentView_re_min) / scaleCurrent * canvas.Width;
+            decimal offsetY = (currentView_im_max - renderedImage_im_max) / scaleCurrent * canvas.Width;
 
-            float p1_X = (float)((renderedImage_re_min - currentView_re_min) / (complex_half_width_current * 2.0m) * canvas.Width);
-            float p1_Y = (float)((currentView_im_max - renderedImage_im_min) / (complex_half_height_current * 2.0m) * canvas.Height);
+            decimal newWidth = canvas.Width * (scaleRendered / scaleCurrent);
+            decimal newHeight = canvas.Height * (scaleRendered / scaleCurrent);
 
-            float w_prime = (float)(canvas.Width * (scaleRendered / scaleCurrent));
-            float h_prime = (float)(canvas.Height * (scaleRendered / scaleCurrent));
+            // ПРАВИЛЬНАЯ ПРОВЕРКА НА ПЕРЕПОЛНЕНИЕ
+            // Мы не можем хранить float.MaxValue в decimal, но можем использовать максимальное значение decimal
+            // как предел. Если вычисленные значения больше, то они точно не поместятся в float.
+            const decimal reasonableLimit = 7.9E+28M; // Это Decimal.MaxValue, можно взять чуть меньше для запаса
+            if (Math.Abs(offsetX) >= reasonableLimit || Math.Abs(offsetY) >= reasonableLimit ||
+                Math.Abs(newWidth) >= reasonableLimit || Math.Abs(newHeight) >= reasonableLimit)
+            {
+                // Значения слишком велики даже для decimal, не говоря уже о float.
+                // Безопасно выходим, чтобы не упасть.
+                return;
+            }
 
-            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
-            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+            // Теперь, когда мы знаем, что значения в пределах decimal, можно пробовать преобразовать их в float.
+            // Используем try-catch как последнюю линию обороны.
+            try
+            {
+                float p1_X = (float)offsetX;
+                float p1_Y = (float)offsetY;
+                float w_prime = (float)newWidth;
+                float h_prime = (float)newHeight;
 
-            e.Graphics.DrawImage(_previewBitmap, new RectangleF(p1_X, p1_Y, w_prime, h_prime));
+                // Дополнительная проверка на аномально большие значения float, которые могут быть проблемой для GDI+
+                if (!float.IsFinite(p1_X) || !float.IsFinite(p1_Y) || !float.IsFinite(w_prime) || !float.IsFinite(h_prime))
+                {
+                    return; // Выходим, если значения стали бесконечностью или NaN
+                }
+
+                PointF destPoint1 = new PointF(p1_X, p1_Y);
+                PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
+                PointF destPoint3 = new PointF(p1_X, p1_Y + h_prime);
+
+                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+                e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+
+                e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
+            }
+            catch (OverflowException)
+            {
+                // Эта ошибка возникает при преобразовании decimal в float.
+                // Перехватываем ее и просто ничего не делаем, чтобы избежать падения.
+                return;
+            }
+
+            // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
         }
 
         private void ParamControl_Changed(object sender, EventArgs e)
