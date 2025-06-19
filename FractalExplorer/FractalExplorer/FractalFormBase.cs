@@ -519,9 +519,12 @@ namespace FractalDraving
         {
             if (_isHighResRendering || !_panning) return;
 
-            decimal scale = BaseScale / _zoom;
-            _centerX -= (decimal)(e.X - _panStart.X) * scale / canvas.Width;
-            _centerY += (decimal)(e.Y - _panStart.Y) * scale / canvas.Height;
+            // Единый коэффициент масштабирования, основанный на ширине
+            decimal units_per_pixel = BaseScale / _zoom / canvas.Width;
+
+            _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel;
+            _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel; // ИСПОЛЬЗУЕМ ТОТ ЖЕ КОЭФФИЦИЕНТ
+
             _panStart = e.Location;
 
             canvas.Invalidate();
