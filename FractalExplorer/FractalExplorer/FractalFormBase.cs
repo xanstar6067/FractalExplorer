@@ -10,13 +10,13 @@ using System.Windows.Forms;
 
 namespace FractalDraving
 {
-    /// <summary>
-    /// Абстрактный базовый класс для форм, отображающих фракталы.
-    /// Содержит общую логику UI, управление рендерингом и обработку событий.
-    /// </summary>
     public abstract partial class FractalFormBase : Form, IFractalForm
     {
         #region Fields
+
+        // <<< НАЧАЛО ИЗМЕНЕНИЙ: Добавляем объект для блокировки >>>
+        private readonly object _bitmapLock = new object();
+        // <<< КОНЕЦ ИЗМЕНЕНИЙ >>>
 
         private const int TILE_SIZE = 32;
         private Bitmap _previewBitmap;
@@ -169,13 +169,19 @@ namespace FractalDraving
                 _renderDebounceTimer?.Stop();
                 _renderDebounceTimer?.Dispose();
 
+                // <<< НАЧАЛО ИЗМЕНЕНИЙ: Безопасное уничтожение битмапа >>>
                 if (_previewRenderCts != null)
                 {
                     _previewRenderCts.Cancel();
                     System.Threading.Thread.Sleep(50);
                     _previewRenderCts.Dispose();
                 }
-                _previewBitmap?.Dispose();
+                lock (_bitmapLock)
+                {
+                    _previewBitmap?.Dispose();
+                    _previewBitmap = null;
+                }
+                // <<< КОНЕЦ ИЗМЕНЕНИЙ >>>
             };
         }
 
@@ -185,17 +191,11 @@ namespace FractalDraving
 
         private void ScheduleRender()
         {
-            // Если идет сохранение в высоком разрешении или окно свернуто, ничего не делаем
             if (_isHighResRendering || this.WindowState == FormWindowState.Minimized) return;
-
-            // Если рендер превью уже идет, запросим его отмену
             if (_isRenderingPreview)
             {
                 _previewRenderCts?.Cancel();
-                // Флаг _isRenderingPreview будет сброшен в finally блока StartPreviewRender
             }
-
-            // Перезапускаем таймер дебаунсинга
             _renderDebounceTimer.Stop();
             _renderDebounceTimer.Start();
         }
@@ -203,28 +203,20 @@ namespace FractalDraving
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
-
-            // Если идет сохранение в высоком разрешении, откладываем рендер превью
             if (_isHighResRendering)
             {
-                ScheduleRender(); // Повторно запланировать
+                ScheduleRender();
                 return;
             }
-
-            // Если предыдущий рендер превью (возможно, отмененный) еще не полностью завершился
-            // (т.е. его блок finally еще не выполнился и _isRenderingPreview все еще true),
-            // то дадим ему еще немного времени и повторно запланируем.
             if (_isRenderingPreview)
             {
-                ScheduleRender(); // Повторно запланировать
+                ScheduleRender();
                 return;
             }
-
-            // Теперь _isRenderingPreview должен быть false, можно начинать новый рендер
             await StartPreviewRender();
         }
 
-        // <<< НАЧАЛО ИСПРАВЛЕННОГО БЛОКА >>>
+        // <<< НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный метод рендеринга >>>
         private async Task StartPreviewRender()
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -234,14 +226,18 @@ namespace FractalDraving
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
 
-            var renderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
-
+            // Подготавливаем новый битмап и параметры движка
+            var newBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
             UpdateEngineParameters();
-            var currentRenderedCenterX = _centerX;
-            var currentRenderedCenterY = _centerY;
-            var currentRenderedZoom = _zoom;
 
+            // Сохраняем параметры, с которыми будет производиться этот рендер
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+
+            // Копируем движок для потокобезопасного рендеринга
             var renderEngineCopy = CreateEngine();
+            // ... (копирование всех свойств движка)
             renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
             renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
             renderEngineCopy.CenterX = _fractalEngine.CenterX;
@@ -249,6 +245,19 @@ namespace FractalDraving
             renderEngineCopy.Scale = _fractalEngine.Scale;
             renderEngineCopy.C = _fractalEngine.C;
             renderEngineCopy.Palette = _fractalEngine.Palette;
+            renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
+
+            // Безопасно подменяем старый битмап на новый (пустой)
+            Bitmap oldBitmapToDispose = null;
+            lock (_bitmapLock)
+            {
+                oldBitmapToDispose = _previewBitmap;
+                _previewBitmap = newBitmap;
+            }
+            oldBitmapToDispose?.Dispose();
+
+            // Сразу инвалидируем холст, чтобы он показал пустой фон
+            canvas.Invalidate();
 
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
@@ -257,78 +266,65 @@ namespace FractalDraving
             pbRenderProgress.Maximum = tiles.Count;
             int progress = 0;
 
-            BitmapData bmpData = null;
-
             try
             {
-                token.ThrowIfCancellationRequested();
-
-                bmpData = renderingBitmap.LockBits(
-                    new Rectangle(0, 0, renderingBitmap.Width, renderingBitmap.Height),
-                    ImageLockMode.WriteOnly,
-                    renderingBitmap.PixelFormat);
-
-                int bytes = Math.Abs(bmpData.Stride) * renderingBitmap.Height;
-                byte[] buffer = new byte[bytes];
-                int bytesPerPixel = Image.GetPixelFormatSize(renderingBitmap.PixelFormat) / 8;
-
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    renderEngineCopy.RenderTile(buffer, bmpData.Stride, bytesPerPixel, tile, canvas.Width, canvas.Height);
+                    // 1. Отрисовываем плитку в ее собственный, локальный буфер
+                    var tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int bytesPerPixel);
 
+                    ct.ThrowIfCancellationRequested();
+
+                    // 2. Блокируем общий битмап и копируем в него данные плитки
+                    lock (_bitmapLock)
+                    {
+                        // Проверяем, что битмап не был уничтожен или заменен, пока мы работали
+                        if (ct.IsCancellationRequested || _previewBitmap != newBitmap) return;
+
+                        var tileRect = tile.Bounds;
+                        // Обрезаем прямоугольник, если он выходит за границы битмапа
+                        var bitmapRect = new Rectangle(0, 0, _previewBitmap.Width, _previewBitmap.Height);
+                        tileRect.Intersect(bitmapRect);
+                        if (tileRect.Width == 0 || tileRect.Height == 0) return;
+
+                        BitmapData bmpData = _previewBitmap.LockBits(tileRect, ImageLockMode.WriteOnly, _previewBitmap.PixelFormat);
+
+                        // Копируем данные построчно
+                        int originalTileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
+                        for (int y = 0; y < tileRect.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            int srcOffset = (y * originalTileWidthInBytes);
+                            Marshal.Copy(tileBuffer, srcOffset, destPtr, tileRect.Width * bytesPerPixel);
+                        }
+                        _previewBitmap.UnlockBits(bmpData);
+                    }
+
+                    // 3. Из UI-потока инвалидируем только область обновленной плитки
                     if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
-
                     canvas.Invoke((Action)(() =>
                     {
-                        if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                        if (ct.IsCancellationRequested) return;
+                        canvas.Invalidate(tile.Bounds);
+                        if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                         {
                             pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
                         }
                     }));
-                    await Task.Yield();
+
+                    await Task.Yield(); // Даем шанс другим задачам выполниться
+
                 }, token);
-
-                token.ThrowIfCancellationRequested();
-                Marshal.Copy(buffer, 0, bmpData.Scan0, bytes);
-
-                renderingBitmap.UnlockBits(bmpData);
-                bmpData = null;
-
-                token.ThrowIfCancellationRequested();
-                if (canvas.IsHandleCreated && !canvas.IsDisposed)
-                {
-                    canvas.Invoke((Action)(() =>
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            renderingBitmap.Dispose();
-                            return;
-                        }
-
-                        _previewBitmap?.Dispose();
-                        _previewBitmap = renderingBitmap;
-
-                        _renderedCenterX = currentRenderedCenterX;
-                        _renderedCenterY = currentRenderedCenterY;
-                        _renderedZoom = currentRenderedZoom;
-
-                        canvas.Invalidate();
-                    }));
-                }
-                else
-                {
-                    renderingBitmap.Dispose();
-                }
             }
             catch (OperationCanceledException)
             {
-                if (renderingBitmap != null) renderingBitmap.Dispose();
+                // Это ожидаемое исключение при отмене, просто выходим
             }
             catch (Exception ex)
             {
-                if (renderingBitmap != null) renderingBitmap.Dispose();
+                // Показываем другие ошибки
                 if (this.IsHandleCreated && !this.IsDisposed)
                 {
                     MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -336,15 +332,6 @@ namespace FractalDraving
             }
             finally
             {
-                if (bmpData != null)
-                {
-                    try
-                    {
-                        renderingBitmap.UnlockBits(bmpData);
-                    }
-                    catch { /* Игнорируем, если битмап уже уничтожен */ }
-                }
-
                 _isRenderingPreview = false;
                 if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                 {
@@ -352,7 +339,7 @@ namespace FractalDraving
                 }
             }
         }
-        // <<< КОНЕЦ ИСПРАВЛЕННОГО БЛОКА >>>
+        // <<< КОНЕЦ ИЗМЕНЕНИЙ >>>
 
         private List<TileInfo> GenerateTiles(int width, int height)
         {
@@ -374,102 +361,82 @@ namespace FractalDraving
 
         #region Event Handlers
 
+        // <<< НАЧАЛО ИЗМЕНЕНИЙ: Оборачиваем Paint в lock >>>
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
-            if (_previewBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return; // Добавил проверку canvas.Width/Height
 
-            if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
+            lock (_bitmapLock)
             {
-                e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
-                return;
-            }
+                if (_previewBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            // _renderedZoom - зум, для которого _previewBitmap был отрендерен
-            // _zoom - текущий целевой зум
-            // BaseScale - базовая комплексная ширина/высота при зуме 1.0
-
-            // Комплексная ширина видимой области для отрендеренного изображения
-            decimal renderedComplexWidth = BaseScale / _renderedZoom;
-            // Комплексная ширина текущей видимой области
-            decimal currentComplexWidth = BaseScale / _zoom;
-
-            if (_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0)
-            {
-                e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
-                return;
-            }
-
-            // Единицы комплексной плоскости на пиксель для отрендеренного и текущего вида
-            decimal units_per_pixel_rendered = renderedComplexWidth / _previewBitmap.Width; // Используем _previewBitmap.Width
-            decimal units_per_pixel_current = currentComplexWidth / canvas.Width;
-
-            // Координаты углов отрендерованного изображения в комплексной плоскости
-            decimal rendered_re_min = _renderedCenterX - (renderedComplexWidth / 2.0m);
-            decimal rendered_im_max = _renderedCenterY + (_previewBitmap.Height * units_per_pixel_rendered / 2.0m); // Высота в компл. коорд.
-
-            // Координаты углов текущего вида в комплексной плоскости
-            decimal current_re_min = _centerX - (currentComplexWidth / 2.0m);
-            decimal current_im_max = _centerY + (canvas.Height * units_per_pixel_current / 2.0m); // Высота в компл. коорд.
-
-            // Смещение отрендеренного изображения в пикселях текущего вида
-            decimal offsetX_pixels = (rendered_re_min - current_re_min) / units_per_pixel_current;
-            decimal offsetY_pixels = (current_im_max - rendered_im_max) / units_per_pixel_current; // Y инвертирован
-
-            // Новый размер отрендеренного изображения в пикселях текущего вида
-            decimal newWidth_pixels = _previewBitmap.Width * (units_per_pixel_rendered / units_per_pixel_current);
-            decimal newHeight_pixels = _previewBitmap.Height * (units_per_pixel_rendered / units_per_pixel_current);
-
-
-            const decimal reasonableLimit = 7.9E+28M; // decimal.MaxValue очень большое, возьмем что-то более приземленное для float
-            const float floatReasonableLimit = 1E+18f; // Ограничение для float
-
-            if (Math.Abs(offsetX_pixels) >= reasonableLimit || Math.Abs(offsetY_pixels) >= reasonableLimit ||
-                Math.Abs(newWidth_pixels) >= reasonableLimit || Math.Abs(newHeight_pixels) >= reasonableLimit)
-            {
-                // Слишком большие значения, не пытаемся рисовать
-                return;
-            }
-
-            try
-            {
-                float p1_X = (float)offsetX_pixels;
-                float p1_Y = (float)offsetY_pixels;
-                float w_prime = (float)newWidth_pixels;
-                float h_prime = (float)newHeight_pixels;
-
-                if (!float.IsFinite(p1_X) || !float.IsFinite(p1_Y) || !float.IsFinite(w_prime) || !float.IsFinite(h_prime) ||
-                    Math.Abs(p1_X) > floatReasonableLimit || Math.Abs(p1_Y) > floatReasonableLimit || // Доп. проверка для float
-                    Math.Abs(w_prime) > floatReasonableLimit || Math.Abs(h_prime) > floatReasonableLimit)
+                if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
                 {
-                    return; // Некорректные значения для float
+                    e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                    return;
                 }
 
+                decimal renderedComplexWidth = BaseScale / _renderedZoom;
+                decimal currentComplexWidth = BaseScale / _zoom;
 
-                PointF destPoint1 = new PointF(p1_X, p1_Y);
-                PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
-                PointF destPoint3 = new PointF(p1_X, p1_Y + h_prime);
+                if (_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0)
+                {
+                    e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                    return;
+                }
 
-                // Сохраняем текущее состояние графики, если планируем менять много параметров
-                // var originalState = e.Graphics.Save();
+                decimal units_per_pixel_rendered = renderedComplexWidth / _previewBitmap.Width;
+                decimal units_per_pixel_current = currentComplexWidth / canvas.Width;
 
-                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear; // Или NearestNeighbor для скорости при панорамировании
-                e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+                decimal rendered_re_min = _renderedCenterX - (renderedComplexWidth / 2.0m);
+                decimal rendered_im_max = _renderedCenterY + (_previewBitmap.Height * units_per_pixel_rendered / 2.0m);
 
-                e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
+                decimal current_re_min = _centerX - (currentComplexWidth / 2.0m);
+                decimal current_im_max = _centerY + (canvas.Height * units_per_pixel_current / 2.0m);
 
-                // e.Graphics.Restore(originalState); // Восстанавливаем состояние
-            }
-            catch (OverflowException)
-            {
-                // Ошибка приведения decimal к float, если значения слишком большие
-                return;
-            }
-            catch (ArgumentException) // Может возникнуть в DrawImage, если прямоугольник некорректен
-            {
-                return;
+                decimal offsetX_pixels = (rendered_re_min - current_re_min) / units_per_pixel_current;
+                decimal offsetY_pixels = (current_im_max - rendered_im_max) / units_per_pixel_current;
+
+                decimal newWidth_pixels = _previewBitmap.Width * (units_per_pixel_rendered / units_per_pixel_current);
+                decimal newHeight_pixels = _previewBitmap.Height * (units_per_pixel_rendered / units_per_pixel_current);
+
+                const decimal reasonableLimit = 7.9E+28M;
+                const float floatReasonableLimit = 1E+18f;
+
+                if (Math.Abs(offsetX_pixels) >= reasonableLimit || Math.Abs(offsetY_pixels) >= reasonableLimit ||
+                    Math.Abs(newWidth_pixels) >= reasonableLimit || Math.Abs(newHeight_pixels) >= reasonableLimit)
+                {
+                    return;
+                }
+
+                try
+                {
+                    float p1_X = (float)offsetX_pixels;
+                    float p1_Y = (float)offsetY_pixels;
+                    float w_prime = (float)newWidth_pixels;
+                    float h_prime = (float)newHeight_pixels;
+
+                    if (!float.IsFinite(p1_X) || !float.IsFinite(p1_Y) || !float.IsFinite(w_prime) || !float.IsFinite(h_prime) ||
+                        Math.Abs(p1_X) > floatReasonableLimit || Math.Abs(p1_Y) > floatReasonableLimit ||
+                        Math.Abs(w_prime) > floatReasonableLimit || Math.Abs(h_prime) > floatReasonableLimit)
+                    {
+                        return;
+                    }
+
+                    PointF destPoint1 = new PointF(p1_X, p1_Y);
+                    PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
+                    PointF destPoint3 = new PointF(p1_X, p1_Y + h_prime);
+
+                    e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+                    e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+
+                    e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
+                }
+                catch (OverflowException) { return; }
+                catch (ArgumentException) { return; }
             }
         }
+        // <<< КОНЕЦ ИЗМЕНЕНИЙ >>>
 
         private void ParamControl_Changed(object sender, EventArgs e)
         {
@@ -486,9 +453,7 @@ namespace FractalDraving
             if (_isHighResRendering) return;
 
             decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
-
             decimal scaleBeforeZoom = BaseScale / _zoom;
-
             decimal mouseRe = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
             decimal mouseIm = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
 
@@ -518,15 +483,10 @@ namespace FractalDraving
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning) return;
-
-            // Единый коэффициент масштабирования, основанный на ширине
             decimal units_per_pixel = BaseScale / _zoom / canvas.Width;
-
             _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel;
-            _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel; // ИСПОЛЬЗУЕМ ТОТ ЖЕ КОЭФФИЦИЕНТ
-
+            _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel;
             _panStart = e.Location;
-
             canvas.Invalidate();
             ScheduleRender();
         }
@@ -565,15 +525,9 @@ namespace FractalDraving
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // Если идет рендер превью, отменяем его перед началом сохранения
                     if (_isRenderingPreview)
                     {
                         _previewRenderCts?.Cancel();
-                        // Дадим шанс рендеру превью обработать отмену.
-                        // Небольшая задержка или ожидание завершения может быть полезна,
-                        // но для простоты положимся на то, что RenderDebounceTimer_Tick
-                        // не запустит новый StartPreviewRender, пока _isHighResRendering true.
-                        // И сам StartPreviewRender должен быстро завершиться при отмене.
                     }
 
                     _isHighResRendering = true;
@@ -584,27 +538,24 @@ namespace FractalDraving
                     try
                     {
                         FractalEngineBase renderEngine = CreateEngine();
-                        // ... (настройка renderEngine) ...
-                        UpdateEngineParameters(); // Убедимся, что параметры движка взяты из UI
+                        UpdateEngineParameters();
                         renderEngine.MaxIterations = _fractalEngine.MaxIterations;
                         renderEngine.ThresholdSquared = _fractalEngine.ThresholdSquared;
                         renderEngine.CenterX = _fractalEngine.CenterX;
                         renderEngine.CenterY = _fractalEngine.CenterY;
                         renderEngine.Scale = _fractalEngine.Scale;
-                        if (this is FractalJulia || this is FractalJuliaBurningShip) // Для типов Жюлиа
+                        if (this is FractalJulia || this is FractalJuliaBurningShip)
                         {
                             renderEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value);
                         }
                         else
                         {
-                            renderEngine.C = _fractalEngine.C; // Для других типов, если C используется (хотя обычно нет для Мандельброта)
+                            renderEngine.C = _fractalEngine.C;
                         }
 
-
-                        HandlePaletteSelectionLogic(); // Установить текущую палитру
+                        HandlePaletteSelectionLogic();
                         renderEngine.Palette = _fractalEngine.Palette;
                         renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
-
 
                         int threadCount = GetThreadCount();
 
@@ -639,8 +590,6 @@ namespace FractalDraving
                                 pbHighResProgress.Value = 0;
                             }));
                         }
-                        // После завершения сохранения, запланировать обновление превью,
-                        // так как его параметры могли измениться или оно было отменено.
                         ScheduleRender();
                     }
                 }
