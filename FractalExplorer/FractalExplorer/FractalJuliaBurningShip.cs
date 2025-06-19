@@ -10,8 +10,8 @@ namespace FractalDraving
     {
         private const decimal BS_MIN_RE = -2.0m;
         private const decimal BS_MAX_RE = 1.5m;
-        private const decimal BS_MIN_IM = -1.5m;
-        private const decimal BS_MAX_IM = 1.0m;
+        private const decimal BS_MIN_IM = -1.0m; // Новый низ (старый верх с инвертированным знаком)
+        private const decimal BS_MAX_IM = 1.5m;  // Новый верх (старый низ с инвертированным знаком)
         private const int BS_PREVIEW_ITERATIONS = 75;
 
         private BurningShipCSelectorForm _burningShipCSelectorWindow;
