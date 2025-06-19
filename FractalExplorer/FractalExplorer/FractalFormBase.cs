@@ -466,21 +466,38 @@ namespace FractalDraving
         {
             if (_isHighResRendering) return;
 
+            // >>> ИЗМЕНЕНИЕ ЗДЕСЬ <<<
+            // "Запекаем" текущий вид (фон + новые плитки) в единый фон перед трансформацией.
+            CommitAndBakePreview();
+
+            // Логика зума относительно курсора
             decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
             decimal scaleBeforeZoom = BaseScale / _zoom;
+
+            // Вычисляем комплексные координаты точки под курсором
             decimal mouseRe = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
             decimal mouseIm = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
 
+            // Применяем новый зум
             _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, _zoom * zoomFactor));
 
+            // Пересчитываем центр так, чтобы точка под курсором осталась на месте
             decimal scaleAfterZoom = BaseScale / _zoom;
             _centerX = mouseRe - (e.X - canvas.Width / 2.0m) * scaleAfterZoom / canvas.Width;
             _centerY = mouseIm + (e.Y - canvas.Height / 2.0m) * scaleAfterZoom / canvas.Height;
 
+            // Немедленно перерисовываем холст, чтобы показать трансформацию
             canvas.Invalidate();
 
-            if (nudZoom.Value != _zoom) nudZoom.Value = _zoom;
-            else ScheduleRender();
+            // Обновляем UI и планируем новый детальный рендер
+            if (nudZoom.Value != _zoom)
+            {
+                nudZoom.Value = _zoom; // Это вызовет ScheduleRender через событие ValueChanged
+            }
+            else
+            {
+                ScheduleRender(); // Если значение не изменилось (уперлись в лимит)
+            }
         }
 
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
@@ -498,12 +515,24 @@ namespace FractalDraving
         {
             if (_isHighResRendering || !_panning) return;
 
+            // >>> ИЗМЕНЕНИЕ ЗДЕСЬ <<<
+            // "Запекаем" текущий вид (фон + новые плитки) в единый фон перед панорамированием.
+            CommitAndBakePreview();
+
+            // Единицы комплексной плоскости на пиксель для текущего вида
             decimal units_per_pixel = BaseScale / _zoom / canvas.Width;
+
+            // Смещаем центр на дельту движения мыши
             _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel;
             _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel;
+
+            // Обновляем стартовую точку для следующего смещения
             _panStart = e.Location;
 
+            // Немедленно перерисовываем холст для отображения сдвига
             canvas.Invalidate();
+
+            // Планируем новый детальный рендер
             ScheduleRender();
         }
 
@@ -695,6 +724,89 @@ namespace FractalDraving
 
         #region Helpers
 
+        /// <summary>
+        /// "Запекает" текущее состояние холста (фон + новые плитки) в основной _previewBitmap.
+        /// Вызывается при начале нового действия пользователя (зум, панорамирование).
+        /// </summary>
+        private void CommitAndBakePreview()
+        {
+            // Проверяем, есть ли вообще что запекать.
+            lock (_bitmapLock)
+            {
+                if (!_isRenderingPreview || _currentRenderingBitmap == null)
+                {
+                    return;
+                }
+            }
+
+            // Немедленно отменяем текущий рендер.
+            // Важно делать это *вне* блокировки, чтобы избежать дедлоков.
+            _previewRenderCts?.Cancel();
+
+            lock (_bitmapLock)
+            {
+                // После отмены еще раз проверяем, на случай если состояние изменилось.
+                if (_currentRenderingBitmap == null) return;
+
+                // Создаем новый битмап, на котором будем смешивать слои.
+                // Формат 24bpp, так как прозрачность больше не нужна.
+                var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+                using (var g = Graphics.FromImage(bakedBitmap))
+                {
+                    g.Clear(Color.Black);
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+
+                    // 1. Рисуем старый фон с его текущей трансформацией.
+                    // Это в точности та же логика, что и в Canvas_Paint.
+                    if (_previewBitmap != null)
+                    {
+                        try
+                        {
+                            decimal renderedComplexWidth = BaseScale / _renderedZoom;
+                            decimal currentComplexWidth = BaseScale / _zoom;
+
+                            if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
+                            {
+                                decimal units_per_pixel_rendered = renderedComplexWidth / _previewBitmap.Width;
+                                decimal units_per_pixel_current = currentComplexWidth / canvas.Width;
+                                decimal rendered_re_min = _renderedCenterX - (renderedComplexWidth / 2.0m);
+                                decimal rendered_im_max = _renderedCenterY + (_previewBitmap.Height * units_per_pixel_rendered / 2.0m);
+                                decimal current_re_min = _centerX - (currentComplexWidth / 2.0m);
+                                decimal current_im_max = _centerY + (canvas.Height * units_per_pixel_current / 2.0m);
+                                decimal offsetX_pixels = (rendered_re_min - current_re_min) / units_per_pixel_current;
+                                decimal offsetY_pixels = (current_im_max - rendered_im_max) / units_per_pixel_current;
+                                decimal newWidth_pixels = _previewBitmap.Width * (units_per_pixel_rendered / units_per_pixel_current);
+                                decimal newHeight_pixels = _previewBitmap.Height * (units_per_pixel_rendered / units_per_pixel_current);
+
+                                PointF destPoint1 = new PointF((float)offsetX_pixels, (float)offsetY_pixels);
+                                PointF destPoint2 = new PointF((float)(offsetX_pixels + newWidth_pixels), (float)offsetY_pixels);
+                                PointF destPoint3 = new PointF((float)offsetX_pixels, (float)(offsetY_pixels + newHeight_pixels));
+
+                                g.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
+                            }
+                        }
+                        catch (Exception) { /* Игнорируем */ }
+                    }
+
+                    // 2. Поверх рисуем новые, уже отрисованные плитки.
+                    g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                }
+
+                // 3. Продвигаем "запеченный" битмап на место основного.
+                _previewBitmap?.Dispose();
+                _previewBitmap = bakedBitmap;
+
+                // 4. Очищаем слой рендеринга.
+                _currentRenderingBitmap.Dispose();
+                _currentRenderingBitmap = null;
+
+                // 5. КРИТИЧЕСКИ ВАЖНО: обновляем "отрендеренные" координаты.
+                // Теперь наш новый фон соответствует текущему положению и зуму.
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
+            }
+        }
         private void UpdateEngineParameters()
         {
             _fractalEngine.MaxIterations = (int)nudIterations.Value;
