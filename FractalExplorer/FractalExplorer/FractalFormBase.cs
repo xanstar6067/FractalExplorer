@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic.Devices;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -7,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
 namespace FractalDraving
 {
@@ -31,8 +29,9 @@ namespace FractalDraving
         protected decimal _zoom = 1.0m;
         protected decimal _centerX = 0.0m;
         protected decimal _centerY = 0.0m;
-        protected CheckBox[] _paletteCheckBoxes;
-        protected CheckBox _lastSelectedPaletteCheckBox = null;
+        // ИСПРАВЛЕНИЕ: Явное указание типа для устранения неоднозначности
+        protected System.Windows.Forms.CheckBox[] _paletteCheckBoxes;
+        protected System.Windows.Forms.CheckBox _lastSelectedPaletteCheckBox = null;
 
         // --- Параметры отрисованного изображения ---
         private decimal _renderedCenterX;
@@ -115,6 +114,7 @@ namespace FractalDraving
         {
             // Настройка потоков
             int cores = Environment.ProcessorCount;
+            cbThreads.Items.Clear();
             for (int i = 1; i <= cores; i++)
             {
                 cbThreads.Items.Add(i);
@@ -137,10 +137,9 @@ namespace FractalDraving
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.001m;
             nudZoom.Maximum = 1_000_000_000_000_000m;
-            _zoom = BaseScale / 3.0m; // Начальный зум
+            _zoom = BaseScale / 3.0m;
             nudZoom.Value = _zoom;
 
-            // Если есть контролы для Re/Im (формы Жюлиа)
             if (nudRe != null && nudIm != null)
             {
                 nudRe.Minimum = -2m;
@@ -159,7 +158,8 @@ namespace FractalDraving
 
         private void InitializePaletteCheckBoxes()
         {
-            var allCheckBoxes = new List<CheckBox>
+            // ИСПРАВЛЕНИЕ: Явное указание типа для устранения неоднозначности
+            var allCheckBoxes = new List<System.Windows.Forms.CheckBox>
             {
                 colorBox, oldRenderBW, mondelbrotClassicBox,
                 checkBox1, checkBox2, checkBox3, checkBox4, checkBox5, checkBox6
@@ -174,26 +174,25 @@ namespace FractalDraving
 
         private void InitializeEventHandlers()
         {
-            // События контролов
             nudIterations.ValueChanged += ParamControl_Changed;
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
-            nudRe?.ValueChanged.Invoke(this, ParamControl_Changed);
-            nudIm?.ValueChanged.Invoke(this, ParamControl_Changed);
+
+            // ИСПРАВЛЕНИЕ: Корректная подписка на события
+            if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
+            if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
 
             btnRender.Click += (s, e) => ScheduleRender();
             btnSaveHighRes.Click += btnSave_Click_1;
 
-            // События холста
             canvas.MouseWheel += Canvas_MouseWheel;
             canvas.MouseDown += Canvas_MouseDown;
             canvas.MouseMove += Canvas_MouseMove;
             canvas.MouseUp += Canvas_MouseUp;
             canvas.Paint += Canvas_Paint;
-            canvas.Resize += (s, e) => ScheduleRender();
+            canvas.Resize += (s, e) => { if (this.WindowState != FormWindowState.Minimized) ScheduleRender(); };
 
-            // Палитра
             foreach (var cb in _paletteCheckBoxes)
             {
                 cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
@@ -214,7 +213,7 @@ namespace FractalDraving
 
         private void ScheduleRender()
         {
-            if (_isHighResRendering) return;
+            if (_isHighResRendering || this.WindowState == FormWindowState.Minimized) return;
             _renderDebounceTimer.Stop();
             _renderDebounceTimer.Start();
         }
@@ -224,7 +223,7 @@ namespace FractalDraving
             _renderDebounceTimer.Stop();
             if (_isHighResRendering || _isRenderingPreview)
             {
-                ScheduleRender(); // Попробовать еще раз чуть позже
+                ScheduleRender();
                 return;
             }
 
@@ -240,7 +239,6 @@ namespace FractalDraving
             _previewRenderCts = new CancellationTokenSource();
             CancellationToken token = _previewRenderCts.Token;
 
-            // Подготовка нового битмапа
             _previewBitmap?.Dispose();
             _previewBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
 
@@ -252,6 +250,10 @@ namespace FractalDraving
 
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+
+            pbRenderProgress.Value = 0;
+            pbRenderProgress.Maximum = tiles.Count;
+            int progress = 0;
 
             BitmapData bmpData = _previewBitmap.LockBits(
                 new Rectangle(0, 0, _previewBitmap.Width, _previewBitmap.Height),
@@ -266,12 +268,15 @@ namespace FractalDraving
 
                     _fractalEngine.RenderTile(bmpData, tile, canvas.Width, canvas.Height);
 
-                    // Обновляем конкретный участок PictureBox
                     if (canvas.IsHandleCreated && !canvas.IsDisposed)
                     {
-                        canvas.Invoke((Action)(() => canvas.Invalidate(tile.Bounds)));
+                        canvas.Invoke((Action)(() =>
+                        {
+                            canvas.Invalidate(tile.Bounds);
+                            pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
+                        }));
                     }
-                    await Task.Yield(); // Даем шанс UI обновиться
+                    await Task.Yield();
                 }, token);
             }
             catch (OperationCanceledException) { /* Normal cancellation */ }
@@ -281,22 +286,18 @@ namespace FractalDraving
             }
             finally
             {
-                if (_previewBitmap != null)
+                if (_previewBitmap != null && bmpData != null)
                 {
-                    try
-                    {
-                        _previewBitmap.UnlockBits(bmpData);
-                    }
-                    catch { }
+                    try { _previewBitmap.UnlockBits(bmpData); } catch { }
                 }
                 _isRenderingPreview = false;
-                pbRenderProgress.Value = 0;
+                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                {
+                    pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
+                }
             }
         }
 
-        /// <summary>
-        /// Создает список плиток для рендеринга, отсортированный от центра к краям.
-        /// </summary>
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
@@ -310,7 +311,6 @@ namespace FractalDraving
                 }
             }
 
-            // Сортировка по расстоянию до центра
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 
@@ -323,14 +323,12 @@ namespace FractalDraving
             e.Graphics.Clear(Color.Black);
             if (_previewBitmap == null) return;
 
-            // Если параметры вида не изменились, просто рисуем битмап
             if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
             {
                 e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
                 return;
             }
 
-            // Иначе, выполняем трансформацию для "мгновенного" панорамирования/зума
             decimal scaleRendered = BaseScale / _renderedZoom;
             decimal scaleCurrent = BaseScale / _zoom;
 
@@ -347,13 +345,13 @@ namespace FractalDraving
             decimal complex_half_height_current = scaleCurrent * canvas.Height / canvas.Width / 2.0m;
 
             decimal renderedImage_re_min = _renderedCenterX - complex_half_width_rendered;
-            decimal renderedImage_im_min = _renderedCenterY - complex_half_height_rendered;
+            decimal renderedImage_im_min = _renderedCenterY + complex_half_height_rendered; // Y-ось инвертирована
 
             decimal currentView_re_min = _centerX - complex_half_width_current;
-            decimal currentView_im_min = _centerY - complex_half_height_current;
+            decimal currentView_im_max = _centerY + complex_half_height_current; // Y-ось инвертирована
 
             float p1_X = (float)((renderedImage_re_min - currentView_re_min) / (complex_half_width_current * 2.0m) * canvas.Width);
-            float p1_Y = (float)((currentView_im_min - renderedImage_im_min) / (complex_half_height_current * 2.0m) * canvas.Height);
+            float p1_Y = (float)((currentView_im_max - renderedImage_im_min) / (complex_half_height_current * 2.0m) * canvas.Height);
 
             float w_prime = (float)(canvas.Width * (scaleRendered / scaleCurrent));
             float h_prime = (float)(canvas.Height * (scaleRendered / scaleCurrent));
@@ -383,13 +381,13 @@ namespace FractalDraving
             decimal scaleBeforeZoom = BaseScale / oldZoom;
 
             decimal mouseRe = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
-            decimal mouseIm = _centerY + (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
+            decimal mouseIm = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
 
             _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, _zoom * zoomFactor));
 
             decimal scaleAfterZoom = BaseScale / _zoom;
             _centerX = mouseRe - (e.X - canvas.Width / 2.0m) * scaleAfterZoom / canvas.Width;
-            _centerY = mouseIm - (e.Y - canvas.Height / 2.0m) * scaleAfterZoom / canvas.Height;
+            _centerY = mouseIm + (e.Y - canvas.Height / 2.0m) * scaleAfterZoom / canvas.Height;
 
             canvas.Invalidate();
 
@@ -414,7 +412,7 @@ namespace FractalDraving
 
             decimal scale = BaseScale / _zoom;
             _centerX -= (decimal)(e.X - _panStart.X) * scale / canvas.Width;
-            _centerY -= (decimal)(e.Y - _panStart.Y) * scale / canvas.Height;
+            _centerY += (decimal)(e.Y - _panStart.Y) * scale / canvas.Height; // Y-ось инвертирована
             _panStart = e.Location;
 
             canvas.Invalidate();
@@ -433,17 +431,88 @@ namespace FractalDraving
 
         private async void btnSave_Click_1(object sender, EventArgs e)
         {
-            // ... (Код сохранения в высоком разрешении, адаптированный под новую архитектуру)
-            // Он остался почти таким же, но теперь вызывает движок напрямую
-        }
+            if (_isHighResRendering)
+            {
+                MessageBox.Show("Процесс сохранения уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
+            int saveWidth = (int)nudSaveWidth.Value;
+            int saveHeight = (int)nudSaveHeight.Value;
+
+            using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить фрактал (Высокое разрешение)" })
+            {
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    _isHighResRendering = true;
+                    pnlControls.Enabled = false;
+                    pbHighResProgress.Value = 0;
+                    pbHighResProgress.Visible = true;
+
+                    try
+                    {
+                        // Создаем новый движок с текущими параметрами для потокобезопасности
+                        FractalEngineBase renderEngine = CreateEngine();
+                        renderEngine.MaxIterations = (int)nudIterations.Value;
+                        renderEngine.ThresholdSquared = nudThreshold.Value * nudThreshold.Value;
+                        renderEngine.Scale = BaseScale / _zoom;
+                        renderEngine.CenterX = _centerX;
+                        renderEngine.CenterY = _centerY;
+                        if (nudRe != null && nudIm != null)
+                        {
+                            renderEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value);
+                        }
+
+                        // Копируем функцию палитры
+                        HandlePaletteSelectionLogic(); // Обновляем палитру в основном движке
+                        renderEngine.Palette = _fractalEngine.Palette; // Копируем ее в движок для рендера
+
+                        int threadCount = GetThreadCount();
+
+                        Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
+                            saveWidth, saveHeight, threadCount,
+                            progress => {
+                                if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
+                                {
+                                    pbHighResProgress.Invoke((Action)(() => {
+                                        pbHighResProgress.Value = Math.Min(pbHighResProgress.Maximum, progress);
+                                    }));
+                                }
+                            }
+                        ));
+
+                        highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
+                        highResBitmap.Dispose();
+                        MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        _isHighResRendering = false;
+                        pnlControls.Enabled = true;
+                        if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
+                        {
+                            pbHighResProgress.Invoke((Action)(() => {
+                                pbHighResProgress.Visible = false;
+                                pbHighResProgress.Value = 0;
+                            }));
+                        }
+                    }
+                }
+            }
+        }
         #endregion
 
         #region Palette Logic
 
         private void PaletteCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            CheckBox currentCb = sender as CheckBox; if (currentCb == null) return;
+            // ИСПРАВЛЕНИЕ: Явное указание типа
+            System.Windows.Forms.CheckBox currentCb = sender as System.Windows.Forms.CheckBox;
+            if (currentCb == null) return;
             foreach (var cb in _paletteCheckBoxes) cb.CheckedChanged -= PaletteCheckBox_CheckedChanged;
 
             if (currentCb.Checked)
@@ -453,7 +522,6 @@ namespace FractalDraving
             }
             else
             {
-                // Если отжали последний, то включаем дефолтный
                 if (_paletteCheckBoxes.All(cb => !cb.Checked))
                 {
                     var defaultCb = mondelbrotClassicBox ?? colorBox;
@@ -474,26 +542,30 @@ namespace FractalDraving
             if (oldRenderBW != null)
                 colorBox.Enabled = !oldRenderBW.Checked;
 
-            if (_lastSelectedPaletteCheckBox != null)
+            var paletteFunc = GetPaletteFuncByName(_lastSelectedPaletteCheckBox?.Name);
+            if (_fractalEngine != null)
             {
-                if (_lastSelectedPaletteCheckBox == colorBox) _fractalEngine.Palette = GetPaletteColorBoxColor;
-                else if (_lastSelectedPaletteCheckBox == oldRenderBW) _fractalEngine.Palette = GetPaletteOldBWColor;
-                else if (_lastSelectedPaletteCheckBox == mondelbrotClassicBox) _fractalEngine.Palette = GetPaletteMandelbrotClassicColor;
-                else if (_lastSelectedPaletteCheckBox.Name == "checkBox1") _fractalEngine.Palette = GetPalette1Color;
-                else if (_lastSelectedPaletteCheckBox.Name == "checkBox2") _fractalEngine.Palette = GetPalette2Color;
-                else if (_lastSelectedPaletteCheckBox.Name == "checkBox3") _fractalEngine.Palette = GetPalette3Color;
-                else if (_lastSelectedPaletteCheckBox.Name == "checkBox4") _fractalEngine.Palette = GetPalette4Color;
-                else if (_lastSelectedPaletteCheckBox.Name == "checkBox5") _fractalEngine.Palette = GetPalette5Color;
-                else if (_lastSelectedPaletteCheckBox.Name == "checkBox6") _fractalEngine.Palette = GetPalette6Color;
-                else _fractalEngine.Palette = GetDefaultPaletteColor;
-            }
-            else
-            {
-                _fractalEngine.Palette = GetDefaultPaletteColor;
+                _fractalEngine.Palette = paletteFunc;
             }
         }
 
-        // --- Методы палитр (остались без изменений)
+        private Func<int, int, int, Color> GetPaletteFuncByName(string name)
+        {
+            switch (name)
+            {
+                case "colorBox": return GetPaletteColorBoxColor;
+                case "oldRenderBW": return GetPaletteOldBWColor;
+                case "mondelbrotClassicBox": return GetPaletteMandelbrotClassicColor;
+                case "checkBox1": return GetPalette1Color;
+                case "checkBox2": return GetPalette2Color;
+                case "checkBox3": return GetPalette3Color;
+                case "checkBox4": return GetPalette4Color;
+                case "checkBox5": return GetPalette5Color;
+                case "checkBox6": return GetPalette6Color;
+                default: return GetDefaultPaletteColor;
+            }
+        }
+
         private Color GetDefaultPaletteColor(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) return Color.Black; double t_log = Math.Log(Math.Min(iter, maxClrIter) + 1) / Math.Log(maxClrIter + 1); int cVal = (int)(255.0 * (1 - t_log)); return Color.FromArgb(cVal, cVal, cVal); }
         private Color GetPaletteColorBoxColor(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) return Color.Black; double t_capped = (double)Math.Min(iter, maxClrIter) / maxClrIter; return ColorFromHSV(360.0 * t_capped, 0.6, 1.0); }
         private Color GetPaletteOldBWColor(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) return Color.Black; double t_capped = (double)Math.Min(iter, maxClrIter) / maxClrIter; int cVal = 255 - (int)(255.0 * t_capped); return Color.FromArgb(cVal, cVal, cVal); }
@@ -504,7 +576,7 @@ namespace FractalDraving
         private Color GetPalette3Color(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) return Color.Black; double t = (double)Math.Min(iter, maxClrIter) / maxClrIter; double r = Math.Sin(t * Math.PI * 3.0 + 0.5) * 0.45 + 0.5, g = Math.Sin(t * Math.PI * 3.0 + Math.PI * 2.0 / 3.0 + 0.5) * 0.45 + 0.5, b = Math.Sin(t * Math.PI * 3.0 + Math.PI * 4.0 / 3.0 + 0.5) * 0.45 + 0.5; return Color.FromArgb((int)(r * 255), (int)(g * 255), (int)(b * 255)); }
         private Color GetPalette4Color(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) return Color.Black; double t = (double)Math.Min(iter, maxClrIter) / maxClrIter; Color c1 = Color.FromArgb(10, 0, 20), c2 = Color.FromArgb(255, 0, 255), c3 = Color.FromArgb(0, 255, 255), c4 = Color.FromArgb(230, 230, 250); if (t < 0.1) return LerpColor(c1, c2, t / 0.1); if (t < 0.4) return LerpColor(c2, c1, (t - 0.1) / 0.3); if (t < 0.5) return LerpColor(c1, c3, (t - 0.4) / 0.1); if (t < 0.8) return LerpColor(c3, c1, (t - 0.5) / 0.3); return LerpColor(c1, c4, (t - 0.8) / 0.2); }
         private Color GetPalette5Color(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) return Color.Black; double t = (double)Math.Min(iter, maxClrIter) / maxClrIter; int g = 50 + (int)(t * 150); double s = Math.Sin(t * Math.PI * 5); int f = Math.Max(0, Math.Min(255, g + (int)(s * 40))); return Color.FromArgb(f, f, Math.Min(255, f + (int)(t * 25))); }
-        private Color GetPalette6Color(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) { return iter % 2 == 0 ? Color.FromArgb(50, 50, 50) : Color.Black; } double t = (double)Math.Min(iter, maxClrIter) / maxClrIter; double h = (t * 200.0 + 180.0) % 360.0, s = Math.Max(0.2, Math.Min(0.6, 0.35 + (Math.Sin(t * Math.PI * 2) * 0.1))), v = Math.Max(0.7, Math.Min(0.95, 0.80 + (Math.Cos(t * Math.PI * 2.5) * 0.15))); return ColorFromHSV(h, s, v); }
+        private Color GetPalette6Color(int iter, int maxIter, int maxClrIter) { if (iter == maxIter) { return Color.FromArgb(50, 50, 50); } double t = (double)Math.Min(iter, maxClrIter) / maxClrIter; double h = (t * 200.0 + 180.0) % 360.0, s = Math.Max(0.2, Math.Min(0.6, 0.35 + (Math.Sin(t * Math.PI * 2) * 0.1))), v = Math.Max(0.7, Math.Min(0.95, 0.80 + (Math.Cos(t * Math.PI * 2.5) * 0.15))); return ColorFromHSV(h, s, v); }
         private Color ColorFromHSV(double hue, double saturation, double value) { hue = (hue % 360 + 360) % 360; int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6; double f = hue / 60 - Math.Floor(hue / 60); value = Math.Max(0, Math.Min(1, value)); saturation = Math.Max(0, Math.Min(1, saturation)); int v_comp = Convert.ToInt32(value * 255); int p_comp = Convert.ToInt32(v_comp * (1 - saturation)); int q_comp = Convert.ToInt32(v_comp * (1 - f * saturation)); int t_comp = Convert.ToInt32(v_comp * (1 - (1 - f) * saturation)); switch (hi) { case 0: return Color.FromArgb(v_comp, t_comp, p_comp); case 1: return Color.FromArgb(q_comp, v_comp, p_comp); case 2: return Color.FromArgb(p_comp, v_comp, t_comp); case 3: return Color.FromArgb(p_comp, q_comp, v_comp); case 4: return Color.FromArgb(t_comp, p_comp, v_comp); default: return Color.FromArgb(v_comp, p_comp, q_comp); } }
 
         #endregion
@@ -532,7 +604,6 @@ namespace FractalDraving
 
         #region IFractalForm Implementation
 
-        // Эти члены нужны для форм-селекторов (MandelbrotSelectorForm и т.д.)
         public double LoupeZoom => nudBaseScale != null ? (double)nudBaseScale.Value : 4.0;
         public event EventHandler LoupeZoomChanged;
 

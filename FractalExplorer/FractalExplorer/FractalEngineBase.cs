@@ -86,6 +86,65 @@ namespace FractalDraving
         }
 
         /// <summary>
+        /// Отрисовывает фрактал в новый Bitmap указанного размера. Используется для сохранения в высоком разрешении.
+        /// </summary>
+        /// <param name="renderWidth">Ширина итогового изображения.</param>
+        /// <param name="renderHeight">Высота итогового изображения.</param>
+        /// <param name="numThreads">Количество потоков для рендеринга.</param>
+        /// <param name="reportProgressCallback">Действие для отчета о прогрессе (от 0 до 100).</param>
+        /// <returns>Готовый Bitmap с изображением фрактала.</returns>
+        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback)
+        {
+            if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
+
+            Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            int stride = bmpData.Stride;
+            IntPtr scan0 = bmpData.Scan0;
+            byte[] buffer = new byte[Math.Abs(stride) * renderHeight];
+
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+            long done = 0;
+
+            decimal half_width = renderWidth / 2.0m;
+            decimal half_height = renderHeight / 2.0m;
+
+            // Используем Parallel.For для распараллеливания по строкам изображения
+            Parallel.For(0, renderHeight, po, y =>
+            {
+                int rowOffset = y * stride;
+                for (int x = 0; x < renderWidth; x++)
+                {
+                    // Преобразуем пиксельные координаты в комплексные, используя параметры движка
+                    decimal re = CenterX + (x - half_width) * Scale / renderWidth;
+                    // Инвертируем Y, так как в Bitmap-е Y растет вниз, а в комплексной плоскости - вверх
+                    decimal im = CenterY - (y - half_height) * Scale / renderHeight;
+
+                    int iter_val = GetIterationsForPoint(re, im);
+                    Color pixelColor = Palette(iter_val, MaxIterations, MaxColorIterations);
+
+                    int index = rowOffset + x * 3;
+                    buffer[index] = pixelColor.B;
+                    buffer[index + 1] = pixelColor.G;
+                    buffer[index + 2] = pixelColor.R;
+                }
+
+                // Потокобезопасно увеличиваем счетчик готовых строк и сообщаем о прогрессе
+                long currentDone = System.Threading.Interlocked.Increment(ref done);
+                if (renderHeight > 0)
+                {
+                    reportProgressCallback((int)(100.0 * currentDone / renderHeight));
+                }
+            });
+
+            // Копируем готовый буфер в память изображения
+            Marshal.Copy(buffer, 0, scan0, buffer.Length);
+            bmp.UnlockBits(bmpData);
+
+            return bmp;
+        }
+
+        /// <summary>
         /// Определяет, какой метод расчета итераций использовать в зависимости от типа фрактала.
         /// </summary>
         protected abstract int GetIterationsForPoint(decimal re, decimal im);
