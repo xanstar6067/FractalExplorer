@@ -41,50 +41,6 @@ namespace FractalDraving
         /// <param name="tile">Информация о плитке для отрисовки.</param>
         /// <param name="canvasWidth">Общая ширина холста.</param>
         /// <param name="canvasHeight">Общая высота холста.</param>
-        /*public void RenderTile(BitmapData bmpData, TileInfo tile, int canvasWidth, int canvasHeight)
-        {
-            int stride = bmpData.Stride;
-            IntPtr scan0 = bmpData.Scan0;
-            int bytesPerPixel = Image.GetPixelFormatSize(bmpData.PixelFormat) / 8;
-            byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
-
-            decimal half_width = canvasWidth / 2.0m;
-            decimal half_height = canvasHeight / 2.0m;
-
-            for (int y = 0; y < tile.Bounds.Height; y++)
-            {
-                int canvasY = tile.Bounds.Y + y;
-                for (int x = 0; x < tile.Bounds.Width; x++)
-                {
-                    int canvasX = tile.Bounds.X + x;
-
-                    // Преобразуем пиксельные координаты в комплексные
-                    decimal re = CenterX + (canvasX - half_width) * Scale / canvasWidth;
-                    decimal im = CenterY + (canvasY - half_height) * Scale / canvasHeight;
-
-                    // Вызываем специфичный для фрактала метод расчета
-                    int iter = GetIterationsForPoint(re, im);
-
-                    // Получаем цвет на основе итераций
-                    Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-
-                    // Записываем цвет в локальный буфер тайла
-                    int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
-                    buffer[bufferIndex] = pixelColor.B;
-                    buffer[bufferIndex + 1] = pixelColor.G;
-                    buffer[bufferIndex + 2] = pixelColor.R;
-                }
-            }
-
-            // Копируем локальный буфер тайла в глобальный буфер битмапа
-            for (int y = 0; y < tile.Bounds.Height; y++)
-            {
-                IntPtr destPtr = IntPtr.Add(scan0, (tile.Bounds.Y + y) * stride + tile.Bounds.X * bytesPerPixel);
-                int srcOffset = y * tile.Bounds.Width * bytesPerPixel;
-                Marshal.Copy(buffer, srcOffset, destPtr, tile.Bounds.Width * bytesPerPixel);
-            }
-        }*/
-
         public void RenderTile(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
         {
             decimal half_width_pixels = canvasWidth / 2.0m;
@@ -117,6 +73,52 @@ namespace FractalDraving
                 }
             }
         }
+
+        /// <summary>
+        /// Отрисовывает ОДНУ плитку в ее собственный байтовый массив.
+        /// </summary>
+        /// <returns>Массив байт с данными пикселей плитки.</returns>
+        public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
+        {
+            // Определяем формат и выделяем память под буфер плитки
+            bytesPerPixel = 3; // Для 24bppRgb
+            byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
+
+            decimal half_width_pixels = canvasWidth / 2.0m;
+            decimal half_height_pixels = canvasHeight / 2.0m;
+            decimal units_per_pixel = this.Scale / canvasWidth;
+
+            for (int y = 0; y < tile.Bounds.Height; y++)
+            {
+                int canvasY = tile.Bounds.Y + y;
+                // Пропускаем пиксели, которые выходят за пределы холста (на случай неровных размеров)
+                if (canvasY >= canvasHeight) continue;
+
+                for (int x = 0; x < tile.Bounds.Width; x++)
+                {
+                    int canvasX = tile.Bounds.X + x;
+                    if (canvasX >= canvasWidth) continue;
+
+                    // Преобразуем пиксельные координаты в комплексные
+                    decimal re = this.CenterX + (canvasX - half_width_pixels) * units_per_pixel;
+                    decimal im = this.CenterY - (canvasY - half_height_pixels) * units_per_pixel;
+
+                    // Вызываем специфичный для фрактала метод расчета
+                    int iter = GetIterationsForPoint(re, im);
+
+                    // Получаем цвет на основе итераций
+                    Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+
+                    // Записываем цвет в локальный буфер тайла
+                    int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
+                    buffer[bufferIndex] = pixelColor.B;
+                    buffer[bufferIndex + 1] = pixelColor.G;
+                    buffer[bufferIndex + 2] = pixelColor.R;
+                }
+            }
+            return buffer;
+        }
+
 
         // --- Изменения для RenderToBitmap ---
         public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback)
