@@ -86,6 +86,8 @@ namespace FractalDraving
         private Bitmap RenderMandelbrotSetInternal(int canvasWidth, int canvasHeight, int iterationsLimit)
         {
             Bitmap bmp = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
+
+            // Создаем движок специально для этого превью
             var engine = new MandelbrotEngine
             {
                 MaxIterations = iterationsLimit,
@@ -97,10 +99,26 @@ namespace FractalDraving
             };
 
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
-            var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
-            engine.RenderTile(bmpData, tile, canvasWidth, canvasHeight);
-            bmp.UnlockBits(bmpData);
 
+            // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+            // Создаем один буфер для всего изображения превью
+            int bytes = Math.Abs(bmpData.Stride) * canvasHeight;
+            byte[] buffer = new byte[bytes];
+            int bytesPerPixel = Image.GetPixelFormatSize(bmp.PixelFormat) / 8;
+
+            // Создаем одну большую плитку, покрывающую все превью
+            var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
+
+            // Вызываем новый, исправленный RenderTile
+            engine.RenderTile(buffer, bmpData.Stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
+
+            // Копируем готовый буфер в битмап
+            System.Runtime.InteropServices.Marshal.Copy(buffer, 0, bmpData.Scan0, bytes);
+
+            // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+            bmp.UnlockBits(bmpData);
             return bmp;
         }
 

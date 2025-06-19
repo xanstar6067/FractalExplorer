@@ -41,7 +41,7 @@ namespace FractalDraving
         /// <param name="tile">Информация о плитке для отрисовки.</param>
         /// <param name="canvasWidth">Общая ширина холста.</param>
         /// <param name="canvasHeight">Общая высота холста.</param>
-        public void RenderTile(BitmapData bmpData, TileInfo tile, int canvasWidth, int canvasHeight)
+        /*public void RenderTile(BitmapData bmpData, TileInfo tile, int canvasWidth, int canvasHeight)
         {
             int stride = bmpData.Stride;
             IntPtr scan0 = bmpData.Scan0;
@@ -82,6 +82,52 @@ namespace FractalDraving
                 IntPtr destPtr = IntPtr.Add(scan0, (tile.Bounds.Y + y) * stride + tile.Bounds.X * bytesPerPixel);
                 int srcOffset = y * tile.Bounds.Width * bytesPerPixel;
                 Marshal.Copy(buffer, srcOffset, destPtr, tile.Bounds.Width * bytesPerPixel);
+            }
+        }*/
+
+        public void RenderTile(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
+        {
+            decimal half_width = canvasWidth / 2.0m;
+            decimal half_height = canvasHeight / 2.0m;
+
+            // Цикл по пикселям ВНУТРИ плитки
+            for (int y = 0; y < tile.Bounds.Height; y++)
+            {
+                // Глобальная Y-координата на холсте
+                int canvasY = tile.Bounds.Y + y;
+
+                // Проверяем, не выходит ли строка за пределы холста (особенно для последней плитки)
+                if (canvasY >= canvasHeight) continue;
+
+                for (int x = 0; x < tile.Bounds.Width; x++)
+                {
+                    // Глобальная X-координата на холсте
+                    int canvasX = tile.Bounds.X + x;
+
+                    // Проверяем, не выходит ли пиксель за пределы холста
+                    if (canvasX >= canvasWidth) continue;
+
+                    // Преобразуем пиксельные координаты в комплексные
+                    decimal re = CenterX + (canvasX - half_width) * Scale / canvasWidth;
+                    decimal im = CenterY - (canvasY - half_height) * Scale / canvasHeight;
+
+                    // Вызываем специфичный для фрактала метод расчета
+                    int iter = GetIterationsForPoint(re, im);
+
+                    // Получаем цвет на основе итераций
+                    Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+
+                    // Вычисляем индекс для записи в БОЛЬШОЙ буфер
+                    int bufferIndex = canvasY * stride + canvasX * bytesPerPixel;
+
+                    // Проверяем границы буфера на всякий случай
+                    if (bufferIndex + bytesPerPixel - 1 < buffer.Length)
+                    {
+                        buffer[bufferIndex] = pixelColor.B;
+                        buffer[bufferIndex + 1] = pixelColor.G;
+                        buffer[bufferIndex + 2] = pixelColor.R;
+                    }
+                }
             }
         }
 

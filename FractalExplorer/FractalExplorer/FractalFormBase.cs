@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -237,16 +238,23 @@ namespace FractalDraving
             _isRenderingPreview = true;
             _previewRenderCts?.Cancel();
             _previewRenderCts = new CancellationTokenSource();
-            CancellationToken token = _previewRenderCts.Token;
+            var token = _previewRenderCts.Token;
 
-            _previewBitmap?.Dispose();
-            _previewBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+            var renderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
 
             UpdateEngineParameters();
+            var currentRenderedCenterX = _centerX;
+            var currentRenderedCenterY = _centerY;
+            var currentRenderedZoom = _zoom;
 
-            _renderedCenterX = _centerX;
-            _renderedCenterY = _centerY;
-            _renderedZoom = _zoom;
+            var renderEngineCopy = CreateEngine();
+            renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
+            renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
+            renderEngineCopy.CenterX = _fractalEngine.CenterX;
+            renderEngineCopy.CenterY = _fractalEngine.CenterY;
+            renderEngineCopy.Scale = _fractalEngine.Scale;
+            renderEngineCopy.C = _fractalEngine.C;
+            renderEngineCopy.Palette = _fractalEngine.Palette;
 
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
@@ -255,41 +263,87 @@ namespace FractalDraving
             pbRenderProgress.Maximum = tiles.Count;
             int progress = 0;
 
-            BitmapData bmpData = _previewBitmap.LockBits(
-                new Rectangle(0, 0, _previewBitmap.Width, _previewBitmap.Height),
-                ImageLockMode.WriteOnly,
-                _previewBitmap.PixelFormat);
+            BitmapData bmpData = null;
 
             try
             {
+                // Блокируем битмап, чтобы получить доступ к его памяти
+                bmpData = renderingBitmap.LockBits(
+                    new Rectangle(0, 0, renderingBitmap.Width, renderingBitmap.Height),
+                    ImageLockMode.WriteOnly,
+                    renderingBitmap.PixelFormat);
+
+                // Создаем ОДИН большой буфер для всего изображения
+                int bytes = Math.Abs(bmpData.Stride) * renderingBitmap.Height;
+                byte[] buffer = new byte[bytes];
+                // Важно: Изначально буфер пуст (черный), так что можно не очищать его нулями.
+
+                int bytesPerPixel = Image.GetPixelFormatSize(renderingBitmap.PixelFormat) / 8;
+
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     if (ct.IsCancellationRequested) return;
 
-                    _fractalEngine.RenderTile(bmpData, tile, canvas.Width, canvas.Height);
+                    // --- ИЗМЕНЕНИЕ: Вызываем НОВЫЙ RenderTile ---
+                    // Передаем ему большой буфер и параметры битмапа
+                    renderEngineCopy.RenderTile(buffer, bmpData.Stride, bytesPerPixel, tile, canvas.Width, canvas.Height);
 
                     if (canvas.IsHandleCreated && !canvas.IsDisposed)
                     {
-                        canvas.Invoke((Action)(() =>
-                        {
-                            canvas.Invalidate(tile.Bounds);
+                        canvas.Invoke((Action)(() => {
                             pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
                         }));
                     }
                     await Task.Yield();
                 }, token);
+
+                // После завершения всех потоков, копируем ВЕСЬ буфер в битмап ОДНИМ действием
+                if (!token.IsCancellationRequested)
+                {
+                    Marshal.Copy(buffer, 0, bmpData.Scan0, bytes);
+                }
+
+                // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+                renderingBitmap.UnlockBits(bmpData);
+                bmpData = null; // Помечаем, что данные разблокированы
+
+                if (!token.IsCancellationRequested && canvas.IsHandleCreated && !canvas.IsDisposed)
+                {
+                    canvas.Invoke((Action)(() =>
+                    {
+                        _previewBitmap?.Dispose();
+                        _previewBitmap = renderingBitmap;
+
+                        _renderedCenterX = currentRenderedCenterX;
+                        _renderedCenterY = currentRenderedCenterY;
+                        _renderedZoom = currentRenderedZoom;
+
+                        canvas.Invalidate();
+                    }));
+                }
+                else
+                {
+                    renderingBitmap.Dispose();
+                }
             }
-            catch (OperationCanceledException) { /* Normal cancellation */ }
+            catch (OperationCanceledException)
+            {
+                renderingBitmap.Dispose();
+            }
             catch (Exception ex)
             {
+                renderingBitmap.Dispose();
                 MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                if (_previewBitmap != null && bmpData != null)
+                // Если вышли из `try` с ошибкой, а bmpData все еще заблокирован
+                if (bmpData != null)
                 {
-                    try { _previewBitmap.UnlockBits(bmpData); } catch { }
+                    renderingBitmap.UnlockBits(bmpData);
                 }
+
                 _isRenderingPreview = false;
                 if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                 {
@@ -297,6 +351,116 @@ namespace FractalDraving
                 }
             }
         }
+
+        /*private async Task StartPreviewRender()
+        {
+            if (canvas.Width <= 0 || canvas.Height <= 0) return;
+
+            _isRenderingPreview = true;
+            _previewRenderCts?.Cancel();
+            _previewRenderCts = new CancellationTokenSource();
+            var token = _previewRenderCts.Token;
+
+            // --- ИЗМЕНЕНИЯ НАЧИНАЮТСЯ ЗДЕСЬ ---
+
+            // 1. Создаем ЛОКАЛЬНЫЙ, временный битмап для рендеринга
+            var renderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+
+            // 2. Копируем текущие параметры в переменные, чтобы избежать их изменения во время рендеринга
+            UpdateEngineParameters();
+            var currentRenderedCenterX = _centerX;
+            var currentRenderedCenterY = _centerY;
+            var currentRenderedZoom = _zoom;
+
+            // 3. Создаем локальную копию движка для потокобезопасности
+            var renderEngineCopy = CreateEngine();
+            renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
+            renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
+            renderEngineCopy.CenterX = _fractalEngine.CenterX;
+            renderEngineCopy.CenterY = _fractalEngine.CenterY;
+            renderEngineCopy.Scale = _fractalEngine.Scale;
+            renderEngineCopy.C = _fractalEngine.C;
+            renderEngineCopy.Palette = _fractalEngine.Palette;
+
+            var tiles = GenerateTiles(canvas.Width, canvas.Height);
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+
+            pbRenderProgress.Value = 0;
+            pbRenderProgress.Maximum = tiles.Count;
+            int progress = 0;
+
+            try
+            {
+                // 4. Блокируем ЛОКАЛЬНЫЙ битмап, а не поле класса
+                BitmapData bmpData = renderingBitmap.LockBits(
+                    new Rectangle(0, 0, renderingBitmap.Width, renderingBitmap.Height),
+                    ImageLockMode.WriteOnly,
+                    renderingBitmap.PixelFormat);
+
+                await dispatcher.RenderAsync(async (tile, ct) =>
+                {
+                    if (ct.IsCancellationRequested) return;
+
+                    // Используем копию движка для рендеринга в локальный битмап
+                    renderEngineCopy.RenderTile(bmpData, tile, canvas.Width, canvas.Height);
+
+                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                    {
+                        // Мы не можем обновлять по плиткам, так как рисуем в отдельный битмап.
+                        // Вместо этого просто обновляем прогресс-бар.
+                        canvas.Invoke((Action)(() => {
+                            pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
+                        }));
+                    }
+                    await Task.Yield();
+                }, token);
+
+                // 5. Разблокируем ЛОКАЛЬНЫЙ битмап, когда все готово
+                renderingBitmap.UnlockBits(bmpData);
+
+                // 6. Только теперь, когда битмап полностью готов и разблокирован,
+                //    передаем его в UI поток для отображения.
+                if (!token.IsCancellationRequested && canvas.IsHandleCreated && !canvas.IsDisposed)
+                {
+                    canvas.Invoke((Action)(() =>
+                    {
+                        // Заменяем старый битмап на новый
+                        _previewBitmap?.Dispose();
+                        _previewBitmap = renderingBitmap;
+
+                        // Сохраняем параметры, с которыми был сделан этот рендер
+                        _renderedCenterX = currentRenderedCenterX;
+                        _renderedCenterY = currentRenderedCenterY;
+                        _renderedZoom = currentRenderedZoom;
+
+                        // Запрашиваем полную перерисовку холста с новым битмапом
+                        canvas.Invalidate();
+                    }));
+                }
+                else
+                {
+                    // Если была отмена, просто уничтожаем временный битмап
+                    renderingBitmap.Dispose();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                renderingBitmap.Dispose(); // Убедимся, что битмап уничтожен при отмене
+            }
+            catch (Exception ex)
+            {
+                renderingBitmap.Dispose(); // И при ошибке тоже
+                MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _isRenderingPreview = false;
+                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                {
+                    pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
+                }
+            }
+        }*/
 
         private List<TileInfo> GenerateTiles(int width, int height)
         {
