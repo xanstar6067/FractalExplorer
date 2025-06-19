@@ -400,7 +400,7 @@ namespace FractalDraving
             nudIm1.Name = "nudIm1";
             nudIm1.Size = new Size(120, 23);
             nudIm1.TabIndex = 1;
-            nudIm1.Value = new decimal(new int[] { 156, 0, 0, 196608 });
+            nudIm1.Value = new decimal(new int[] { 4395, 0, 0, -2147090432 });
             // 
             // nudRe1
             // 
@@ -412,7 +412,7 @@ namespace FractalDraving
             nudRe1.Name = "nudRe1";
             nudRe1.Size = new Size(120, 23);
             nudRe1.TabIndex = 0;
-            nudRe1.Value = new decimal(new int[] { 8, 0, 0, -2147418112 });
+            nudRe1.Value = new decimal(new int[] { 1636, 0, 0, -2147287040 });
             // 
             // canvas1
             // 
@@ -423,7 +423,7 @@ namespace FractalDraving
             canvas1.TabIndex = 1;
             canvas1.TabStop = false;
             // 
-            // burningShipComplex
+            // FractalburningShipJulia
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -431,7 +431,7 @@ namespace FractalDraving
             Controls.Add(canvas1);
             Controls.Add(panel1);
             MinimumSize = new Size(1100, 675);
-            Name = "burningShipComplex";
+            Name = "FractalburningShipJulia";
             Text = "Фрактал Горящий Корабль (Жюлиа)";
             Load += Form1_Load;
             panel1.ResumeLayout(false);
