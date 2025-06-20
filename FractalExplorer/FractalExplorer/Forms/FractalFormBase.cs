@@ -242,6 +242,8 @@ namespace FractalDraving
         /// </summary>
         // In FractalFormBase.cs
 
+        // In FractalFormBase.cs
+
         private async Task StartPreviewRender()
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -253,9 +255,6 @@ namespace FractalDraving
 
             _renderVisualizer?.NotifyRenderSessionStart(); // Уведомляем о начале сессии рендеринга
 
-            // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ (Этот вызов теперь выполняется внутри NotifyRenderSessionStart())
-
-            // 1. Создаем новый временный битмап для отрисовки новых плиток.
             var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
 
             lock (_bitmapLock)
@@ -264,7 +263,6 @@ namespace FractalDraving
                 _currentRenderingBitmap = newRenderingBitmap;
             }
 
-            // 2. Обновляем параметры движка и делаем его копию для потоков.
             UpdateEngineParameters();
             var currentRenderedCenterX = _centerX;
             var currentRenderedCenterY = _centerY;
@@ -294,16 +292,15 @@ namespace FractalDraving
 
             try
             {
-                // 3. Запускаем рендеринг плиток в _currentRenderingBitmap
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds); // <--- НОВОЕ
-                    if (canvas.IsHandleCreated && !canvas.IsDisposed)       // <--- НОВОЕ
-                    {                                                       // <--- НОВОЕ
-                        canvas.Invoke((Action)(() => canvas.Invalidate(tile.Bounds))); // <--- НОВОЕ
-                    }                                                       // <--- НОВОЕ
+                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
+                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                    {
+                        canvas.Invoke((Action)(() => canvas.Invalidate(tile.Bounds)));
+                    }
 
                     var tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int bytesPerPixel);
 
@@ -332,13 +329,16 @@ namespace FractalDraving
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
 
-                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds); // <--- НОВОЕ
+                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
 
                     if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
                     canvas.Invoke((Action)(() =>
                     {
                         if (ct.IsCancellationRequested) return;
-                        canvas.Invalidate(tile.Bounds);
+
+                        // ИЗМЕНЕНИЕ ЗДЕСЬ: Инвалидируем ВЕСЬ холст
+                        canvas.Invalidate();
+
                         if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                         {
                             pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
@@ -393,9 +393,8 @@ namespace FractalDraving
             finally
             {
                 _isRenderingPreview = false;
-                _renderVisualizer?.NotifyRenderSessionComplete(); // Уведомляем о завершении сессии рендеринга
-                                                                  // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ: (Этот вызов теперь выполняется внутри NotifyRenderSessionComplete())
-                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate(); // <--- НОВОЕ: Финальное обновление для очистки рамок
+                _renderVisualizer?.NotifyRenderSessionComplete();
+                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
 
                 if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                 {

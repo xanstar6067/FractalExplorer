@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Linq; // Потребуется для ToList()
-// System.Collections.Generic не нужен явно для этого изменения, но часто полезен
+using System.Collections.Generic; // Для List<Rectangle>
 
 public class RenderVisualizerComponent : IDisposable
 {
@@ -18,9 +18,9 @@ public class RenderVisualizerComponent : IDisposable
     private float _sessionBorderThickness = 2f;
     private bool _isRenderSessionActive = false;
 
-    // НОВОЕ: Для отслеживания области, затронутой рендерингом в текущей сессии
-    private readonly object _sessionAreaLock = new object(); // Для потокобезопасного обновления _currentSessionRenderedArea
-    private Rectangle _currentSessionRenderedArea = Rectangle.Empty;
+    // НОВОЕ: Для отслеживания области, объединяющей ЗАВЕРШЕННЫЕ плитки в текущей сессии
+    private readonly object _completedAreaLock = new object();
+    private Rectangle _completedTilesUnionArea = Rectangle.Empty;
 
     public RenderVisualizerComponent()
     {
@@ -46,11 +46,11 @@ public class RenderVisualizerComponent : IDisposable
 
     public void NotifyRenderSessionStart()
     {
-        _isRenderSessionActive = true;
-        ClearActiveTiles(); // Очищаем отдельные плитки от предыдущей сессии
-        lock (_sessionAreaLock)
+        _isRenderSessionActive = true; // Устанавливаем флаг до очистки
+        ClearActiveTiles(); // Очищаем отдельные активные плитки от предыдущей сессии
+        lock (_completedAreaLock)
         {
-            _currentSessionRenderedArea = Rectangle.Empty; // Сбрасываем общую область для новой сессии
+            _completedTilesUnionArea = Rectangle.Empty; // Сбрасываем общую область завершенных плиток
         }
     }
 
@@ -58,34 +58,37 @@ public class RenderVisualizerComponent : IDisposable
     {
         _isRenderSessionActive = false;
         ClearActiveTiles(); // Также очищаем активные плитки при завершении
-        // _currentSessionRenderedArea не нужно сбрасывать здесь, она сбрасывается при следующем Start
+        // _completedTilesUnionArea не нужно сбрасывать здесь, она сбрасывается при следующем Start
     }
 
     public void NotifyTileRenderStart(Rectangle tileBounds)
     {
+        // Добавляем плитку для зеленой рамки, только если общая сессия активна
         if (_isRenderSessionActive)
         {
-            _activeTiles.TryAdd(tileBounds, 0); // Добавляем для зеленой рамки
-
-            // Обновляем общую область рендеринга для красной рамки
-            lock (_sessionAreaLock)
-            {
-                if (_currentSessionRenderedArea.IsEmpty)
-                {
-                    _currentSessionRenderedArea = tileBounds;
-                }
-                else
-                {
-                    _currentSessionRenderedArea = Rectangle.Union(_currentSessionRenderedArea, tileBounds);
-                }
-            }
+            _activeTiles.TryAdd(tileBounds, 0);
         }
     }
 
     public void NotifyTileRenderComplete(Rectangle tileBounds)
     {
-        _activeTiles.TryRemove(tileBounds, out _);
-        // Не изменяем _currentSessionRenderedArea здесь, т.к. плитка всё ещё является частью отрендеренной области сессии
+        _activeTiles.TryRemove(tileBounds, out _); // Убираем из активных (зеленая рамка исчезнет)
+
+        // Обновляем общую область завершенных плиток для красной рамки
+        if (_isRenderSessionActive)
+        {
+            lock (_completedAreaLock)
+            {
+                if (_completedTilesUnionArea.IsEmpty)
+                {
+                    _completedTilesUnionArea = tileBounds;
+                }
+                else
+                {
+                    _completedTilesUnionArea = Rectangle.Union(_completedTilesUnionArea, tileBounds);
+                }
+            }
+        }
     }
 
     public void ClearActiveTiles()
@@ -93,26 +96,20 @@ public class RenderVisualizerComponent : IDisposable
         _activeTiles.Clear();
     }
 
-    /// <summary>
-    /// Отрисовывает все визуализации.
-    /// Красная рамка сессии теперь рисуется вокруг _currentSessionRenderedArea.
-    /// Зеленые рамки рисуются для _activeTiles.
-    /// </summary>
-    /// <param name="g">Объект Graphics для рисования.</param>
-    /// <param name="canvasBounds">Полные границы холста. Используется как запасной вариант или для других визуализаций.</param>
-    public void DrawVisualization(Graphics g, Rectangle canvasBounds) // canvasBounds пока остается в сигнатуре
+    public void DrawVisualization(Graphics g, Rectangle canvasBounds)
     {
-        Rectangle sessionAreaSnapshot;
-        lock (_sessionAreaLock)
+        Rectangle currentCompletedArea;
+        lock (_completedAreaLock)
         {
-            sessionAreaSnapshot = _currentSessionRenderedArea;
+            currentCompletedArea = _completedTilesUnionArea;
         }
 
-        // 1. Рисуем красную рамку для текущей фактически отрендеренной области сессии
-        if (_isRenderSessionActive && _sessionBorderPen != null && !sessionAreaSnapshot.IsEmpty)
+        // 1. Рисуем красную рамку для объединенной области ЗАВЕРШЕННЫХ плиток
+        if (_isRenderSessionActive && _sessionBorderPen != null && !currentCompletedArea.IsEmpty)
         {
-            RectangleF visualSessionBorder = sessionAreaSnapshot;
-            // Уменьшаем немного, чтобы линия была внутри фактических границ
+            RectangleF visualSessionBorder = currentCompletedArea;
+            // Слегка уменьшаем прямоугольник, чтобы линия пера была нарисована по его границе
+            // и внешний край пера совпадал с границей currentCompletedArea.
             visualSessionBorder.Inflate(-_sessionBorderThickness / 2f, -_sessionBorderThickness / 2f);
             if (visualSessionBorder.Width > 0 && visualSessionBorder.Height > 0)
             {
@@ -123,13 +120,11 @@ public class RenderVisualizerComponent : IDisposable
         // 2. Рисуем зеленые рамки для активных плиток (обрабатываемых в данный момент)
         if (!_activeTiles.IsEmpty && _tileBorderPen != null)
         {
-            // Копируем ключи для безопасной итерации, если _activeTiles может измениться из другого потока
-            var tilesToDraw = _activeTiles.Keys.ToList();
+            var tilesToDraw = _activeTiles.Keys.ToList(); // Копируем для безопасной итерации
 
-            foreach (var tileBounds in tilesToDraw)
+            foreach (var tileRect in tilesToDraw)
             {
-                RectangleF visualTileBounds = tileBounds;
-                // Уменьшаем немного, чтобы рамка была четко видна
+                RectangleF visualTileBounds = tileRect;
                 visualTileBounds.Inflate(-_tileBorderThickness / 2f, -_tileBorderThickness / 2f);
                 if (visualTileBounds.Width > 0 && visualTileBounds.Height > 0)
                 {

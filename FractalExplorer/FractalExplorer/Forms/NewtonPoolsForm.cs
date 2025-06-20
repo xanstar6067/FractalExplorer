@@ -172,6 +172,8 @@ namespace FractalExplorer
 
         // In NewtonPools.cs
 
+        // In NewtonPools.cs
+
         private async Task StartPreviewRender()
         {
             if (fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
@@ -181,11 +183,8 @@ namespace FractalExplorer
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
 
-            _renderVisualizer?.NotifyRenderSessionStart(); // Уведомляем о начале сессии рендеринга
+            _renderVisualizer?.NotifyRenderSessionStart();
 
-            // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ (Этот вызов теперь выполняется внутри NotifyRenderSessionStart())
-
-            // 1. Обрабатываем формулу и находим корни
             if (!_engine.SetFormula(richTextInput.Text, out string debugInfo))
             {
                 richTextDebugOutput.Text = debugInfo;
@@ -198,14 +197,12 @@ namespace FractalExplorer
                 }
                 if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate();
                 _isRenderingPreview = false;
-                _renderVisualizer?.NotifyRenderSessionComplete(); // Уведомляем о завершении сессии рендеринга (ранний выход)
-                                                                  // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ (Этот вызов теперь выполняется внутри NotifyRenderSessionComplete())
-                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate(); // <--- НОВОЕ
+                _renderVisualizer?.NotifyRenderSessionComplete();
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate();
                 return;
             }
             richTextDebugOutput.Text = debugInfo;
 
-            // 2. Создаем новый временный битмап для отрисовки плиток (прозрачный)
             var newRenderingBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
@@ -213,7 +210,6 @@ namespace FractalExplorer
                 _currentRenderingBitmap = newRenderingBitmap;
             }
 
-            // 3. Обновляем параметры движка
             UpdateEngineParameters();
             double currentRenderedCenterX = _centerX;
             double currentRenderedCenterY = _centerY;
@@ -237,11 +233,11 @@ namespace FractalExplorer
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds); // <--- НОВОЕ
-                    if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) // <--- НОВОЕ
-                    {                                                                 // <--- НОВОЕ
-                        fractal_bitmap.Invoke((Action)(() => fractal_bitmap.Invalidate(tile.Bounds))); // <--- НОВОЕ
-                    }                                                                 // <--- НОВОЕ
+                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
+                    if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
+                    {
+                        fractal_bitmap.Invoke((Action)(() => fractal_bitmap.Invalidate(tile.Bounds)));
+                    }
 
                     var tileBuffer = _engine.RenderSingleTile(tile, fractal_bitmap.Width, fractal_bitmap.Height, out int bytesPerPixel);
 
@@ -262,13 +258,16 @@ namespace FractalExplorer
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
 
-                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds); // <--- НОВОЕ
+                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
 
                     if (ct.IsCancellationRequested || !fractal_bitmap.IsHandleCreated || fractal_bitmap.IsDisposed) return;
                     fractal_bitmap.Invoke((Action)(() =>
                     {
                         if (ct.IsCancellationRequested) return;
-                        fractal_bitmap.Invalidate(tile.Bounds);
+
+                        // ИЗМЕНЕНИЕ ЗДЕСЬ: Инвалидируем ВЕСЬ холст
+                        fractal_bitmap.Invalidate();
+
                         if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                             progressBar.Value = Math.Min(progressBar.Maximum, Interlocked.Increment(ref progress));
                     }));
@@ -318,9 +317,8 @@ namespace FractalExplorer
             finally
             {
                 _isRenderingPreview = false;
-                _renderVisualizer?.NotifyRenderSessionComplete(); // Уведомляем о завершении сессии рендеринга
-                                                                  // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ (Этот вызов теперь выполняется внутри NotifyRenderSessionComplete())
-                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate(); // <--- НОВОЕ
+                _renderVisualizer?.NotifyRenderSessionComplete();
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate();
 
                 if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                     progressBar.Invoke((Action)(() => progressBar.Value = 0));
