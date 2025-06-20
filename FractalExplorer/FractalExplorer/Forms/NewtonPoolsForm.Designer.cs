@@ -341,7 +341,6 @@
             btnRender.TabIndex = 2;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
-            //btnRender.Click += btnRender_Click;
             // 
             // progressBar
             // 
@@ -415,6 +414,7 @@
             MinimumSize = new Size(1100, 675);
             Name = "NewtonPools";
             Text = "Бассейны Ньютона";
+            Load += NewtonPools_Load;
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             panel6.ResumeLayout(false);

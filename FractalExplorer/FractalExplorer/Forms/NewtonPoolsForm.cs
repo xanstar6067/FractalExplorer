@@ -23,6 +23,7 @@ namespace FractalExplorer
         private readonly NewtonFractalEngine _engine;
         private readonly System.Windows.Forms.Timer _renderDebounceTimer;
         private color_setting_NewtonPoolsForm _colorSettingsForm;
+        private RenderVisualizerComponent _renderVisualizer;
 
         // --- Состояние UI и рендеринга ---
         private const double BASE_SCALE = 3.0;
@@ -455,7 +456,8 @@ namespace FractalExplorer
             if (_colorSettingsForm == null || _colorSettingsForm.IsDisposed)
             {
                 _colorSettingsForm = new color_setting_NewtonPoolsForm();
-                _colorSettingsForm.ColorsChanged += (s, palette) => {
+                _colorSettingsForm.ColorsChanged += (s, palette) =>
+                {
                     _userDefinedRootColors = palette.RootColors;
                     _userDefinedBackgroundColor = palette.BackgroundColor;
                     if (_useCustomPalette) ScheduleRender();
@@ -602,7 +604,8 @@ namespace FractalExplorer
                         Bitmap highResBitmap = await Task.Run(() => saveEngine.RenderToBitmap(
                             saveWidth, saveHeight,
                             threadCount, // 2. Используем захваченную переменную здесь
-                            progress => {
+                            progress =>
+                            {
                                 if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
                                     progressPNG.Invoke((Action)(() => progressPNG.Value = Math.Min(100, progress)));
                             }
@@ -632,7 +635,8 @@ namespace FractalExplorer
 
         private void SetMainControlsEnabled(bool enabled)
         {
-            Action action = () => {
+            Action action = () =>
+            {
                 panel1.Enabled = enabled; // Отключаем всю панель
                 btnSave.Enabled = enabled; // Кнопку сохранения управляем отдельно
             };
@@ -646,6 +650,7 @@ namespace FractalExplorer
             _previewRenderCts?.Dispose();
             _renderDebounceTimer?.Dispose();
             _colorSettingsForm?.Close();
+            _renderVisualizer?.Dispose();
             base.OnFormClosed(e);
         }
 
@@ -665,5 +670,10 @@ namespace FractalExplorer
             return defaults[index % defaults.Length];
         }
         #endregion
+
+        private void NewtonPools_Load(object sender, EventArgs e)
+        {
+            _renderVisualizer = new RenderVisualizerComponent();
+        }
     }
 }
