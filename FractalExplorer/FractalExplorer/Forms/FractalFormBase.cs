@@ -1,4 +1,6 @@
-﻿using System;
+﻿using FractalExplorer.Projects;
+using FractalExplorer.Resources;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;

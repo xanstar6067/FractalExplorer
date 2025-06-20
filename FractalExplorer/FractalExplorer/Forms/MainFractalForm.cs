@@ -1,4 +1,6 @@
 using FractalDraving;
+using FractalExplorer.Projects;
+
 
 namespace FractalExplorer
 {
