@@ -290,7 +290,6 @@
             btnRender.TabIndex = 2;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
-            btnRender.Click += btnRender_Click;
             // 
             // progressBarSerpinsky
             // 

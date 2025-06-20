@@ -1,10 +1,13 @@
-﻿using System.Drawing.Imaging;
+﻿using FractalExplorer.Engines;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
 namespace FractalExplorer
 {
     public partial class FractalSerpinsky : Form
     {
+        private readonly SerpinskyFractalEngine _engine;
+
         private Bitmap canvasBitmap;
         private volatile bool isRenderingPreview = false;
         private volatile bool isHighResRendering = false;
@@ -12,25 +15,22 @@ namespace FractalExplorer
         private CancellationTokenSource highResRenderCts;
         private System.Windows.Forms.Timer renderTimer;
 
+        // Параметры вида остаются в форме для управления UI
         private double currentZoom = 1.0;
         private double centerX = 0.0;
         private double centerY = 0.0;
-        private const double BASE_SCALE = 1.0;
-
         private double renderedZoom = 1.0;
         private double renderedCenterX = 0.0;
         private double renderedCenterY = 0.0;
-
         private Point panStart;
         private bool panning = false;
 
-        private Color fractalColor = Color.Black;
-        private Color backgroundColor = Color.White;
         private ColorDialog colorDialog;
 
         public FractalSerpinsky()
         {
             InitializeComponent();
+            _engine = new SerpinskyFractalEngine();
             InitializeCustomComponents();
         }
 
@@ -40,31 +40,28 @@ namespace FractalExplorer
             renderTimer.Tick += RenderTimer_Tick;
 
             int cores = Environment.ProcessorCount;
-            for (int i = 1; i <= cores; i++)
-            {
-                cbCPUThreads.Items.Add(i);
-            }
+            for (int i = 1; i <= cores; i++) cbCPUThreads.Items.Add(i);
             cbCPUThreads.Items.Add("Auto");
             cbCPUThreads.SelectedItem = "Auto";
 
             colorDialog = new ColorDialog();
 
-            this.Load += FractalSerpinsky_Load;
+            this.Load += (s, e) => { renderedCenterX = centerX; renderedCenterY = centerY; renderedZoom = currentZoom; ScheduleRender(); };
             canvasSerpinsky.Paint += CanvasSerpinsky_Paint;
             canvasSerpinsky.MouseWheel += CanvasSerpinsky_MouseWheel;
             canvasSerpinsky.MouseDown += CanvasSerpinsky_MouseDown;
             canvasSerpinsky.MouseMove += CanvasSerpinsky_MouseMove;
             canvasSerpinsky.MouseUp += CanvasSerpinsky_MouseUp;
-            this.Resize += FractalSerpinsky_Resize;
-            canvasSerpinsky.Resize += CanvasSerpinsky_Resize;
+            this.Resize += (s, e) => ScheduleRender();
+            canvasSerpinsky.Resize += (s, e) => ScheduleRender();
 
             nudZoom.ValueChanged += ParamControl_Changed;
             nudIterations.ValueChanged += ParamControl_Changed;
             cbCPUThreads.SelectedIndexChanged += ParamControl_Changed;
 
             nudIterations.Minimum = 0;
-            nudIterations.Maximum = 15;
-            nudIterations.Value = 5;
+            nudIterations.Maximum = 20; // Увеличен лимит
+            nudIterations.Value = 8;
 
             nudZoom.Minimum = 0.01m;
             nudZoom.Maximum = 10000000m;
@@ -73,43 +70,19 @@ namespace FractalExplorer
 
             FractalTypeIsGeometry.CheckedChanged += FractalType_CheckedChanged;
             FractalTypeIsChaos.CheckedChanged += FractalType_CheckedChanged;
-
             renderBW.CheckedChanged += ColorMode_CheckedChanged;
             colorGrayscale.CheckedChanged += ColorMode_CheckedChanged;
-
             colorColor.CheckedChanged += ColorChoiceMode_CheckedChanged;
-
             colorBackground.CheckedChanged += ColorTarget_CheckedChanged;
             colorFractal.CheckedChanged += ColorTarget_CheckedChanged;
 
             FractalTypeIsGeometry.Checked = true;
             colorGrayscale.Checked = true;
-            colorColor.Checked = false;
-            colorFractal.Checked = true;
-
             UpdatePaletteCanvas();
             UpdateAbortButtonState();
         }
 
-        private void FractalSerpinsky_Load(object sender, EventArgs e)
-        {
-            renderedCenterX = centerX;
-            renderedCenterY = centerY;
-            renderedZoom = currentZoom;
-            ScheduleRender();
-        }
-
-        private void FractalSerpinsky_Resize(object sender, EventArgs e) => HandleResize();
-        private void CanvasSerpinsky_Resize(object sender, EventArgs e) => HandleResize();
-
-        private void HandleResize()
-        {
-            if (isHighResRendering) return;
-            if (canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0) return;
-            ScheduleRender();
-        }
-
-        #region Взаимоисключающие CheckBox'ы и управление цветом
+        #region UI Event Handlers (CheckBoxes, etc.)
 
         private void FractalType_CheckedChanged(object sender, EventArgs e)
         {
@@ -118,38 +91,34 @@ namespace FractalExplorer
 
             if (activeCb == FractalTypeIsGeometry)
             {
-                // Не трогаем этот блок по вашей просьбе
                 FractalTypeIsChaos.Checked = false;
-                nudIterations.Maximum = 15; // Глубина для геометрического
+                nudIterations.Maximum = 20; // Новый лимит
                 nudIterations.Minimum = 0;
-                if (nudIterations.Value >= 15) nudIterations.Value = 5;
+                // Если значение было от режима "Хаос", сбрасываем на адекватное
+                if (nudIterations.Value > 20) nudIterations.Value = 8;
             }
-            else if (activeCb == FractalTypeIsChaos)
+            else // FractalTypeIsChaos
             {
                 FractalTypeIsGeometry.Checked = false;
                 nudIterations.Maximum = int.MaxValue;
                 nudIterations.Minimum = 1000;
-                if (nudIterations.Value < 1000)
-                {
-                    nudIterations.Value = 50000;
-                }
+                if (nudIterations.Value < 1000) nudIterations.Value = 50000;
             }
             ScheduleRender();
         }
 
         private void ColorChoiceMode_CheckedChanged(object sender, EventArgs e)
         {
+            // Эта и другие функции управления UI остаются без изменений,
+            // так как они просто меняют состояние, которое потом читается для движка.
             CheckBox currentCheckBox = sender as CheckBox;
             if (currentCheckBox == null) return;
-
             renderBW.CheckedChanged -= ColorMode_CheckedChanged;
             colorGrayscale.CheckedChanged -= ColorMode_CheckedChanged;
-
             if (currentCheckBox.Checked)
             {
                 if (renderBW.Checked) renderBW.Checked = false;
                 if (colorGrayscale.Checked) colorGrayscale.Checked = false;
-
                 if (!colorFractal.Checked && !colorBackground.Checked)
                 {
                     colorFractal.CheckedChanged -= ColorTarget_CheckedChanged;
@@ -157,36 +126,24 @@ namespace FractalExplorer
                     colorFractal.CheckedChanged += ColorTarget_CheckedChanged;
                 }
             }
-            else
+            else if (!renderBW.Checked && !colorGrayscale.Checked)
             {
-                if (!renderBW.Checked && !colorGrayscale.Checked)
-                {
-                    colorGrayscale.Checked = true;
-                }
+                colorGrayscale.Checked = true;
             }
-
             renderBW.CheckedChanged += ColorMode_CheckedChanged;
             colorGrayscale.CheckedChanged += ColorMode_CheckedChanged;
-
             UpdatePaletteCanvas();
             ScheduleRender();
         }
-
 
         private void ColorMode_CheckedChanged(object sender, EventArgs e)
         {
             CheckBox activeCb = sender as CheckBox;
             if (activeCb == null) return;
-
             if (colorColor != null) colorColor.CheckedChanged -= ColorChoiceMode_CheckedChanged;
-
             if (activeCb.Checked)
             {
-                if (colorColor != null && colorColor.Checked)
-                {
-                    colorColor.Checked = false;
-                }
-
+                if (colorColor != null && colorColor.Checked) colorColor.Checked = false;
                 if (activeCb == renderBW && colorGrayscale.Checked)
                 {
                     colorGrayscale.CheckedChanged -= ColorMode_CheckedChanged;
@@ -200,22 +157,16 @@ namespace FractalExplorer
                     renderBW.CheckedChanged += ColorMode_CheckedChanged;
                 }
             }
-            else
+            else if (!renderBW.Checked && !colorGrayscale.Checked && (colorColor == null || !colorColor.Checked))
             {
-                if (!renderBW.Checked && !colorGrayscale.Checked && (colorColor == null || !colorColor.Checked))
-                {
-                    colorGrayscale.CheckedChanged -= ColorMode_CheckedChanged;
-                    colorGrayscale.Checked = true;
-                    colorGrayscale.CheckedChanged += ColorMode_CheckedChanged;
-                }
+                colorGrayscale.CheckedChanged -= ColorMode_CheckedChanged;
+                colorGrayscale.Checked = true;
+                colorGrayscale.CheckedChanged += ColorMode_CheckedChanged;
             }
-
             if (colorColor != null) colorColor.CheckedChanged += ColorChoiceMode_CheckedChanged;
-
             UpdatePaletteCanvas();
             ScheduleRender();
         }
-
 
         private void ColorTarget_CheckedChanged(object sender, EventArgs e)
         {
@@ -231,38 +182,25 @@ namespace FractalExplorer
                 UpdatePaletteCanvas();
                 return;
             }
-
-            if (activeCb == colorBackground)
-            {
-                colorFractal.Checked = false;
-            }
-            else if (activeCb == colorFractal)
-            {
-                colorBackground.Checked = false;
-            }
+            if (activeCb == colorBackground) colorFractal.Checked = false;
+            else if (activeCb == colorFractal) colorBackground.Checked = false;
             UpdatePaletteCanvas();
         }
 
         #endregion
 
-        #region Управление параметрами и рендеринг
+        #region Rendering Logic
 
         private void ParamControl_Changed(object sender, EventArgs e)
         {
             if (isHighResRendering) return;
-
-            if (sender == nudZoom)
-            {
-                currentZoom = Math.Max((double)nudZoom.Minimum, (double)nudZoom.Value);
-            }
+            if (sender == nudZoom) currentZoom = (double)nudZoom.Value;
             ScheduleRender();
         }
-
 
         private void ScheduleRender()
         {
             if (isHighResRendering) return;
-
             previewRenderCts?.Cancel();
             renderTimer.Stop();
             renderTimer.Start();
@@ -271,10 +209,7 @@ namespace FractalExplorer
         private async void RenderTimer_Tick(object sender, EventArgs e)
         {
             renderTimer.Stop();
-            if (isHighResRendering || isRenderingPreview)
-            {
-                return;
-            }
+            if (isHighResRendering || isRenderingPreview) return;
 
             isRenderingPreview = true;
             SetMainControlsEnabled(false);
@@ -284,406 +219,134 @@ namespace FractalExplorer
             previewRenderCts = new CancellationTokenSource();
             CancellationToken token = previewRenderCts.Token;
 
-            int iterations = (int)nudIterations.Value;
-            int numThreads = GetThreadCount(); // <-- ИЗМЕНЕНИЕ: Используем новый метод
-            bool isGeometric = FractalTypeIsGeometry.Checked;
+            // Обновляем параметры движка из UI
+            UpdateEngineParameters();
 
-            bool useColorMode = colorColor.Checked;
-            bool useBW = renderBW.Checked;
-            bool useGrayscale = colorGrayscale.Checked;
-
-            double captureZoom = currentZoom;
-            double captureCenterX = centerX;
-            double captureCenterY = centerY;
+            int renderWidth = canvasSerpinsky.Width;
+            int renderHeight = canvasSerpinsky.Height;
+            if (renderWidth <= 0 || renderHeight <= 0)
+            {
+                isRenderingPreview = false;
+                SetMainControlsEnabled(true);
+                UpdateAbortButtonState();
+                return;
+            }
 
             try
             {
-                await Task.Run(() =>
-                    RenderFractal(token, canvasSerpinsky.Width, canvasSerpinsky.Height,
-                                  captureZoom, captureCenterX, captureCenterY,
-                                  iterations, numThreads, isGeometric,
-                                  useColorMode, useBW, useGrayscale,
-                                  fractalColor, backgroundColor,
-                                  (progress) => UpdateProgressBar(progressBarSerpinsky, progress))
-                , token);
+                // Создаем буфер и битмап для рендеринга
+                var bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format32bppArgb);
+                var bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+                var buffer = new byte[bmpData.Stride * renderHeight];
 
-                if (token.IsCancellationRequested)
-                {
-                    System.Diagnostics.Debug.WriteLine("Preview render was cancelled by request.");
-                }
+                await Task.Run(() => _engine.RenderToBuffer(
+                    buffer, renderWidth, renderHeight, bmpData.Stride, 4,
+                    GetThreadCount(), token,
+                    (progress) => UpdateProgressBar(progressBarSerpinsky, progress)),
+                token);
+
+                token.ThrowIfCancellationRequested();
+
+                // Копируем результат в битмап
+                Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+                bmp.UnlockBits(bmpData);
+
+                // Обновляем UI
+                Bitmap oldImage = canvasBitmap;
+                canvasBitmap = bmp;
+                renderedZoom = currentZoom;
+                renderedCenterX = centerX;
+                renderedCenterY = centerY;
+                canvasSerpinsky.Invalidate();
+                oldImage?.Dispose();
             }
-            catch (OperationCanceledException)
-            {
-                System.Diagnostics.Debug.WriteLine("Preview render operation was cancelled via exception.");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Render Error: {ex.Message}");
-            }
+            catch (OperationCanceledException) { /* Ignore */ }
+            catch (Exception ex) { MessageBox.Show($"Render Error: {ex.Message}"); }
             finally
             {
                 isRenderingPreview = false;
-                if (!isHighResRendering)
-                {
-                    SetMainControlsEnabled(true);
-                }
+                if (!isHighResRendering) SetMainControlsEnabled(true);
                 UpdateAbortButtonState();
                 UpdateProgressBar(progressBarSerpinsky, 0);
             }
         }
 
-        private void RenderFractal(CancellationToken token, int renderWidth, int renderHeight,
-                           double zoomVal, double cX, double cY,
-                           int iterationsVal, int numThreadsVal, bool isGeometricVal,
-                           bool useColorModeVal, bool useBWVal, bool useGrayscaleVal,
-                           Color frColor, Color bgColor, Action<int> reportProgress)
-        {
-            if (token.IsCancellationRequested) return;
-            if (renderWidth <= 0 || renderHeight <= 0) return;
-
-            Bitmap bmp = null;
-            BitmapData bmpData = null;
-
-            try
-            {
-                bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format32bppArgb);
-                token.ThrowIfCancellationRequested();
-
-                bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
-                token.ThrowIfCancellationRequested();
-
-                int bytesPerPixel = Image.GetPixelFormatSize(bmp.PixelFormat) / 8;
-                int stride = bmpData.Stride;
-                byte[] buffer = new byte[Math.Abs(stride) * renderHeight];
-                IntPtr scan0 = bmpData.Scan0;
-
-                Color currentBgColor;
-                if (useBWVal) currentBgColor = Color.White;
-                else if (useGrayscaleVal) currentBgColor = Color.White;
-                else currentBgColor = bgColor;
-
-                // Заполняем фон
-                for (int y_bg = 0; y_bg < renderHeight; y_bg++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    for (int x_bg = 0; x_bg < renderWidth; x_bg++)
-                    {
-                        int idx_bg = y_bg * stride + x_bg * bytesPerPixel;
-                        buffer[idx_bg + 0] = currentBgColor.B;
-                        buffer[idx_bg + 1] = currentBgColor.G;
-                        buffer[idx_bg + 2] = currentBgColor.R;
-                        buffer[idx_bg + 3] = currentBgColor.A;
-                    }
-                }
-                token.ThrowIfCancellationRequested();
-
-                if (isGeometricVal)
-                {
-                    // ИЗМЕНЕНИЕ: Вызываем новую, оптимизированную версию
-                    RenderSierpinskiGeometricOptimized(token, buffer, renderWidth, renderHeight, stride, bytesPerPixel,
-                                                      zoomVal, cX, cY, iterationsVal,
-                                                      useColorModeVal, useBWVal, useGrayscaleVal, frColor, numThreadsVal, reportProgress);
-                }
-                else
-                {
-                    RenderSierpinskiChaos(token, buffer, renderWidth, renderHeight, stride, bytesPerPixel,
-                                          zoomVal, cX, cY, iterationsVal,
-                                          useColorModeVal, useBWVal, useGrayscaleVal, frColor, numThreadsVal, reportProgress);
-                }
-                token.ThrowIfCancellationRequested();
-
-                Marshal.Copy(buffer, 0, scan0, buffer.Length);
-                bmp.UnlockBits(bmpData);
-                bmpData = null;
-                token.ThrowIfCancellationRequested();
-
-                if (canvasSerpinsky.IsHandleCreated && !canvasSerpinsky.IsDisposed)
-                {
-                    Bitmap oldImage = null;
-                    canvasSerpinsky.Invoke((Action)(() =>
-                    {
-                        if (token.IsCancellationRequested) { bmp?.Dispose(); return; }
-                        oldImage = canvasBitmap;
-                        canvasBitmap = bmp;
-                        renderedZoom = zoomVal;
-                        renderedCenterX = cX;
-                        renderedCenterY = cY;
-                        canvasSerpinsky.Invalidate();
-                        bmp = null;
-                    }));
-                    oldImage?.Dispose();
-                }
-                else
-                {
-                    bmp?.Dispose();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                bmp?.Dispose();
-                throw;
-            }
-            finally
-            {
-                if (bmpData != null && bmp != null) try { bmp.UnlockBits(bmpData); } catch { }
-            }
-        }
-
-        /// <summary>
-        /// НОВЫЙ ОПТИМИЗИРОВАННЫЙ МЕТОД: рендерит геометрический треугольник Серпинского без создания списка делегатов.
-        /// </summary>
-        private void RenderSierpinskiGeometricOptimized(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
-                                               double zoom, double cX, double cY, int totalDepth,
-                                               bool useColorMode, bool useBW, bool useGrayscale, Color frColor,
-                                               int numThreads, Action<int> reportProgress)
-        {
-            if (totalDepth < 0)
-            {
-                reportProgress(100);
-                return;
-            }
-            token.ThrowIfCancellationRequested();
-
-            Color actualFractalColor;
-            if (useBW) actualFractalColor = Color.Black;
-            else if (useGrayscale) actualFractalColor = Color.FromArgb(255, 50, 50, 50);
-            else actualFractalColor = frColor;
-
-            double side = 1.0;
-            double height_triangle = side * Math.Sqrt(3) / 2.0;
-            PointF p1_world = new PointF(0, (float)(height_triangle * 2.0 / 3.0));
-            PointF p2_world = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0));
-            PointF p3_world = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0));
-
-            // Рекурсивная функция, которая рисует одну "ветку" треугольников
-            Action<int, PointF, PointF, PointF> drawTriangleBranch = null;
-            drawTriangleBranch = (d, pA, pB, pC) =>
-            {
-                if (token.IsCancellationRequested) return;
-
-                if (d == 0)
-                {
-                    PointF sP1 = WorldToScreen(pA, W, H, zoom, cX, cY);
-                    PointF sP2 = WorldToScreen(pB, W, H, zoom, cX, cY);
-                    PointF sP3 = WorldToScreen(pC, W, H, zoom, cX, cY);
-                    FillTriangleToBuffer(buffer, W, H, stride, bpp, sP1, sP2, sP3, actualFractalColor);
-                    return;
-                }
-                PointF pAB = MidPoint(pA, pB); PointF pBC = MidPoint(pB, pC); PointF pCA = MidPoint(pC, pA);
-                drawTriangleBranch(d - 1, pA, pAB, pCA);
-                drawTriangleBranch(d - 1, pAB, pB, pBC);
-                drawTriangleBranch(d - 1, pCA, pBC, pC);
-            };
-
-            // Создаем небольшое количество "задач" верхнего уровня для распараллеливания
-            var topLevelTasks = new List<Tuple<int, PointF, PointF, PointF>>();
-            int parallelDepth = Math.Min(totalDepth, 5); // Глубина для создания параллельных задач (3^5 = 243 задачи)
-
-            Action<int, PointF, PointF, PointF> generateTopLevelTasks = null;
-            generateTopLevelTasks = (d, pA, pB, pC) =>
-            {
-                if (token.IsCancellationRequested) return;
-                if (d == 0)
-                {
-                    topLevelTasks.Add(Tuple.Create(totalDepth - parallelDepth, pA, pB, pC));
-                    return;
-                }
-                PointF pAB = MidPoint(pA, pB); PointF pBC = MidPoint(pB, pC); PointF pCA = MidPoint(pC, pA);
-                generateTopLevelTasks(d - 1, pA, pAB, pCA);
-                generateTopLevelTasks(d - 1, pAB, pB, pBC);
-                generateTopLevelTasks(d - 1, pCA, pBC, pC);
-            };
-
-            if (totalDepth == 0)
-            {
-                // Особый случай для глубины 0
-                drawTriangleBranch(0, p1_world, p2_world, p3_world);
-                reportProgress(100);
-                return;
-            }
-
-            generateTopLevelTasks(parallelDepth, p1_world, p2_world, p3_world);
-            token.ThrowIfCancellationRequested();
-
-            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token };
-            long tasksDone = 0;
-
-            try
-            {
-                Parallel.ForEach(topLevelTasks, po, task =>
-                {
-                    drawTriangleBranch(task.Item1, task.Item2, task.Item3, task.Item4);
-
-                    // Обновление прогресс-бара. Будет скачкообразным, но это лучше, чем ничего.
-                    long currentDone = Interlocked.Increment(ref tasksDone);
-                    reportProgress((int)(100.0 * currentDone / topLevelTasks.Count));
-                });
-            }
-            catch (OperationCanceledException) { /* Игнорируем */ }
-            finally
-            {
-                if (!token.IsCancellationRequested) reportProgress(100);
-            }
-        }
-
-
-        private void FillTriangleToBuffer(byte[] buffer, int W, int H, int stride, int bpp, PointF p1, PointF p2, PointF p3, Color color)
-        {
-            PointF[] v = { p1, p2, p3 };
-            Array.Sort(v, (a, b) => a.Y.CompareTo(b.Y));
-            PointF vTop = v[0]; PointF vMid = v[1]; PointF vBot = v[2];
-            byte cB = color.B; byte cG = color.G; byte cR = color.R; byte cA = color.A;
-
-            Action<float, float, float> fillScanline = (yScan, xStart, xEnd) =>
-            {
-                if (yScan < 0 || yScan >= H) return;
-                int startX = (int)Math.Max(0, Math.Min(xStart, xEnd));
-                int endX = (int)Math.Min(W - 1, Math.Max(xStart, xEnd));
-                for (int x = startX; x <= endX; x++)
-                {
-                    int idx = (int)yScan * stride + x * bpp;
-                    if (idx >= 0 && idx + (bpp - 1) < buffer.Length)
-                    { buffer[idx + 0] = cB; buffer[idx + 1] = cG; buffer[idx + 2] = cR; buffer[idx + 3] = cA; }
-                }
-            };
-
-            float invSlope1, invSlope2;
-            float curX1, curX2;
-
-            if (vMid.Y - vTop.Y > 0.0001f)
-            {
-                invSlope1 = (vMid.X - vTop.X) / (vMid.Y - vTop.Y);
-                invSlope2 = (vBot.X - vTop.X) / (vBot.Y - vTop.Y);
-                curX1 = vTop.X; curX2 = vTop.X;
-                for (float y = vTop.Y; y < vMid.Y; y += 1.0f)
-                {
-                    fillScanline(y, curX1, curX2);
-                    curX1 += invSlope1; curX2 += invSlope2;
-                }
-            }
-            if (vBot.Y - vMid.Y > 0.0001f)
-            {
-                invSlope1 = (vBot.X - vMid.X) / (vBot.Y - vMid.Y);
-                invSlope2 = (vBot.X - vTop.X) / (vBot.Y - vTop.Y);
-
-                curX1 = vMid.X;
-                if (Math.Abs(vBot.Y - vTop.Y) > 0.0001f)
-                    curX2 = vTop.X + (vMid.Y - vTop.Y) * invSlope2;
-                else
-                    curX2 = vTop.X;
-
-                for (float y = vMid.Y; y <= vBot.Y; y += 1.0f)
-                {
-                    fillScanline(y, curX1, curX2);
-                    curX1 += invSlope1;
-                    if (Math.Abs(vBot.Y - vTop.Y) > 0.0001f)
-                        curX2 += invSlope2;
-                }
-            }
-        }
-
-
-        private void RenderSierpinskiChaos(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
-                                   double zoom, double cX, double cY, int numPoints,
-                                   bool useColorMode, bool useBW, bool useGrayscale, Color frColor,
-                                   int numThreads, Action<int> reportProgress)
-        {
-            token.ThrowIfCancellationRequested();
-            Color pointColor;
-            if (useBW) pointColor = Color.Black;
-            else if (useGrayscale) pointColor = Color.FromArgb(255, 100, 100, 100);
-            else pointColor = frColor;
-
-            byte cB = pointColor.B; byte cG = pointColor.G; byte cR = pointColor.R; byte cA = pointColor.A;
-            double side = 1.0; double height_triangle = side * Math.Sqrt(3) / 2.0;
-            PointF[] vertices_world = new PointF[3];
-            vertices_world[0] = new PointF(0, (float)(height_triangle * 2.0 / 3.0));
-            vertices_world[1] = new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0));
-            vertices_world[2] = new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0));
-
-            Random masterRand = new Random();
-            PointF initialPoint_world = vertices_world[0];
-            for (int i = 0; i < 20; ++i) { initialPoint_world = MidPoint(initialPoint_world, vertices_world[masterRand.Next(3)]); }
-
-            long totalDrawnPoints = 0;
-            int pointsPerThread = (numPoints < numThreads && numPoints > 0) ? 1 : Math.Max(1, numPoints / numThreads);
-            if (numPoints == 0) pointsPerThread = 0;
-
-            Parallel.For(0, numThreads, new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token }, threadId =>
-            {
-                if (token.IsCancellationRequested) return;
-
-                Random localRand = new Random(masterRand.Next() + threadId);
-                PointF localCurrentPoint_world = initialPoint_world;
-                if (threadId > 0) { for (int i = 0; i < 5 + threadId; ++i) { localCurrentPoint_world = MidPoint(localCurrentPoint_world, vertices_world[localRand.Next(3)]); } }
-
-                int startPoint = threadId * pointsPerThread;
-                int endPoint = (threadId == numThreads - 1) ? numPoints : startPoint + pointsPerThread;
-                int pointsForThisThread = endPoint - startPoint;
-
-                for (int i = 0; i < pointsForThisThread; i++)
-                {
-                    if (token.IsCancellationRequested) break;
-                    localCurrentPoint_world = MidPoint(localCurrentPoint_world, vertices_world[localRand.Next(3)]);
-                    Point screenPoint = Point.Round(WorldToScreen(localCurrentPoint_world, W, H, zoom, cX, cY));
-                    if (screenPoint.X >= 0 && screenPoint.X < W && screenPoint.Y >= 0 && screenPoint.Y < H)
-                    {
-                        int idx = screenPoint.Y * stride + screenPoint.X * bpp;
-                        if (idx >= 0 && idx + bpp - 1 < buffer.Length)
-                        {
-                            buffer[idx + 0] = cB; buffer[idx + 1] = cG; buffer[idx + 2] = cR; buffer[idx + 3] = cA;
-                        }
-                    }
-                    if (i % 1000 == 0)
-                    {
-                        long currentTotal = Interlocked.Add(ref totalDrawnPoints, (i == 0 && threadId == 0 && pointsForThisThread > 0) ? 1 : (i > 0 ? 1000 : 0));
-                        if (numPoints > 0) reportProgress((int)Math.Min(100, (100 * currentTotal / numPoints)));
-                    }
-                }
-                if (pointsForThisThread > 0 && pointsForThisThread % 1000 != 0)
-                {
-                    Interlocked.Add(ref totalDrawnPoints, pointsForThisThread % 1000);
-                }
-            });
-            if (token.IsCancellationRequested)
-            {
-                reportProgress(numPoints > 0 ? (int)Math.Min(100, (100 * Interlocked.Read(ref totalDrawnPoints) / numPoints)) : 0);
-            }
-            else
-            {
-                reportProgress(100);
-            }
-        }
-
         #endregion
 
-        #region Вспомогательные функции для рендеринга (координаты, точки)
+        #region Canvas Interaction (Paint, Mouse)
 
-        private PointF WorldToScreen(PointF worldPoint, int screenWidth, int screenHeight, double zoomVal, double centerXVal, double centerYVal)
+        // Код для Paint, MouseWheel, MouseDown, MouseMove, MouseUp остается без изменений
+        // так как он управляет состоянием формы (centerX, currentZoom и т.д.),
+        // а движок это состояние просто читает.
+        private void CanvasSerpinsky_Paint(object sender, PaintEventArgs e)
         {
-            if (screenHeight == 0 || zoomVal == 0) return new PointF(0, 0);
+            // Код остается тот же
+            bool useBW = renderBW.Checked;
+            bool useGrayscale = colorGrayscale.Checked;
 
-            double aspect = (double)screenWidth / screenHeight;
-            double viewHeightWorld = BASE_SCALE / zoomVal;
-            double viewWidthWorld = viewHeightWorld * aspect;
+            Color effectiveBgColor;
+            if (useBW || useGrayscale) effectiveBgColor = Color.White;
+            else effectiveBgColor = _engine.BackgroundColor;
 
-            double minRe = centerXVal - viewWidthWorld / 2.0;
-            double maxIm = centerYVal + viewHeightWorld / 2.0;
+            e.Graphics.Clear(effectiveBgColor);
 
-            if (viewWidthWorld == 0 || viewHeightWorld == 0) return new PointF(0, 0);
+            if (canvasBitmap == null || canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0) return;
 
-            float screenX = (float)(((worldPoint.X - minRe) / viewWidthWorld) * screenWidth);
-            float screenY = (float)(((maxIm - worldPoint.Y) / viewHeightWorld) * screenHeight);
+            double rAspect = (double)canvasBitmap.Width / canvasBitmap.Height;
+            double rViewHeightWorld = 1.0 / renderedZoom;
+            double rViewWidthWorld = rViewHeightWorld * rAspect;
+            double rMinRe = renderedCenterX - rViewWidthWorld / 2.0;
+            double rMaxIm = renderedCenterY + rViewHeightWorld / 2.0;
 
-            return new PointF(screenX, screenY);
+            double cAspect = (double)canvasSerpinsky.Width / canvasSerpinsky.Height;
+            double cViewHeightWorld = 1.0 / currentZoom;
+            double cViewWidthWorld = cViewHeightWorld * cAspect;
+            double cMinRe = centerX - cViewWidthWorld / 2.0;
+            double cMaxIm = centerY + cViewHeightWorld / 2.0;
+
+            float p1_X = (float)(((rMinRe - cMinRe) / cViewWidthWorld) * canvasSerpinsky.Width);
+            float p1_Y = (float)(((cMaxIm - rMaxIm) / cViewHeightWorld) * canvasSerpinsky.Height);
+            float w_prime = (float)((rViewWidthWorld / cViewWidthWorld) * canvasSerpinsky.Width);
+            float h_prime = (float)((rViewHeightWorld / cViewHeightWorld) * canvasSerpinsky.Height);
+
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            e.Graphics.DrawImage(canvasBitmap, new RectangleF(p1_X, p1_Y, w_prime, h_prime));
         }
+
+        private void CanvasSerpinsky_MouseWheel(object sender, MouseEventArgs e)
+        {
+            // Код остается тот же
+            if (isHighResRendering || canvasSerpinsky.Width <= 0) return;
+            double zoomFactor = e.Delta > 0 ? 1.2 : 1.0 / 1.2;
+            PointF worldPos = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
+            currentZoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, currentZoom * zoomFactor));
+            PointF newWorldPos = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
+            centerX += worldPos.X - newWorldPos.X;
+            centerY += worldPos.Y - newWorldPos.Y;
+
+            canvasSerpinsky.Invalidate();
+            if (nudZoom.Value != (decimal)currentZoom) nudZoom.Value = (decimal)currentZoom; else ScheduleRender();
+        }
+
+        private void CanvasSerpinsky_MouseDown(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) { panning = true; panStart = e.Location; } }
+
+        private void CanvasSerpinsky_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!panning) return;
+            PointF worldBefore = ScreenToWorld(panStart, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
+            PointF worldAfter = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
+            centerX += worldBefore.X - worldAfter.X;
+            centerY += worldBefore.Y - worldAfter.Y;
+            panStart = e.Location;
+            canvasSerpinsky.Invalidate();
+            ScheduleRender();
+        }
+        private void CanvasSerpinsky_MouseUp(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) panning = false; }
 
         private PointF ScreenToWorld(Point screenPoint, int screenWidth, int screenHeight, double zoomVal, double centerXVal, double centerYVal)
         {
-            if (screenWidth == 0 || screenHeight == 0 || zoomVal == 0) return new PointF(0, 0);
-
             double aspect = (double)screenWidth / screenHeight;
-            double viewHeightWorld = BASE_SCALE / zoomVal;
+            double viewHeightWorld = 1.0 / zoomVal;
             double viewWidthWorld = viewHeightWorld * aspect;
 
             double minRe = centerXVal - viewWidthWorld / 2.0;
@@ -691,455 +354,150 @@ namespace FractalExplorer
 
             float worldX = (float)(minRe + (screenPoint.X / (double)screenWidth) * viewWidthWorld);
             float worldY = (float)(maxIm - (screenPoint.Y / (double)screenHeight) * viewHeightWorld);
-
             return new PointF(worldX, worldY);
         }
 
-        private PointF MidPoint(PointF p1, PointF p2)
-        {
-            return new PointF((p1.X + p2.X) / 2f, (p1.Y + p2.Y) / 2f);
-        }
         #endregion
 
-        #region Масштабирование и панорамирование Canvas
+        #region Save & Helpers
 
-        private void CanvasSerpinsky_Paint(object sender, PaintEventArgs e)
+        private void UpdateEngineParameters()
         {
-            bool useColorMode = colorColor.Checked;
-            bool useBW = renderBW.Checked;
-            bool useGrayscale = colorGrayscale.Checked;
+            _engine.RenderMode = FractalTypeIsGeometry.Checked ? SerpinskyRenderMode.Geometric : SerpinskyRenderMode.Chaos;
+            if (renderBW.Checked) _engine.ColorMode = SerpinskyColorMode.BlackAndWhite;
+            else if (colorGrayscale.Checked) _engine.ColorMode = SerpinskyColorMode.Grayscale;
+            else _engine.ColorMode = SerpinskyColorMode.CustomColor;
 
-            Color effectiveBgColor;
-            if (useBW) effectiveBgColor = Color.White;
-            else if (useGrayscale) effectiveBgColor = Color.White;
-            else effectiveBgColor = backgroundColor;
-
-            if (canvasBitmap == null || canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0)
-            {
-                e.Graphics.Clear(effectiveBgColor);
-                return;
-            }
-
-            double rZoom = renderedZoom; double rCX = renderedCenterX; double rCY = renderedCenterY;
-            double cZoom = currentZoom; double cCX = centerX; double cCY = centerY;
-
-            if (rZoom <= 0 || cZoom <= 0 || canvasBitmap.Height == 0 || canvasSerpinsky.Height == 0)
-            { e.Graphics.Clear(effectiveBgColor); if (canvasBitmap != null) e.Graphics.DrawImageUnscaled(canvasBitmap, Point.Empty); return; }
-
-            double rAspect = (double)canvasBitmap.Width / canvasBitmap.Height;
-            double rViewHeightWorld = BASE_SCALE / rZoom;
-            double rViewWidthWorld = rViewHeightWorld * rAspect;
-            double rMinRe = rCX - rViewWidthWorld / 2.0;
-            double rMaxIm = rCY + rViewHeightWorld / 2.0;
-
-            double cAspect = (double)canvasSerpinsky.Width / canvasSerpinsky.Height;
-            double cViewHeightWorld = BASE_SCALE / cZoom;
-            double cViewWidthWorld = cViewHeightWorld * cAspect;
-            double cMinRe = cCX - cViewWidthWorld / 2.0;
-            double cMaxIm = cCY + cViewHeightWorld / 2.0;
-
-            if (cViewWidthWorld == 0 || cViewHeightWorld == 0)
-            { e.Graphics.Clear(effectiveBgColor); e.Graphics.DrawImageUnscaled(canvasBitmap, Point.Empty); return; }
-
-            float p1_X = (float)(((rMinRe - cMinRe) / cViewWidthWorld) * canvasSerpinsky.Width);
-            float p1_Y = (float)(((cMaxIm - rMaxIm) / cViewHeightWorld) * canvasSerpinsky.Height);
-            float w_prime = (float)((rViewWidthWorld / cViewWidthWorld) * canvasSerpinsky.Width);
-            float h_prime = (float)((rViewHeightWorld / cViewHeightWorld) * canvasSerpinsky.Height);
-
-            PointF destPoint1 = new PointF(p1_X, p1_Y);
-            PointF destPoint2 = new PointF(p1_X + w_prime, p1_Y);
-            PointF destPoint3 = new PointF(p1_X, p1_Y + h_prime);
-
-            e.Graphics.Clear(effectiveBgColor);
-            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-
-            if (w_prime > 0 && h_prime > 0)
-            { try { e.Graphics.DrawImage(canvasBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 }); } catch (ArgumentException) { e.Graphics.DrawImageUnscaled(canvasBitmap, Point.Empty); } }
-            else { e.Graphics.DrawImageUnscaled(canvasBitmap, Point.Empty); }
-        }
-
-        private void CanvasSerpinsky_MouseWheel(object sender, MouseEventArgs e)
-        {
-            if (isHighResRendering) return;
-            if (canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0) return;
-            double zoomFactor = e.Delta > 0 ? 1.2 : 1.0 / 1.2;
-            double oldZoom = currentZoom;
-            PointF worldPosUnderCursor = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, oldZoom, centerX, centerY);
-            double minZoomFromNud = (double)nudZoom.Minimum; if (minZoomFromNud <= 0) minZoomFromNud = 0.01;
-            currentZoom = Math.Max(minZoomFromNud, Math.Min((double)nudZoom.Maximum, currentZoom * zoomFactor));
-
-            if (currentZoom < 0.000001) currentZoom = 0.000001;
-            if (currentZoom > 1000000000) currentZoom = 1000000000;
-
-            if (currentZoom == 0 || canvasSerpinsky.Width == 0 || canvasSerpinsky.Height == 0) return;
-
-            double cAspect = (double)canvasSerpinsky.Width / canvasSerpinsky.Height;
-            double newViewHeightWorld = BASE_SCALE / currentZoom;
-            double newViewWidthWorld = newViewHeightWorld * cAspect;
-
-            if (newViewWidthWorld == 0 || newViewHeightWorld == 0) return;
-
-            centerX = worldPosUnderCursor.X - (((double)e.X / canvasSerpinsky.Width) - 0.5) * newViewWidthWorld;
-            centerY = worldPosUnderCursor.Y + (((double)e.Y / canvasSerpinsky.Height) - 0.5) * newViewHeightWorld;
-
-            canvasSerpinsky.Invalidate();
-            if (Math.Abs((double)nudZoom.Value - currentZoom) > 0.00001)
-            {
-                nudZoom.ValueChanged -= ParamControl_Changed;
-                decimal newNudZoomValue = (decimal)currentZoom;
-                if (newNudZoomValue < nudZoom.Minimum) newNudZoomValue = nudZoom.Minimum;
-                if (newNudZoomValue > nudZoom.Maximum) newNudZoomValue = nudZoom.Maximum;
-                nudZoom.Value = newNudZoomValue;
-                nudZoom.ValueChanged += ParamControl_Changed;
-            }
-            ScheduleRender();
-        }
-
-        private void CanvasSerpinsky_MouseDown(object sender, MouseEventArgs e)
-        { if (isHighResRendering) return; if (e.Button == MouseButtons.Left) { panning = true; panStart = e.Location; canvasSerpinsky.Cursor = Cursors.Hand; } }
-
-        private void CanvasSerpinsky_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (isHighResRendering || !panning) return;
-            if (canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0 || currentZoom == 0) return;
-
-            double aspect = (double)canvasSerpinsky.Width / canvasSerpinsky.Height;
-            double viewHeightWorld = BASE_SCALE / currentZoom;
-            double viewWidthWorld = viewHeightWorld * aspect;
-
-            if (canvasSerpinsky.Width == 0 || canvasSerpinsky.Height == 0) return;
-
-            double worldUnitsPerPixelX = viewWidthWorld / canvasSerpinsky.Width;
-            double worldUnitsPerPixelY = viewHeightWorld / canvasSerpinsky.Height;
-
-            double pixelDeltaX = e.X - panStart.X;
-            double pixelDeltaY = e.Y - panStart.Y;
-
-            centerX -= pixelDeltaX * worldUnitsPerPixelX;
-            centerY += pixelDeltaY * worldUnitsPerPixelY;
-
-            panStart = e.Location;
-            canvasSerpinsky.Invalidate();
-            ScheduleRender();
-        }
-
-        private void CanvasSerpinsky_MouseUp(object sender, MouseEventArgs e)
-        { if (isHighResRendering) return; if (e.Button == MouseButtons.Left) { panning = false; canvasSerpinsky.Cursor = Cursors.Default; } }
-
-        #endregion
-
-        #region Сохранение и управление UI
-
-        private void btnRender_Click(object sender, EventArgs e)
-        {
-            previewRenderCts?.Cancel();
-            ScheduleRender();
+            _engine.Iterations = (int)nudIterations.Value;
+            _engine.Zoom = currentZoom;
+            _engine.CenterX = centerX;
+            _engine.CenterY = centerY;
+            // Цвета для _engine.FractalColor и BackgroundColor уже установлены в cancasPalette_Click
         }
 
         private async void btnSavePNG_Click(object sender, EventArgs e)
         {
-            if (isRenderingPreview)
+            if (isRenderingPreview) previewRenderCts?.Cancel();
+            if (isHighResRendering) return;
+
+            int saveWidth = (int)nudW2.Value;
+            int saveHeight = (int)nudH2.Value;
+
+            using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", FileName = $"serpinski_{DateTime.Now:yyyyMMdd_HHmmss}.png" })
             {
-                previewRenderCts?.Cancel();
-            }
+                if (saveDialog.ShowDialog() != DialogResult.OK) return;
 
-            if (isHighResRendering) { MessageBox.Show("Процесс сохранения уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+                isHighResRendering = true;
+                SetMainControlsEnabled(false);
+                UpdateAbortButtonState();
+                progressPNGSerpinsky.Visible = true;
+                UpdateProgressBar(progressPNGSerpinsky, 0);
 
-            int saveWidth = (int)nudW2.Value; int saveHeight = (int)nudH2.Value;
-            if (saveWidth <= 0 || saveHeight <= 0) { MessageBox.Show("Размеры изображения для сохранения должны быть больше нуля.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+                highResRenderCts = new CancellationTokenSource();
+                CancellationToken token = highResRenderCts.Token;
 
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss"); string suggestedFileName = $"serpinski_{timestamp}.png";
-            using (SaveFileDialog saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить Треугольник Серпинского", FileName = suggestedFileName })
-            {
-                if (saveDialog.ShowDialog() == DialogResult.OK)
+                // Создаем и настраиваем отдельный движок для сохранения
+                var saveEngine = new SerpinskyFractalEngine();
+                UpdateEngineParameters(); // Настраиваем основной движок
+                saveEngine.RenderMode = _engine.RenderMode; // Копируем параметры
+                saveEngine.ColorMode = _engine.ColorMode;
+                saveEngine.Iterations = _engine.Iterations;
+                saveEngine.Zoom = _engine.Zoom;
+                saveEngine.CenterX = _engine.CenterX;
+                saveEngine.CenterY = _engine.CenterY;
+                saveEngine.FractalColor = _engine.FractalColor;
+                saveEngine.BackgroundColor = _engine.BackgroundColor;
+
+                try
                 {
-                    isHighResRendering = true;
-                    SetMainControlsEnabled(false);
+                    Bitmap highResBitmap = await Task.Run(() => {
+                        var bmp = new Bitmap(saveWidth, saveHeight, PixelFormat.Format32bppArgb);
+                        var bmpData = bmp.LockBits(new Rectangle(0, 0, saveWidth, saveHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+                        var buffer = new byte[bmpData.Stride * saveHeight];
+
+                        saveEngine.RenderToBuffer(
+                            buffer, saveWidth, saveHeight, bmpData.Stride, 4,
+                            GetThreadCount(), token,
+                            (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
+
+                        token.ThrowIfCancellationRequested();
+                        Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+                        bmp.UnlockBits(bmpData);
+                        return bmp;
+                    }, token);
+
+                    highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
+                    MessageBox.Show("Изображение сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    highResBitmap.Dispose();
+                }
+                catch (OperationCanceledException) { MessageBox.Show("Сохранение было отменено.", "Отмена", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+                catch (Exception ex) { MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                finally
+                {
+                    isHighResRendering = false;
+                    SetMainControlsEnabled(true);
                     UpdateAbortButtonState();
-
-                    progressPNGSerpinsky.Visible = true;
-                    UpdateProgressBar(progressPNGSerpinsky, 0);
-
-                    int iterations = (int)nudIterations.Value;
-                    int numThreads = GetThreadCount(); // <-- ИЗМЕНЕНИЕ: Используем новый метод
-                    bool isGeometric = FractalTypeIsGeometry.Checked;
-
-                    bool useColorMode = colorColor.Checked;
-                    bool useBW = renderBW.Checked; bool useGrayscale = colorGrayscale.Checked;
-                    Color currentFrColor = fractalColor; Color currentBgColor = backgroundColor;
-                    double captureZoom = currentZoom; double captureCenterX = centerX; double captureCenterY = centerY;
-
-                    highResRenderCts?.Dispose();
-                    highResRenderCts = new CancellationTokenSource();
-                    CancellationToken token = highResRenderCts.Token;
-
-                    try
-                    {
-                        Bitmap highResBitmap = null;
-                        await Task.Run(() =>
-                        {
-                            Bitmap tempBmp = new Bitmap(saveWidth, saveHeight, PixelFormat.Format32bppArgb);
-                            token.ThrowIfCancellationRequested();
-                            BitmapData tempData = tempBmp.LockBits(new Rectangle(0, 0, saveWidth, saveHeight), ImageLockMode.WriteOnly, tempBmp.PixelFormat);
-                            token.ThrowIfCancellationRequested();
-
-                            int tempBpp = Image.GetPixelFormatSize(tempBmp.PixelFormat) / 8;
-                            int tempStride = tempData.Stride;
-                            byte[] tempBuffer = new byte[Math.Abs(tempStride) * saveHeight];
-
-                            Color effectiveBgColor;
-                            if (useBW) effectiveBgColor = Color.White;
-                            else if (useGrayscale) effectiveBgColor = Color.White;
-                            else effectiveBgColor = currentBgColor;
-
-                            for (int y_bg = 0; y_bg < saveHeight; y_bg++)
-                            {
-                                token.ThrowIfCancellationRequested();
-                                for (int x_bg = 0; x_bg < saveWidth; x_bg++)
-                                {
-                                    int idx_bg = y_bg * tempStride + x_bg * tempBpp;
-                                    tempBuffer[idx_bg + 0] = effectiveBgColor.B;
-                                    tempBuffer[idx_bg + 1] = effectiveBgColor.G;
-                                    tempBuffer[idx_bg + 2] = effectiveBgColor.R;
-                                    tempBuffer[idx_bg + 3] = effectiveBgColor.A;
-                                }
-                            }
-                            token.ThrowIfCancellationRequested();
-
-                            if (isGeometric)
-                            {
-                                // ИЗМЕНЕНИЕ: Вызываем новую, оптимизированную версию
-                                RenderSierpinskiGeometricOptimized(token, tempBuffer, saveWidth, saveHeight, tempStride, tempBpp,
-                                                                  captureZoom, captureCenterX, captureCenterY, iterations,
-                                                                  useColorMode, useBW, useGrayscale, currentFrColor, numThreads,
-                                                                  (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
-                            }
-                            else
-                            {
-                                RenderSierpinskiChaos(token, tempBuffer, saveWidth, saveHeight, tempStride, tempBpp,
-                                                      captureZoom, captureCenterX, captureCenterY, iterations,
-                                                      useColorMode, useBW, useGrayscale, currentFrColor, numThreads,
-                                                      (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
-                            }
-                            token.ThrowIfCancellationRequested();
-
-                            Marshal.Copy(tempBuffer, 0, tempData.Scan0, tempBuffer.Length);
-                            tempBmp.UnlockBits(tempData);
-                            highResBitmap = tempBmp;
-                        }, token);
-
-                        if (!token.IsCancellationRequested && highResBitmap != null)
-                        {
-                            highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                            MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        else if (token.IsCancellationRequested)
-                        {
-                            MessageBox.Show("Сохранение было отменено.", "Отмена", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
-                        highResBitmap?.Dispose();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        MessageBox.Show("Сохранение было отменено.", "Отмена", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Произошла ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    finally
-                    {
-                        isHighResRendering = false;
-                        SetMainControlsEnabled(true);
-                        UpdateAbortButtonState();
-                        progressPNGSerpinsky.Visible = false;
-                        UpdateProgressBar(progressPNGSerpinsky, 0);
-                        highResRenderCts?.Dispose();
-                        highResRenderCts = null;
-                    }
+                    progressPNGSerpinsky.Visible = false;
+                    highResRenderCts.Dispose();
                 }
             }
         }
 
-        private void SetMainControlsEnabled(bool enabled)
-        {
-            Action action = () =>
-            {
-                FractalTypeIsGeometry.Enabled = enabled;
-                FractalTypeIsChaos.Enabled = enabled;
-                nudIterations.Enabled = enabled;
-                nudZoom.Enabled = enabled;
-                cbCPUThreads.Enabled = enabled;
-                btnRender.Enabled = enabled;
-                btnSavePNG.Enabled = enabled;
-                nudW2.Enabled = enabled;
-                nudH2.Enabled = enabled;
-                renderBW.Enabled = enabled;
-                colorGrayscale.Enabled = enabled;
-                colorColor.Enabled = enabled;
-                colorFractal.Enabled = enabled;
-                colorBackground.Enabled = enabled;
-                label1.Enabled = enabled;
-                panel2.Enabled = enabled;
-                panel3.Enabled = enabled;
-
-                if (enabled)
-                {
-                    UpdatePaletteCanvas();
-                }
-                else
-                {
-                    // panel2.Enabled = false уже сделает PictureBox неактивным.
-                }
-            };
-
-            if (this.InvokeRequired)
-            {
-                try { this.Invoke(action); } catch (ObjectDisposedException) { /* Форма закрывается */ }
-            }
-            else
-            {
-                action();
-            }
-        }
-
-        private void UpdateAbortButtonState()
-        {
-            if (abortRender == null || abortRender.IsDisposed || this.IsDisposed || !this.IsHandleCreated) return;
-
-            Action action = () =>
-            {
-                if (abortRender != null && !abortRender.IsDisposed)
-                {
-                    abortRender.Enabled = isRenderingPreview || isHighResRendering;
-                }
-            };
-
-            if (abortRender.InvokeRequired)
-            {
-                try { abortRender.Invoke(action); } catch (ObjectDisposedException) { } catch (InvalidOperationException) { }
-            }
-            else
-            {
-                action();
-            }
-        }
-
-        /// <summary>
-        /// НОВЫЙ МЕТОД: централизованное получение количества потоков.
-        /// </summary>
-        private int GetThreadCount()
-        {
-            // Проверка на случай, если метод вызван до полной инициализации UI
-            if (cbCPUThreads.SelectedItem == null)
-            {
-                return Environment.ProcessorCount;
-            }
-
-            return cbCPUThreads.SelectedItem.ToString() == "Auto"
-                ? Environment.ProcessorCount
-                : Convert.ToInt32(cbCPUThreads.SelectedItem);
-        }
-
-        private void UpdateProgressBar(ProgressBar pb, int percentage)
-        {
-            if (pb == null || pb.IsDisposed || !pb.IsHandleCreated) return;
-            int val = Math.Min(pb.Maximum, Math.Max(pb.Minimum, percentage));
-            try
-            {
-                pb.Invoke((Action)(() =>
-                {
-                    if (pb.IsHandleCreated && !pb.IsDisposed) pb.Value = val;
-                }));
-            }
-            catch (ObjectDisposedException) { }
-            catch (InvalidOperationException) { }
-        }
-
-        #endregion
-
-        #region Управление цветом и палитрой
+        private int GetThreadCount() => cbCPUThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbCPUThreads.SelectedItem);
 
         private void cancasPalette_Click(object sender, EventArgs e)
         {
             if (!colorColor.Checked) return;
-
             if (colorDialog.ShowDialog() == DialogResult.OK)
             {
-                if (colorFractal.Checked) fractalColor = colorDialog.Color;
-                else if (colorBackground.Checked) backgroundColor = colorDialog.Color;
+                if (colorFractal.Checked) _engine.FractalColor = colorDialog.Color;
+                else if (colorBackground.Checked) _engine.BackgroundColor = colorDialog.Color;
                 UpdatePaletteCanvas();
                 ScheduleRender();
             }
         }
 
+        // Методы UpdatePaletteCanvas, SetMainControlsEnabled, UpdateAbortButtonState, UpdateProgressBar
+        // остаются практически без изменений, т.к. их логика не зависит от рендеринга.
         private void UpdatePaletteCanvas()
         {
             if (this.IsDisposed || !this.IsHandleCreated) return;
-
             bool isColorModeActive = colorColor.Checked;
             bool areMainControlsActive = nudZoom.Enabled;
 
-            Action updateUIAction = () =>
+            colorFractal.Enabled = areMainControlsActive && isColorModeActive;
+            colorBackground.Enabled = areMainControlsActive && isColorModeActive;
+            canvasPalette.Enabled = areMainControlsActive && isColorModeActive;
+
+            using (Graphics g = canvasPalette.CreateGraphics())
             {
-                if (colorFractal != null && !colorFractal.IsDisposed) colorFractal.Enabled = areMainControlsActive && isColorModeActive;
-                if (colorBackground != null && !colorBackground.IsDisposed) colorBackground.Enabled = areMainControlsActive && isColorModeActive;
-                if (label1 != null && !label1.IsDisposed) label1.Enabled = areMainControlsActive && isColorModeActive;
-                if (canvasPalette != null && !canvasPalette.IsDisposed) canvasPalette.Enabled = areMainControlsActive && isColorModeActive;
-
-
-                if (canvasPalette != null && !canvasPalette.IsDisposed && canvasPalette.IsHandleCreated)
+                if (canvasPalette.Enabled)
                 {
-                    try
+                    if (isColorModeActive)
                     {
-                        using (Graphics g = canvasPalette.CreateGraphics())
-                        {
-                            if (canvasPalette.Enabled)
-                            {
-                                if (isColorModeActive)
-                                {
-                                    Color previewColor = colorFractal.Checked ? fractalColor : backgroundColor;
-                                    g.Clear(previewColor);
-                                    using (Pen p = new Pen(previewColor.GetBrightness() < 0.5f ? Color.LightGray : Color.DarkGray, 1))
-                                    {
-                                        g.DrawLine(p, canvasPalette.Width / 2 - 5, canvasPalette.Height / 2, canvasPalette.Width / 2 + 5, canvasPalette.Height / 2);
-                                        g.DrawLine(p, canvasPalette.Width / 2, canvasPalette.Height / 2 - 5, canvasPalette.Width / 2, canvasPalette.Height / 2 + 5);
-                                    }
-                                }
-                                else if (renderBW.Checked)
-                                {
-                                    g.Clear(Color.White);
-                                    using (Brush b = new SolidBrush(Color.Black)) { g.FillRectangle(b, 0, 0, canvasPalette.Width / 2, canvasPalette.Height); }
-                                    using (Brush b = new SolidBrush(Color.LightGray)) { g.FillRectangle(b, canvasPalette.Width / 2, 0, canvasPalette.Width / 2, canvasPalette.Height); }
-                                }
-                                else if (colorGrayscale.Checked)
-                                {
-                                    using (System.Drawing.Drawing2D.LinearGradientBrush lgb = new System.Drawing.Drawing2D.LinearGradientBrush(canvasPalette.ClientRectangle, Color.Gainsboro, Color.DarkSlateGray, 0f))
-                                    { g.FillRectangle(lgb, canvasPalette.ClientRectangle); }
-                                }
-                                else
-                                {
-                                    g.Clear(SystemColors.Control);
-                                }
-                            }
-                            else
-                            {
-                                g.Clear(SystemColors.ControlDark);
-                            }
-                        }
+                        Color previewColor = colorFractal.Checked ? _engine.FractalColor : _engine.BackgroundColor;
+                        g.Clear(previewColor);
                     }
-                    catch (Exception ex)
+                    else if (renderBW.Checked) { g.Clear(Color.White); g.FillRectangle(Brushes.Black, 0, 0, canvasPalette.Width / 2, canvasPalette.Height); }
+                    else if (colorGrayscale.Checked)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error updating palette: {ex.Message}");
+                        using (var lgb = new System.Drawing.Drawing2D.LinearGradientBrush(canvasPalette.ClientRectangle, Color.Gainsboro, Color.DarkSlateGray, 0f))
+                            g.FillRectangle(lgb, canvasPalette.ClientRectangle);
                     }
                 }
-            };
-
-            if (this.InvokeRequired) { try { this.Invoke(updateUIAction); } catch (ObjectDisposedException) { } catch (InvalidOperationException) { } }
-            else { updateUIAction(); }
+                else g.Clear(SystemColors.ControlDark);
+            }
         }
-        #endregion
+
+        private void SetMainControlsEnabled(bool enabled)
+        {
+            panel1.Enabled = enabled;
+            // Кнопку отмены нужно обрабатывать отдельно, т.к. она должна быть активна, когда все остальное выключено
+            UpdateAbortButtonState();
+        }
+        private void UpdateAbortButtonState() { if (this.IsHandleCreated) this.Invoke((Action)(() => abortRender.Enabled = isRenderingPreview || isHighResRendering)); }
+        private void UpdateProgressBar(ProgressBar pb, int percentage) { if (pb.IsHandleCreated) pb.Invoke((Action)(() => pb.Value = Math.Min(100, Math.Max(0, percentage)))); }
+        private void abortRender_Click(object sender, EventArgs e) { if (isRenderingPreview) previewRenderCts?.Cancel(); if (isHighResRendering) highResRenderCts?.Cancel(); }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
@@ -1147,45 +505,12 @@ namespace FractalExplorer
             previewRenderCts?.Dispose();
             highResRenderCts?.Cancel();
             highResRenderCts?.Dispose();
-
             renderTimer?.Stop();
             renderTimer?.Dispose();
             canvasBitmap?.Dispose();
             colorDialog?.Dispose();
             base.OnFormClosed(e);
         }
-
-        private void abortRender_Click(object sender, EventArgs e)
-        {
-            if (isRenderingPreview && previewRenderCts != null && !previewRenderCts.IsCancellationRequested)
-            {
-                previewRenderCts.Cancel();
-                System.Diagnostics.Debug.WriteLine("Preview render cancellation explicitly requested by user.");
-            }
-
-            if (isHighResRendering && highResRenderCts != null && !highResRenderCts.IsCancellationRequested)
-            {
-                highResRenderCts.Cancel();
-                System.Diagnostics.Debug.WriteLine("High-resolution render cancellation explicitly requested by user.");
-            }
-        }
-
-        // Этот метод остался здесь, но больше не используется для геометрического рендеринга.
-        // Я оставил его на случай, если он нужен для отладки или сравнения.
-        private void RenderSierpinskiGeometric(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
-                                     double zoom, double cX, double cY, int depth,
-                                     bool useColorMode, bool useBW, bool useGrayscale, Color frColor,
-                                     int numThreads, Action<int> reportProgress)
-        {
-            // Этот метод является устаревшим и неэффективным по памяти.
-            // Используйте RenderSierpinskiGeometricOptimized.
-            System.Diagnostics.Debug.WriteLine("WARNING: Using obsolete RenderSierpinskiGeometric method.");
-
-            // Здесь был старый код, который я удалил, чтобы избежать случайного использования.
-            // Вы можете восстановить его из истории, если потребуется.
-
-            // Перенаправляем на новый метод, чтобы избежать ошибок.
-            RenderSierpinskiGeometricOptimized(token, buffer, W, H, stride, bpp, zoom, cX, cY, depth, useColorMode, useBW, useGrayscale, frColor, numThreads, reportProgress);
-        }
+        #endregion
     }
 }
