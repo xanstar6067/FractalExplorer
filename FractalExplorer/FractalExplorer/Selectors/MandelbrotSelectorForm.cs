@@ -1,10 +1,11 @@
 ﻿// --- START OF FILE MandelbrotSelectorForm.cs ---
 
+using FractalExplorer.Resources;
 using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace FractalDraving
+namespace FractalExplorer.Selectors
 {
     /// <summary>
     /// Форма для выбора комплексного параметра 'c' (для фрактала Жюлиа)
@@ -62,22 +63,22 @@ namespace FractalDraving
         /// </summary>
         public MandelbrotSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN) // <--- И ИЗМЕНЕНИЕ ЗДЕСЬ
         {
-            this.ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
-            this.Text = "Выбор точки C (Множество Мандельброта)";
-            this.Size = new Size(800, 700);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.StartPosition = FormStartPosition.CenterParent;
+            ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
+            Text = "Выбор точки C (Множество Мандельброта)";
+            Size = new Size(800, 700);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            StartPosition = FormStartPosition.CenterParent;
 
             mandelbrotDisplay = new PictureBox
             {
                 Dock = DockStyle.Fill,
                 SizeMode = PictureBoxSizeMode.StretchImage // Важно для начального отображения, но мы рисуем сами
             };
-            this.Controls.Add(mandelbrotDisplay);
+            Controls.Add(mandelbrotDisplay);
 
             // Подписка на события.
-            this.Load += MandelbrotSelectorForm_Load;
+            Load += MandelbrotSelectorForm_Load;
             mandelbrotDisplay.Paint += MandelbrotDisplay_Paint;
             mandelbrotDisplay.MouseClick += MandelbrotDisplay_MouseClick;
             mandelbrotDisplay.MouseWheel += MandelbrotDisplay_MouseWheel;
@@ -142,7 +143,7 @@ namespace FractalDraving
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             renderDebounceTimer.Stop();
-            if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+            if (IsHandleCreated && !IsDisposed && !Disposing)
             {
                 await RenderMandelbrotAsync();
             }
@@ -150,7 +151,7 @@ namespace FractalDraving
 
         private void ScheduleDelayedRender()
         {
-            if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+            if (IsHandleCreated && !IsDisposed && !Disposing)
             {
                 renderDebounceTimer.Stop();
                 renderDebounceTimer.Start();
@@ -174,7 +175,7 @@ namespace FractalDraving
         {
             if (isRendering) return;
             if (mandelbrotDisplay.Width <= 0 || mandelbrotDisplay.Height <= 0 ||
-                !mandelbrotDisplay.IsHandleCreated || mandelbrotDisplay.IsDisposed || this.Disposing) return;
+                !mandelbrotDisplay.IsHandleCreated || mandelbrotDisplay.IsDisposed || Disposing) return;
 
             isRendering = true;
 
@@ -194,12 +195,12 @@ namespace FractalDraving
                     RenderMandelbrotSetForSelector(currentWidth, currentHeight, ITERATIONS,
                                                    minRe_capture, maxRe_capture, minIm_capture, maxIm_capture));
 
-                if (mandelbrotDisplay.IsHandleCreated && !mandelbrotDisplay.IsDisposed && !this.Disposing)
+                if (mandelbrotDisplay.IsHandleCreated && !mandelbrotDisplay.IsDisposed && !Disposing)
                 {
                     // Выполняем обновление UI в основном (UI) потоке
-                    mandelbrotDisplay.Invoke((Action)(() =>
+                    mandelbrotDisplay.Invoke(() =>
                     {
-                        if (mandelbrotDisplay.IsHandleCreated && !mandelbrotDisplay.IsDisposed && !this.Disposing)
+                        if (mandelbrotDisplay.IsHandleCreated && !mandelbrotDisplay.IsDisposed && !Disposing)
                         {
                             Bitmap oldOwnedBitmap = mandelbrotBitmap;
                             mandelbrotBitmap = newRenderedBitmap;
@@ -223,7 +224,7 @@ namespace FractalDraving
                         {
                             newRenderedBitmap?.Dispose(); // Контрол был уничтожен
                         }
-                    }));
+                    });
                 }
                 else
                 {
@@ -249,7 +250,7 @@ namespace FractalDraving
             Bitmap bmp = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
             int stride = bmpData.Stride;
-            IntPtr scan0 = bmpData.Scan0;
+            nint scan0 = bmpData.Scan0;
             int bytes = Math.Abs(stride) * canvasHeight;
             byte[] buffer = new byte[bytes];
 
@@ -269,8 +270,8 @@ namespace FractalDraving
                 int rowOffset = y_coord * stride;
                 for (int x_coord = 0; x_coord < canvasWidth; x_coord++)
                 {
-                    double c_re = minRe + (x_coord / (double)canvasWidth) * reRange;
-                    double c_im = maxIm - (y_coord / (double)canvasHeight) * imRange;
+                    double c_re = minRe + x_coord / (double)canvasWidth * reRange;
+                    double c_im = maxIm - y_coord / (double)canvasHeight * imRange;
                     Complex c0 = new Complex(c_re, c_im);
                     Complex z = Complex.Zero;
                     int iter = 0;
@@ -327,8 +328,8 @@ namespace FractalDraving
 
             if (reRange <= 0 || imRange <= 0) return;
 
-            double re = currentMinRe + (e.X / (double)mandelbrotDisplay.Width) * reRange;
-            double im = currentMaxIm - (e.Y / (double)mandelbrotDisplay.Height) * imRange;
+            double re = currentMinRe + e.X / (double)mandelbrotDisplay.Width * reRange;
+            double im = currentMaxIm - e.Y / (double)mandelbrotDisplay.Height * imRange;
 
             SetSelectedCoordinates(re, im, true);
         }
@@ -369,11 +370,11 @@ namespace FractalDraving
                 return;
             }
 
-            float p1_X = (float)(((rMinR_param - cMinR_param) / currentComplexWidth) * mandelbrotDisplay.Width);
-            float p1_Y = (float)(((cMaxI_param - rMaxI_param) / currentComplexHeight) * mandelbrotDisplay.Height);
+            float p1_X = (float)((rMinR_param - cMinR_param) / currentComplexWidth * mandelbrotDisplay.Width);
+            float p1_Y = (float)((cMaxI_param - rMaxI_param) / currentComplexHeight * mandelbrotDisplay.Height);
 
-            float destWidthPixels = (float)((renderedComplexWidth / currentComplexWidth) * mandelbrotDisplay.Width);
-            float destHeightPixels = (float)((renderedComplexHeight / currentComplexHeight) * mandelbrotDisplay.Height);
+            float destWidthPixels = (float)(renderedComplexWidth / currentComplexWidth * mandelbrotDisplay.Width);
+            float destHeightPixels = (float)(renderedComplexHeight / currentComplexHeight * mandelbrotDisplay.Height);
 
             PointF destPoint1 = new PointF(p1_X, p1_Y);
             PointF destPoint2 = new PointF(p1_X + destWidthPixels, p1_Y);
@@ -418,8 +419,8 @@ namespace FractalDraving
                     {
                         checked
                         {
-                            int markerX = (int)(((selectedMandelbrotCoords.X - currentMinRe) / reRange) * mandelbrotDisplay.Width);
-                            int markerY = (int)(((currentMaxIm - selectedMandelbrotCoords.Y) / imRange) * mandelbrotDisplay.Height);
+                            int markerX = (int)((selectedMandelbrotCoords.X - currentMinRe) / reRange * mandelbrotDisplay.Width);
+                            int markerY = (int)((currentMaxIm - selectedMandelbrotCoords.Y) / imRange * mandelbrotDisplay.Height);
 
                             int markerSize = 9;
                             using (Pen markerPen = new Pen(Color.FromArgb(220, Color.Green), 2f))
@@ -439,12 +440,12 @@ namespace FractalDraving
 
                         // Выводим сообщение в заголовок окна.  Обратите внимание, что нужно
                         // использовать Invoke, чтобы обновить UI из другого потока (если это необходимо).
-                        if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+                        if (IsHandleCreated && !IsDisposed && !Disposing)
                         {
-                            this.Invoke((Action)(() =>
+                            Invoke(() =>
                             {
-                                this.Text = errorMessage;
-                            }));
+                                Text = errorMessage;
+                            });
                         }
 
                         // Можно предпринять другие действия, например, не рисовать маркер.
@@ -463,8 +464,8 @@ namespace FractalDraving
 
             if (oldReRange <= 0 || oldImRange <= 0) return;
 
-            double mouseRe = currentMinRe + (e.X / (double)mandelbrotDisplay.Width) * oldReRange;
-            double mouseIm = currentMaxIm - (e.Y / (double)mandelbrotDisplay.Height) * oldImRange;
+            double mouseRe = currentMinRe + e.X / (double)mandelbrotDisplay.Width * oldReRange;
+            double mouseIm = currentMaxIm - e.Y / (double)mandelbrotDisplay.Height * oldImRange;
 
             double newReRange = oldReRange / zoomFactor;
             double newImRange = oldImRange / zoomFactor;

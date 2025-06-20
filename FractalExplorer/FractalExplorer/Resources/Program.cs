@@ -1,4 +1,4 @@
-namespace FractalExplorer
+namespace FractalExplorer.Resources
 {
     internal static class Program
     {

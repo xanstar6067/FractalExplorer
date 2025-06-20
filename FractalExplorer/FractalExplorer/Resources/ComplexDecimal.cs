@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FractalDraving
+namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Представляет комплексное число, используя тип decimal для высокой точности.

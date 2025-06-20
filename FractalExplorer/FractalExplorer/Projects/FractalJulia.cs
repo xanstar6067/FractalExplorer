@@ -1,10 +1,9 @@
-using System;
-using System.Drawing;
+using FractalDraving;
+using FractalExplorer.Resources;
+using FractalExplorer.Selectors;
 using System.Drawing.Imaging;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
-namespace FractalDraving
+namespace FractalExplorer.Projects
 {
     public partial class FractalJulia : FractalFormBase
     {
@@ -19,7 +18,7 @@ namespace FractalDraving
 
         public FractalJulia()
         {
-            this.Text = "Фрактал Жюлиа";
+            Text = "Фрактал Жюлиа";
         }
 
         protected override FractalEngineBase CreateEngine()
@@ -71,11 +70,11 @@ namespace FractalDraving
             Bitmap mandelbrotImage = RenderMandelbrotSetInternal(mandelbrotPreviewCanvas.Width, mandelbrotPreviewCanvas.Height, MANDELBROT_PREVIEW_ITERATIONS);
             if (mandelbrotPreviewCanvas.IsHandleCreated && !mandelbrotPreviewCanvas.IsDisposed)
             {
-                mandelbrotPreviewCanvas.Invoke((Action)(() =>
+                mandelbrotPreviewCanvas.Invoke(() =>
                 {
                     mandelbrotPreviewCanvas.Image?.Dispose();
                     mandelbrotPreviewCanvas.Image = mandelbrotImage;
-                }));
+                });
             }
             else
             {
@@ -93,7 +92,7 @@ namespace FractalDraving
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
                 Palette = GetPaletteMandelbrotClassicColor,
-                Scale = (MANDELBROT_MAX_RE - MANDELBROT_MIN_RE),
+                Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE,
                 CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2,
                 CenterY = (MANDELBROT_MAX_IM + MANDELBROT_MIN_IM) / 2
             };

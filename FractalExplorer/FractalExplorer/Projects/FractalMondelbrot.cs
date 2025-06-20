@@ -1,10 +1,13 @@
-namespace FractalDraving
+using FractalDraving;
+using FractalExplorer.Resources;
+
+namespace FractalExplorer.Projects
 {
     public partial class FractalMondelbrot : FractalFormBase
     {
         public FractalMondelbrot()
         {
-            this.Text = "Множество Мандельброта";
+            Text = "Множество Мандельброта";
         }
 
         protected override FractalEngineBase CreateEngine()

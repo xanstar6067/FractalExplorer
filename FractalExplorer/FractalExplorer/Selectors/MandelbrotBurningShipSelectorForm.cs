@@ -1,10 +1,11 @@
 ﻿// --- START OF FILE BurningShipCSelectorForm.cs ---
 
+using FractalExplorer.Resources;
 using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace FractalDraving
+namespace FractalExplorer.Selectors
 {
     /// <summary>
     /// Форма для выбора комплексного параметра 'c' (для фрактала Жюлиа "Горящий Корабль")
@@ -64,22 +65,22 @@ namespace FractalDraving
         /// </summary>
         public BurningShipCSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN)
         {
-            this.ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
-            this.Text = "Выбор точки C (Множество Горящий Корабль)"; // <--- ИЗМЕНЕНО
-            this.Size = new Size(800, 700);
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.StartPosition = FormStartPosition.CenterParent;
+            ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
+            Text = "Выбор точки C (Множество Горящий Корабль)"; // <--- ИЗМЕНЕНО
+            Size = new Size(800, 700);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            StartPosition = FormStartPosition.CenterParent;
 
             displayPictureBox = new PictureBox
             {
                 Dock = DockStyle.Fill,
                 SizeMode = PictureBoxSizeMode.StretchImage
             };
-            this.Controls.Add(displayPictureBox);
+            Controls.Add(displayPictureBox);
 
             // Подписка на события.
-            this.Load += SelectorForm_Load;
+            Load += SelectorForm_Load;
             displayPictureBox.Paint += DisplayPictureBox_Paint;
             displayPictureBox.MouseClick += DisplayPictureBox_MouseClick;
             displayPictureBox.MouseWheel += DisplayPictureBox_MouseWheel;
@@ -139,7 +140,7 @@ namespace FractalDraving
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             renderDebounceTimer.Stop();
-            if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+            if (IsHandleCreated && !IsDisposed && !Disposing)
             {
                 await RenderSetAsync();
             }
@@ -147,7 +148,7 @@ namespace FractalDraving
 
         private void ScheduleDelayedRender()
         {
-            if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+            if (IsHandleCreated && !IsDisposed && !Disposing)
             {
                 renderDebounceTimer.Stop();
                 renderDebounceTimer.Start();
@@ -166,7 +167,7 @@ namespace FractalDraving
         {
             if (isRendering) return;
             if (displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0 ||
-                !displayPictureBox.IsHandleCreated || displayPictureBox.IsDisposed || this.Disposing) return;
+                !displayPictureBox.IsHandleCreated || displayPictureBox.IsDisposed || Disposing) return;
 
             isRendering = true;
 
@@ -185,11 +186,11 @@ namespace FractalDraving
                     RenderBurningShipSetInternal(currentWidth, currentHeight, ITERATIONS,
                                                    minRe_capture, maxRe_capture, minIm_capture, maxIm_capture));
 
-                if (displayPictureBox.IsHandleCreated && !displayPictureBox.IsDisposed && !this.Disposing)
+                if (displayPictureBox.IsHandleCreated && !displayPictureBox.IsDisposed && !Disposing)
                 {
-                    displayPictureBox.Invoke((Action)(() =>
+                    displayPictureBox.Invoke(() =>
                     {
-                        if (displayPictureBox.IsHandleCreated && !displayPictureBox.IsDisposed && !this.Disposing)
+                        if (displayPictureBox.IsHandleCreated && !displayPictureBox.IsDisposed && !Disposing)
                         {
                             Bitmap oldOwnedBitmap = renderedBitmap;
                             renderedBitmap = newRenderedBitmap;
@@ -209,7 +210,7 @@ namespace FractalDraving
                         {
                             newRenderedBitmap?.Dispose();
                         }
-                    }));
+                    });
                 }
                 else
                 {
@@ -234,7 +235,7 @@ namespace FractalDraving
             Bitmap bmp = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
             int stride = bmpData.Stride;
-            IntPtr scan0 = bmpData.Scan0;
+            nint scan0 = bmpData.Scan0;
             int bytes = Math.Abs(stride) * canvasHeight;
             byte[] buffer = new byte[bytes];
 
@@ -254,8 +255,8 @@ namespace FractalDraving
                 int rowOffset = y_coord * stride;
                 for (int x_coord = 0; x_coord < canvasWidth; x_coord++)
                 {
-                    double c_re = minRe + (x_coord / (double)canvasWidth) * reRange;
-                    double c_im = maxIm - (y_coord / (double)canvasHeight) * imRange; // Y инвертирован для стандартного отображения
+                    double c_re = minRe + x_coord / (double)canvasWidth * reRange;
+                    double c_im = maxIm - y_coord / (double)canvasHeight * imRange; // Y инвертирован для стандартного отображения
                     Complex c0 = new Complex(c_re, c_im);
                     Complex z = Complex.Zero;
                     int iter = 0;
@@ -316,8 +317,8 @@ namespace FractalDraving
 
             if (reRange <= 0 || imRange <= 0) return;
 
-            double re = currentMinRe + (e.X / (double)displayPictureBox.Width) * reRange;
-            double im = currentMaxIm - (e.Y / (double)displayPictureBox.Height) * imRange;
+            double re = currentMinRe + e.X / (double)displayPictureBox.Width * reRange;
+            double im = currentMaxIm - e.Y / (double)displayPictureBox.Height * imRange;
 
             SetSelectedCoordinates(re, im, true);
         }
@@ -356,11 +357,11 @@ namespace FractalDraving
                 return;
             }
 
-            float p1_X = (float)(((rMinR_param - cMinR_param) / currentComplexWidth) * displayPictureBox.Width);
-            float p1_Y = (float)(((cMaxI_param - rMaxI_param) / currentComplexHeight) * displayPictureBox.Height);
+            float p1_X = (float)((rMinR_param - cMinR_param) / currentComplexWidth * displayPictureBox.Width);
+            float p1_Y = (float)((cMaxI_param - rMaxI_param) / currentComplexHeight * displayPictureBox.Height);
 
-            float destWidthPixels = (float)((renderedComplexWidth / currentComplexWidth) * displayPictureBox.Width);
-            float destHeightPixels = (float)((renderedComplexHeight / currentComplexHeight) * displayPictureBox.Height);
+            float destWidthPixels = (float)(renderedComplexWidth / currentComplexWidth * displayPictureBox.Width);
+            float destHeightPixels = (float)(renderedComplexHeight / currentComplexHeight * displayPictureBox.Height);
 
             PointF destPoint1 = new PointF(p1_X, p1_Y);
             PointF destPoint2 = new PointF(p1_X + destWidthPixels, p1_Y);
@@ -404,8 +405,8 @@ namespace FractalDraving
                     {
                         checked
                         {
-                            int markerX = (int)(((selectedComplexCoords.X - currentMinRe) / reRange) * displayPictureBox.Width);
-                            int markerY = (int)(((currentMaxIm - selectedComplexCoords.Y) / imRange) * displayPictureBox.Height);
+                            int markerX = (int)((selectedComplexCoords.X - currentMinRe) / reRange * displayPictureBox.Width);
+                            int markerY = (int)((currentMaxIm - selectedComplexCoords.Y) / imRange * displayPictureBox.Height);
 
                             int markerSize = 9;
                             using (Pen markerPen = new Pen(Color.FromArgb(220, Color.Green), 2f))
@@ -418,9 +419,9 @@ namespace FractalDraving
                     catch (OverflowException ex)
                     {
                         string errorMessage = $"Переполнение: {ex.Message}";
-                        if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+                        if (IsHandleCreated && !IsDisposed && !Disposing)
                         {
-                            this.Invoke((Action)(() => { this.Text = errorMessage; }));
+                            Invoke(() => { Text = errorMessage; });
                         }
                     }
                 }
@@ -437,8 +438,8 @@ namespace FractalDraving
 
             if (oldReRange <= 0 || oldImRange <= 0) return;
 
-            double mouseRe = currentMinRe + (e.X / (double)displayPictureBox.Width) * oldReRange;
-            double mouseIm = currentMaxIm - (e.Y / (double)displayPictureBox.Height) * oldImRange;
+            double mouseRe = currentMinRe + e.X / (double)displayPictureBox.Width * oldReRange;
+            double mouseIm = currentMaxIm - e.Y / (double)displayPictureBox.Height * oldImRange;
 
             double newReRange = oldReRange / zoomFactor;
             double newImRange = oldImRange / zoomFactor;

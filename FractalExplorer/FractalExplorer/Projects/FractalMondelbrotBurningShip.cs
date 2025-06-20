@@ -1,10 +1,13 @@
-﻿namespace FractalDraving
+﻿using FractalDraving;
+using FractalExplorer.Resources;
+
+namespace FractalExplorer.Projects
 {
     public partial class FractalMondelbrotBurningShip : FractalFormBase
     {
         public FractalMondelbrotBurningShip()
         {
-            this.Text = "Множество Горящий Корабль";
+            Text = "Множество Горящий Корабль";
         }
 
         protected override FractalEngineBase CreateEngine()

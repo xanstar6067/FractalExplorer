@@ -1,10 +1,13 @@
-﻿using System;
+﻿using FractalDraving;
+using FractalExplorer.Resources;
+using FractalExplorer.Selectors;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace FractalDraving
+namespace FractalExplorer.Projects
 {
     public partial class FractalJuliaBurningShip : FractalFormBase
     {
@@ -18,7 +21,7 @@ namespace FractalDraving
 
         public FractalJuliaBurningShip()
         {
-            this.Text = "Фрактал Горящий Корабль (Жюлиа)";
+            Text = "Фрактал Горящий Корабль (Жюлиа)";
         }
 
         protected override FractalEngineBase CreateEngine()
@@ -65,11 +68,11 @@ namespace FractalDraving
             Bitmap bsImage = RenderBurningShipSetInternal(mandelbrotPreviewCanvas.Width, mandelbrotPreviewCanvas.Height, BS_PREVIEW_ITERATIONS);
             if (mandelbrotPreviewCanvas.IsHandleCreated && !mandelbrotPreviewCanvas.IsDisposed)
             {
-                mandelbrotPreviewCanvas.Invoke((Action)(() =>
+                mandelbrotPreviewCanvas.Invoke(() =>
                 {
                     mandelbrotPreviewCanvas.Image?.Dispose();
                     mandelbrotPreviewCanvas.Image = bsImage;
-                }));
+                });
             }
             else
             {
@@ -87,7 +90,7 @@ namespace FractalDraving
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
                 Palette = GetPaletteMandelbrotClassicColor,
-                Scale = (BS_MAX_RE - BS_MIN_RE),
+                Scale = BS_MAX_RE - BS_MIN_RE,
                 CenterX = (BS_MAX_RE + BS_MIN_RE) / 2,
                 CenterY = (BS_MAX_IM + BS_MIN_IM) / 2
             };

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FractalDraving
+namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Управляет параллельным рендерингом плиток (тайлов), распределяя их по рабочим потокам.

@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-namespace FractalDraving
+namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Абстрактный базовый класс для движков рендеринга фракталов.
@@ -45,7 +45,7 @@ namespace FractalDraving
         {
             decimal half_width_pixels = canvasWidth / 2.0m;
             decimal half_height_pixels = canvasHeight / 2.0m;
-            decimal units_per_pixel = this.Scale / canvasWidth; // Единый коэффициент
+            decimal units_per_pixel = Scale / canvasWidth; // Единый коэффициент
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
@@ -57,8 +57,8 @@ namespace FractalDraving
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
-                    decimal re = this.CenterX + (canvasX - half_width_pixels) * units_per_pixel;
-                    decimal im = this.CenterY - (canvasY - half_height_pixels) * units_per_pixel; // Тот же units_per_pixel
+                    decimal re = CenterX + (canvasX - half_width_pixels) * units_per_pixel;
+                    decimal im = CenterY - (canvasY - half_height_pixels) * units_per_pixel; // Тот же units_per_pixel
 
                     int iter = GetIterationsForPoint(re, im);
                     Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
@@ -86,7 +86,7 @@ namespace FractalDraving
 
             decimal half_width_pixels = canvasWidth / 2.0m;
             decimal half_height_pixels = canvasHeight / 2.0m;
-            decimal units_per_pixel = this.Scale / canvasWidth;
+            decimal units_per_pixel = Scale / canvasWidth;
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
@@ -98,8 +98,8 @@ namespace FractalDraving
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
-                    decimal re = this.CenterX + (canvasX - half_width_pixels) * units_per_pixel;
-                    decimal im = this.CenterY - (canvasY - half_height_pixels) * units_per_pixel;
+                    decimal re = CenterX + (canvasX - half_width_pixels) * units_per_pixel;
+                    decimal im = CenterY - (canvasY - half_height_pixels) * units_per_pixel;
 
                     int iter = GetIterationsForPoint(re, im);
                     Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
@@ -123,7 +123,7 @@ namespace FractalDraving
             Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
             int stride = bmpData.Stride;
-            IntPtr scan0 = bmpData.Scan0;
+            nint scan0 = bmpData.Scan0;
             byte[] buffer = new byte[Math.Abs(stride) * renderHeight];
 
             ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
@@ -131,15 +131,15 @@ namespace FractalDraving
 
             decimal half_width_pixels = renderWidth / 2.0m;
             decimal half_height_pixels = renderHeight / 2.0m;
-            decimal units_per_pixel = this.Scale / renderWidth; // Единый коэффициент
+            decimal units_per_pixel = Scale / renderWidth; // Единый коэффициент
 
             Parallel.For(0, renderHeight, po, y =>
             {
                 int rowOffset = y * stride;
                 for (int x = 0; x < renderWidth; x++)
                 {
-                    decimal re = this.CenterX + (x - half_width_pixels) * units_per_pixel;
-                    decimal im = this.CenterY - (y - half_height_pixels) * units_per_pixel; // Тот же units_per_pixel
+                    decimal re = CenterX + (x - half_width_pixels) * units_per_pixel;
+                    decimal im = CenterY - (y - half_height_pixels) * units_per_pixel; // Тот же units_per_pixel
 
                     int iter_val = GetIterationsForPoint(re, im);
                     Color pixelColor = Palette(iter_val, MaxIterations, MaxColorIterations);
@@ -153,7 +153,7 @@ namespace FractalDraving
                     }
                 }
 
-                long currentDone = System.Threading.Interlocked.Increment(ref done);
+                long currentDone = Interlocked.Increment(ref done);
                 if (renderHeight > 0)
                 {
                     reportProgressCallback((int)(100.0 * currentDone / renderHeight));
