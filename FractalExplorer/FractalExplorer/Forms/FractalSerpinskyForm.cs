@@ -413,7 +413,8 @@ namespace FractalExplorer
 
                 try
                 {
-                    Bitmap highResBitmap = await Task.Run(() => {
+                    Bitmap highResBitmap = await Task.Run(() =>
+                    {
                         var bmp = new Bitmap(saveWidth, saveHeight, PixelFormat.Format32bppArgb);
                         var bmpData = bmp.LockBits(new Rectangle(0, 0, saveWidth, saveHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
                         var buffer = new byte[bmpData.Stride * saveHeight];
@@ -527,5 +528,16 @@ namespace FractalExplorer
             base.OnFormClosed(e);
         }
         #endregion
+
+        private void btnRender_Click(object sender, EventArgs e)
+        {
+            // Отменяем любой текущий рендер и останавливаем таймер, чтобы избежать двойного запуска
+            previewRenderCts?.Cancel();
+            renderTimer.Stop();
+
+            // Немедленно запускаем логику рендеринга, которая находится в RenderTimer_Tick,
+            // минуя 300-миллисекундную задержку таймера.
+            RenderTimer_Tick(sender, e);
+        }
     }
 }
