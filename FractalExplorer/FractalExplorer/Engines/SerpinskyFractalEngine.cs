@@ -163,43 +163,69 @@ namespace FractalExplorer.Engines
         }
 
         private void RenderChaos(CancellationToken token, byte[] buffer, int W, int H, int stride, int bpp,
-                                 Color frColor, int numThreads, Action<int> reportProgress)
+                         Color frColor, int numThreads, Action<int> reportProgress)
         {
             byte cB = frColor.B; byte cG = frColor.G; byte cR = frColor.R; byte cA = frColor.A;
             double side = 1.0; double height_triangle = side * Math.Sqrt(3) / 2.0;
             PointF[] vertices_world = {
-                new PointF(0, (float)(height_triangle * 2.0 / 3.0)),
-                new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0)),
-                new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0))
-            };
+        new PointF(0, (float)(height_triangle * 2.0 / 3.0)),
+        new PointF((float)(-side / 2.0), (float)(-height_triangle / 3.0)),
+        new PointF((float)(side / 2.0), (float)(-height_triangle / 3.0))
+    };
 
-            Random masterRand = new Random();
-            PointF initialPoint_world = vertices_world[0];
-            for (int i = 0; i < 20; ++i) { initialPoint_world = MidPoint(initialPoint_world, vertices_world[masterRand.Next(3)]); }
+            int targetVisiblePoints = Iterations;
+            if (targetVisiblePoints <= 0)
+            {
+                reportProgress(100);
+                return;
+            }
 
-            long totalDrawnPoints = 0;
-            int numPoints = Iterations;
-            int pointsPerThread = Math.Max(1, numPoints / numThreads);
+            // --- Новая логика со счетчиками ---
+            long visiblePointsDrawn = 0;
+            long totalGeneratedPoints = 0;
+            // Аварийный лимит, чтобы избежать бесконечного цикла в пустых областях
+            long maxTotalGenerations = (long)targetVisiblePoints * 1000 + 1000000;
 
             Parallel.For(0, numThreads, new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token }, threadId =>
             {
-                Random localRand = new Random(masterRand.Next() + threadId);
-                PointF localCurrentPoint_world = initialPoint_world;
-                if (threadId > 0) { for (int i = 0; i < 5 + threadId; ++i) { localCurrentPoint_world = MidPoint(localCurrentPoint_world, vertices_world[localRand.Next(3)]); } }
+                Random localRand = new Random();
+                PointF p = new PointF((float)(localRand.NextDouble() - 0.5), (float)(localRand.NextDouble() - 0.5));
 
-                for (int i = 0; i < pointsPerThread; i++)
+                // "Прогрев" остается
+                for (int i = 0; i < 20; i++)
                 {
+                    p = MidPoint(p, vertices_world[localRand.Next(3)]);
+                }
+
+                // --- Главный цикл, работающий до достижения цели ---
+                while (true)
+                {
+                    // Проверки на выход из цикла
                     if (token.IsCancellationRequested) break;
-                    localCurrentPoint_world = MidPoint(localCurrentPoint_world, vertices_world[localRand.Next(3)]);
-                    Point screenPoint = Point.Round(WorldToScreen(localCurrentPoint_world, W, H));
+                    if (Interlocked.Read(ref visiblePointsDrawn) >= targetVisiblePoints) break;
+                    if (Interlocked.Read(ref totalGeneratedPoints) > maxTotalGenerations) break;
+
+                    Interlocked.Increment(ref totalGeneratedPoints);
+
+                    // Генерация точки
+                    p = MidPoint(p, vertices_world[localRand.Next(3)]);
+                    Point screenPoint = Point.Round(WorldToScreen(p, W, H));
+
                     if (screenPoint.X >= 0 && screenPoint.X < W && screenPoint.Y >= 0 && screenPoint.Y < H)
                     {
+                        // Точка видима! Рисуем и увеличиваем главный счетчик.
                         int idx = screenPoint.Y * stride + screenPoint.X * bpp;
                         buffer[idx + 0] = cB; buffer[idx + 1] = cG; buffer[idx + 2] = cR; buffer[idx + 3] = cA;
+
+                        long currentVisible = Interlocked.Increment(ref visiblePointsDrawn);
+
+                        // Обновляем прогресс-бар по мере заполнения экрана
+                        if (currentVisible % 1000 == 0) // Обновляем не слишком часто, чтобы не тормозить
+                        {
+                            reportProgress((int)Math.Min(100, (100L * currentVisible / targetVisiblePoints)));
+                        }
                     }
                 }
-                long drawn = Interlocked.Add(ref totalDrawnPoints, pointsPerThread);
-                if (numPoints > 0) reportProgress((int)Math.Min(100, (100L * drawn / numPoints)));
             });
 
             if (!token.IsCancellationRequested) reportProgress(100);
