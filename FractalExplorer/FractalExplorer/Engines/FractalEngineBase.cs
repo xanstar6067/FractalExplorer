@@ -1,9 +1,10 @@
-﻿using System;
+﻿using FractalExplorer.Resources;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-namespace FractalExplorer.Resources
+namespace FractalExplorer.Engines
 {
     /// <summary>
     /// Абстрактный базовый класс для движков рендеринга фракталов.

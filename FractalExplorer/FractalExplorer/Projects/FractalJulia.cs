@@ -1,4 +1,5 @@
 using FractalDraving;
+using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.Selectors;
 using System.Drawing.Imaging;

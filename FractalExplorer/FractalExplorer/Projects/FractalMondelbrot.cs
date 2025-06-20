@@ -1,5 +1,5 @@
 using FractalDraving;
-using FractalExplorer.Resources;
+using FractalExplorer.Engines;
 
 namespace FractalExplorer.Projects
 {

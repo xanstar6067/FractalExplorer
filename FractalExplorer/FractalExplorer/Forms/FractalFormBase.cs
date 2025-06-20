@@ -1,4 +1,5 @@
-﻿using FractalExplorer.Projects;
+﻿using FractalExplorer.Engines;
+using FractalExplorer.Projects;
 using FractalExplorer.Resources;
 using System;
 using System.Collections.Generic;
