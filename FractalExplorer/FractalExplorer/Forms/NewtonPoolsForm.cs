@@ -572,27 +572,33 @@ namespace FractalExplorer
                         return;
                     }
 
+                    // 1. Получаем количество потоков в потоке UI (ДО Task.Run)
+                    int threadCount = GetThreadCount();
+
                     // Копируем параметры в новый движок
                     saveEngine.MaxIterations = (int)nudIterations.Value;
                     saveEngine.CenterX = _centerX;
                     saveEngine.CenterY = _centerY;
                     saveEngine.Scale = BASE_SCALE / _zoom;
-                    // Палитру нужно скопировать так же, как мы делаем для рендера
+
                     _useCustomPalette = colorCustom.Checked;
-                    UpdatePalette(); // Обновит палитру основного движка
-                    saveEngine.RootColors = _engine.RootColors; // Копируем ее
+                    UpdatePalette();
+                    saveEngine.RootColors = _engine.RootColors;
                     saveEngine.BackgroundColor = _engine.BackgroundColor;
                     saveEngine.UseGradient = _engine.UseGradient;
 
                     try
                     {
+                        // Запускаем рендеринг в фоновом потоке
                         Bitmap highResBitmap = await Task.Run(() => saveEngine.RenderToBitmap(
-                            saveWidth, saveHeight, GetThreadCount(),
+                            saveWidth, saveHeight,
+                            threadCount, // 2. Используем захваченную переменную здесь
                             progress => {
                                 if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
                                     progressPNG.Invoke((Action)(() => progressPNG.Value = Math.Min(100, progress)));
                             }
                         ));
+
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
                         highResBitmap.Dispose();
                         MessageBox.Show("Изображение сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);

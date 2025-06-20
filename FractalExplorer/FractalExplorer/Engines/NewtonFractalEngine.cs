@@ -132,6 +132,7 @@ namespace FractalExplorer.Engines
             }
             return buffer;
         }
+        //Резервная копия. Поврежденный метод. Удалить перед записью на дискету для экономии места
         /* public void RenderTile(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
          {
              if (f_ast == null || f_deriv_ast == null || Roots.Count == 0) return;
