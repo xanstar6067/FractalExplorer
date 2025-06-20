@@ -118,10 +118,11 @@ namespace FractalExplorer
 
             if (activeCb == FractalTypeIsGeometry)
             {
+                // Не трогаем этот блок по вашей просьбе
                 FractalTypeIsChaos.Checked = false;
-                nudIterations.Maximum = 15;
+                nudIterations.Maximum = 15; // Глубина для геометрического
                 nudIterations.Minimum = 0;
-                if (nudIterations.Value > 15) nudIterations.Value = 5;
+                if (nudIterations.Value >= 15) nudIterations.Value = 5;
             }
             else if (activeCb == FractalTypeIsChaos)
             {
