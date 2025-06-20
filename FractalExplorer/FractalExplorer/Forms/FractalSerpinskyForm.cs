@@ -95,7 +95,7 @@ namespace FractalExplorer
                 nudIterations.Maximum = 20; // Новый лимит
                 nudIterations.Minimum = 0;
                 // Если значение было от режима "Хаос", сбрасываем на адекватное
-                if (nudIterations.Value > 20) nudIterations.Value = 8;
+                if (nudIterations.Value >= 20) nudIterations.Value = 8;
             }
             else // FractalTypeIsChaos
             {
@@ -222,6 +222,9 @@ namespace FractalExplorer
             // Обновляем параметры движка из UI
             UpdateEngineParameters();
 
+            // >>> ИСПРАВЛЕНИЕ: Получаем количество потоков ЗДЕСЬ, в потоке UI <<<
+            int numThreads = GetThreadCount();
+
             int renderWidth = canvasSerpinsky.Width;
             int renderHeight = canvasSerpinsky.Height;
             if (renderWidth <= 0 || renderHeight <= 0)
@@ -234,24 +237,22 @@ namespace FractalExplorer
 
             try
             {
-                // Создаем буфер и битмап для рендеринга
                 var bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format32bppArgb);
                 var bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
                 var buffer = new byte[bmpData.Stride * renderHeight];
 
                 await Task.Run(() => _engine.RenderToBuffer(
                     buffer, renderWidth, renderHeight, bmpData.Stride, 4,
-                    GetThreadCount(), token,
+                    numThreads, // >>> ИСПОЛЬЗУЕМ переменную вместо вызова метода <<<
+                    token,
                     (progress) => UpdateProgressBar(progressBarSerpinsky, progress)),
                 token);
 
                 token.ThrowIfCancellationRequested();
 
-                // Копируем результат в битмап
                 Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
                 bmp.UnlockBits(bmpData);
 
-                // Обновляем UI
                 Bitmap oldImage = canvasBitmap;
                 canvasBitmap = bmp;
                 renderedZoom = currentZoom;
@@ -396,10 +397,9 @@ namespace FractalExplorer
                 highResRenderCts = new CancellationTokenSource();
                 CancellationToken token = highResRenderCts.Token;
 
-                // Создаем и настраиваем отдельный движок для сохранения
                 var saveEngine = new SerpinskyFractalEngine();
-                UpdateEngineParameters(); // Настраиваем основной движок
-                saveEngine.RenderMode = _engine.RenderMode; // Копируем параметры
+                UpdateEngineParameters();
+                saveEngine.RenderMode = _engine.RenderMode;
                 saveEngine.ColorMode = _engine.ColorMode;
                 saveEngine.Iterations = _engine.Iterations;
                 saveEngine.Zoom = _engine.Zoom;
@@ -407,6 +407,9 @@ namespace FractalExplorer
                 saveEngine.CenterY = _engine.CenterY;
                 saveEngine.FractalColor = _engine.FractalColor;
                 saveEngine.BackgroundColor = _engine.BackgroundColor;
+
+                // >>> ИСПРАВЛЕНИЕ: Получаем количество потоков ЗДЕСЬ, в потоке UI <<<
+                int numThreads = GetThreadCount();
 
                 try
                 {
@@ -417,7 +420,8 @@ namespace FractalExplorer
 
                         saveEngine.RenderToBuffer(
                             buffer, saveWidth, saveHeight, bmpData.Stride, 4,
-                            GetThreadCount(), token,
+                            numThreads, // >>> ИСПОЛЬЗУЕМ переменную вместо вызова метода <<<
+                            token,
                             (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
 
                         token.ThrowIfCancellationRequested();
