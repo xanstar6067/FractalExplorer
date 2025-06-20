@@ -341,7 +341,7 @@
             btnRender.TabIndex = 2;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
-            btnRender.Click += btnRender_Click;
+            //btnRender.Click += btnRender_Click;
             // 
             // progressBar
             // 
