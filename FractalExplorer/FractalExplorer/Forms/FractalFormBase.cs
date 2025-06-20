@@ -21,6 +21,7 @@ namespace FractalDraving
     {
         #region Fields
 
+        private RenderVisualizerComponent _renderVisualizer;
 
         private const int TILE_SIZE = 32;
         /// <summary>
@@ -90,6 +91,8 @@ namespace FractalDraving
 
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
+
+            _renderVisualizer = new RenderVisualizerComponent();
 
             InitializePaletteCheckBoxes();
             InitializeControls();
@@ -204,6 +207,7 @@ namespace FractalDraving
                     _currentRenderingBitmap?.Dispose();
                     _currentRenderingBitmap = null;
                 }
+                _renderVisualizer?.Dispose();
             };
         }
 
