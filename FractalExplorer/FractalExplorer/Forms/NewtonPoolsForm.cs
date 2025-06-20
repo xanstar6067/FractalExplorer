@@ -170,6 +170,8 @@ namespace FractalExplorer
             await StartPreviewRender();
         }
 
+        // In NewtonPools.cs
+
         private async Task StartPreviewRender()
         {
             if (fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
@@ -178,6 +180,9 @@ namespace FractalExplorer
             _previewRenderCts?.Cancel();
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
+
+            // Очищаем предыдущие активные плитки перед новым рендером
+            _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ
 
             // 1. Обрабатываем формулу и находим корни
             if (!_engine.SetFormula(richTextInput.Text, out string debugInfo))
@@ -190,8 +195,10 @@ namespace FractalExplorer
                     _currentRenderingBitmap?.Dispose();
                     _currentRenderingBitmap = null;
                 }
-                fractal_bitmap.Invalidate();
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate();
                 _isRenderingPreview = false;
+                _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate(); // <--- НОВОЕ
                 return;
             }
             richTextDebugOutput.Text = debugInfo;
@@ -205,16 +212,28 @@ namespace FractalExplorer
             }
 
             // 3. Обновляем параметры движка
-            UpdateEngineParameters();
+            UpdateEngineParameters(); // Это обновляет _engine
             double currentRenderedCenterX = _centerX;
             double currentRenderedCenterY = _centerY;
             double currentRenderedZoom = _zoom;
 
+            // Создаем копию движка для потокобезопасного рендеринга
+            // (Хотя NewtonFractalEngine.RenderSingleTile может быть уже потокобезопасным,
+            // но если он меняет внутреннее состояние, копия безопаснее. Если он stateless, копия не нужна)
+            // Для простоты оставим текущую логику _engine.RenderSingleTile, предполагая, что он не меняет глобальное состояние _engine
+            // Если же RenderSingleTile модифицирует _engine, то нужно создавать копию движка, как в FractalFormBase.
+            // Пока оставим без копии, так как RenderSingleTile в NewtonFractalEngine выглядит stateless относительно глобальных параметров _engine.
+
             var tiles = GenerateTiles(fractal_bitmap.Width, fractal_bitmap.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
 
-            progressBar.Value = 0;
-            progressBar.Maximum = tiles.Count;
+            if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
+            {
+                progressBar.Invoke((Action)(() => {
+                    progressBar.Value = 0;
+                    progressBar.Maximum = tiles.Count;
+                }));
+            }
             int progress = 0;
 
             try
@@ -222,6 +241,13 @@ namespace FractalExplorer
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
+
+                    // Уведомляем о начале рендера плитки и запрашиваем перерисовку для рамки
+                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds); // <--- НОВОЕ
+                    if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) // <--- НОВОЕ
+                    {                                                                 // <--- НОВОЕ
+                        fractal_bitmap.Invoke((Action)(() => fractal_bitmap.Invalidate(tile.Bounds))); // <--- НОВОЕ
+                    }                                                                 // <--- НОВОЕ
 
                     // 1. Получаем готовый буфер от движка
                     var tileBuffer = _engine.RenderSingleTile(tile, fractal_bitmap.Width, fractal_bitmap.Height, out int bytesPerPixel);
@@ -234,26 +260,25 @@ namespace FractalExplorer
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
 
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
-
-                        // Копируем каждую строку отдельно
                         for (int y = 0; y < tile.Bounds.Height; y++)
                         {
                             IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
                             int srcOffset = y * tileWidthInBytes;
                             Marshal.Copy(tileBuffer, srcOffset, destPtr, tileWidthInBytes);
                         }
-
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
 
-                    // 3. Обновляем UI (этот блок без изменений)
+                    // Уведомляем о завершении рендера плитки
+                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds); // <--- НОВОЕ
+
+                    // 3. Обновляем UI (прогресс-бар и финальная перерисовка плитки, которая уберет рамку)
                     if (ct.IsCancellationRequested || !fractal_bitmap.IsHandleCreated || fractal_bitmap.IsDisposed) return;
                     fractal_bitmap.Invoke((Action)(() =>
                     {
                         if (ct.IsCancellationRequested) return;
-                        fractal_bitmap.Invalidate(tile.Bounds);
+                        fractal_bitmap.Invalidate(tile.Bounds); // <--- Это обновит плитку и уберет рамку
                         if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                             progressBar.Value = Math.Min(progressBar.Maximum, Interlocked.Increment(ref progress));
                     }));
@@ -268,7 +293,7 @@ namespace FractalExplorer
                     if (_currentRenderingBitmap == newRenderingBitmap)
                     {
                         _previewBitmap?.Dispose();
-                        _previewBitmap = new Bitmap(_currentRenderingBitmap); // Копируем, чтобы избавиться от альфа-канала
+                        _previewBitmap = new Bitmap(_currentRenderingBitmap); // Копируем, чтобы избавиться от альфа-канала при необходимости
                         _currentRenderingBitmap.Dispose();
                         _currentRenderingBitmap = null;
 
@@ -276,8 +301,12 @@ namespace FractalExplorer
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
                     }
+                    else
+                    {
+                        newRenderingBitmap?.Dispose();
+                    }
                 }
-                fractal_bitmap.Invalidate();
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate();
             }
             catch (OperationCanceledException)
             {
@@ -289,15 +318,20 @@ namespace FractalExplorer
                         _currentRenderingBitmap = null;
                     }
                 }
+                newRenderingBitmap?.Dispose();
             }
             catch (Exception ex)
             {
+                newRenderingBitmap?.Dispose();
                 if (this.IsHandleCreated && !this.IsDisposed)
                     MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 _isRenderingPreview = false;
+                _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ
+                if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate(); // <--- НОВОЕ
+
                 if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                     progressBar.Invoke((Action)(() => progressBar.Value = 0));
             }
@@ -368,6 +402,11 @@ namespace FractalExplorer
                 if (_currentRenderingBitmap != null)
                 {
                     e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                }
+
+                if (_renderVisualizer != null && _isRenderingPreview) // Или другой флаг, указывающий на активный рендер превью
+                {
+                    _renderVisualizer.DrawVisualization(e.Graphics);
                 }
             }
         }
