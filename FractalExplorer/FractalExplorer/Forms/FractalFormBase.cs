@@ -251,8 +251,9 @@ namespace FractalDraving
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
 
-            // Очищаем предыдущие активные плитки перед новым рендером
-            _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ
+            _renderVisualizer?.NotifyRenderSessionStart(); // Уведомляем о начале сессии рендеринга
+
+            // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ (Этот вызов теперь выполняется внутри NotifyRenderSessionStart())
 
             // 1. Создаем новый временный битмап для отрисовки новых плиток.
             var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
@@ -269,13 +270,13 @@ namespace FractalDraving
             var currentRenderedCenterY = _centerY;
             var currentRenderedZoom = _zoom;
 
-            var renderEngineCopy = CreateEngine(); // Создаем копию движка для потокобезопасности
+            var renderEngineCopy = CreateEngine();
             renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
             renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
             renderEngineCopy.CenterX = _fractalEngine.CenterX;
             renderEngineCopy.CenterY = _fractalEngine.CenterY;
             renderEngineCopy.Scale = _fractalEngine.Scale;
-            renderEngineCopy.C = _fractalEngine.C; // Для Жюлиа
+            renderEngineCopy.C = _fractalEngine.C;
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
 
@@ -298,37 +299,31 @@ namespace FractalDraving
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    // Уведомляем о начале рендера плитки и запрашиваем перерисовку для рамки
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds); // <--- НОВОЕ
                     if (canvas.IsHandleCreated && !canvas.IsDisposed)       // <--- НОВОЕ
                     {                                                       // <--- НОВОЕ
                         canvas.Invoke((Action)(() => canvas.Invalidate(tile.Bounds))); // <--- НОВОЕ
                     }                                                       // <--- НОВОЕ
 
-                    // Рендерим плитку в ее собственный 32-битный буфер
                     var tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
 
-                    // Копируем данные из буфера плитки в _currentRenderingBitmap
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
 
                         var tileRect = tile.Bounds;
                         var bitmapRect = new Rectangle(0, 0, _currentRenderingBitmap.Width, _currentRenderingBitmap.Height);
-                        tileRect.Intersect(bitmapRect); // Обрезаем плитку по границам битмапа
-                        if (tileRect.Width == 0 || tileRect.Height == 0) return; // Плитка вне видимой области
+                        tileRect.Intersect(bitmapRect);
+                        if (tileRect.Width == 0 || tileRect.Height == 0) return;
 
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tileRect, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
 
-                        // Рассчитываем правильное смещение в исходном tileBuffer, если tileRect был обрезан
                         int originalTileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
                         for (int y = 0; y < tileRect.Height; y++)
                         {
                             IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
-                            // y_in_original_tile - это 'y' относительно начала tileRect ВНУТРИ исходной tile.Bounds
-                            // tileRect.X - tile.Bounds.X - смещение по X, если tileRect был обрезан слева
                             int srcOffset = ((y + tileRect.Y) - tile.Bounds.Y) * originalTileWidthInBytes +
                                             ((tileRect.X - tile.Bounds.X) * bytesPerPixel);
 
@@ -337,15 +332,13 @@ namespace FractalDraving
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
 
-                    // Уведомляем о завершении рендера плитки
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds); // <--- НОВОЕ
 
-                    // Обновляем UI (прогресс-бар и финальная перерисовка плитки, которая уберет рамку)
                     if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
                     canvas.Invoke((Action)(() =>
                     {
                         if (ct.IsCancellationRequested) return;
-                        canvas.Invalidate(tile.Bounds); // <--- Это обновит плитку и уберет рамку
+                        canvas.Invalidate(tile.Bounds);
                         if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                         {
                             pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
@@ -358,29 +351,27 @@ namespace FractalDraving
 
                 token.ThrowIfCancellationRequested();
 
-                // 4. Рендеринг успешно завершен. Делаем _currentRenderingBitmap основным.
                 lock (_bitmapLock)
                 {
-                    if (_currentRenderingBitmap == newRenderingBitmap) // Убедимся, что это все еще тот битмап, с которым мы работали
+                    if (_currentRenderingBitmap == newRenderingBitmap)
                     {
                         _previewBitmap?.Dispose();
-                        _previewBitmap = _currentRenderingBitmap; // Продвигаем (теперь он будет 32bppArgb)
-                        _currentRenderingBitmap = null;          // Сбрасываем текущий рендерящийся
+                        _previewBitmap = _currentRenderingBitmap;
+                        _currentRenderingBitmap = null;
 
                         _renderedCenterX = currentRenderedCenterX;
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
                     }
-                    else // Если _currentRenderingBitmap изменился (например, из-за быстрой отмены и нового старта),
-                    {    // то newRenderingBitmap уже не актуален и должен быть уничтожен.
+                    else
+                    {
                         newRenderingBitmap?.Dispose();
                     }
                 }
-                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate(); // Финальная перерисовка всего холста
+                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
             }
             catch (OperationCanceledException)
             {
-                // Если рендер отменен, просто удаляем временный битмап
                 lock (_bitmapLock)
                 {
                     if (_currentRenderingBitmap == newRenderingBitmap)
@@ -389,11 +380,11 @@ namespace FractalDraving
                         _currentRenderingBitmap = null;
                     }
                 }
-                newRenderingBitmap?.Dispose(); // Убедимся, что он уничтожен, если не был присвоен
+                newRenderingBitmap?.Dispose();
             }
             catch (Exception ex)
             {
-                newRenderingBitmap?.Dispose(); // При любой другой ошибке тоже уничтожаем
+                newRenderingBitmap?.Dispose();
                 if (this.IsHandleCreated && !this.IsDisposed)
                 {
                     MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -402,7 +393,8 @@ namespace FractalDraving
             finally
             {
                 _isRenderingPreview = false;
-                _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ: На всякий случай очищаем, если что-то осталось
+                _renderVisualizer?.NotifyRenderSessionComplete(); // Уведомляем о завершении сессии рендеринга
+                                                                  // _renderVisualizer?.ClearActiveTiles(); // <--- НОВОЕ: (Этот вызов теперь выполняется внутри NotifyRenderSessionComplete())
                 if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate(); // <--- НОВОЕ: Финальное обновление для очистки рамок
 
                 if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
@@ -490,9 +482,10 @@ namespace FractalDraving
                     e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
             }
-            if (_renderVisualizer != null && _isRenderingPreview) // Или другой флаг, указывающий на активный рендер превью
+            if (_renderVisualizer != null && _isRenderingPreview)
             {
-                _renderVisualizer.DrawVisualization(e.Graphics);
+                // ИЗМЕНЕННЫЙ ВЫЗОВ: передаем canvas.ClientRectangle для границ сессии
+                _renderVisualizer.DrawVisualization(e.Graphics, canvas.ClientRectangle);
             }
         }
 
