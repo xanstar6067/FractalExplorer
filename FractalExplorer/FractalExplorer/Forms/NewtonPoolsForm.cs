@@ -221,18 +221,33 @@ namespace FractalExplorer
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
-                    var tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-                    _engine.RenderTile(tileBuffer, tile.Bounds.Width * 4, 4, tile, fractal_bitmap.Width, fractal_bitmap.Height);
+
+                    // 1. Получаем готовый буфер от движка
+                    var tileBuffer = _engine.RenderSingleTile(tile, fractal_bitmap.Width, fractal_bitmap.Height, out int bytesPerPixel);
+
                     ct.ThrowIfCancellationRequested();
 
+                    // 2. Блокируем область в главном битмапе и копируем данные ПОСТРОЧНО
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
+
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-                        Marshal.Copy(tileBuffer, 0, bmpData.Scan0, tileBuffer.Length);
+
+                        int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
+
+                        // Копируем каждую строку отдельно
+                        for (int y = 0; y < tile.Bounds.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            int srcOffset = y * tileWidthInBytes;
+                            Marshal.Copy(tileBuffer, srcOffset, destPtr, tileWidthInBytes);
+                        }
+
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
 
+                    // 3. Обновляем UI (этот блок без изменений)
                     if (ct.IsCancellationRequested || !fractal_bitmap.IsHandleCreated || fractal_bitmap.IsDisposed) return;
                     fractal_bitmap.Invoke((Action)(() =>
                     {
@@ -291,13 +306,22 @@ namespace FractalExplorer
         {
             var tiles = new List<TileInfo>();
             Point center = new Point(width / 2, height / 2);
+
             for (int y = 0; y < height; y += TILE_SIZE)
             {
                 for (int x = 0; x < width; x += TILE_SIZE)
                 {
-                    tiles.Add(new TileInfo(x, y, TILE_SIZE, TILE_SIZE));
+                    // Вычисляем реальную ширину и высоту для текущей плитки,
+                    // чтобы не выйти за границы изображения.
+                    int tileWidth = Math.Min(TILE_SIZE, width - x);
+                    int tileHeight = Math.Min(TILE_SIZE, height - y);
+
+                    // Создаем плитку с корректными, "обрезанными" размерами.
+                    tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
                 }
             }
+
+            // Сортировка остается прежней, чтобы рендер шел от центра к краям.
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 

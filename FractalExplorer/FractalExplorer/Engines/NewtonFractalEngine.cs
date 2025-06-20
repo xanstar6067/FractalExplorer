@@ -76,9 +76,17 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Рендерит одну плитку в предоставленный байтовый буфер.
         /// </summary>
-        public void RenderTile(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
+        public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
-            if (f_ast == null || f_deriv_ast == null || Roots.Count == 0) return;
+            bytesPerPixel = 4; // Используем 32bpp ARGB для прозрачности
+            byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
+
+            if (f_ast == null || f_deriv_ast == null || Roots.Count == 0)
+            {
+                // Если корней нет, возвращаем прозрачный буфер
+                for (int i = 0; i < buffer.Length; i++) buffer[i] = 0;
+                return buffer;
+            }
 
             double half_width_pixels = canvasWidth / 2.0;
             double half_height_pixels = canvasHeight / 2.0;
@@ -96,7 +104,7 @@ namespace FractalExplorer.Engines
                     if (canvasX >= canvasWidth) continue;
 
                     double c_re = CenterX + (canvasX - half_width_pixels) * units_per_pixel;
-                    double c_im = CenterY + (canvasY - half_height_pixels) * units_per_pixel; // Знак + т.к. экранные Y инвертированы
+                    double c_im = CenterY + (canvasY - half_height_pixels) * units_per_pixel;
 
                     Complex z = new Complex(c_re, c_im);
                     int iter = 0;
@@ -122,7 +130,55 @@ namespace FractalExplorer.Engines
                     buffer[bufferIndex + 3] = 255; // Alpha
                 }
             }
+            return buffer;
         }
+        /* public void RenderTile(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
+         {
+             if (f_ast == null || f_deriv_ast == null || Roots.Count == 0) return;
+
+             double half_width_pixels = canvasWidth / 2.0;
+             double half_height_pixels = canvasHeight / 2.0;
+             double units_per_pixel = Scale / canvasWidth;
+             var variables = new Dictionary<string, Complex>();
+
+             for (int y = 0; y < tile.Bounds.Height; y++)
+             {
+                 int canvasY = tile.Bounds.Y + y;
+                 if (canvasY >= canvasHeight) continue;
+
+                 for (int x = 0; x < tile.Bounds.Width; x++)
+                 {
+                     int canvasX = tile.Bounds.X + x;
+                     if (canvasX >= canvasWidth) continue;
+
+                     double c_re = CenterX + (canvasX - half_width_pixels) * units_per_pixel;
+                     double c_im = CenterY + (canvasY - half_height_pixels) * units_per_pixel; // Знак + т.к. экранные Y инвертированы
+
+                     Complex z = new Complex(c_re, c_im);
+                     int iter = 0;
+                     while (iter < MaxIterations)
+                     {
+                         variables["z"] = z;
+                         Complex f_val = f_ast.Evaluate(variables);
+                         if (f_val.Magnitude < epsilon) break;
+
+                         Complex f_deriv_val = f_deriv_ast.Evaluate(variables);
+                         if (f_deriv_val == Complex.Zero) break;
+
+                         z -= f_val / f_deriv_val;
+                         iter++;
+                     }
+
+                     Color pixelColor = GetPixelColor(z, iter);
+
+                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
+                     buffer[bufferIndex] = pixelColor.B;
+                     buffer[bufferIndex + 1] = pixelColor.G;
+                     buffer[bufferIndex + 2] = pixelColor.R;
+                     buffer[bufferIndex + 3] = 255; // Alpha
+                 }
+             }
+         }*/
 
         /// <summary>
         /// Рендерит полное изображение в Bitmap для сохранения.
