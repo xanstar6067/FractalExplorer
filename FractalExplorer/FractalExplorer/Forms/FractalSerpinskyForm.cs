@@ -495,8 +495,19 @@ namespace FractalExplorer
 
         private void SetMainControlsEnabled(bool enabled)
         {
-            panel1.Enabled = enabled;
-            // Кнопку отмены нужно обрабатывать отдельно, т.к. она должна быть активна, когда все остальное выключено
+
+            // Проходимся по всем контролам на панели
+            foreach (Control ctrl in panel1.Controls)
+            {
+                // Если это НЕ кнопка отмены, то меняем ее состояние
+                if (ctrl != abortRender)
+                {
+                    ctrl.Enabled = enabled;
+                }
+            }
+
+            // Состояние самой кнопки отмены будет управляться отдельно
+            // методом UpdateAbortButtonState(), который вызывается следом.
             UpdateAbortButtonState();
         }
         private void UpdateAbortButtonState() { if (this.IsHandleCreated) this.Invoke((Action)(() => abortRender.Enabled = isRenderingPreview || isHighResRendering)); }
