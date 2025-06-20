@@ -516,16 +516,26 @@ namespace FractalExplorer
         {
             if (_useCustomPalette)
             {
+                // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+                // Если пользовательских цветов не хватает, добавляем красивые цвета по умолчанию.
+                // Это исправляет ошибку IndexOutOfRangeException и убирает серый цвет.
+                while (_userDefinedRootColors.Count < _engine.Roots.Count)
+                {
+                    _userDefinedRootColors.Add(GetDefaultColorForIndex(_userDefinedRootColors.Count));
+                }
+                // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+                // Берем нужное количество цветов. Если корней стало меньше, лишние цвета в списке сохранятся.
                 _engine.RootColors = _userDefinedRootColors.Take(_engine.Roots.Count).ToArray();
                 _engine.BackgroundColor = _userDefinedBackgroundColor;
                 _engine.UseGradient = false;
             }
             else
             {
-                // Логика выбора стандартных палитр
+                // Логика выбора стандартных палитр (остается без изменений)
                 var rootColors = new Color[_engine.Roots.Count];
                 bool useBlackWhite = oldRenderBW.Checked;
-                bool useGradient = colorBox0.Checked; // Gradient
+                bool useGradient = colorBox0.Checked;
                 bool usePastel = colorBox1.Checked;
                 bool useContrast = colorBox2.Checked;
                 bool useFire = colorBox3.Checked;
@@ -533,7 +543,6 @@ namespace FractalExplorer
 
                 _engine.UseGradient = useGradient;
 
-                // Эта логика будет работать, только если UseGradient = false
                 if (usePastel) { Color[] p = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201) }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
                 else if (useContrast) { Color[] p = { Color.Red, Color.Yellow, Color.Blue }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
                 else if (useFire) { Color[] p = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100) }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
@@ -638,6 +647,22 @@ namespace FractalExplorer
             _renderDebounceTimer?.Dispose();
             _colorSettingsForm?.Close();
             base.OnFormClosed(e);
+        }
+
+        private Color GetDefaultColorForIndex(int index)
+        {
+            Color[] defaults = {
+            Color.FromArgb(255, 87, 87),    // Красный
+            Color.FromArgb(87, 155, 255),   // Синий
+            Color.FromArgb(87, 255, 87),    // Зеленый
+            Color.FromArgb(255, 255, 87),   // Желтый
+            Color.FromArgb(255, 87, 255),   // Пурпурный
+            Color.FromArgb(87, 255, 255),   // Голубой
+            Color.Orange,
+            Color.Orchid,
+            Color.LightSeaGreen
+        };
+            return defaults[index % defaults.Length];
         }
         #endregion
     }
