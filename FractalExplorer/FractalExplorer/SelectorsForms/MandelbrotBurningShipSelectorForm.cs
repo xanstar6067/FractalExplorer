@@ -40,8 +40,8 @@ namespace FractalExplorer.Selectors
         // Эти значения взяты из вашего burningShipComplex.cs для mandelbrotCanvas1
         private const double INITIAL_MIN_RE = -2.0;
         private const double INITIAL_MAX_RE = 1.5;
-        private const double INITIAL_MIN_IM = -1.5;
-        private const double INITIAL_MAX_IM = 1.0;
+        private const double INITIAL_MIN_IM = -1.0;
+        private const double INITIAL_MAX_IM = 1.5;
         private const int ITERATIONS = 200; // Можно настроить, 200 должно быть нормально для селектора
 
         /// <summary>
