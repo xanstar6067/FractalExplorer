@@ -10,7 +10,7 @@ namespace FractalExplorer.Projects
             Text = "Множество Горящий Корабль";
         }
 
-        protected override FractalEngineBase CreateEngine()
+        protected override FractalMondelbrotBaseEngine CreateEngine()
         {
             return new MandelbrotBurningShipEngine();
         }

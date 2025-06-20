@@ -22,7 +22,7 @@ namespace FractalExplorer.Projects
             Text = "Фрактал Жюлиа";
         }
 
-        protected override FractalEngineBase CreateEngine()
+        protected override FractalMondelbrotBaseEngine CreateEngine()
         {
             return new JuliaEngine();
         }

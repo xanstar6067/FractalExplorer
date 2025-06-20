@@ -10,7 +10,7 @@ namespace FractalExplorer.Projects
             Text = "Множество Мандельброта";
         }
 
-        protected override FractalEngineBase CreateEngine()
+        protected override FractalMondelbrotBaseEngine CreateEngine()
         {
             return new MandelbrotEngine();
         }

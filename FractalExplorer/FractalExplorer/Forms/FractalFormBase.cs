@@ -42,7 +42,7 @@ namespace FractalDraving
         private volatile bool _isHighResRendering = false;
         private volatile bool _isRenderingPreview = false;
 
-        protected FractalEngineBase _fractalEngine;
+        protected FractalMondelbrotBaseEngine _fractalEngine;
         protected decimal _zoom = 1.0m;
         protected decimal _centerX = 0.0m;
         protected decimal _centerY = 0.0m;
@@ -62,7 +62,7 @@ namespace FractalDraving
 
         #region Abstract and Virtual Members
 
-        protected abstract FractalEngineBase CreateEngine();
+        protected abstract FractalMondelbrotBaseEngine CreateEngine();
         protected virtual decimal BaseScale => 3.0m;
         protected virtual decimal InitialCenterX => -0.5m;
         protected virtual decimal InitialCenterY => 0.0m;
@@ -585,7 +585,7 @@ namespace FractalDraving
 
                     try
                     {
-                        FractalEngineBase renderEngine = CreateEngine();
+                        FractalMondelbrotBaseEngine renderEngine = CreateEngine();
                         UpdateEngineParameters();
                         renderEngine.MaxIterations = _fractalEngine.MaxIterations;
                         renderEngine.ThresholdSquared = _fractalEngine.ThresholdSquared;

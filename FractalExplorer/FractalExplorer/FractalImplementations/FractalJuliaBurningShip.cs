@@ -25,7 +25,7 @@ namespace FractalExplorer.Projects
             Text = "Фрактал Горящий Корабль (Жюлиа)";
         }
 
-        protected override FractalEngineBase CreateEngine()
+        protected override FractalMondelbrotBaseEngine CreateEngine()
         {
             return new JuliaBurningShipEngine();
         }

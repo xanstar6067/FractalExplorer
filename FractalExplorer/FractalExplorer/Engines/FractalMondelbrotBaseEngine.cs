@@ -10,7 +10,7 @@ namespace FractalExplorer.Engines
     /// Абстрактный базовый класс для движков рендеринга фракталов.
     /// Инкапсулирует общую логику рендеринга и управления параметрами.
     /// </summary>
-    public abstract class FractalEngineBase
+    public abstract class FractalMondelbrotBaseEngine
     {
         // Параметры фрактала
         public int MaxIterations { get; set; }
@@ -175,7 +175,7 @@ namespace FractalExplorer.Engines
 
     #region Concrete Engines
 
-    public class MandelbrotEngine : FractalEngineBase
+    public class MandelbrotEngine : FractalMondelbrotBaseEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im)
         {
@@ -195,7 +195,7 @@ namespace FractalExplorer.Engines
         }
     }
 
-    public class JuliaEngine : FractalEngineBase
+    public class JuliaEngine : FractalMondelbrotBaseEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im)
         {
@@ -215,7 +215,7 @@ namespace FractalExplorer.Engines
         }
     }
 
-    public class MandelbrotBurningShipEngine : FractalEngineBase
+    public class MandelbrotBurningShipEngine : FractalMondelbrotBaseEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im)
         {
@@ -236,7 +236,7 @@ namespace FractalExplorer.Engines
         }
     }
 
-    public class JuliaBurningShipEngine : FractalEngineBase
+    public class JuliaBurningShipEngine : FractalMondelbrotBaseEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im)
         {
