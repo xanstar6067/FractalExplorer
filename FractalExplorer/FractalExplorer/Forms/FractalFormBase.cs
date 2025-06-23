@@ -40,13 +40,6 @@ namespace FractalDraving
         private bool _panning = false;
         private System.Windows.Forms.Timer _renderDebounceTimer;
 
-        // --- НОВЫЕ ПОЛЯ ДЛЯ УПРАВЛЕНИЯ МАСШТАБОМ ---
-        private bool _isUpdatingZoomControls = false;
-        private const decimal MIN_ZOOM = 0.1m;
-        // Максимальный зум, поддерживаемый decimal, примерно 10^28. 
-        // Ограничим его для стабильности.
-        private const decimal MAX_ZOOM = 1_000_000_000_000_000m;
-
         #endregion
 
         protected abstract FractalMondelbrotBaseEngine CreateEngine();
@@ -82,10 +75,11 @@ namespace FractalDraving
             OnPostInitialize();
 
             ApplyActivePalette();
-            UpdateZoomControls();
             ScheduleRender();
         }
 
+        // ... (Код ниже до InitializeControls без изменений) ...
+        #region Unchanged_Code_1
         private void OnVisualizerNeedsRedraw()
         {
             if (canvas.IsHandleCreated && !canvas.IsDisposed)
@@ -94,8 +88,6 @@ namespace FractalDraving
             }
         }
 
-        // ... (Код ниже до InitializeControls без изменений) ...
-        #region Unchanged_Code_1
         private void color_configurations_Click(object sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
@@ -131,24 +123,23 @@ namespace FractalDraving
             for (int i = 1; i <= cores; i++) cbThreads.Items.Add(i);
             cbThreads.Items.Add("Auto");
             cbThreads.SelectedItem = "Auto";
+
             nudIterations.Minimum = 50;
             nudIterations.Maximum = 100000;
             nudIterations.Value = 500;
+
             nudThreshold.Minimum = 2m;
             nudThreshold.Maximum = 1000m;
             nudThreshold.DecimalPlaces = 1;
             nudThreshold.Increment = 0.1m;
             nudThreshold.Value = 2m;
 
-            // Настройка элементов управления масштабом
             nudZoom.DecimalPlaces = 4;
-            nudZoom.Minimum = MIN_ZOOM;
-            nudZoom.Maximum = MAX_ZOOM;
+            nudZoom.Increment = 0.1m;
+            nudZoom.Minimum = 0.001m;
+            nudZoom.Maximum = 1_000_000_000_000_000m; // Максимальное значение для decimal
             _zoom = BaseScale / 3.0m;
             nudZoom.Value = _zoom;
-
-            tbZoom.Minimum = 0;
-            tbZoom.Maximum = 1000; // Больше шагов для плавности
 
             if (nudRe != null && nudIm != null)
             {
@@ -163,16 +154,12 @@ namespace FractalDraving
 
         private void InitializeEventHandlers()
         {
-            nudIterations.ValueChanged += (s, e) => ScheduleRender();
-            nudThreshold.ValueChanged += (s, e) => ScheduleRender();
-            cbThreads.SelectedIndexChanged += (s, e) => ScheduleRender();
-
-            // Новые обработчики для синхронизации масштаба
-            nudZoom.ValueChanged += NudZoom_ValueChanged;
-            tbZoom.Scroll += TbZoom_Scroll;
-
-            if (nudRe != null) nudRe.ValueChanged += (s, e) => ScheduleRender();
-            if (nudIm != null) nudIm.ValueChanged += (s, e) => ScheduleRender();
+            nudIterations.ValueChanged += ParamControl_Changed;
+            nudThreshold.ValueChanged += ParamControl_Changed;
+            cbThreads.SelectedIndexChanged += ParamControl_Changed;
+            nudZoom.ValueChanged += ParamControl_Changed;
+            if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
+            if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
 
             btnRender.Click += (s, e) => ScheduleRender();
             btnSaveHighRes.Click += btnSave_Click_1;
@@ -198,86 +185,7 @@ namespace FractalDraving
             };
         }
 
-        #region Zoom Control Logic
-
-        private void TbZoom_Scroll(object sender, EventArgs e)
-        {
-            if (_isUpdatingZoomControls) return;
-
-            try
-            {
-                _isUpdatingZoomControls = true;
-
-                // Экспоненциальное преобразование значения ползунка в масштаб
-                double trackPercentage = (double)tbZoom.Value / tbZoom.Maximum;
-                _zoom = MIN_ZOOM * (decimal)Math.Pow((double)(MAX_ZOOM / MIN_ZOOM), trackPercentage);
-
-                // Ограничиваем, чтобы избежать выхода за пределы
-                _zoom = Math.Max(MIN_ZOOM, Math.Min(MAX_ZOOM, _zoom));
-
-                nudZoom.Value = _zoom;
-                UpdateZoomLabel();
-            }
-            finally
-            {
-                _isUpdatingZoomControls = false;
-            }
-            ScheduleRender();
-        }
-
-        private void NudZoom_ValueChanged(object sender, EventArgs e)
-        {
-            if (_isUpdatingZoomControls) return;
-
-            _zoom = nudZoom.Value;
-            UpdateZoomControls(); // Обновляем ползунок
-            ScheduleRender();
-        }
-
-        private void UpdateZoomControls()
-        {
-            if (_isUpdatingZoomControls) return;
-
-            try
-            {
-                _isUpdatingZoomControls = true;
-
-                // Синхронизируем nudZoom, если значение отличается от _zoom
-                if (nudZoom.Value != _zoom)
-                {
-                    nudZoom.Value = _zoom;
-                }
-
-                // Логарифмическое преобразование масштаба в значение ползунка
-                if (_zoom > MIN_ZOOM)
-                {
-                    double logMin = Math.Log((double)MIN_ZOOM);
-                    double logMax = Math.Log((double)MAX_ZOOM);
-                    double logCurrent = Math.Log((double)_zoom);
-                    double trackPercentage = (logCurrent - logMin) / (logMax - logMin);
-                    tbZoom.Value = (int)(trackPercentage * tbZoom.Maximum);
-                }
-                else
-                {
-                    tbZoom.Value = 0;
-                }
-                UpdateZoomLabel();
-            }
-            finally
-            {
-                _isUpdatingZoomControls = false;
-            }
-        }
-
-        private void UpdateZoomLabel()
-        {
-            double percentage = (double)tbZoom.Value / tbZoom.Maximum * 100.0;
-            lblZoomPercentage.Text = $"{percentage:F1} %";
-        }
-
-        #endregion
-
-        // ... (Код ниже до Canvas_MouseWheel без изменений) ...
+        // ... (Код ниже до ParamControl_Changed без изменений) ...
         #region Unchanged_Code_2
         private async Task StartPreviewRender()
         {
@@ -391,8 +299,21 @@ namespace FractalDraving
         }
         private void ScheduleRender() { if (_isHighResRendering || this.WindowState == FormWindowState.Minimized) return; if (_isRenderingPreview) { _previewRenderCts?.Cancel(); } _renderDebounceTimer.Stop(); _renderDebounceTimer.Start(); }
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e) { _renderDebounceTimer.Stop(); if (_isHighResRendering || _isRenderingPreview) { ScheduleRender(); return; } await StartPreviewRender(); }
-
         #endregion
+
+        private void ParamControl_Changed(object sender, EventArgs e)
+        {
+            if (_isHighResRendering) return;
+            if (sender == nudZoom)
+            {
+                // Защита от рекурсивного вызова при программном изменении nudZoom.Value
+                if (nudZoom.Value != _zoom)
+                {
+                    _zoom = nudZoom.Value;
+                }
+            }
+            ScheduleRender();
+        }
 
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
@@ -411,19 +332,17 @@ namespace FractalDraving
 
             canvas.Invalidate();
 
-            // Если значение не изменилось (достигнут предел), вручную обновить контролы
-            if (nudZoom.Value == _zoom)
+            if (nudZoom.Value != _zoom)
             {
-                UpdateZoomControls();
-                ScheduleRender();
+                nudZoom.Value = _zoom;
             }
             else
             {
-                // Это вызовет событие NudZoom_ValueChanged, которое запустит UpdateZoomControls и ScheduleRender
-                nudZoom.Value = _zoom;
+                ScheduleRender();
             }
         }
-        // ... (Код ниже без изменений) ...
+
+        // ... (Остальной код до конца файла без изменений) ...
         #region Unchanged_Code_3
         private void Canvas_MouseDown(object sender, MouseEventArgs e) { if (_isHighResRendering) return; if (e.Button == MouseButtons.Left) { _panning = true; _panStart = e.Location; canvas.Cursor = Cursors.Hand; } }
         private void Canvas_MouseMove(object sender, MouseEventArgs e) { if (_isHighResRendering || !_panning) return; CommitAndBakePreview(); decimal units_per_pixel = BaseScale / _zoom / canvas.Width; _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel; _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel; _panStart = e.Location; canvas.Invalidate(); ScheduleRender(); }
@@ -580,7 +499,8 @@ namespace FractalDraving
         #endregion
 
         #region IFractalForm Implementation
-        public double LoupeZoom => 4.0; // Фиксированное значение для обратной совместимости с окнами выбора 'c'
+        // Этот контрол теперь скрыт, но его значение используется другими формами.
+        public double LoupeZoom => nudBaseScale != null ? (double)nudBaseScale.Value : 4.0;
         public event EventHandler LoupeZoomChanged;
         #endregion
         #endregion

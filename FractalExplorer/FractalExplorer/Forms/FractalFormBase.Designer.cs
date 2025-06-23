@@ -17,8 +17,6 @@
         protected void InitializeComponent()
         {
             this.pnlControls = new System.Windows.Forms.Panel();
-            this.lblZoomPercentage = new System.Windows.Forms.Label();
-            this.tbZoom = new System.Windows.Forms.TrackBar();
             this.color_configurations = new System.Windows.Forms.Button();
             this.mandelbrotPreviewPanel = new System.Windows.Forms.Panel();
             this.mandelbrotPreviewCanvas = new System.Windows.Forms.PictureBox();
@@ -42,8 +40,11 @@
             this.nudIm = new System.Windows.Forms.NumericUpDown();
             this.nudRe = new System.Windows.Forms.NumericUpDown();
             this.canvas = new System.Windows.Forms.PictureBox();
+
+            // Скрытый NumericUpDown для обратной совместимости с IFractalForm
+            this.nudBaseScale = new System.Windows.Forms.NumericUpDown();
+
             this.pnlControls.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.tbZoom)).BeginInit();
             this.mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.mandelbrotPreviewCanvas)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudSaveWidth)).BeginInit();
@@ -54,12 +55,11 @@
             ((System.ComponentModel.ISupportInitialize)(this.nudIm)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudRe)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.canvas)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudBaseScale)).BeginInit();
             this.SuspendLayout();
             // 
             // pnlControls
             // 
-            this.pnlControls.Controls.Add(this.lblZoomPercentage);
-            this.pnlControls.Controls.Add(this.tbZoom);
             this.pnlControls.Controls.Add(this.color_configurations);
             this.pnlControls.Controls.Add(this.mandelbrotPreviewPanel);
             this.pnlControls.Controls.Add(this.nudSaveWidth);
@@ -81,30 +81,12 @@
             this.pnlControls.Controls.Add(this.nudIterations);
             this.pnlControls.Controls.Add(this.nudIm);
             this.pnlControls.Controls.Add(this.nudRe);
+            this.pnlControls.Controls.Add(this.nudBaseScale); // Добавлен, но будет скрыт
             this.pnlControls.Dock = System.Windows.Forms.DockStyle.Left;
             this.pnlControls.Location = new System.Drawing.Point(0, 0);
             this.pnlControls.Name = "pnlControls";
             this.pnlControls.Size = new System.Drawing.Size(231, 636);
             this.pnlControls.TabIndex = 0;
-            // 
-            // lblZoomPercentage
-            // 
-            this.lblZoomPercentage.AutoSize = true;
-            this.lblZoomPercentage.Location = new System.Drawing.Point(179, 150);
-            this.lblZoomPercentage.Name = "lblZoomPercentage";
-            this.lblZoomPercentage.Size = new System.Drawing.Size(26, 15);
-            this.lblZoomPercentage.TabIndex = 35;
-            this.lblZoomPercentage.Text = "0 %";
-            this.lblZoomPercentage.TextAlign = System.Drawing.ContentAlignment.TopRight;
-            // 
-            // tbZoom
-            // 
-            this.tbZoom.Location = new System.Drawing.Point(12, 168);
-            this.tbZoom.Maximum = 1000;
-            this.tbZoom.Name = "tbZoom";
-            this.tbZoom.Size = new System.Drawing.Size(195, 45);
-            this.tbZoom.TabIndex = 34;
-            this.tbZoom.TickFrequency = 100;
             // 
             // color_configurations
             // 
@@ -185,9 +167,11 @@
             this.nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
             this.nudZoom.Location = new System.Drawing.Point(11, 143);
             this.nudZoom.Maximum = new decimal(new int[] { -1, -1, -1, 0 });
+            this.nudZoom.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             this.nudZoom.Name = "nudZoom";
-            this.nudZoom.Size = new System.Drawing.Size(162, 23);
+            this.nudZoom.Size = new System.Drawing.Size(196, 23);
             this.nudZoom.TabIndex = 2;
+            this.nudZoom.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
             // btnRender
             // 
@@ -208,7 +192,7 @@
             // lblThreads
             // 
             this.lblThreads.AutoSize = true;
-            this.lblThreads.Location = new System.Drawing.Point(12, 213);
+            this.lblThreads.Location = new System.Drawing.Point(12, 180);
             this.lblThreads.Name = "lblThreads";
             this.lblThreads.Size = new System.Drawing.Size(69, 15);
             this.lblThreads.TabIndex = 13;
@@ -217,7 +201,7 @@
             // cbThreads
             // 
             this.cbThreads.FormattingEnabled = true;
-            this.cbThreads.Location = new System.Drawing.Point(12, 231);
+            this.cbThreads.Location = new System.Drawing.Point(12, 198);
             this.cbThreads.Name = "cbThreads";
             this.cbThreads.Size = new System.Drawing.Size(195, 23);
             this.cbThreads.TabIndex = 12;
@@ -269,10 +253,11 @@
             // 
             // nudThreshold
             // 
-            this.nudThreshold.DecimalPlaces = 3;
-            this.nudThreshold.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
+            this.nudThreshold.DecimalPlaces = 1;
+            this.nudThreshold.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
             this.nudThreshold.Location = new System.Drawing.Point(12, 99);
-            this.nudThreshold.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
+            this.nudThreshold.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+            this.nudThreshold.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
             this.nudThreshold.Name = "nudThreshold";
             this.nudThreshold.Size = new System.Drawing.Size(120, 23);
             this.nudThreshold.TabIndex = 3;
@@ -320,6 +305,15 @@
             this.canvas.Size = new System.Drawing.Size(853, 636);
             this.canvas.TabIndex = 1;
             this.canvas.TabStop = false;
+            //
+            // nudBaseScale
+            //
+            this.nudBaseScale.Location = new System.Drawing.Point(12, 227);
+            this.nudBaseScale.Name = "nudBaseScale";
+            this.nudBaseScale.Size = new System.Drawing.Size(195, 23);
+            this.nudBaseScale.TabIndex = 18;
+            this.nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
+            this.nudBaseScale.Visible = false; // Важно: этот контрол скрыт
             // 
             // FractalFormBase
             // 
@@ -334,7 +328,6 @@
             this.Load += new System.EventHandler(this.FormBase_Load);
             this.pnlControls.ResumeLayout(false);
             this.pnlControls.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.tbZoom)).EndInit();
             this.mandelbrotPreviewPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.mandelbrotPreviewCanvas)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudSaveWidth)).EndInit();
@@ -345,6 +338,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.nudIm)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudRe)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.canvas)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudBaseScale)).EndInit();
             this.ResumeLayout(false);
         }
         #endregion
@@ -373,7 +367,7 @@
         protected System.Windows.Forms.NumericUpDown nudIm;
         protected System.Windows.Forms.NumericUpDown nudRe;
         protected System.Windows.Forms.Button color_configurations;
-        protected System.Windows.Forms.TrackBar tbZoom;
-        protected System.Windows.Forms.Label lblZoomPercentage;
+        // Этот контрол нужен для IFractalForm, но он невидимый.
+        protected System.Windows.Forms.NumericUpDown nudBaseScale;
     }
 }
