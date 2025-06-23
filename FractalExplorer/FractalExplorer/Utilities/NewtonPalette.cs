@@ -33,11 +33,22 @@ namespace FractalExplorer
 
         private void LoadPalettes()
         {
-            // Добавляем встроенные палитры
-            Palettes.Add(new NewtonColorPalette { Name = "Классика (Градиент)", IsGradient = true, IsBuiltIn = true });
+            // --- ВОССТАНОВЛЕННЫЙ И РАСШИРЕННЫЙ СПИСОК ПАЛИТР ---
+
+            // Палитра по умолчанию
+            Palettes.Add(new NewtonColorPalette { Name = "Оттенки серого (Градиент)", RootColors = new List<Color> { Color.White, Color.LightGray, Color.DarkGray }, IsGradient = true, IsBuiltIn = true });
+
+            // Палитры, у которых нет заданных цветов (они будут генерироваться автоматически)
+            Palettes.Add(new NewtonColorPalette { Name = "Классика (Гармонический)", IsGradient = false, IsBuiltIn = true });
+            Palettes.Add(new NewtonColorPalette { Name = "Классика (Гармонический, Градиент)", IsGradient = true, IsBuiltIn = true });
+
+            // Восстановленные палитры
+            Palettes.Add(new NewtonColorPalette { Name = "Чёрно-белый (Дискретный)", RootColors = new List<Color> { Color.White }, IsGradient = false, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Пастель (Дискретная)", RootColors = new List<Color> { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201), Color.FromArgb(253, 253, 150) }, IsGradient = false, IsBuiltIn = true, BackgroundColor = Color.FromArgb(40, 40, 40) });
+            Palettes.Add(new NewtonColorPalette { Name = "Контраст (Дискретный)", RootColors = new List<Color> { Color.Red, Color.Yellow, Color.Blue }, IsGradient = false, IsBuiltIn = true });
+            Palettes.Add(new NewtonColorPalette { Name = "Огонь (Градиент)", RootColors = new List<Color> { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100) }, IsGradient = true, IsBuiltIn = true });
+            Palettes.Add(new NewtonColorPalette { Name = "Психоделика (Градиент)", RootColors = new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan }, IsGradient = true, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Огонь и Лёд (Градиент)", RootColors = new List<Color> { Color.FromArgb(255, 100, 0), Color.FromArgb(0, 100, 255), Color.FromArgb(255, 200, 0), Color.FromArgb(0, 200, 255) }, IsGradient = true, IsBuiltIn = true });
-            Palettes.Add(new NewtonColorPalette { Name = "Белый на Чёрном", RootColors = new List<Color> { Color.White }, IsGradient = false, IsBuiltIn = true });
 
             // Загружаем пользовательские палитры
             if (File.Exists(PALETTE_FILE))

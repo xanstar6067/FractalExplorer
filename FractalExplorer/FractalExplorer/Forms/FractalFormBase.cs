@@ -19,7 +19,7 @@ namespace FractalDraving
         #region Fields
 
         private RenderVisualizerComponent _renderVisualizer;
-        private PaletteManager _paletteManager;
+        private PaletteManagerBase _paletteManager;
         private ColorConfigurationFormBase _colorConfigForm;
 
         private const int TILE_SIZE = 32;
@@ -59,7 +59,7 @@ namespace FractalDraving
 
         private void FormBase_Load(object sender, EventArgs e)
         {
-            _paletteManager = new PaletteManager();
+            _paletteManager = new PaletteManagerBase();
             _fractalEngine = CreateEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;

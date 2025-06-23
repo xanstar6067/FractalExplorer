@@ -9,13 +9,13 @@ namespace FractalExplorer.Core
 {
     public partial class ColorConfigurationFormBase : Form
     {
-        private readonly PaletteManager _paletteManager;
+        private readonly PaletteManagerBase _paletteManager;
         private ColorPaletteBase _selectedPalette;
 
         // НОВОЕ: Событие, которое будет сообщать главной форме о применении изменений
         public event EventHandler PaletteApplied;
 
-        public ColorConfigurationFormBase(PaletteManager paletteManager)
+        public ColorConfigurationFormBase(PaletteManagerBase paletteManager)
         {
             InitializeComponent();
             _paletteManager = paletteManager;

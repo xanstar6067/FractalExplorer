@@ -11,7 +11,7 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
     /// <summary>
     /// Управляет коллекцией цветовых палитр, их загрузкой, сохранением и активной палитрой.
     /// </summary>
-    public class PaletteManager
+    public class PaletteManagerBase
     {
         private const string CONFIG_FILE_NAME = "palettes.json";
 
@@ -26,10 +26,10 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
         public ColorPaletteBase ActivePalette { get; set; }
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="PaletteManager"/>.
+        /// Инициализирует новый экземпляр класса <see cref="PaletteManagerBase"/>.
         /// Загружает встроенные палитры и пользовательские палитры из файла.
         /// </summary>
-        public PaletteManager()
+        public PaletteManagerBase()
         {
             Palettes = new List<ColorPaletteBase>();
             LoadPalettes();
