@@ -35,17 +35,14 @@ namespace FractalExplorer.Projects
 
         protected override void OnPostInitialize()
         {
-            var classicBox = this.Controls.Find("mondelbrotClassicBox", true).FirstOrDefault();
-            if (classicBox != null) classicBox.Visible = false;
+            // Отображаем нужные для Жюлиа контролы
+            mandelbrotPreviewPanel.Visible = true;
+            lblRe.Visible = true;
+            nudRe.Visible = true;
+            lblIm.Visible = true;
+            nudIm.Visible = true;
 
-            var previewPanel = this.Controls.Find("mandelbrotPreviewPanel", true).FirstOrDefault();
-            if (previewPanel != null) previewPanel.Visible = true;
-
-            this.Controls.Find("lblRe", true).FirstOrDefault()?.Show();
-            this.Controls.Find("nudRe", true).FirstOrDefault()?.Show();
-            this.Controls.Find("lblIm", true).FirstOrDefault()?.Show();
-            this.Controls.Find("nudIm", true).FirstOrDefault()?.Show();
-
+            // Настраиваем превью множества Мандельброта
             var previewCanvas = this.Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault() as PictureBox;
             if (previewCanvas != null)
             {
