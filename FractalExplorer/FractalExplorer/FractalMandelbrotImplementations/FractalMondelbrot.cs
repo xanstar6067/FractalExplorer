@@ -7,7 +7,7 @@ namespace FractalExplorer.Projects
     /// Форма для отображения и взаимодействия с множеством Мандельброта.
     /// Является конкретной реализацией базовой формы фрактала.
     /// </summary>
-    public partial class FractalMondelbrot : FractalFormBase
+    public partial class FractalMondelbrot : FractalMandelbrotFamilyForm
     {
         #region Constructor
 
@@ -28,7 +28,7 @@ namespace FractalExplorer.Projects
         /// Создает и возвращает экземпляр движка для рендеринга множества Мандельброта.
         /// </summary>
         /// <returns>Экземпляр <see cref="MandelbrotEngine"/>.</returns>
-        protected override FractalMondelbrotBaseEngine CreateEngine()
+        protected override FractalMandelbrotFamilyEngine CreateEngine()
         {
             return new MandelbrotEngine();
         }

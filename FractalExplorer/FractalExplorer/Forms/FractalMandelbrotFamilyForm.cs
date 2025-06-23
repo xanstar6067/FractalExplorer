@@ -2,6 +2,7 @@
 using FractalExplorer.Engines;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
+using FractalExplorer.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -19,7 +20,7 @@ namespace FractalDraving
     /// Предоставляет общую логику для управления движком рендеринга,
     /// палитрой, масштабированием, панорамированием и сохранением изображений.
     /// </summary>
-    public abstract partial class FractalFormBase : Form, IFractalForm
+    public abstract partial class FractalMandelbrotFamilyForm : Form, IFractalForm
     {
         #region Fields
 
@@ -31,12 +32,12 @@ namespace FractalDraving
         /// <summary>
         /// Менеджер палитр, используемый этой формой.
         /// </summary>
-        private PaletteManagerBase _paletteManager;
+        private ColorPaletteMandelbrotFamily _paletteManager;
 
         /// <summary>
         /// Форма конфигурации палитр, связанная с этой формой.
         /// </summary>
-        private ColorConfigurationFormBase _colorConfigForm;
+        private ColorConfigurationMandelbrotFamilyForm _colorConfigForm;
 
         /// <summary>
         /// Размер одной плитки (тайла) для пошагового рендеринга.
@@ -76,7 +77,7 @@ namespace FractalDraving
         /// <summary>
         /// Экземпляр движка для рендеринга фрактала.
         /// </summary>
-        protected FractalMondelbrotBaseEngine _fractalEngine;
+        protected FractalMandelbrotFamilyEngine _fractalEngine;
 
         /// <summary>
         /// Текущий коэффициент масштабирования фрактала.
@@ -131,9 +132,9 @@ namespace FractalDraving
         #region Constructor
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="FractalFormBase"/>.
+        /// Инициализирует новый экземпляр класса <see cref="FractalMandelbrotFamilyForm"/>.
         /// </summary>
-        protected FractalFormBase()
+        protected FractalMandelbrotFamilyForm()
         {
             InitializeComponent();
             _centerX = InitialCenterX;
@@ -148,8 +149,8 @@ namespace FractalDraving
         /// Абстрактный метод, который должен быть реализован в производных классах
         /// для создания конкретного экземпляра движка фрактала.
         /// </summary>
-        /// <returns>Экземпляр <see cref="FractalMondelbrotBaseEngine"/>.</returns>
-        protected abstract FractalMondelbrotBaseEngine CreateEngine();
+        /// <returns>Экземпляр <see cref="FractalMandelbrotFamilyEngine"/>.</returns>
+        protected abstract FractalMandelbrotFamilyEngine CreateEngine();
 
         /// <summary>
         /// Получает базовый масштаб для фрактала.
@@ -308,7 +309,7 @@ namespace FractalDraving
         /// <param name="e">Аргументы события.</param>
         private void FormBase_Load(object sender, EventArgs e)
         {
-            _paletteManager = new PaletteManagerBase();
+            _paletteManager = new ColorPaletteMandelbrotFamily();
             _fractalEngine = CreateEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
@@ -349,7 +350,7 @@ namespace FractalDraving
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
-                _colorConfigForm = new ColorConfigurationFormBase(_paletteManager);
+                _colorConfigForm = new ColorConfigurationMandelbrotFamilyForm(_paletteManager);
                 _colorConfigForm.PaletteApplied += OnPaletteApplied;
                 _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
                 _colorConfigForm.Show(this);
@@ -631,7 +632,7 @@ namespace FractalDraving
                     try
                     {
                         // Создаем отдельный движок для рендеринга высокого разрешения
-                        FractalMondelbrotBaseEngine renderEngine = CreateEngine();
+                        FractalMandelbrotFamilyEngine renderEngine = CreateEngine();
                         UpdateEngineParameters(); // Обновляем параметры для движка предпросмотра
 
                         // Копируем параметры из текущего движка в движок высокого разрешения
@@ -1030,7 +1031,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="palette">Объект палитры.</param>
         /// <returns>Функция, преобразующая количество итераций в цвет.</returns>
-        private Func<int, int, int, Color> GeneratePaletteFunction(FractalExplorer.Core.ColorPaletteBase palette)
+        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerBase palette)
         {
             if (palette.Name == "Стандартный серый")
             {

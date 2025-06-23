@@ -1,4 +1,4 @@
-﻿using FractalDraving;
+using FractalDraving;
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.Selectors;
@@ -13,54 +13,54 @@ using System.Windows.Forms;
 namespace FractalExplorer.Projects
 {
     /// <summary>
-    /// Форма для отображения и взаимодействия с фракталом "Пылающий корабль" Жюлиа.
+    /// Форма для отображения и взаимодействия с фракталом Жюлиа.
     /// Позволяет настраивать параметры фрактала и выбирать константу 'C'
-    /// с помощью предпросмотра множества "Пылающий корабль" Мандельброта.
+    /// с помощью предпросмотра множества Мандельброта.
     /// </summary>
-    public partial class FractalJuliaBurningShip : FractalFormBase
+    public partial class FractalJulia : FractalMandelbrotFamilyForm
     {
         #region Fields
 
         /// <summary>
-        /// Минимальное значение действительной части для рендеринга предпросмотра множества "Пылающий корабль".
+        /// Минимальное значение действительной части для рендеринга предпросмотра множества Мандельброта.
         /// </summary>
-        private const decimal BURNING_SHIP_MIN_REAL = -2.0m;
+        private const decimal MANDELBROT_MIN_RE = -2.0m;
 
         /// <summary>
-        /// Максимальное значение действительной части для рендеринга предпросмотра множества "Пылающий корабль".
+        /// Максимальное значение действительной части для рендеринга предпросмотра множества Мандельброта.
         /// </summary>
-        private const decimal BURNING_SHIP_MAX_REAL = 1.5m;
+        private const decimal MANDELBROT_MAX_RE = 1.0m;
 
         /// <summary>
-        /// Минимальное значение мнимой части для рендеринга предпросмотра множества "Пылающий корабль".
+        /// Минимальное значение мнимой части для рендеринга предпросмотра множества Мандельброта.
         /// </summary>
-        private const decimal BURNING_SHIP_MIN_IMAGINARY = -1.0m;
+        private const decimal MANDELBROT_MIN_IM = -1.2m;
 
         /// <summary>
-        /// Максимальное значение мнимой части для рендеринга предпросмотра множества "Пылающий корабль".
+        /// Максимальное значение мнимой части для рендеринга предпросмотра множества Мандельброта.
         /// </summary>
-        private const decimal BURNING_SHIP_MAX_IMAGINARY = 1.5m;
+        private const decimal MANDELBROT_MAX_IM = 1.2m;
 
         /// <summary>
-        /// Количество итераций для рендеринга предпросмотра множества "Пылающий корабль".
+        /// Количество итераций для рендеринга предпросмотра множества Мандельброта.
         /// </summary>
-        private const int BURNING_SHIP_PREVIEW_ITERATIONS = 75;
+        private const int MANDELBROT_PREVIEW_ITERATIONS = 75;
 
         /// <summary>
-        /// Окно выбора константы 'C' на основе множества "Пылающий корабль".
+        /// Окно выбора константы 'C' на основе множества Мандельброта.
         /// </summary>
-        private BurningShipCSelectorForm _burningShipCSelectorWindow;
+        private JuliaMandelbrotSelectorForm _mandelbrotCSelectorWindow;
 
         #endregion
 
         #region Constructor
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="FractalJuliaBurningShip"/>.
+        /// Инициализирует новый экземпляр класса <see cref="FractalJulia"/>.
         /// </summary>
-        public FractalJuliaBurningShip()
+        public FractalJulia()
         {
-            Text = "Фрактал Горящий Корабль (Жюлиа)";
+            Text = "Фрактал Жюлиа";
         }
 
         #endregion
@@ -68,32 +68,32 @@ namespace FractalExplorer.Projects
         #region Fractal Engine Overrides
 
         /// <summary>
-        /// Создает и возвращает экземпляр движка для рендеринга фрактала "Пылающий корабль" Жюлиа.
+        /// Создает и возвращает экземпляр движка для рендеринга фрактала Жюлиа.
         /// </summary>
-        /// <returns>Экземпляр <see cref="JuliaBurningShipEngine"/>.</returns>
-        protected override FractalMondelbrotBaseEngine CreateEngine()
+        /// <returns>Экземпляр <see cref="JuliaEngine"/>.</returns>
+        protected override FractalMandelbrotFamilyEngine CreateEngine()
         {
-            return new JuliaBurningShipEngine();
+            return new JuliaEngine();
         }
 
         /// <summary>
-        /// Получает базовый масштаб для фрактала "Пылающий корабль" Жюлиа.
+        /// Получает базовый масштаб для фрактала Жюлиа.
         /// </summary>
         protected override decimal BaseScale => 4.0m;
 
         /// <summary>
-        /// Получает начальную координату X центра для фрактала "Пылающий корабль" Жюлиа.
+        /// Получает начальную координату X центра для фрактала Жюлиа.
         /// </summary>
         protected override decimal InitialCenterX => 0.0m;
 
         /// <summary>
-        /// Получает начальную координату Y центра для фрактала "Пылающий корабль" Жюлиа.
+        /// Получает начальную координату Y центра для фрактала Жюлиа.
         /// </summary>
         protected override decimal InitialCenterY => 0.0m;
 
         /// <summary>
         /// Вызывается после завершения инициализации формы.
-        /// Отображает специфичные для Жюлиа элементы управления и запускает рендеринг предпросмотра "Пылающего корабля".
+        /// Отображает специфичные для Жюлиа элементы управления и запускает рендеринг предпросмотра Мандельброта.
         /// </summary>
         protected override void OnPostInitialize()
         {
@@ -103,26 +103,23 @@ namespace FractalExplorer.Projects
             lblIm.Visible = true;
             nudIm.Visible = true;
 
-            // Устанавливаем начальные значения для 'c' по умолчанию для примера "Пылающего корабля" Жюлиа
-            nudRe.Value = -1.7551867961883m;
-            nudIm.Value = 0.01068m;
-
             var previewCanvas = Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault() as PictureBox;
             if (previewCanvas != null)
             {
                 previewCanvas.Click += mandelbrotCanvas_Click;
                 previewCanvas.Paint += mandelbrotCanvas_Paint;
-                Task.Run(() => RenderAndDisplayBurningShipSet()); // Запускаем рендеринг предпросмотра асинхронно
+                Task.Run(() => RenderAndDisplayMandelbrotSet()); // Запускаем рендеринг предпросмотра асинхронно
             }
         }
 
         /// <summary>
-        /// Обновляет специфичные для фрактала "Пылающий корабль" Жюлиа параметры движка.
-        /// Устанавливает комплексную константу 'C' на основе значений из UI и вызывает перерисовку предпросмотра.
+        /// Обновляет специфичные для фрактала Жюлиа параметры движка.
+        /// Устанавливает комплексную константу 'C' на основе значений из UI и вызывает перерисовку предпросмотра Мандельброта.
         /// </summary>
         protected override void UpdateEngineSpecificParameters()
         {
             _fractalEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value);
+
             var previewCanvas = Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault();
             if (previewCanvas != null && previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
@@ -139,17 +136,17 @@ namespace FractalExplorer.Projects
         {
             string reString = nudRe.Value.ToString("F15", CultureInfo.InvariantCulture).Replace(".", "_");
             string imString = nudIm.Value.ToString("F15", CultureInfo.InvariantCulture).Replace(".", "_");
-            return $"burningship_julia_re{reString}_im{imString}";
+            return $"julia_re{reString}_im{imString}";
         }
 
         #endregion
 
-        #region Burning Ship Preview / C-Parameter Selection
+        #region Mandelbrot Preview / C-Parameter Selection
 
         /// <summary>
-        /// Рендерит множество "Пылающий корабль" в фоновом потоке и отображает его на канвасе предпросмотра.
+        /// Рендерит множество Мандельброта в фоновом потоке и отображает его на канвасе предпросмотра.
         /// </summary>
-        private void RenderAndDisplayBurningShipSet()
+        private void RenderAndDisplayMandelbrotSet()
         {
             var previewCanvas = Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault() as PictureBox;
             if (previewCanvas == null || previewCanvas.Width <= 0 || previewCanvas.Height <= 0)
@@ -157,8 +154,8 @@ namespace FractalExplorer.Projects
                 return;
             }
 
-            // Рендерим изображение "Пылающий корабль"
-            Bitmap burningShipImage = RenderBurningShipSetInternal(previewCanvas.Width, previewCanvas.Height, BURNING_SHIP_PREVIEW_ITERATIONS);
+            // Рендерим изображение Мандельброта
+            Bitmap mandelbrotImage = RenderMandelbrotSetInternal(previewCanvas.Width, previewCanvas.Height, MANDELBROT_PREVIEW_ITERATIONS);
 
             // Обновляем изображение на UI-потоке
             if (previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
@@ -166,35 +163,35 @@ namespace FractalExplorer.Projects
                 previewCanvas.Invoke(() =>
                 {
                     previewCanvas.Image?.Dispose(); // Освобождаем старое изображение
-                    previewCanvas.Image = burningShipImage;
+                    previewCanvas.Image = mandelbrotImage;
                 });
             }
             else
             {
-                burningShipImage?.Dispose(); // Если канвас уже недействителен, просто освобождаем битмап
+                mandelbrotImage?.Dispose(); // Если канвас уже недействителен, просто освобождаем битмап
             }
         }
 
         /// <summary>
-        /// Внутренний метод для рендеринга множества "Пылающий корабль" Мандельброта в Bitmap.
+        /// Внутренний метод для рендеринга множества Мандельброта в Bitmap.
         /// </summary>
         /// <param name="canvasWidth">Ширина канваса для рендеринга.</param>
         /// <param name="canvasHeight">Высота канваса для рендеринга.</param>
         /// <param name="iterationsLimit">Максимальное количество итераций.</param>
-        /// <returns>Объект <see cref="Bitmap"/> с отрисованным множеством "Пылающий корабль".</returns>
-        private Bitmap RenderBurningShipSetInternal(int canvasWidth, int canvasHeight, int iterationsLimit)
+        /// <returns>Объект <see cref="Bitmap"/> с отрисованным множеством Мандельброта.</returns>
+        private Bitmap RenderMandelbrotSetInternal(int canvasWidth, int canvasHeight, int iterationsLimit)
         {
             Bitmap bitmap = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
 
-            // Создаем временный движок "Пылающий корабль" Мандельброта с фиксированными параметрами для предпросмотра
-            var engine = new MandelbrotBurningShipEngine
+            // Создаем временный движок Мандельброта с фиксированными параметрами для предпросмотра
+            var engine = new MandelbrotEngine
             {
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
                 Palette = GetPaletteMandelbrotClassicColor, // Используем специальную палитру для предпросмотра
-                Scale = BURNING_SHIP_MAX_REAL - BURNING_SHIP_MIN_REAL,
-                CenterX = (BURNING_SHIP_MAX_REAL + BURNING_SHIP_MIN_REAL) / 2,
-                CenterY = (BURNING_SHIP_MAX_IMAGINARY + BURNING_SHIP_MIN_IMAGINARY) / 2
+                Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE,
+                CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2,
+                CenterY = (MANDELBROT_MAX_IM + MANDELBROT_MIN_IM) / 2
             };
 
             // Блокируем биты для прямого доступа к буферу
@@ -206,7 +203,7 @@ namespace FractalExplorer.Projects
             // Создаем одну плитку на весь канвас для рендеринга
             var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
 
-            // Рендерим множество в буфер
+            // Рендерим множество Мандельброта в буфер
             engine.RenderTile(pixelBuffer, bitmapData.Stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
 
             // Копируем данные из буфера в битмап и разблокируем биты
@@ -216,7 +213,7 @@ namespace FractalExplorer.Projects
         }
 
         /// <summary>
-        /// Обработчик события отрисовки канваса предпросмотра "Пылающего корабля".
+        /// Обработчик события отрисовки канваса предпросмотра Мандельброта.
         /// Рисует маркер, указывающий текущие значения Re/Im константы 'C'.
         /// </summary>
         /// <param name="sender">Источник события.</param>
@@ -229,18 +226,18 @@ namespace FractalExplorer.Projects
                 return;
             }
 
-            decimal realRange = BURNING_SHIP_MAX_REAL - BURNING_SHIP_MIN_REAL;
-            decimal imaginaryRange = BURNING_SHIP_MAX_IMAGINARY - BURNING_SHIP_MIN_IMAGINARY;
+            decimal reRange = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE;
+            decimal imRange = MANDELBROT_MAX_IM - MANDELBROT_MIN_IM;
             decimal currentCReal = nudRe.Value;
             decimal currentCImaginary = nudIm.Value;
 
             // Если диапазон допустим и текущие значения 'C' находятся в пределах предпросмотра
-            if (realRange > 0 && imaginaryRange > 0 && currentCReal >= BURNING_SHIP_MIN_REAL && currentCReal <= BURNING_SHIP_MAX_REAL &&
-                currentCImaginary >= BURNING_SHIP_MIN_IMAGINARY && currentCImaginary <= BURNING_SHIP_MAX_IMAGINARY)
+            if (reRange > 0 && imRange > 0 && currentCReal >= MANDELBROT_MIN_RE && currentCReal <= MANDELBROT_MAX_RE &&
+                currentCImaginary >= MANDELBROT_MIN_IM && currentCImaginary <= MANDELBROT_MAX_IM)
             {
                 // Преобразуем координаты 'C' в пиксельные координаты на канвасе предпросмотра
-                int markerX = (int)((currentCReal - BURNING_SHIP_MIN_REAL) / realRange * previewCanvas.Width);
-                int markerY = (int)((BURNING_SHIP_MAX_IMAGINARY - currentCImaginary) / imaginaryRange * previewCanvas.Height);
+                int markerX = (int)((currentCReal - MANDELBROT_MIN_RE) / reRange * previewCanvas.Width);
+                int markerY = (int)((MANDELBROT_MAX_IM - currentCImaginary) / imRange * previewCanvas.Height);
 
                 using (Pen markerPen = new Pen(Color.FromArgb(200, Color.LimeGreen), 1.5f))
                 {
@@ -251,7 +248,7 @@ namespace FractalExplorer.Projects
         }
 
         /// <summary>
-        /// Обработчик события клика по канвасу предпросмотра "Пылающего корабля".
+        /// Обработчик события клика по канвасу предпросмотра Мандельброта.
         /// Открывает окно выбора константы 'C', позволяющее интерактивно выбирать ее значение.
         /// </summary>
         /// <param name="sender">Источник события.</param>
@@ -261,21 +258,21 @@ namespace FractalExplorer.Projects
             double initialReal = (double)nudRe.Value;
             double initialImaginary = (double)nudIm.Value;
 
-            if (_burningShipCSelectorWindow == null || _burningShipCSelectorWindow.IsDisposed)
+            if (_mandelbrotCSelectorWindow == null || _mandelbrotCSelectorWindow.IsDisposed)
             {
-                _burningShipCSelectorWindow = new BurningShipCSelectorForm(this, initialReal, initialImaginary);
-                _burningShipCSelectorWindow.CoordinatesSelected += (re, im) =>
+                _mandelbrotCSelectorWindow = new JuliaMandelbrotSelectorForm(this, initialReal, initialImaginary);
+                _mandelbrotCSelectorWindow.CoordinatesSelected += (re, im) =>
                 {
                     nudRe.Value = (decimal)re;
                     nudIm.Value = (decimal)im;
                 };
-                _burningShipCSelectorWindow.FormClosed += (s, args) => { _burningShipCSelectorWindow = null; };
-                _burningShipCSelectorWindow.Show(this);
+                _mandelbrotCSelectorWindow.FormClosed += (s, args) => { _mandelbrotCSelectorWindow = null; };
+                _mandelbrotCSelectorWindow.Show(this);
             }
             else
             {
-                _burningShipCSelectorWindow.Activate();
-                _burningShipCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true);
+                _mandelbrotCSelectorWindow.Activate();
+                _mandelbrotCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true);
             }
         }
 
@@ -284,8 +281,8 @@ namespace FractalExplorer.Projects
         #region Helper Methods
 
         /// <summary>
-        /// Локальная функция палитры для рендеринга предпросмотра множества Мандельброта (или "Пылающего корабля").
-        /// Генерирует классическую цветовую схему.
+        /// Локальная функция палитры для рендеринга предпросмотра Мандельброта.
+        /// Генерирует классическую цветовую схему для множества Мандельброта.
         /// </summary>
         /// <param name="iter">Количество итераций до выхода за порог.</param>
         /// <param name="maxIter">Максимально допустимое количество итераций.</param>

@@ -17,7 +17,7 @@ namespace FractalExplorer.Engines
     /// Движок для рендеринга фракталов Ньютона, основанных на комплексных функциях.
     /// Вычисляет точки, сходящиеся к корням заданной функции, и раскрашивает их.
     /// </summary>
-    public class NewtonFractalEngine
+    public class FractalNewtonEngine
     {
         #region Fields
 

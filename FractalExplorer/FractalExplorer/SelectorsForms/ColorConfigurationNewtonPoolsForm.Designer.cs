@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer
 {
-    partial class color_setting_NewtonPoolsForm
+    partial class ColorConfigurationNewtonPoolsForm
     {
         private System.ComponentModel.IContainer components = null;
 

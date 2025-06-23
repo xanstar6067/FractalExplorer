@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 using System.Windows.Forms;
 using FractalExplorer.Core;
 
-namespace FractalExplorer
+namespace FractalExplorer.Utilities
 {
     /// <summary>
     /// Представляет цветовую палитру, специфичную для фракталов Ньютона.

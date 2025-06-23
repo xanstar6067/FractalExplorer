@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Engines;
 using FractalExplorer.Resources;
+using FractalExplorer.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -26,7 +27,7 @@ namespace FractalExplorer
         /// <summary>
         /// Экземпляр движка для рендеринга фрактала Ньютона.
         /// </summary>
-        private readonly NewtonFractalEngine _engine;
+        private readonly FractalNewtonEngine _engine;
 
         /// <summary>
         /// Таймер для отложенного запуска рендеринга, чтобы избежать частых перерисовок.
@@ -46,7 +47,7 @@ namespace FractalExplorer
         /// <summary>
         /// Форма для настройки цветовой палитры фрактала Ньютона.
         /// </summary>
-        private color_setting_NewtonPoolsForm _colorSettingsForm;
+        private ColorConfigurationNewtonPoolsForm _colorSettingsForm;
 
         /// <summary>
         /// Базовый масштаб для преобразования мировых координат в экранные.
@@ -177,7 +178,7 @@ namespace FractalExplorer
         public NewtonPools()
         {
             InitializeComponent();
-            _engine = new NewtonFractalEngine();
+            _engine = new FractalNewtonEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _paletteManager = new NewtonPaletteManager();
             InitializeForm();
@@ -270,7 +271,7 @@ namespace FractalExplorer
 
             if (_colorSettingsForm == null || _colorSettingsForm.IsDisposed)
             {
-                _colorSettingsForm = new color_setting_NewtonPoolsForm(_paletteManager);
+                _colorSettingsForm = new ColorConfigurationNewtonPoolsForm(_paletteManager);
                 _colorSettingsForm.PaletteChanged += (s, palette) =>
                 {
                     _paletteManager.ActivePalette = palette;
@@ -295,7 +296,7 @@ namespace FractalExplorer
             if (palette.RootColors == null || palette.RootColors.Count == 0)
             {
                 // Если в палитре нет цветов для корней, генерируем гармонические цвета по умолчанию.
-                _engine.RootColors = color_setting_NewtonPoolsForm.GenerateHarmonicColors(_engine.Roots.Count).ToArray();
+                _engine.RootColors = ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(_engine.Roots.Count).ToArray();
             }
             else
             {
@@ -836,7 +837,7 @@ namespace FractalExplorer
                     progressBar.Visible = true;
 
                     // Создаем отдельный движок для сохранения, чтобы не изменять параметры текущего движка
-                    var saveEngine = new NewtonFractalEngine();
+                    var saveEngine = new FractalNewtonEngine();
                     if (!saveEngine.SetFormula(richTextInput.Text, out _))
                     {
                         MessageBox.Show("Ошибка в формуле, сохранение отменено.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);

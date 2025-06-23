@@ -7,7 +7,7 @@ namespace FractalExplorer.Projects
     /// Форма для отображения и взаимодействия с множеством "Пылающий корабль" Мандельброта.
     /// Является конкретной реализацией базовой формы фрактала.
     /// </summary>
-    public partial class FractalMondelbrotBurningShip : FractalFormBase
+    public partial class FractalMondelbrotBurningShip : FractalMandelbrotFamilyForm
     {
         #region Constructor
 
@@ -28,7 +28,7 @@ namespace FractalExplorer.Projects
         /// Создает и возвращает экземпляр движка для рендеринга множества "Пылающий корабль" Мандельброта.
         /// </summary>
         /// <returns>Экземпляр <see cref="MandelbrotBurningShipEngine"/>.</returns>
-        protected override FractalMondelbrotBaseEngine CreateEngine()
+        protected override FractalMandelbrotFamilyEngine CreateEngine()
         {
             return new MandelbrotBurningShipEngine();
         }

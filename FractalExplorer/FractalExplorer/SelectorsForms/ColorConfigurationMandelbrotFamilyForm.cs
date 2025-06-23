@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FractalExplorer.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -13,19 +14,19 @@ namespace FractalExplorer.Core
     /// выбирать, просматривать, создавать новые, редактировать цвета,
     /// и применять выбранную палитру.
     /// </summary>
-    public partial class ColorConfigurationFormBase : Form
+    public partial class ColorConfigurationMandelbrotFamilyForm : Form
     {
         #region Fields
 
         /// <summary>
         /// Менеджер палитр, управляющий доступными палитрами.
         /// </summary>
-        private readonly PaletteManagerBase _paletteManager;
+        private readonly ColorPaletteMandelbrotFamily _paletteManager;
 
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
-        private ColorPaletteBase _selectedPalette;
+        private PaletteManagerBase _selectedPalette;
 
         #endregion
 
@@ -41,10 +42,10 @@ namespace FractalExplorer.Core
         #region Constructor
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationFormBase"/>.
+        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationMandelbrotFamilyForm"/>.
         /// </summary>
         /// <param name="paletteManager">Менеджер палитр для управления палитрами.</param>
-        public ColorConfigurationFormBase(PaletteManagerBase paletteManager)
+        public ColorConfigurationMandelbrotFamilyForm(ColorPaletteMandelbrotFamily paletteManager)
         {
             InitializeComponent();
             _paletteManager = paletteManager;
@@ -293,7 +294,7 @@ namespace FractalExplorer.Core
             {
                 newName = $"Новая палитра {++counter}";
             }
-            var newPalette = new ColorPaletteBase(newName, new List<Color> { Color.Black, Color.White }, true);
+            var newPalette = new PaletteManagerBase(newName, new List<Color> { Color.Black, Color.White }, true);
             _paletteManager.Palettes.Add(newPalette);
             PopulatePaletteList(); // Обновляем список палитр в UI
             lbPalettes.SelectedItem = newPalette.Name; // Выбираем новую палитру в списке

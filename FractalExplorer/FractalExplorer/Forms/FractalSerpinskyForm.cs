@@ -21,7 +21,7 @@ namespace FractalExplorer
         /// <summary>
         /// Экземпляр движка для рендеринга фрактала Серпинского.
         /// </summary>
-        private readonly SerpinskyFractalEngine _engine;
+        private readonly FractalSerpinskyEngine _engine;
 
         /// <summary>
         /// Битмап, в который рендерится фрактал для отображения на канвасе.
@@ -108,7 +108,7 @@ namespace FractalExplorer
         public FractalSerpinsky()
         {
             InitializeComponent();
-            _engine = new SerpinskyFractalEngine();
+            _engine = new FractalSerpinskyEngine();
             InitializeCustomComponents();
         }
 
@@ -744,7 +744,7 @@ namespace FractalExplorer
                 CancellationToken token = highResRenderCts.Token;
 
                 // Создаем отдельный движок для сохранения, чтобы не изменять параметры текущего движка
-                var renderEngine = new SerpinskyFractalEngine();
+                var renderEngine = new FractalSerpinskyEngine();
                 UpdateEngineParameters(); // Обновляем параметры, чтобы скопировать их
                 renderEngine.RenderMode = _engine.RenderMode;
                 renderEngine.ColorMode = _engine.ColorMode;

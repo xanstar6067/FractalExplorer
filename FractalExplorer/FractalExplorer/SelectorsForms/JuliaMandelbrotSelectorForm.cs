@@ -14,7 +14,7 @@ namespace FractalExplorer.Selectors
     /// путем интерактивного клика по изображению множества Мандельброта.
     /// Также поддерживает панорамирование и масштабирование отображаемого множества Мандельброта.
     /// </summary>
-    public class MandelbrotSelectorForm : Form
+    public class JuliaMandelbrotSelectorForm : Form
     {
         #region Fields
 
@@ -147,7 +147,7 @@ namespace FractalExplorer.Selectors
         /// <param name="owner">Главная форма, являющаяся владельцем этого окна.</param>
         /// <param name="initialRe">Начальное значение действительной части для выбранных координат (по умолчанию NaN).</param>
         /// <param name="initialIm">Начальное значение мнимой части для выбранных координат (по умолчанию NaN).</param>
-        public MandelbrotSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN)
+        public JuliaMandelbrotSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN)
         {
             ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
             Text = "Выбор точки C (Множество Мандельброта)";

@@ -49,7 +49,7 @@ namespace FractalExplorer.Engines
     /// Движок для рендеринга фрактала Серпинского в различных режимах.
     /// Поддерживает геометрический рендеринг и метод "Игры Хаоса".
     /// </summary>
-    public class SerpinskyFractalEngine
+    public class FractalSerpinskyEngine
     {
         #region Fields
 

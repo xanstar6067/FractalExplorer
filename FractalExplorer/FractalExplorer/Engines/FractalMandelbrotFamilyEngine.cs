@@ -12,7 +12,7 @@ namespace FractalExplorer.Engines
     /// Абстрактный базовый класс для движков рендеринга фракталов.
     /// Инкапсулирует общую логику рендеринга и управления параметрами.
     /// </summary>
-    public abstract class FractalMondelbrotBaseEngine
+    public abstract class FractalMandelbrotFamilyEngine
     {
         /// <summary>
         /// Максимальное количество итераций для вычисления фрактала.
@@ -242,7 +242,7 @@ namespace FractalExplorer.Engines
     /// <summary>
     /// Движок рендеринга для множества Мандельброта.
     /// </summary>
-    public class MandelbrotEngine : FractalMondelbrotBaseEngine
+    public class MandelbrotEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
         /// Определяет количество итераций для точки Мандельброта.
@@ -277,7 +277,7 @@ namespace FractalExplorer.Engines
     /// <summary>
     /// Движок рендеринга для множества Жюлиа.
     /// </summary>
-    public class JuliaEngine : FractalMondelbrotBaseEngine
+    public class JuliaEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
         /// Определяет количество итераций для точки Жюлиа, используя фиксированную константу C.
@@ -313,7 +313,7 @@ namespace FractalExplorer.Engines
     /// <summary>
     /// Движок рендеринга для фрактала "Пылающий корабль" Мандельброта.
     /// </summary>
-    public class MandelbrotBurningShipEngine : FractalMondelbrotBaseEngine
+    public class MandelbrotBurningShipEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
         /// Определяет количество итераций для точки фрактала "Пылающий корабль" Мандельброта.
@@ -352,7 +352,7 @@ namespace FractalExplorer.Engines
     /// <summary>
     /// Движок рендеринга для фрактала "Пылающий корабль" Жюлиа.
     /// </summary>
-    public class JuliaBurningShipEngine : FractalMondelbrotBaseEngine
+    public class JuliaBurningShipEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
         /// Определяет количество итераций для точки фрактала "Пылающий корабль" Жюлиа, используя фиксированную константу C.

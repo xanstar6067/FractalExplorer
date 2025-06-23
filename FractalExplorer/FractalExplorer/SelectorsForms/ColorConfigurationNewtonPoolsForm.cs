@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using FractalExplorer.Utilities;
 using Microsoft.VisualBasic; // Для Interaction.InputBox
 
 namespace FractalExplorer
@@ -12,7 +13,7 @@ namespace FractalExplorer
     /// Позволяет пользователю выбирать, изменять, сохранять и удалять палитры,
     /// а также настраивать цвета для корней и фон, и режим градиента.
     /// </summary>
-    public partial class color_setting_NewtonPoolsForm : Form
+    public partial class ColorConfigurationNewtonPoolsForm : Form
     {
         #region Delegates and Events
 
@@ -54,10 +55,10 @@ namespace FractalExplorer
         #region Constructor
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="color_setting_NewtonPoolsForm"/>.
+        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationNewtonPoolsForm"/>.
         /// </summary>
         /// <param name="manager">Менеджер палитр для управления палитрами.</param>
-        public color_setting_NewtonPoolsForm(NewtonPaletteManager manager)
+        public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
             InitializeComponent();
             _paletteManager = manager;

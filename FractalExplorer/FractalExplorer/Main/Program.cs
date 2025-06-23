@@ -1,4 +1,6 @@
-namespace FractalExplorer.Resources
+using FractalExplorer.Resources;
+
+namespace FractalExplorer.Main
 {
     internal static class Program
     {

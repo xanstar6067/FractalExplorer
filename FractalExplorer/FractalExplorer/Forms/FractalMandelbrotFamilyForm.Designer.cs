@@ -6,7 +6,7 @@
     // приводя имена к общему виду, а `FractalFormBase` будет просто базовым классом Form.
     // Ниже я приведу исправленные `.Designer.cs` файлы для каждой из ваших форм.
     // ВАЖНО: Сам файл `FractalFormBase.Designer.cs` должен быть таким:
-    partial class FractalFormBase
+    partial class FractalMandelbrotFamilyForm
     {
         private System.ComponentModel.IContainer components = null;
 
