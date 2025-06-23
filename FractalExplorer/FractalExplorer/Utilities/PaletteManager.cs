@@ -19,16 +19,14 @@ namespace FractalExplorer.Core
             Palettes = new List<ColorPalette>();
             LoadPalettes();
 
-            // Устанавливаем палитру по умолчанию
-            ActivePalette = Palettes.FirstOrDefault(p => p.Name == "Оттенки серого") ?? Palettes.First();
+            // ИЗМЕНЕНИЕ: Убеждаемся, что "Стандартный серый" является палитрой по умолчанию
+            ActivePalette = Palettes.FirstOrDefault(p => p.Name == "Стандартный серый") ?? Palettes.First();
         }
 
         private void LoadPalettes()
         {
-            // 1. Добавляем встроенные палитры (они не сохраняются в файл)
             AddBuiltInPalettes();
 
-            // 2. Загружаем пользовательские палитры из файла
             try
             {
                 string filePath = Path.Combine(Application.StartupPath, CONFIG_FILE_NAME);
@@ -52,7 +50,6 @@ namespace FractalExplorer.Core
         {
             try
             {
-                // Сохраняем только пользовательские палитры
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 string json = JsonSerializer.Serialize(customPalettes, options);
@@ -67,8 +64,10 @@ namespace FractalExplorer.Core
 
         private void AddBuiltInPalettes()
         {
-            Palettes.Add(new ColorPalette("Оттенки серого", new List<Color> { Color.White, Color.Black }, true, true));
+            // ИЗМЕНЕНИЕ: Переименовали палитру, чтобы отразить ее суть. Она будет обработана особым образом.
+            Palettes.Add(new ColorPalette("Стандартный серый", new List<Color>(), false, true));
             Palettes.Add(new ColorPalette("Черно-белый", new List<Color> { Color.White, Color.Black }, false, true));
+            Palettes.Add(new ColorPalette("Серый (линейный)", new List<Color> { Color.White, Color.Black }, true, true));
             Palettes.Add(new ColorPalette("Классика", new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) }, true, true));
             Palettes.Add(new ColorPalette("Радуга", new List<Color> { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Indigo, Color.Violet }, true, true));
             Palettes.Add(new ColorPalette("Огонь", new List<Color> { Color.Black, Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), Color.White }, true, true));

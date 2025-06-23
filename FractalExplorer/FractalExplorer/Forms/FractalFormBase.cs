@@ -5,7 +5,6 @@ using FractalExplorer.Resources;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-// Это пространство имен необходимо, но оно и вызывает конфликт
 using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -68,13 +67,16 @@ namespace FractalDraving
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
+
             HideOldPaletteControls();
             InitializeControls();
             InitializeEventHandlers();
+
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
             OnPostInitialize();
+
             ApplyActivePalette();
             ScheduleRender();
         }
@@ -141,17 +143,20 @@ namespace FractalDraving
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
             btnRender.Click += (s, e) => ScheduleRender();
             btnSaveHighRes.Click += btnSave_Click_1;
+
             var configButton = this.Controls.Find("color_configurations", true).FirstOrDefault();
             if (configButton != null)
             {
                 configButton.Click += color_configurations_Click;
             }
+
             canvas.MouseWheel += Canvas_MouseWheel;
             canvas.MouseDown += Canvas_MouseDown;
             canvas.MouseMove += Canvas_MouseMove;
             canvas.MouseUp += Canvas_MouseUp;
             canvas.Paint += Canvas_Paint;
             canvas.Resize += (s, e) => { if (this.WindowState != FormWindowState.Minimized) ScheduleRender(); };
+
             this.FormClosed += (s, e) => {
                 _renderDebounceTimer?.Stop(); _renderDebounceTimer?.Dispose();
                 if (_previewRenderCts != null) { _previewRenderCts.Cancel(); System.Threading.Thread.Sleep(50); _previewRenderCts.Dispose(); }
@@ -166,8 +171,7 @@ namespace FractalDraving
 
         private void color_configurations_Click(object sender, EventArgs e)
         {
-            // ИЗМЕНЕНО: Явно указываем пространство имен для ColorConfigurationForm, на всякий случай
-            using (var form = new FractalExplorer.Core.ColorConfigurationForm(_paletteManager))
+            using (var form = new ColorConfigurationForm(_paletteManager))
             {
                 if (form.ShowDialog() == DialogResult.OK)
                 {
@@ -180,7 +184,6 @@ namespace FractalDraving
         private void ApplyActivePalette()
         {
             if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
-            // ИЗМЕНЕНО: Здесь была одна из ошибок CS1503. Мы просто передаем палитру из менеджера.
             _fractalEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
         }
 
@@ -301,13 +304,24 @@ namespace FractalDraving
         private void Canvas_MouseDown(object sender, MouseEventArgs e) { if (_isHighResRendering) return; if (e.Button == MouseButtons.Left) { _panning = true; _panStart = e.Location; canvas.Cursor = Cursors.Hand; } }
         private void Canvas_MouseMove(object sender, MouseEventArgs e) { if (_isHighResRendering || !_panning) return; CommitAndBakePreview(); decimal units_per_pixel = BaseScale / _zoom / canvas.Width; _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel; _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel; _panStart = e.Location; canvas.Invalidate(); ScheduleRender(); }
         private void Canvas_MouseUp(object sender, MouseEventArgs e) { if (_isHighResRendering) return; if (e.Button == MouseButtons.Left) { _panning = false; canvas.Cursor = Cursors.Default; } }
+
         #endregion
 
         #region New Palette Logic
 
-        // ИЗМЕНЕНО: Явно указываем полное имя нашего класса ColorPalette, чтобы избежать конфликта.
         private Func<int, int, int, Color> GeneratePaletteFunction(FractalExplorer.Core.ColorPalette palette)
         {
+            if (palette.Name == "Стандартный серый")
+            {
+                return (iter, maxIter, maxClrIter) =>
+                {
+                    if (iter == maxIter) return Color.Black;
+                    double t_log = Math.Log(Math.Min(iter, maxClrIter) + 1) / Math.Log(maxClrIter + 1);
+                    int cVal = (int)(255.0 * (1 - t_log));
+                    return Color.FromArgb(cVal, cVal, cVal);
+                };
+            }
+
             var colors = new List<Color>(palette.Colors);
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
@@ -318,6 +332,7 @@ namespace FractalDraving
             return (iter, maxIter, maxClrIter) =>
             {
                 if (iter == maxIter) return Color.Black;
+
                 if (isGradient)
                 {
                     double t = (double)Math.Min(iter, maxClrIter) / maxClrIter;
@@ -349,6 +364,7 @@ namespace FractalDraving
         #endregion
 
         #region Helpers
+
         private void CommitAndBakePreview()
         {
             lock (_bitmapLock) { if (!_isRenderingPreview || _currentRenderingBitmap == null) { return; } }
@@ -423,7 +439,6 @@ namespace FractalDraving
                         if (this is FractalJulia || this is FractalJuliaBurningShip) { renderEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value); }
                         else { renderEngine.C = _fractalEngine.C; }
 
-                        // ИЗМЕНЕНО: Здесь была вторая ошибка CS1503. Теперь мы передаем правильный тип.
                         renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
                         renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
                         int threadCount = GetThreadCount();

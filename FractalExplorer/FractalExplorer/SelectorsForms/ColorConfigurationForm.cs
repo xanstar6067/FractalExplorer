@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using System.Xml.Linq;
 
 namespace FractalExplorer.Core
 {
@@ -22,8 +21,18 @@ namespace FractalExplorer.Core
         private void ColorConfigurationForm_Load(object sender, EventArgs e)
         {
             PopulatePaletteList();
-            // Выбираем активную палитру при загрузке
-            lbPalettes.SelectedItem = _paletteManager.ActivePalette.Name;
+
+            // --- ИЗМЕНЕНИЕ: Исправлена логика выбора активной палитры при загрузке ---
+            if (_paletteManager.ActivePalette != null)
+            {
+                // Формируем имя для поиска в списке (с добавкой "[Встроенная]", если нужно)
+                string displayNameToFind = _paletteManager.ActivePalette.IsBuiltIn
+                    ? $"{_paletteManager.ActivePalette.Name} [Встроенная]"
+                    : _paletteManager.ActivePalette.Name;
+
+                // Ищем и устанавливаем элемент
+                lbPalettes.SelectedItem = displayNameToFind;
+            }
         }
 
         private void PopulatePaletteList()
@@ -40,7 +49,6 @@ namespace FractalExplorer.Core
         {
             if (lbPalettes.SelectedIndex == -1) return;
 
-            // Находим палитру по реальному имени, отбрасывая "[Встроенная]"
             string selectedName = lbPalettes.SelectedItem.ToString().Replace(" [Встроенная]", "");
             _selectedPalette = _paletteManager.Palettes.FirstOrDefault(p => p.Name == selectedName);
 
@@ -65,6 +73,7 @@ namespace FractalExplorer.Core
 
         private void UpdateControlsState()
         {
+            if (_selectedPalette == null) return;
             bool isCustom = !_selectedPalette.IsBuiltIn;
             txtName.Enabled = isCustom;
             checkIsGradient.Enabled = isCustom;
@@ -79,7 +88,11 @@ namespace FractalExplorer.Core
         {
             if (_selectedPalette == null || _selectedPalette.Colors.Count == 0)
             {
-                e.Graphics.Clear(Color.Black);
+                // Для палитр без цветов (как наша новая "Стандартный серый") рисуем серый градиент
+                using (var lgb = new LinearGradientBrush(panelPreview.ClientRectangle, Color.White, Color.Black, 0f))
+                {
+                    e.Graphics.FillRectangle(lgb, panelPreview.ClientRectangle);
+                }
                 return;
             }
 
@@ -103,8 +116,6 @@ namespace FractalExplorer.Core
                 e.Graphics.FillRectangle(lgb, panelPreview.ClientRectangle);
             }
         }
-
-        // --- Обработчики кнопок для редактирования ---
 
         private void btnAddColor_Click(object sender, EventArgs e)
         {
@@ -166,7 +177,7 @@ namespace FractalExplorer.Core
 
         private void txtName_TextChanged(object sender, EventArgs e)
         {
-            if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
+            if (_selectedPalette != null && !_selectedPalette.IsBuiltIn && txtName.Focused)
             {
                 _selectedPalette.Name = txtName.Text;
             }
@@ -180,16 +191,12 @@ namespace FractalExplorer.Core
             }
         }
 
-        // --- Основные кнопки формы ---
-
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // Обновляем имена в списке перед сохранением
             int currentSelectedIndex = lbPalettes.SelectedIndex;
+            _paletteManager.SaveCustomPalettes();
             PopulatePaletteList();
             lbPalettes.SelectedIndex = currentSelectedIndex;
-
-            _paletteManager.SaveCustomPalettes();
             MessageBox.Show("Пользовательские палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
