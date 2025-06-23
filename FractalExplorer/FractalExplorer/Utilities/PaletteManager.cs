@@ -111,10 +111,18 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
         /// </summary>
         private void AddBuiltInPalettes()
         {
-            // Этот метод остается без изменений по сути, только форматирование
+            // --- ВНЕСЕНЫ ИЗМЕНЕНИЯ СОГЛАСНО ВАШЕМУ ЗАПРОСУ ---
+
+            // 1. Палитра по умолчанию, использует специальную логарифмическую формулу.
             Palettes.Add(new ColorPalette("Стандартный серый", new List<Color>(), false, true));
-            Palettes.Add(new ColorPalette("Черно-белый", new List<Color> { Color.White, Color.Black }, false, true));
-            Palettes.Add(new ColorPalette("Серый (линейный)", new List<Color> { Color.White, Color.Black }, true, true));
+
+            // 2. Старый "Серый (линейный)" переименован в "Черно-белый".
+            //    Это правильный градиент от белого к черному.
+            Palettes.Add(new ColorPalette("Черно-белый", new List<Color> { Color.White, Color.Black }, true, true));
+
+            // 3. Старый "Черно-белый" (который был дискретным и вызывал проблемы) УДАЛЕН.
+
+            // Остальные палитры без изменений
             Palettes.Add(new ColorPalette("Классика", new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) }, true, true));
             Palettes.Add(new ColorPalette("Радуга", new List<Color> { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Indigo, Color.Violet }, true, true));
             Palettes.Add(new ColorPalette("Огонь", new List<Color> { Color.Black, Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), Color.White }, true, true));
