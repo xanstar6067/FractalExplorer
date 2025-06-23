@@ -22,15 +22,12 @@ namespace FractalExplorer.Core
         {
             PopulatePaletteList();
 
-            // --- ИЗМЕНЕНИЕ: Исправлена логика выбора активной палитры при загрузке ---
             if (_paletteManager.ActivePalette != null)
             {
-                // Формируем имя для поиска в списке (с добавкой "[Встроенная]", если нужно)
                 string displayNameToFind = _paletteManager.ActivePalette.IsBuiltIn
                     ? $"{_paletteManager.ActivePalette.Name} [Встроенная]"
                     : _paletteManager.ActivePalette.Name;
 
-                // Ищем и устанавливаем элемент
                 lbPalettes.SelectedItem = displayNameToFind;
             }
         }
@@ -60,7 +57,11 @@ namespace FractalExplorer.Core
 
         private void DisplayPaletteDetails()
         {
+            // Блокируем обработчик события, чтобы избежать рекурсии
+            txtName.TextChanged -= txtName_TextChanged;
             txtName.Text = _selectedPalette.Name;
+            txtName.TextChanged += txtName_TextChanged;
+
             checkIsGradient.Checked = _selectedPalette.IsGradient;
 
             lbColorStops.Items.Clear();
@@ -88,7 +89,6 @@ namespace FractalExplorer.Core
         {
             if (_selectedPalette == null || _selectedPalette.Colors.Count == 0)
             {
-                // Для палитр без цветов (как наша новая "Стандартный серый") рисуем серый градиент
                 using (var lgb = new LinearGradientBrush(panelPreview.ClientRectangle, Color.White, Color.Black, 0f))
                 {
                     e.Graphics.FillRectangle(lgb, panelPreview.ClientRectangle);
@@ -179,7 +179,17 @@ namespace FractalExplorer.Core
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn && txtName.Focused)
             {
+                // Обновляем имя объекта в памяти
                 _selectedPalette.Name = txtName.Text;
+
+                // --- ИЗМЕНЕНИЕ: Синхронизируем UI ---
+                // Немедленно обновляем текст в списке, чтобы он соответствовал новому имени
+                int selectedIndex = lbPalettes.SelectedIndex;
+                if (selectedIndex != -1)
+                {
+                    // Обновляем текст элемента в списке, не пересоздавая весь список
+                    lbPalettes.Items[selectedIndex] = txtName.Text;
+                }
             }
         }
 
@@ -193,10 +203,7 @@ namespace FractalExplorer.Core
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            int currentSelectedIndex = lbPalettes.SelectedIndex;
             _paletteManager.SaveCustomPalettes();
-            PopulatePaletteList();
-            lbPalettes.SelectedIndex = currentSelectedIndex;
             MessageBox.Show("Пользовательские палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
