@@ -303,6 +303,7 @@
             // nudBaseScale
             // 
             nudBaseScale.Location = new Point(12, 432);
+            nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
             nudBaseScale.Size = new Size(40, 23);
             nudBaseScale.TabIndex = 18;
