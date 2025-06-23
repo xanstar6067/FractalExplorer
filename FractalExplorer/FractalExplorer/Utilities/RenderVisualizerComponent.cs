@@ -62,6 +62,7 @@ public class RenderVisualizerComponent : IDisposable
         }
         _isDirty = true;
         // Запускаем таймер с интервалом 33 мс (~30 FPS)
+        // Запускаем таймер с интервалом 16 мс (~60 FPS)
         _redrawTimer.Change(0, 33);
     }
 
