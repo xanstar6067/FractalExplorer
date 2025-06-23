@@ -4,30 +4,84 @@ namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Представляет комплексное число, используя тип decimal для высокой точности.
-    /// Эта структура является неизменяемой (immutable).
+    /// Эта структура является неизменяемой (immutable), то есть её значения не могут быть изменены после создания.
     /// </summary>
     public readonly struct ComplexDecimal
     {
+        #region Fields
+
+        /// <summary>
+        /// Действительная часть комплексного числа.
+        /// </summary>
         public readonly decimal Real;
+
+        /// <summary>
+        /// Мнимая часть комплексного числа.
+        /// </summary>
         public readonly decimal Imaginary;
 
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Получает квадрат модуля (длины) комплексного числа.
+        /// Вычисляется как Real^2 + Imaginary^2.
+        /// </summary>
+        public decimal MagnitudeSquared => Real * Real + Imaginary * Imaginary;
+
+        /// <summary>
+        /// Получает модуль (длину) комплексного числа.
+        /// Вычисляется как квадратный корень из MagnitudeSquared.
+        /// </summary>
+        public double Magnitude => Math.Sqrt((double)MagnitudeSquared);
+
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Инициализирует новый экземпляр структуры <see cref="ComplexDecimal"/>
+        /// с указанными действительной и мнимой частями.
+        /// </summary>
+        /// <param name="real">Действительная часть комплексного числа.</param>
+        /// <param name="imaginary">Мнимая часть комплексного числа.</param>
         public ComplexDecimal(decimal real, decimal imaginary)
         {
             Real = real;
             Imaginary = imaginary;
         }
 
+        #endregion
+
+        #region Static Properties
+
+        /// <summary>
+        /// Представляет комплексное число 0 + 0i.
+        /// </summary>
         public static readonly ComplexDecimal Zero = new ComplexDecimal(0m, 0m);
 
-        public decimal MagnitudeSquared => Real * Real + Imaginary * Imaginary;
+        #endregion
 
-        public double Magnitude => Math.Sqrt((double)MagnitudeSquared);
+        #region Operators
 
+        /// <summary>
+        /// Определяет оператор сложения для двух комплексных чисел.
+        /// </summary>
+        /// <param name="a">Первое комплексное число.</param>
+        /// <param name="b">Второе комплексное число.</param>
+        /// <returns>Новое комплексное число, представляющее сумму a и b.</returns>
         public static ComplexDecimal operator +(ComplexDecimal a, ComplexDecimal b)
         {
             return new ComplexDecimal(a.Real + b.Real, a.Imaginary + b.Imaginary);
         }
 
+        /// <summary>
+        /// Определяет оператор умножения для двух комплексных чисел.
+        /// </summary>
+        /// <param name="a">Первое комплексное число.</param>
+        /// <param name="b">Второе комплексное число.</param>
+        /// <returns>Новое комплексное число, представляющее произведение a и b.</returns>
         public static ComplexDecimal operator *(ComplexDecimal a, ComplexDecimal b)
         {
             decimal realPart = a.Real * b.Real - a.Imaginary * b.Imaginary;
@@ -35,42 +89,137 @@ namespace FractalExplorer.Resources
             return new ComplexDecimal(realPart, imaginaryPart);
         }
 
+        /// <summary>
+        /// Определяет оператор вычитания для двух комплексных чисел.
+        /// </summary>
+        /// <param name="a">Комплексное число, из которого вычитается.</param>
+        /// <param name="b">Комплексное число, которое вычитается.</param>
+        /// <returns>Новое комплексное число, представляющее разность a и b.</returns>
         public static ComplexDecimal operator -(ComplexDecimal a, ComplexDecimal b)
         {
             return new ComplexDecimal(a.Real - b.Real, a.Imaginary - b.Imaginary);
         }
 
+        /// <summary>
+        /// Определяет оператор унарного минуса (отрицания) для комплексного числа.
+        /// </summary>
+        /// <param name="value">Комплексное число для отрицания.</param>
+        /// <returns>Новое комплексное число, представляющее отрицание value.</returns>
         public static ComplexDecimal operator -(ComplexDecimal value)
         {
             return new ComplexDecimal(-value.Real, -value.Imaginary);
         }
 
+        /// <summary>
+        /// Определяет оператор деления для двух комплексных чисел.
+        /// </summary>
+        /// <param name="a">Комплексное число (делимое).</param>
+        /// <param name="b">Комплексное число (делитель).</param>
+        /// <returns>Новое комплексное число, представляющее частное a и b.</returns>
+        /// <exception cref="DivideByZeroException">Выбрасывается, если делитель b равен нулю.</exception>
         public static ComplexDecimal operator /(ComplexDecimal a, ComplexDecimal b)
         {
             decimal denominator = b.MagnitudeSquared;
             if (denominator == 0)
-                throw new DivideByZeroException("Division by zero complex number.");
+            {
+                throw new DivideByZeroException("Деление на комплексное число, равное нулю.");
+            }
 
             decimal realPart = (a.Real * b.Real + a.Imaginary * b.Imaginary) / denominator;
             decimal imaginaryPart = (a.Imaginary * b.Real - a.Real * b.Imaginary) / denominator;
             return new ComplexDecimal(realPart, imaginaryPart);
         }
 
+        /// <summary>
+        /// Определяет оператор равенства для двух комплексных чисел.
+        /// </summary>
+        /// <param name="a">Первое комплексное число.</param>
+        /// <param name="b">Второе комплексное число.</param>
+        /// <returns>True, если действительные и мнимые части чисел равны; иначе False.</returns>
         public static bool operator ==(ComplexDecimal a, ComplexDecimal b)
         {
             return a.Real == b.Real && a.Imaginary == b.Imaginary;
         }
 
+        /// <summary>
+        /// Определяет оператор неравенства для двух комплексных чисел.
+        /// </summary>
+        /// <param name="a">Первое комплексное число.</param>
+        /// <param name="b">Второе комплексное число.</param>
+        /// <returns>True, если действительные или мнимые части чисел не равны; иначе False.</returns>
         public static bool operator !=(ComplexDecimal a, ComplexDecimal b)
         {
             return !(a == b);
         }
 
+        /// <summary>
+        /// Определяет оператор сложения комплексного числа и скаляра (decimal).
+        /// </summary>
+        /// <param name="a">Комплексное число.</param>
+        /// <param name="b">Скалярное значение.</param>
+        /// <returns>Новое комплексное число, представляющее сумму.</returns>
+        public static ComplexDecimal operator +(ComplexDecimal a, decimal b)
+        {
+            return new ComplexDecimal(a.Real + b, a.Imaginary);
+        }
+
+        /// <summary>
+        /// Определяет оператор вычитания скаляра (decimal) из комплексного числа.
+        /// </summary>
+        /// <param name="a">Комплексное число.</param>
+        /// <param name="b">Скалярное значение.</param>
+        /// <returns>Новое комплексное число, представляющее разность.</returns>
+        public static ComplexDecimal operator -(ComplexDecimal a, decimal b)
+        {
+            return new ComplexDecimal(a.Real - b, a.Imaginary);
+        }
+
+        /// <summary>
+        /// Определяет оператор умножения комплексного числа на скаляр (decimal).
+        /// </summary>
+        /// <param name="a">Комплексное число.</param>
+        /// <param name="b">Скалярное значение.</param>
+        /// <returns>Новое комплексное число, представляющее произведение.</returns>
+        public static ComplexDecimal operator *(ComplexDecimal a, decimal b)
+        {
+            return new ComplexDecimal(a.Real * b, a.Imaginary * b);
+        }
+
+        /// <summary>
+        /// Определяет оператор деления комплексного числа на скаляр (decimal).
+        /// </summary>
+        /// <param name="a">Комплексное число.</param>
+        /// <param name="b">Скалярное значение.</param>
+        /// <returns>Новое комплексное число, представляющее частное.</returns>
+        /// <exception cref="DivideByZeroException">Выбрасывается, если делитель b равен нулю.</exception>
+        public static ComplexDecimal operator /(ComplexDecimal a, decimal b)
+        {
+            if (b == 0)
+            {
+                throw new DivideByZeroException("Деление на скаляр, равный нулю.");
+            }
+            return new ComplexDecimal(a.Real / b, a.Imaginary / b);
+        }
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Вычисляет комплексно сопряженное число к данному.
+        /// </summary>
+        /// <returns>Новое комплексное число, представляющее комплексно сопряженное.</returns>
         public ComplexDecimal Conjugate()
         {
             return new ComplexDecimal(Real, -Imaginary);
         }
 
+        /// <summary>
+        /// Создает комплексное число из полярных координат (модуля и аргумента).
+        /// </summary>
+        /// <param name="magnitude">Модуль (длина) комплексного числа.</param>
+        /// <param name="angleRadians">Аргумент (угол) комплексного числа в радианах.</param>
+        /// <returns>Новое комплексное число, созданное из полярных координат.</returns>
         public static ComplexDecimal FromPolarCoordinates(double magnitude, double angleRadians)
         {
             decimal real = (decimal)(magnitude * Math.Cos(angleRadians));
@@ -78,43 +227,44 @@ namespace FractalExplorer.Resources
             return new ComplexDecimal(real, imaginary);
         }
 
+        #endregion
+
+        #region Overrides
+
+        /// <summary>
+        /// Определяет, равен ли указанный объект текущему объекту.
+        /// </summary>
+        /// <param name="obj">Объект, который требуется сравнить с текущим объектом.</param>
+        /// <returns>True, если указанный объект равен текущему; в противном случае False.</returns>
         public override bool Equals(object obj)
         {
             if (obj is ComplexDecimal other)
+            {
                 return this == other;
+            }
             return false;
         }
 
+        /// <summary>
+        /// Возвращает хэш-код для текущего экземпляра.
+        /// </summary>
+        /// <returns>Хэш-код для текущего объекта.</returns>
         public override int GetHashCode()
         {
+            // Используем XOR для объединения хэш-кодов действительной и мнимой частей.
             return Real.GetHashCode() ^ Imaginary.GetHashCode();
         }
 
+        /// <summary>
+        /// Возвращает строковое представление текущего комплексного числа.
+        /// </summary>
+        /// <returns>Строка, представляющая текущее комплексное число (например, "1.23 + 4.56i").</returns>
         public override string ToString()
         {
+            // Форматируем вывод в виде "Real + Imaginary i".
             return $"{Real} + {Imaginary}i";
         }
 
-        public static ComplexDecimal operator +(ComplexDecimal a, decimal b)
-        {
-            return new ComplexDecimal(a.Real + b, a.Imaginary);
-        }
-
-        public static ComplexDecimal operator -(ComplexDecimal a, decimal b)
-        {
-            return new ComplexDecimal(a.Real - b, a.Imaginary);
-        }
-
-        public static ComplexDecimal operator *(ComplexDecimal a, decimal b)
-        {
-            return new ComplexDecimal(a.Real * b, a.Imaginary * b);
-        }
-
-        public static ComplexDecimal operator /(ComplexDecimal a, decimal b)
-        {
-            if (b == 0)
-                throw new DivideByZeroException("Division by zero scalar.");
-            return new ComplexDecimal(a.Real / b, a.Imaginary / b);
-        }
+        #endregion
     }
 }
