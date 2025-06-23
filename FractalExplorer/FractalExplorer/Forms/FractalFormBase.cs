@@ -202,7 +202,8 @@ namespace FractalDraving
                 cb.CheckedChanged += PaletteCheckBox_CheckedChanged;
             }
 
-            this.FormClosed += (s, e) => {
+            this.FormClosed += (s, e) =>
+            {
                 _renderDebounceTimer?.Stop();
                 _renderDebounceTimer?.Dispose();
 
@@ -296,7 +297,8 @@ namespace FractalDraving
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
-                pbRenderProgress.Invoke((Action)(() => {
+                pbRenderProgress.Invoke((Action)(() =>
+                {
                     pbRenderProgress.Value = 0;
                     pbRenderProgress.Maximum = tiles.Count;
                 }));
@@ -637,10 +639,12 @@ namespace FractalDraving
 
                         Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
                             saveWidth, saveHeight, threadCount,
-                            progress => {
+                            progress =>
+                            {
                                 if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
                                 {
-                                    pbHighResProgress.Invoke((Action)(() => {
+                                    pbHighResProgress.Invoke((Action)(() =>
+                                    {
                                         pbHighResProgress.Value = Math.Min(pbHighResProgress.Maximum, progress);
                                     }));
                                 }
@@ -661,7 +665,8 @@ namespace FractalDraving
                         pnlControls.Enabled = true;
                         if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
                         {
-                            pbHighResProgress.Invoke((Action)(() => {
+                            pbHighResProgress.Invoke((Action)(() =>
+                            {
                                 pbHighResProgress.Visible = false;
                                 pbHighResProgress.Value = 0;
                             }));
@@ -837,6 +842,11 @@ namespace FractalDraving
             return cbThreads.SelectedItem?.ToString() == "Auto"
                 ? Environment.ProcessorCount
                 : Convert.ToInt32(cbThreads.SelectedItem);
+        }
+
+        private void color_configurations_Click(object sender, EventArgs e)
+        {
+
         }
 
         #endregion
