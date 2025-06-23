@@ -6,23 +6,42 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 
-namespace FractalExplorer.Core
+namespace FractalExplorer.Core // Убедитесь, что пространство имен совпадает с вашим
 {
+    /// <summary>
+    /// Управляет коллекцией цветовых палитр, их загрузкой, сохранением и активной палитрой.
+    /// </summary>
     public class PaletteManager
     {
         private const string CONFIG_FILE_NAME = "palettes.json";
+
+        /// <summary>
+        /// Получает список всех доступных цветовых палитр.
+        /// </summary>
         public List<ColorPalette> Palettes { get; private set; }
+
+        /// <summary>
+        /// Получает или устанавливает активную (текущую используемую) цветовую палитру.
+        /// </summary>
         public ColorPalette ActivePalette { get; set; }
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="PaletteManager"/>.
+        /// Загружает встроенные палитры и пользовательские палитры из файла.
+        /// </summary>
         public PaletteManager()
         {
             Palettes = new List<ColorPalette>();
             LoadPalettes();
 
-            // ИЗМЕНЕНИЕ: Убеждаемся, что "Стандартный серый" является палитрой по умолчанию
+            // Инициализируем активную палитру, пытаясь найти "Стандартный серый",
+            // иначе выбираем первую палитру из списка.
             ActivePalette = Palettes.FirstOrDefault(p => p.Name == "Стандартный серый") ?? Palettes.First();
         }
 
+        /// <summary>
+        /// Загружает встроенные палитры и пользовательские палитры из файла конфигурации.
+        /// </summary>
         private void LoadPalettes()
         {
             AddBuiltInPalettes();
@@ -33,9 +52,22 @@ namespace FractalExplorer.Core
                 if (File.Exists(filePath))
                 {
                     string json = File.ReadAllText(filePath);
-                    var customPalettes = JsonSerializer.Deserialize<List<ColorPalette>>(json);
+
+                    // ИЗМЕНЕНИЕ: Создаем настройки для десериализатора
+                    var options = new JsonSerializerOptions();
+                    // ИЗМЕНЕНИЕ: Добавляем наш конвертер в список "переводчиков"
+                    options.Converters.Add(new JsonColorConverter());
+
+                    // ИЗМЕНЕНИЕ: Передаем настройки в метод Deserialize
+                    var customPalettes = JsonSerializer.Deserialize<List<ColorPalette>>(json, options);
+
                     if (customPalettes != null)
                     {
+                        // Добавляем пользовательские палитры к списку, но помечаем их как не встроенные
+                        foreach (var palette in customPalettes)
+                        {
+                            palette.IsBuiltIn = false;
+                        }
                         Palettes.AddRange(customPalettes);
                     }
                 }
@@ -43,16 +75,28 @@ namespace FractalExplorer.Core
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка загрузки файла палитр: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // В случае ошибки загрузки, просто продолжаем с встроенными палитрами
             }
         }
 
+        /// <summary>
+        /// Сохраняет только пользовательские палитры в файл конфигурации.
+        /// Встроенные палитры не сохраняются.
+        /// </summary>
         public void SaveCustomPalettes()
         {
             try
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
+
+                // ИЗМЕНЕНИЕ: Создаем настройки для сериализатора
                 var options = new JsonSerializerOptions { WriteIndented = true };
+                // ИЗМЕНЕНИЕ: Добавляем наш конвертер в список "переводчиков"
+                options.Converters.Add(new JsonColorConverter());
+
+                // ИЗМЕНЕНИЕ: Передаем настройки в метод Serialize
                 string json = JsonSerializer.Serialize(customPalettes, options);
+
                 string filePath = Path.Combine(Application.StartupPath, CONFIG_FILE_NAME);
                 File.WriteAllText(filePath, json);
             }
@@ -62,9 +106,12 @@ namespace FractalExplorer.Core
             }
         }
 
+        /// <summary>
+        /// Добавляет набор встроенных (предустановленных) цветовых палитр.
+        /// </summary>
         private void AddBuiltInPalettes()
         {
-            // ИЗМЕНЕНИЕ: Переименовали палитру, чтобы отразить ее суть. Она будет обработана особым образом.
+            // Этот метод остается без изменений по сути, только форматирование
             Palettes.Add(new ColorPalette("Стандартный серый", new List<Color>(), false, true));
             Palettes.Add(new ColorPalette("Черно-белый", new List<Color> { Color.White, Color.Black }, false, true));
             Palettes.Add(new ColorPalette("Серый (линейный)", new List<Color> { Color.White, Color.Black }, true, true));

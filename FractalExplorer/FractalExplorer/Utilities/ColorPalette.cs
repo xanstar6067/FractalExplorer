@@ -2,15 +2,16 @@
 using System.Drawing;
 using System.Text.Json.Serialization;
 
-namespace FractalExplorer.Core
+namespace FractalExplorer.Core // Убедитесь, что пространство имен совпадает с вашим
 {
     public class ColorPalette
     {
         public string Name { get; set; }
+
         public List<Color> Colors { get; set; } = new List<Color>();
+
         public bool IsGradient { get; set; } = true;
 
-        // Это свойство не будет сохраняться в JSON, оно для внутренней логики UI
         [JsonIgnore]
         public bool IsBuiltIn { get; set; } = false;
 
