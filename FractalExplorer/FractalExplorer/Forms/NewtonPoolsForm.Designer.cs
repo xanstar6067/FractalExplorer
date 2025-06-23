@@ -317,7 +317,6 @@
             MinimumSize = new Size(1100, 675);
             Name = "NewtonPools";
             Text = "Бассейны Ньютона";
-            Load += NewtonPools_Load;
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             panel2.ResumeLayout(false);
