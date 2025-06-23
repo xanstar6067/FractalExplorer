@@ -7,15 +7,15 @@ using System.Windows.Forms;
 
 namespace FractalExplorer.Core
 {
-    public partial class ColorConfigurationForm : Form
+    public partial class ColorConfigurationFormBase : Form
     {
         private readonly PaletteManager _paletteManager;
-        private ColorPalette _selectedPalette;
+        private ColorPaletteBase _selectedPalette;
 
         // НОВОЕ: Событие, которое будет сообщать главной форме о применении изменений
         public event EventHandler PaletteApplied;
 
-        public ColorConfigurationForm(PaletteManager paletteManager)
+        public ColorConfigurationFormBase(PaletteManager paletteManager)
         {
             InitializeComponent();
             _paletteManager = paletteManager;
@@ -137,7 +137,7 @@ namespace FractalExplorer.Core
         private void btnAddColor_Click(object sender, EventArgs e) { if (colorDialog1.ShowDialog() == DialogResult.OK) { _selectedPalette.Colors.Add(colorDialog1.Color); DisplayPaletteDetails(); } }
         private void btnEditColor_Click(object sender, EventArgs e) { if (lbColorStops.SelectedIndex == -1) return; colorDialog1.Color = _selectedPalette.Colors[lbColorStops.SelectedIndex]; if (colorDialog1.ShowDialog() == DialogResult.OK) { _selectedPalette.Colors[lbColorStops.SelectedIndex] = colorDialog1.Color; DisplayPaletteDetails(); } }
         private void btnRemoveColor_Click(object sender, EventArgs e) { if (lbColorStops.SelectedIndex != -1 && _selectedPalette.Colors.Count > 1) { _selectedPalette.Colors.RemoveAt(lbColorStops.SelectedIndex); DisplayPaletteDetails(); } }
-        private void btnNew_Click(object sender, EventArgs e) { string newName = "Новая палитра"; int counter = 1; while (_paletteManager.Palettes.Any(p => p.Name == newName)) { newName = $"Новая палитра {++counter}"; } var newPalette = new ColorPalette(newName, new List<Color> { Color.Black, Color.White }, true); _paletteManager.Palettes.Add(newPalette); PopulatePaletteList(); lbPalettes.SelectedItem = newPalette.Name; }
+        private void btnNew_Click(object sender, EventArgs e) { string newName = "Новая палитра"; int counter = 1; while (_paletteManager.Palettes.Any(p => p.Name == newName)) { newName = $"Новая палитра {++counter}"; } var newPalette = new ColorPaletteBase(newName, new List<Color> { Color.Black, Color.White }, true); _paletteManager.Palettes.Add(newPalette); PopulatePaletteList(); lbPalettes.SelectedItem = newPalette.Name; }
         private void btnDelete_Click(object sender, EventArgs e) { if (_selectedPalette != null && !_selectedPalette.IsBuiltIn) { if (MessageBox.Show($"Вы уверены, что хотите удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) { _paletteManager.Palettes.Remove(_selectedPalette); PopulatePaletteList(); lbPalettes.SelectedIndex = 0; } } }
         private void checkIsGradient_CheckedChanged(object sender, EventArgs e) { if (_selectedPalette != null && !_selectedPalette.IsBuiltIn) { _selectedPalette.IsGradient = checkIsGradient.Checked; } }
         private void btnSave_Click(object sender, EventArgs e) { _paletteManager.SaveCustomPalettes(); MessageBox.Show("Пользовательские палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information); }

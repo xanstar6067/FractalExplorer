@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer.Core
 {
-    partial class ColorConfigurationForm
+    partial class ColorConfigurationFormBase
     {
         /// <summary>
         /// Required designer variable.

@@ -304,7 +304,7 @@
             // 
             nudBaseScale.Location = new Point(12, 432);
             nudBaseScale.Name = "nudBaseScale";
-            nudBaseScale.Size = new Size(195, 23);
+            nudBaseScale.Size = new Size(40, 23);
             nudBaseScale.TabIndex = 18;
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;

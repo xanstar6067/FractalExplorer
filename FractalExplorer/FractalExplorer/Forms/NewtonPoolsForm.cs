@@ -4,11 +4,8 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Numerics;
@@ -22,28 +19,28 @@ namespace FractalExplorer
         // --- Компоненты ---
         private readonly NewtonFractalEngine _engine;
         private readonly System.Windows.Forms.Timer _renderDebounceTimer;
-        private color_setting_NewtonPoolsForm _colorSettingsForm;
-        // ИЗМЕНЕНИЕ: Компонент визуализатора теперь имеет свой таймер и требует размер плитки
         private RenderVisualizerComponent _renderVisualizer;
+
+        // --- Новая система палитр ---
+        private NewtonPaletteManager _paletteManager;
+        private color_setting_NewtonPoolsForm _colorSettingsForm;
 
         // --- Состояние UI и рендеринга ---
         private const double BASE_SCALE = 3.0;
-        private const int TILE_SIZE = 64; // Важно: размер плитки для этого окна
+        private const int TILE_SIZE = 64;
         private readonly object _bitmapLock = new object();
 
-        private Bitmap _previewBitmap; // Последний полностью отрисованный
-        private Bitmap _currentRenderingBitmap; // Для новых плиток
+        private Bitmap _previewBitmap;
+        private Bitmap _currentRenderingBitmap;
 
         private CancellationTokenSource _previewRenderCts;
         private volatile bool _isHighResRendering = false;
         private volatile bool _isRenderingPreview = false;
 
-        // --- Параметры вида ---
         private double _zoom = 1.0;
         private double _centerX = 0.0;
         private double _centerY = 0.0;
 
-        // Параметры, с которыми был сделан _previewBitmap
         private double _renderedCenterX;
         private double _renderedCenterY;
         private double _renderedZoom;
@@ -51,74 +48,29 @@ namespace FractalExplorer
         private Point _panStart;
         private bool _panning = false;
 
-        #region Unchanged_Fields
-        private List<Color> _userDefinedRootColors = new List<Color>();
-        private Color _userDefinedBackgroundColor = Color.Black;
-        private bool _useCustomPalette = false;
-
         private readonly string[] presetPolynomials = {
-    // --- Классические полиномы ---
-    "z^3-1",
-    "z^4-1",
-    "z^5-1",
-    "z^6-1",
-    "z^3-2*z+2",
-    "z^5 - z^2 + 1",
-    "z^6 + 3*z^3 - 2",
-    "z^4 - 4*z^2 + 4", // (z^2-2)^2
-    "z^7 + z^4 - z + 1",
-    "z^8 + 15*z^4 - 16", // (z^4+16)(z^4-1)
-    "z^4 + z^3 + z^2 + z + 1",
-
-    // --- С комплексными и дробными коэффициентами ---
-    "z^2 - i",
-    "(z^2-1)*(z-2*i)",
-    "(1+2*i)*z^2+z-1",
-    "(0.5-0.3*i)*z^3+2",
-    "0.5*z^3 - 1.25*z + 2",
-    "(2+i)*z^3 - (1-2*i)*z + 1",
-    "i*z^4 + z - 1",
-    "(1+0.5*i)*z^2 - z + (2-3*i)",
-    "(0.3+1.7*i)*z^3 + (1-i)",
-    "(2-i)*z^5 + (3+2*i)*z^2 - 1",
-    "-2*z^3 + 0.75*z^2 - 1",
-    "z^6 - 1.5*z^3 + 0.25",
-    "-0.1*z^4 + z - 2",
-    "(1/2)*z^3 + (3/4)*z - 1",
-    "(2+3*i)*(z^2) - (1-i)*z + 4",
-
-    // --- Дробно-рациональные функции (для теста деления) ---
-    "(z^2-1)/(z^2+1)",
-    "(z^3-1)/(z^3+1)",
-    "z^2 / (z-1)^2",
-    "(z^4-1)/(z*z-2*z+1)" // (z^4-1)/(z-1)^2
-};
-        #endregion
+            "z^3-1", "z^4-1", "z^5-1", "z^6-1", "z^3-2*z+2", "z^5 - z^2 + 1", "z^6 + 3*z^3 - 2",
+            "z^4 - 4*z^2 + 4", "z^7 + z^4 - z + 1", "z^8 + 15*z^4 - 16", "z^4 + z^3 + z^2 + z + 1",
+            "z^2 - i", "(z^2-1)*(z-2*i)", "(1+2*i)*z^2+z-1", "0.5*z^3 - 1.25*z + 2",
+            "(2+i)*z^3 - (1-2*i)*z + 1", "i*z^4 + z - 1", "(1+0.5*i)*z^2 - z + (2-3*i)",
+            "(0.3+1.7*i)*z^3 + (1-i)", "(2-i)*z^5 + (3+2*i)*z^2 - 1", "-2*z^3 + 0.75*z^2 - 1",
+            "z^6 - 1.5*z^3 + 0.25", "-0.1*z^4 + z - 2", "(1/2)*z^3 + (3/4)*z - 1", "(2+3*i)*(z^2) - (1-i)*z + 4",
+            "(z^2-1)/(z^2+1)", "(z^3-1)/(z^3+1)", "z^2 / (z-1)^2", "(z^4-1)/(z*z-2*z+1)"
+        };
 
         public NewtonPools()
         {
             InitializeComponent();
             _engine = new NewtonFractalEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
+            _paletteManager = new NewtonPaletteManager();
             InitializeForm();
-        }
-
-        // НОВЫЙ МЕТОД: Обработчик события от визуализатора
-        private void OnVisualizerNeedsRedraw()
-        {
-            // Асинхронно запрашиваем перерисовку холста
-            if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
-            {
-                fractal_bitmap.BeginInvoke((Action)(() => fractal_bitmap.Invalidate()));
-            }
         }
 
         private void InitializeForm()
         {
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
 
-            // ИЗМЕНЕНИЕ: Подписка на событие запроса перерисовки
-            // (_renderVisualizer будет инициализирован в Form_Load)
             if (_renderVisualizer != null)
             {
                 _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
@@ -138,7 +90,8 @@ namespace FractalExplorer
             nudZoom.DecimalPlaces = 4;
             nudZoom.Value = (decimal)_zoom;
 
-            #region Unchanged_Subscriptions
+            btnConfigurePalette.Click += btnConfigurePalette_Click;
+
             nudIterations.ValueChanged += (s, e) => ScheduleRender();
             cbThreads.SelectedIndexChanged += (s, e) => ScheduleRender();
             nudZoom.ValueChanged += (s, e) => { _zoom = (double)nudZoom.Value; ScheduleRender(); };
@@ -147,27 +100,71 @@ namespace FractalExplorer
             btnRender.Click += (s, e) => ScheduleRender();
             btnSave.Click += btnSave_Click;
 
-            var colorCheckboxes = new[] { oldRenderBW, colorBox0, colorBox1, colorBox2, colorBox3, colorBox4, colorCustom };
-            foreach (var cb in colorCheckboxes) cb.CheckedChanged += ColorBox_Changed;
-            custom_color.Click += custom_color_Click;
-
             fractal_bitmap.MouseWheel += Canvas_MouseWheel;
             fractal_bitmap.MouseDown += Canvas_MouseDown;
             fractal_bitmap.MouseMove += Canvas_MouseMove;
             fractal_bitmap.MouseUp += Canvas_MouseUp;
             fractal_bitmap.Paint += Canvas_Paint;
             fractal_bitmap.Resize += (s, e) => { if (this.WindowState != FormWindowState.Minimized) ScheduleRender(); };
-            #endregion
 
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
 
+            ApplyActivePalette();
             ScheduleRender();
         }
 
-        #region Tiled Rendering Logic
+        #region New Palette Logic
 
+        private void btnConfigurePalette_Click(object sender, EventArgs e)
+        {
+            if (!_engine.SetFormula(richTextInput.Text, out string _))
+            {
+                MessageBox.Show("Сначала введите корректную формулу, чтобы определить количество корней.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_colorSettingsForm == null || _colorSettingsForm.IsDisposed)
+            {
+                _colorSettingsForm = new color_setting_NewtonPoolsForm(_paletteManager);
+                _colorSettingsForm.PaletteChanged += (s, palette) => {
+                    _paletteManager.ActivePalette = palette;
+                    ApplyActivePalette();
+                    ScheduleRender();
+                };
+            }
+            _colorSettingsForm.ShowWithRootCount(_engine.Roots.Count);
+        }
+
+        private void ApplyActivePalette()
+        {
+            var palette = _paletteManager.ActivePalette;
+            if (palette == null) return;
+
+            if (palette.RootColors == null || palette.RootColors.Count == 0)
+            {
+                _engine.RootColors = color_setting_NewtonPoolsForm.GenerateHarmonicColors(_engine.Roots.Count).ToArray();
+            }
+            else
+            {
+                _engine.RootColors = palette.RootColors.ToArray();
+            }
+
+            _engine.BackgroundColor = palette.BackgroundColor;
+            _engine.UseGradient = palette.IsGradient;
+        }
+
+        #endregion
+
+        #region Tiled Rendering Logic & Event Handlers (Unchanged)
+        private void OnVisualizerNeedsRedraw()
+        {
+            if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
+            {
+                fractal_bitmap.BeginInvoke((Action)(() => fractal_bitmap.Invalidate()));
+            }
+        }
         private void ScheduleRender()
         {
             if (_isHighResRendering || this.WindowState == FormWindowState.Minimized) return;
@@ -178,7 +175,6 @@ namespace FractalExplorer
             _renderDebounceTimer.Stop();
             _renderDebounceTimer.Start();
         }
-
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
@@ -189,18 +185,14 @@ namespace FractalExplorer
             }
             await StartPreviewRender();
         }
-
         private async Task StartPreviewRender()
         {
             if (fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0) return;
-
             _isRenderingPreview = true;
             _previewRenderCts?.Cancel();
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
-
             _renderVisualizer?.NotifyRenderSessionStart();
-
             if (!_engine.SetFormula(richTextInput.Text, out string debugInfo))
             {
                 richTextDebugOutput.Text = debugInfo;
@@ -215,22 +207,18 @@ namespace FractalExplorer
                 return;
             }
             richTextDebugOutput.Text = debugInfo;
-
             var newRenderingBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
                 _currentRenderingBitmap?.Dispose();
                 _currentRenderingBitmap = newRenderingBitmap;
             }
-
             UpdateEngineParameters();
             double currentRenderedCenterX = _centerX;
             double currentRenderedCenterY = _centerY;
             double currentRenderedZoom = _zoom;
-
             var tiles = GenerateTiles(fractal_bitmap.Width, fractal_bitmap.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
-
             if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
             {
                 progressBar.Invoke((Action)(() => {
@@ -239,25 +227,17 @@ namespace FractalExplorer
                 }));
             }
             int progress = 0;
-
             try
             {
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
-
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
-
-                    // УБРАН ВЫЗОВ Invalidate()
-
                     var tileBuffer = _engine.RenderSingleTile(tile, fractal_bitmap.Width, fractal_bitmap.Height, out int bytesPerPixel);
-
                     ct.ThrowIfCancellationRequested();
-
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
-
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
                         for (int y = 0; y < tile.Bounds.Height; y++)
@@ -268,24 +248,16 @@ namespace FractalExplorer
                         }
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
-
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
-
                     if (ct.IsCancellationRequested || !fractal_bitmap.IsHandleCreated || fractal_bitmap.IsDisposed) return;
                     fractal_bitmap.Invoke((Action)(() =>
                     {
-                        if (ct.IsCancellationRequested) return;
-
-                        // УБРАН ВЫЗОВ Invalidate()
-
-                        if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
+                        if (!ct.IsCancellationRequested && progressBar.IsHandleCreated && !progressBar.IsDisposed)
                             progressBar.Value = Math.Min(progressBar.Maximum, Interlocked.Increment(ref progress));
                     }));
                     await Task.Yield();
                 }, token);
-
                 token.ThrowIfCancellationRequested();
-
                 lock (_bitmapLock)
                 {
                     if (_currentRenderingBitmap == newRenderingBitmap)
@@ -294,7 +266,6 @@ namespace FractalExplorer
                         _previewBitmap = new Bitmap(_currentRenderingBitmap);
                         _currentRenderingBitmap.Dispose();
                         _currentRenderingBitmap = null;
-
                         _renderedCenterX = currentRenderedCenterX;
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
@@ -328,18 +299,14 @@ namespace FractalExplorer
             {
                 _isRenderingPreview = false;
                 _renderVisualizer?.NotifyRenderSessionComplete();
-                //if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed) fractal_bitmap.Invalidate(); // Убран, т.к. NotifyRenderSessionComplete вызовет перерисовку
-
                 if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                     progressBar.Invoke((Action)(() => progressBar.Value = 0));
             }
         }
-
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
             Point center = new Point(width / 2, height / 2);
-
             for (int y = 0; y < height; y += TILE_SIZE)
             {
                 for (int x = 0; x < width; x += TILE_SIZE)
@@ -349,111 +316,81 @@ namespace FractalExplorer
                     tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
                 }
             }
-
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
-
-        #endregion
-
-        #region Event Handlers (UI, Mouse, etc.)
-
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
             e.Graphics.InterpolationMode = InterpolationMode.Bilinear;
-
             lock (_bitmapLock)
             {
-                // 1. Рисуем фон: старый, но трансформированный _previewBitmap
                 if (_previewBitmap != null && fractal_bitmap.Width > 0 && fractal_bitmap.Height > 0)
                 {
                     try
                     {
                         double renderedScale = BASE_SCALE / _renderedZoom;
                         double currentScale = BASE_SCALE / _zoom;
-
                         float drawScaleRatio = (float)(renderedScale / currentScale);
                         float newWidth = fractal_bitmap.Width * drawScaleRatio;
                         float newHeight = fractal_bitmap.Height * drawScaleRatio;
-
                         double deltaRe = _renderedCenterX - _centerX;
                         double deltaIm = _renderedCenterY - _centerY;
-
                         float offsetX = (float)(deltaRe / currentScale * fractal_bitmap.Width);
                         float offsetY = (float)(deltaIm / currentScale * fractal_bitmap.Width);
-
                         float drawX = (fractal_bitmap.Width - newWidth) / 2.0f + offsetX;
                         float drawY = (fractal_bitmap.Height - newHeight) / 2.0f + offsetY;
-
                         var destRect = new RectangleF(drawX, drawY, newWidth, newHeight);
                         e.Graphics.DrawImage(_previewBitmap, destRect);
                     }
                     catch { /* Игнорируем ошибки */ }
                 }
-
-                // 2. Рисуем передний план: новые плитки из _currentRenderingBitmap
                 if (_currentRenderingBitmap != null)
                 {
                     e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
-
                 if (_renderVisualizer != null && _isRenderingPreview)
                 {
-                    // ИЗМЕНЕНИЕ: Вызов визуализатора без лишних аргументов
                     _renderVisualizer.DrawVisualization(e.Graphics);
                 }
             }
         }
-
-        #region Unchanged_Methods
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             CommitAndBakePreview();
-
             double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5;
             double scaleBefore = BASE_SCALE / _zoom / fractal_bitmap.Width;
             double mouseRe = _centerX + (e.X - fractal_bitmap.Width / 2.0) * scaleBefore;
             double mouseIm = _centerY + (e.Y - fractal_bitmap.Height / 2.0) * scaleBefore;
-
             _zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, _zoom * zoomFactor));
-
             double scaleAfter = BASE_SCALE / _zoom / fractal_bitmap.Width;
             _centerX = mouseRe - (e.X - fractal_bitmap.Width / 2.0) * scaleAfter;
             _centerY = mouseIm - (e.Y - fractal_bitmap.Height / 2.0) * scaleAfter;
-
             fractal_bitmap.Invalidate();
-
             if (nudZoom.Value != (decimal)_zoom) nudZoom.Value = (decimal)_zoom;
             else ScheduleRender();
         }
-
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left) { _panning = true; _panStart = e.Location; }
         }
-
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning) return;
             CommitAndBakePreview();
-
             double scale = BASE_SCALE / _zoom / fractal_bitmap.Width;
             _centerX -= (e.X - _panStart.X) * scale;
             _centerY -= (e.Y - _panStart.Y) * scale;
             _panStart = e.Location;
-
             fractal_bitmap.Invalidate();
             ScheduleRender();
         }
-
         private void Canvas_MouseUp(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left) { _panning = false; }
         }
-
         private void cbSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cbSelector.SelectedIndex >= 0)
@@ -461,49 +398,9 @@ namespace FractalExplorer
                 richTextInput.Text = cbSelector.SelectedItem.ToString();
             }
         }
-
-        private void ColorBox_Changed(object sender, EventArgs e)
-        {
-            if (_isHighResRendering) return;
-            if (sender is CheckBox currentCb && currentCb.Checked)
-            {
-                _useCustomPalette = (currentCb == colorCustom);
-                var allCheckBoxes = new[] { oldRenderBW, colorBox0, colorBox1, colorBox2, colorBox3, colorBox4, colorCustom };
-                foreach (var cb in allCheckBoxes)
-                {
-                    if (cb != currentCb) cb.Checked = false;
-                }
-            }
-            ScheduleRender();
-        }
-
-        private void custom_color_Click(object sender, EventArgs e)
-        {
-            if (!_engine.SetFormula(richTextInput.Text, out string _))
-            {
-                MessageBox.Show("Сначала введите корректную формулу.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            if (_colorSettingsForm == null || _colorSettingsForm.IsDisposed)
-            {
-                _colorSettingsForm = new color_setting_NewtonPoolsForm();
-                _colorSettingsForm.ColorsChanged += (s, palette) =>
-                {
-                    _userDefinedRootColors = palette.RootColors;
-                    _userDefinedBackgroundColor = palette.BackgroundColor;
-                    if (_useCustomPalette) ScheduleRender();
-                };
-            }
-            _colorSettingsForm.PopulateColorPickers(_userDefinedRootColors, _userDefinedBackgroundColor, _engine.Roots.Count);
-            _colorSettingsForm.Show();
-            _colorSettingsForm.Activate();
-        }
-        #endregion
         #endregion
 
         #region Helpers and Save Logic
-        #region Unchanged_Helpers
         private void CommitAndBakePreview()
         {
             lock (_bitmapLock)
@@ -511,11 +408,9 @@ namespace FractalExplorer
                 if (!_isRenderingPreview || _currentRenderingBitmap == null) return;
             }
             _previewRenderCts?.Cancel();
-
             lock (_bitmapLock)
             {
                 if (_currentRenderingBitmap == null) return;
-
                 var bakedBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format24bppRgb);
                 using (var g = Graphics.FromImage(bakedBitmap))
                 {
@@ -523,83 +418,37 @@ namespace FractalExplorer
                     var paintArgs = new PaintEventArgs(g, currentRect);
                     Canvas_Paint(this, paintArgs);
                 }
-
                 _previewBitmap?.Dispose();
                 _previewBitmap = bakedBitmap;
                 _currentRenderingBitmap.Dispose();
                 _currentRenderingBitmap = null;
-
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;
             }
         }
-
         private void UpdateEngineParameters()
         {
             _engine.MaxIterations = (int)nudIterations.Value;
             _engine.CenterX = _centerX;
             _engine.CenterY = _centerY;
             _engine.Scale = BASE_SCALE / _zoom;
-
-            UpdatePalette();
+            ApplyActivePalette();
         }
-
-        private void UpdatePalette()
-        {
-            if (_useCustomPalette)
-            {
-                while (_userDefinedRootColors.Count < _engine.Roots.Count)
-                {
-                    _userDefinedRootColors.Add(GetDefaultColorForIndex(_userDefinedRootColors.Count));
-                }
-
-                _engine.RootColors = _userDefinedRootColors.Take(_engine.Roots.Count).ToArray();
-                _engine.BackgroundColor = _userDefinedBackgroundColor;
-                _engine.UseGradient = false;
-            }
-            else
-            {
-                var rootColors = new Color[_engine.Roots.Count];
-                bool useBlackWhite = oldRenderBW.Checked;
-                bool useGradient = colorBox0.Checked;
-                bool usePastel = colorBox1.Checked;
-                bool useContrast = colorBox2.Checked;
-                bool useFire = colorBox3.Checked;
-                bool useContrasting = colorBox4.Checked;
-
-                _engine.UseGradient = useGradient;
-
-                if (usePastel) { Color[] p = { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201) }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
-                else if (useContrast) { Color[] p = { Color.Red, Color.Yellow, Color.Blue }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
-                else if (useFire) { Color[] p = { Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100) }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
-                else if (useContrasting) { Color[] p = { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan }; for (int i = 0; i < rootColors.Length; i++) rootColors[i] = p[i % p.Length]; }
-                else if (useBlackWhite) { for (int i = 0; i < rootColors.Length; i++) rootColors[i] = Color.White; }
-                else { for (int i = 0; i < rootColors.Length; i++) { int shade = 255 * (i + 1) / (rootColors.Length + 1); rootColors[i] = Color.FromArgb(shade, shade, shade); } }
-
-                _engine.RootColors = rootColors;
-                _engine.BackgroundColor = usePastel ? Color.FromArgb(50, 50, 50) : Color.Black;
-            }
-        }
-
         private int GetThreadCount() => cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
-
         private async void btnSave_Click(object sender, EventArgs e)
         {
             if (_isHighResRendering) return;
             _isHighResRendering = true;
             SetMainControlsEnabled(false);
-
             int saveWidth = (int)nudW.Value;
             int saveHeight = (int)nudH.Value;
-
             using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", FileName = $"newton_pools_{DateTime.Now:yyyyMMdd_HHmmss}.png" })
             {
                 if (saveDialog.ShowDialog() == DialogResult.OK)
                 {
                     progressPNG.Value = 0;
                     progressPNG.Visible = true;
-
                     var saveEngine = new NewtonFractalEngine();
                     if (!saveEngine.SetFormula(richTextInput.Text, out _))
                     {
@@ -607,20 +456,15 @@ namespace FractalExplorer
                         FinalizeSave();
                         return;
                     }
-
                     int threadCount = GetThreadCount();
-
                     saveEngine.MaxIterations = (int)nudIterations.Value;
                     saveEngine.CenterX = _centerX;
                     saveEngine.CenterY = _centerY;
                     saveEngine.Scale = BASE_SCALE / _zoom;
-
-                    _useCustomPalette = colorCustom.Checked;
-                    UpdatePalette();
+                    ApplyActivePalette();
                     saveEngine.RootColors = _engine.RootColors;
                     saveEngine.BackgroundColor = _engine.BackgroundColor;
                     saveEngine.UseGradient = _engine.UseGradient;
-
                     try
                     {
                         Bitmap highResBitmap = await Task.Run(() => saveEngine.RenderToBitmap(
@@ -632,7 +476,6 @@ namespace FractalExplorer
                                     progressPNG.Invoke((Action)(() => progressPNG.Value = Math.Min(100, progress)));
                             }
                         ));
-
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
                         highResBitmap.Dispose();
                         MessageBox.Show("Изображение сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -643,10 +486,8 @@ namespace FractalExplorer
                     }
                 }
             }
-
             FinalizeSave();
         }
-
         private void FinalizeSave()
         {
             _isHighResRendering = false;
@@ -654,7 +495,6 @@ namespace FractalExplorer
             if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
                 progressPNG.Invoke((Action)(() => { progressPNG.Visible = false; progressPNG.Value = 0; }));
         }
-
         private void SetMainControlsEnabled(bool enabled)
         {
             Action action = () =>
@@ -664,50 +504,26 @@ namespace FractalExplorer
             };
             if (this.InvokeRequired) this.Invoke(action); else action();
         }
-
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            base.OnFormClosed(e);
             _renderDebounceTimer?.Stop();
             _previewRenderCts?.Cancel();
             _previewRenderCts?.Dispose();
             _renderDebounceTimer?.Dispose();
             _colorSettingsForm?.Close();
-
-            // ИЗМЕНЕНИЕ: Отписка и освобождение ресурсов
+            _colorSettingsForm?.Dispose();
             if (_renderVisualizer != null)
             {
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
                 _renderVisualizer.Dispose();
             }
-
-            base.OnFormClosed(e);
         }
-
-        private Color GetDefaultColorForIndex(int index)
-        {
-            Color[] defaults = {
-            Color.FromArgb(255, 87, 87),    // Красный
-            Color.FromArgb(87, 155, 255),   // Синий
-            Color.FromArgb(87, 255, 87),    // Зеленый
-            Color.FromArgb(255, 255, 87),   // Желтый
-            Color.FromArgb(255, 87, 255),   // Пурпурный
-            Color.FromArgb(87, 255, 255),   // Голубой
-            Color.Orange,
-            Color.Orchid,
-            Color.LightSeaGreen
-        };
-            return defaults[index % defaults.Length];
-        }
-        #endregion
-        #endregion
-
         private void NewtonPools_Load(object sender, EventArgs e)
         {
-            // ИЗМЕНЕНИЕ: Инициализируем компонент с размером плитки
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
-            // Важно: подписка происходит в InitializeForm, т.к. этот метод вызывается позже
-            // и может переопределить обработчик события, если добавить его здесь.
-            // Мы уже добавили подписку в InitializeForm.
+            _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
         }
+        #endregion
     }
 }

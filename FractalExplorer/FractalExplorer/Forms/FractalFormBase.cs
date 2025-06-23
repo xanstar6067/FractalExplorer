@@ -20,7 +20,7 @@ namespace FractalDraving
 
         private RenderVisualizerComponent _renderVisualizer;
         private PaletteManager _paletteManager;
-        private ColorConfigurationForm _colorConfigForm;
+        private ColorConfigurationFormBase _colorConfigForm;
 
         private const int TILE_SIZE = 32;
         private readonly object _bitmapLock = new object();
@@ -92,7 +92,7 @@ namespace FractalDraving
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
-                _colorConfigForm = new ColorConfigurationForm(_paletteManager);
+                _colorConfigForm = new ColorConfigurationFormBase(_paletteManager);
                 _colorConfigForm.PaletteApplied += OnPaletteApplied;
                 _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
                 _colorConfigForm.Show(this);
@@ -350,7 +350,7 @@ namespace FractalDraving
 
         #region New Palette Logic
 
-        private Func<int, int, int, Color> GeneratePaletteFunction(FractalExplorer.Core.ColorPalette palette)
+        private Func<int, int, int, Color> GeneratePaletteFunction(FractalExplorer.Core.ColorPaletteBase palette)
         {
             if (palette.Name == "Стандартный серый")
             {

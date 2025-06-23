@@ -1,167 +1,278 @@
-﻿using System.ComponentModel;
-using System.Drawing;
-using System.Windows.Forms;
+﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+using Microsoft.VisualBasic; // Для InputBox
 
 namespace FractalExplorer
 {
     public partial class color_setting_NewtonPoolsForm : Form
     {
-        // Делегат и событие для уведомления главной формы об изменениях
-        public delegate void ColorsChangedEventHandler(object sender, CustomPalette newPalette);
-        public event ColorsChangedEventHandler ColorsChanged;
+        public delegate void PaletteChangedEventHandler(object sender, NewtonColorPalette activePalette);
+        public event PaletteChangedEventHandler PaletteChanged;
 
-        // Внутреннее хранилище цветов
-        private List<Color> _currentRootColors = new List<Color>();
-        private Color _currentBackgroundColor = Color.Black;
+        private NewtonPaletteManager _paletteManager;
+        private int _requiredRootCount;
+        private bool _isProgrammaticChange = false;
 
-        public color_setting_NewtonPoolsForm()
+        public color_setting_NewtonPoolsForm(NewtonPaletteManager manager)
         {
             InitializeComponent();
-            // Перехватываем событие закрытия формы, чтобы скрыть ее, а не уничтожить
-            this.FormClosing += new FormClosingEventHandler(this.ColorSetting_FormClosing);
+            _paletteManager = manager;
+            this.FormClosing += ColorSetting_FormClosing;
         }
 
-        /// <summary>
-        /// Метод для заполнения формы элементами выбора цвета. Вызывается из главной формы.
-        /// </summary>
-        /// <param name="currentRootColors">Список текущих цветов для корней.</param>
-        /// <param name="currentBgColor">Текущий цвет фона.</param>
-        /// <param name="rootCount">Необходимое количество цветов для корней.</param>
-        public void PopulateColorPickers(List<Color> currentRootColors, Color currentBgColor, int rootCount)
+        public void ShowWithRootCount(int rootCount)
         {
-            _currentRootColors = new List<Color>(currentRootColors);
-            _currentBackgroundColor = currentBgColor;
+            _requiredRootCount = rootCount;
+            PopulatePaletteList();
+            this.Show();
+            this.Activate();
+        }
 
-            // Очищаем панель перед добавлением новых элементов
+        private void PopulatePaletteList()
+        {
+            _isProgrammaticChange = true;
+            cbPalettes.Items.Clear();
+            foreach (var palette in _paletteManager.Palettes)
+            {
+                cbPalettes.Items.Add(palette.Name);
+            }
+            cbPalettes.SelectedItem = _paletteManager.ActivePalette.Name;
+            _isProgrammaticChange = false;
+
+            RefreshUIFromPalette(_paletteManager.ActivePalette);
+        }
+
+        private void RefreshUIFromPalette(NewtonColorPalette palette)
+        {
+            _isProgrammaticChange = true;
+
+            // Обновляем контролы
+            chkIsGradient.Checked = palette.IsGradient;
+            panelBackgroundColor.BackColor = palette.BackgroundColor;
+
+            // Управляем доступностью кнопок
+            btnSave.Enabled = !palette.IsBuiltIn;
+            btnDelete.Enabled = !palette.IsBuiltIn;
+
+            // Очищаем и заполняем пикеры цветов
             flpRootColorPickers.Controls.Clear();
-
-            // Убедимся, что у нас достаточно цветов в списке
-            while (_currentRootColors.Count < rootCount)
+            if (_requiredRootCount == 0)
             {
-                _currentRootColors.Add(GetDefaultColorForIndex(_currentRootColors.Count));
+                flpRootColorPickers.Controls.Add(new Label { Text = "Корни не найдены, цвета не требуются.", ForeColor = Color.Gray, AutoSize = true });
             }
-            // Можно также обрезать список, если корней стало меньше, но лучше оставить
-            // на случай, если пользователь вернется к предыдущей формуле.
-
-            // Создаем элементы для выбора цвета корней
-            for (int i = 0; i < rootCount; i++)
+            else
             {
-                Label lbl = new Label
+                // Если у палитры не заданы цвета, генерируем их
+                List<Color> colorsToUse = palette.RootColors;
+                if (colorsToUse == null || colorsToUse.Count == 0)
                 {
-                    Text = $"Цвет корня {i + 1}:",
-                    AutoSize = true,
-                    Margin = new Padding(3, 6, 3, 3) // Отступы для выравнивания
-                };
+                    colorsToUse = GenerateHarmonicColors(_requiredRootCount);
+                }
 
-                Panel colorPanel = new Panel
+                for (int i = 0; i < _requiredRootCount; i++)
                 {
-                    Size = new Size(50, 20),
-                    BorderStyle = BorderStyle.FixedSingle,
-                    BackColor = _currentRootColors[i],
-                    Tag = i, // Сохраняем индекс в Tag для легкого доступа
-                    Cursor = Cursors.Hand,
-                    Margin = new Padding(3, 3, 15, 3)
-                };
+                    var color = colorsToUse[i % colorsToUse.Count]; // Зацикливаем цвета, если их меньше, чем корней
 
-                // При клике на панель открываем диалог выбора цвета
-                colorPanel.Click += RootColorPanel_Click;
-
-                flpRootColorPickers.Controls.Add(lbl);
-                flpRootColorPickers.Controls.Add(colorPanel);
+                    Panel colorPanel = new Panel
+                    {
+                        Size = new Size(25, 25),
+                        BorderStyle = BorderStyle.FixedSingle,
+                        BackColor = color,
+                        Tag = i,
+                        Cursor = Cursors.Hand,
+                        Margin = new Padding(5)
+                    };
+                    toolTip1.SetToolTip(colorPanel, $"Цвет для корня №{i + 1}\nНажмите, чтобы изменить");
+                    colorPanel.Click += RootColorPanel_Click;
+                    flpRootColorPickers.Controls.Add(colorPanel);
+                }
             }
-
-            if (rootCount == 0)
-            {
-                Label lbl = new Label
-                {
-                    Text = "Корни не найдены. Нечего настраивать.",
-                    AutoSize = true,
-                    ForeColor = Color.Red
-                };
-                flpRootColorPickers.Controls.Add(lbl);
-            }
-
-            // Устанавливаем цвет для фона
-            panelBackgroundColor.BackColor = _currentBackgroundColor;
+            _isProgrammaticChange = false;
         }
 
-        private void RootColorPanel_Click(object sender, System.EventArgs e)
+        private void cbPalettes_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Panel clickedPanel = sender as Panel;
-            if (clickedPanel == null) return;
+            if (_isProgrammaticChange) return;
 
+            string selectedName = cbPalettes.SelectedItem.ToString();
+            _paletteManager.ActivePalette = _paletteManager.Palettes.First(p => p.Name == selectedName);
+            RefreshUIFromPalette(_paletteManager.ActivePalette);
+            PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+        }
+
+        private void RootColorPanel_Click(object sender, EventArgs e)
+        {
+            if (_paletteManager.ActivePalette.IsBuiltIn)
+            {
+                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            Panel clickedPanel = sender as Panel;
             int colorIndex = (int)clickedPanel.Tag;
 
-            using (ColorDialog cd = new ColorDialog())
+            using (ColorDialog cd = new ColorDialog { Color = clickedPanel.BackColor })
             {
-                cd.Color = clickedPanel.BackColor;
                 if (cd.ShowDialog() == DialogResult.OK)
                 {
-                    // Обновляем цвет панели и в нашем списке
                     clickedPanel.BackColor = cd.Color;
-                    _currentRootColors[colorIndex] = cd.Color;
 
-                    // Уведомляем подписчиков об изменении
-                    RaiseColorsChangedEvent();
+                    // Обновляем цвет в активной палитре
+                    while (_paletteManager.ActivePalette.RootColors.Count <= colorIndex)
+                    {
+                        _paletteManager.ActivePalette.RootColors.Add(Color.Black);
+                    }
+                    _paletteManager.ActivePalette.RootColors[colorIndex] = cd.Color;
+                    PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
                 }
             }
         }
 
-        private void panelBackgroundColor_Click(object sender, System.EventArgs e)
+        private void panelBackgroundColor_Click(object sender, EventArgs e)
         {
-            using (ColorDialog cd = new ColorDialog())
+            if (_paletteManager.ActivePalette.IsBuiltIn)
             {
-                cd.Color = panelBackgroundColor.BackColor;
+                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (ColorDialog cd = new ColorDialog { Color = panelBackgroundColor.BackColor })
+            {
                 if (cd.ShowDialog() == DialogResult.OK)
                 {
                     panelBackgroundColor.BackColor = cd.Color;
-                    _currentBackgroundColor = cd.Color;
-
-                    // Уведомляем подписчиков об изменении
-                    RaiseColorsChangedEvent();
+                    _paletteManager.ActivePalette.BackgroundColor = cd.Color;
+                    PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
                 }
             }
         }
 
-        // Метод для вызова события
-        private void RaiseColorsChangedEvent()
+        private void chkIsGradient_CheckedChanged(object sender, EventArgs e)
         {
-            CustomPalette palette = new CustomPalette
+            if (_isProgrammaticChange) return;
+            if (_paletteManager.ActivePalette.IsBuiltIn)
             {
-                RootColors = _currentRootColors,
-                BackgroundColor = _currentBackgroundColor
+                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _isProgrammaticChange = true;
+                chkIsGradient.Checked = !chkIsGradient.Checked; // Вернуть обратно
+                _isProgrammaticChange = false;
+                return;
+            }
+            _paletteManager.ActivePalette.IsGradient = chkIsGradient.Checked;
+            PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            if (_paletteManager.ActivePalette.IsBuiltIn)
+            {
+                MessageBox.Show("Нельзя сохранить изменения во встроенной палитре.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            _paletteManager.SavePalettes();
+            MessageBox.Show("Палитра сохранена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void btnSaveAs_Click(object sender, EventArgs e)
+        {
+            string newName = Interaction.InputBox("Введите имя для новой палитры:", "Сохранить палитру как", "Моя палитра");
+            if (string.IsNullOrWhiteSpace(newName)) return;
+
+            if (_paletteManager.Palettes.Any(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("Палитра с таким именем уже существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var currentPalette = _paletteManager.ActivePalette;
+            var newPalette = new NewtonColorPalette
+            {
+                Name = newName,
+                BackgroundColor = currentPalette.BackgroundColor,
+                IsGradient = currentPalette.IsGradient,
+                IsBuiltIn = false,
+                RootColors = new List<Color>()
             };
-            ColorsChanged?.Invoke(this, palette);
+
+            // Копируем цвета из UI
+            foreach (Panel panel in flpRootColorPickers.Controls.OfType<Panel>())
+            {
+                newPalette.RootColors.Add(panel.BackColor);
+            }
+
+            _paletteManager.Palettes.Add(newPalette);
+            _paletteManager.ActivePalette = newPalette;
+            _paletteManager.SavePalettes();
+            PopulatePaletteList();
+            MessageBox.Show($"Палитра '{newName}' создана и сохранена.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        // Вспомогательный метод для генерации цветов по умолчанию
-        private Color GetDefaultColorForIndex(int index)
+        private void btnDelete_Click(object sender, EventArgs e)
         {
-            Color[] defaults = { Color.Red, Color.Green, Color.Blue, Color.Yellow, Color.Magenta, Color.Cyan, Color.Orange, Color.Purple, Color.Brown, Color.LightGreen };
-            return defaults[index % defaults.Length];
+            var paletteToDelete = _paletteManager.ActivePalette;
+            if (paletteToDelete.IsBuiltIn) return;
+
+            if (MessageBox.Show($"Вы уверены, что хотите удалить палитру '{paletteToDelete.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                _paletteManager.Palettes.Remove(paletteToDelete);
+                _paletteManager.ActivePalette = _paletteManager.Palettes.First();
+                _paletteManager.SavePalettes();
+                PopulatePaletteList();
+                PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+            }
         }
 
-        private void btnClose_Click(object sender, System.EventArgs e)
+        // Улучшенная генерация цветов
+        public static List<Color> GenerateHarmonicColors(int count)
         {
-            this.Hide(); // Просто скрываем форму, а не закрываем
+            var colors = new List<Color>();
+            if (count == 0) return colors;
+            for (int i = 0; i < count; i++)
+            {
+                float hue = (360f * i) / count;
+                colors.Add(ColorFromHSL(hue, 0.85f, 0.6f));
+            }
+            return colors;
         }
 
-        // Переопределяем закрытие формы
+        public static Color ColorFromHSL(float h, float s, float l)
+        {
+            float r, g, b;
+            if (s == 0)
+            {
+                r = g = b = l;
+            }
+            else
+            {
+                float q = l < 0.5f ? l * (1 + s) : l + s - l * s;
+                float p = 2 * l - q;
+                h /= 360f;
+                r = HueToRgb(p, q, h + 1 / 3f);
+                g = HueToRgb(p, q, h);
+                b = HueToRgb(p, q, h - 1 / 3f);
+            }
+            return Color.FromArgb(255, (int)(r * 255), (int)(g * 255), (int)(b * 255));
+        }
+
+        private static float HueToRgb(float p, float q, float t)
+        {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6f) return p + (q - p) * 6 * t;
+            if (t < 1 / 2f) return q;
+            if (t < 2 / 3f) return p + (q - p) * (2 / 3f - t) * 6;
+            return p;
+        }
+
         private void ColorSetting_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Если форму закрывают через "крестик", мы отменяем закрытие и просто скрываем ее
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 e.Cancel = true;
                 this.Hide();
             }
         }
-    }
-    // Класс для удобной передачи данных о палитре
-    public class CustomPalette
-    {
-        public List<Color> RootColors { get; set; }
-        public Color BackgroundColor { get; set; }
     }
 }

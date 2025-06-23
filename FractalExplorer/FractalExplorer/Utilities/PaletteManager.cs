@@ -18,12 +18,12 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
         /// <summary>
         /// Получает список всех доступных цветовых палитр.
         /// </summary>
-        public List<ColorPalette> Palettes { get; private set; }
+        public List<ColorPaletteBase> Palettes { get; private set; }
 
         /// <summary>
         /// Получает или устанавливает активную (текущую используемую) цветовую палитру.
         /// </summary>
-        public ColorPalette ActivePalette { get; set; }
+        public ColorPaletteBase ActivePalette { get; set; }
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="PaletteManager"/>.
@@ -31,7 +31,7 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
         /// </summary>
         public PaletteManager()
         {
-            Palettes = new List<ColorPalette>();
+            Palettes = new List<ColorPaletteBase>();
             LoadPalettes();
 
             // Инициализируем активную палитру, пытаясь найти "Стандартный серый",
@@ -59,7 +59,7 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
                     options.Converters.Add(new JsonColorConverter());
 
                     // ИЗМЕНЕНИЕ: Передаем настройки в метод Deserialize
-                    var customPalettes = JsonSerializer.Deserialize<List<ColorPalette>>(json, options);
+                    var customPalettes = JsonSerializer.Deserialize<List<ColorPaletteBase>>(json, options);
 
                     if (customPalettes != null)
                     {
@@ -114,20 +114,20 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
             // --- ВНЕСЕНЫ ИЗМЕНЕНИЯ СОГЛАСНО ВАШЕМУ ЗАПРОСУ ---
 
             // 1. Палитра по умолчанию, использует специальную логарифмическую формулу.
-            Palettes.Add(new ColorPalette("Стандартный серый", new List<Color>(), false, true));
+            Palettes.Add(new ColorPaletteBase("Стандартный серый", new List<Color>(), false, true));
 
             // 2. Старый "Серый (линейный)" переименован в "Черно-белый".
             //    Это правильный градиент от белого к черному.
-            Palettes.Add(new ColorPalette("Черно-белый", new List<Color> { Color.White, Color.Black }, true, true));
+            Palettes.Add(new ColorPaletteBase("Черно-белый", new List<Color> { Color.White, Color.Black }, true, true));
 
             // 3. Старый "Черно-белый" (который был дискретным и вызывал проблемы) УДАЛЕН.
 
             // Остальные палитры без изменений
-            Palettes.Add(new ColorPalette("Классика", new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) }, true, true));
-            Palettes.Add(new ColorPalette("Радуга", new List<Color> { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Indigo, Color.Violet }, true, true));
-            Palettes.Add(new ColorPalette("Огонь", new List<Color> { Color.Black, Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), Color.White }, true, true));
-            Palettes.Add(new ColorPalette("Лёд", new List<Color> { Color.Black, Color.FromArgb(0, 0, 100), Color.FromArgb(0, 120, 200), Color.FromArgb(170, 220, 255), Color.White }, true, true));
-            Palettes.Add(new ColorPalette("Психоделика", new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan, Color.FromArgb(230, 230, 250) }, true, true));
+            Palettes.Add(new ColorPaletteBase("Классика", new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) }, true, true));
+            Palettes.Add(new ColorPaletteBase("Радуга", new List<Color> { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Indigo, Color.Violet }, true, true));
+            Palettes.Add(new ColorPaletteBase("Огонь", new List<Color> { Color.Black, Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), Color.White }, true, true));
+            Palettes.Add(new ColorPaletteBase("Лёд", new List<Color> { Color.Black, Color.FromArgb(0, 0, 100), Color.FromArgb(0, 120, 200), Color.FromArgb(170, 220, 255), Color.White }, true, true));
+            Palettes.Add(new ColorPaletteBase("Психоделика", new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan, Color.FromArgb(230, 230, 250) }, true, true));
         }
     }
 }

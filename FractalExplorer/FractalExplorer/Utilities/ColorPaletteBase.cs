@@ -2,9 +2,9 @@
 using System.Drawing;
 using System.Text.Json.Serialization;
 
-namespace FractalExplorer.Core // Убедитесь, что пространство имен совпадает с вашим
+namespace FractalExplorer.Core
 {
-    public class ColorPalette
+    public class ColorPaletteBase
     {
         public string Name { get; set; }
 
@@ -15,9 +15,9 @@ namespace FractalExplorer.Core // Убедитесь, что пространс�
         [JsonIgnore]
         public bool IsBuiltIn { get; set; } = false;
 
-        public ColorPalette() { }
+        public ColorPaletteBase() { }
 
-        public ColorPalette(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false)
+        public ColorPaletteBase(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false)
         {
             Name = name;
             Colors = colors;
