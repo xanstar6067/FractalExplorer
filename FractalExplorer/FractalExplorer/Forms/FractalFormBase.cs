@@ -23,8 +23,19 @@ namespace FractalDraving
     {
         #region Fields
 
+        /// <summary>
+        /// Компонент для визуализации процесса рендеринга плиток.
+        /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
+
+        /// <summary>
+        /// Менеджер палитр, используемый этой формой.
+        /// </summary>
         private PaletteManagerBase _paletteManager;
+
+        /// <summary>
+        /// Форма конфигурации палитр, связанная с этой формой.
+        /// </summary>
         private ColorConfigurationFormBase _colorConfigForm;
 
         /// <summary>
