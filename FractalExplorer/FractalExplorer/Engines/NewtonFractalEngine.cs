@@ -21,7 +21,13 @@ namespace FractalExplorer.Engines
     {
         #region Fields
 
+        /// <summary>
+        /// Абстрактное синтаксическое дерево (AST) для функции f(z).
+        /// </summary>
         private ExpressionNode f_ast;
+        /// <summary>
+        /// Абстрактное синтаксическое дерево (AST) для производной функции f'(z).
+        /// </summary>
         private ExpressionNode f_deriv_ast;
 
         /// <summary>
