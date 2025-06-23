@@ -1,41 +1,119 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
-using FractalExplorer.Core; // --- ВОТ ЭТО ИЗМЕНЕНИЕ ---
+using FractalExplorer.Core;
 
 namespace FractalExplorer
 {
+    /// <summary>
+    /// Представляет цветовую палитру, специфичную для фракталов Ньютона.
+    /// Включает цвета для корней, цвет фона и флаги градиента/встроенности.
+    /// </summary>
     public class NewtonColorPalette
     {
+        #region Properties
+
+        /// <summary>
+        /// Получает или устанавливает имя палитры.
+        /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// Получает или устанавливает список цветов, используемых для отрисовки областей притяжения корней.
+        /// </summary>
         public List<Color> RootColors { get; set; } = new List<Color>();
+
+        /// <summary>
+        /// Получает или устанавливает цвет фона, используемый для точек, не сходящихся к корням.
+        /// </summary>
         public Color BackgroundColor { get; set; } = Color.Black;
+
+        /// <summary>
+        /// Получает или устанавливает значение, указывающее, следует ли использовать градиентную заливку
+        /// в областях притяжения корней в зависимости от количества итераций.
+        /// </summary>
         public bool IsGradient { get; set; } = false;
 
+        /// <summary>
+        /// Получает или устанавливает значение, указывающее, является ли палитра встроенной (предопределенной).
+        /// Встроенные палитры не могут быть удалены или изменены пользователем через UI.
+        /// Игнорируется при сериализации в JSON.
+        /// </summary>
         [JsonIgnore]
         public bool IsBuiltIn { get; set; } = false;
+
+        #endregion
+
+        #region Constructors
+
+        /// <summary>
+        /// Инициализирует новый пустой экземпляр класса <see cref="NewtonColorPalette"/>.
+        /// Используется для десериализации.
+        /// </summary>
+        public NewtonColorPalette() { }
+
+        #endregion
     }
 
+    /// <summary>
+    /// Управляет загрузкой, сохранением и выбором цветовых палитр для фракталов Ньютона.
+    /// Поддерживает как встроенные, так и пользовательские палитры.
+    /// </summary>
     public class NewtonPaletteManager
     {
+        #region Fields
+
+        /// <summary>
+        /// Имя файла для сохранения пользовательских палитр.
+        /// </summary>
         private const string PALETTE_FILE = "newton_palettes.json";
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Получает список всех доступных палитр (включая встроенные и пользовательские).
+        /// </summary>
         public List<NewtonColorPalette> Palettes { get; private set; }
+
+        /// <summary>
+        /// Получает или устанавливает текущую активную палитру.
+        /// </summary>
         public NewtonColorPalette ActivePalette { get; set; }
 
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="NewtonPaletteManager"/>.
+        /// Загружает встроенные и пользовательские палитры, а также устанавливает активную палитру по умолчанию.
+        /// </summary>
         public NewtonPaletteManager()
         {
             Palettes = new List<NewtonColorPalette>();
             LoadPalettes();
+            // Устанавливаем первую палитру как активную, или создаем простую "Default", если список пуст.
             ActivePalette = Palettes.FirstOrDefault() ?? new NewtonColorPalette { Name = "Default" };
         }
 
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Загружает встроенные и пользовательские палитры из файла.
+        /// Встроенные палитры добавляются всегда, пользовательские - только если файл существует и корректен.
+        /// </summary>
         private void LoadPalettes()
         {
-            // Список встроенных палитр
+            // Добавляем предопределенные встроенные палитры
             Palettes.Add(new NewtonColorPalette { Name = "Оттенки серого (Градиент)", RootColors = new List<Color> { Color.White, Color.LightGray, Color.DarkGray }, IsGradient = true, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Классика (Гармонический)", IsGradient = false, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Классика (Гармонический, Градиент)", IsGradient = true, IsBuiltIn = true });
@@ -53,30 +131,38 @@ namespace FractalExplorer
                     string json = File.ReadAllText(PALETTE_FILE);
 
                     var options = new JsonSerializerOptions();
-                    options.Converters.Add(new JsonColorConverter()); // Теперь компилятор найдет этот класс
+                    // Добавляем конвертер для System.Drawing.Color
+                    options.Converters.Add(new JsonColorConverter());
 
                     var customPalettes = JsonSerializer.Deserialize<List<NewtonColorPalette>>(json, options);
 
                     if (customPalettes != null)
                     {
+                        // Добавляем загруженные пользовательские палитры к списку
                         Palettes.AddRange(customPalettes);
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Не удалось загрузить палитры для Ньютона: {ex.Message}");
+                    // Отображаем сообщение об ошибке, если загрузка не удалась
+                    MessageBox.Show($"Не удалось загрузить палитры для Ньютона: {ex.Message}", "Ошибка загрузки палитр", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
+        /// <summary>
+        /// Сохраняет все пользовательские палитры (которые не являются встроенными) в файл JSON.
+        /// </summary>
         public void SavePalettes()
         {
             try
             {
+                // Выбираем только пользовательские палитры для сохранения
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
 
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                options.Converters.Add(new JsonColorConverter()); // И здесь он тоже будет найден
+                var options = new JsonSerializerOptions { WriteIndented = true }; // Форматируем JSON для удобочитаемости
+                // Добавляем конвертер для System.Drawing.Color
+                options.Converters.Add(new JsonColorConverter());
 
                 string json = JsonSerializer.Serialize(customPalettes, options);
 
@@ -84,8 +170,11 @@ namespace FractalExplorer
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Не удалось сохранить палитры для Ньютона: {ex.Message}");
+                // Отображаем сообщение об ошибке, если сохранение не удалось
+                MessageBox.Show($"Не удалось сохранить палитры для Ньютона: {ex.Message}", "Ошибка сохранения палитр", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        #endregion
     }
 }

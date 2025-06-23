@@ -1,16 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System; // Для EventHandler
 
 namespace FractalExplorer.Resources
 {
+    /// <summary>
+    /// Определяет общий контракт для форм фракталов,
+    /// позволяя другим компонентам (например, селекторам) взаимодействовать с ними.
+    /// </summary>
     public interface IFractalForm
     {
-        // Свойство для получения масштаба лупы
+        #region Interface Definition
+
+        /// <summary>
+        /// Получает текущий коэффициент масштабирования, используемый для "лупы" или увеличения.
+        /// </summary>
         double LoupeZoom { get; }
-        // Событие, на которое подпишется селектор
+
+        /// <summary>
+        /// Событие, которое возникает при изменении значения масштаба "лупы".
+        /// Другие компоненты могут подписываться на это событие, чтобы реагировать на изменения масштаба.
+        /// </summary>
         event EventHandler LoupeZoomChanged;
+
+        #endregion
     }
 }
