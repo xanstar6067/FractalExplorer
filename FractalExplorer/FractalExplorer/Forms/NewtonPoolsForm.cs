@@ -686,10 +686,16 @@ namespace FractalExplorer
         private Color GetDefaultColorForIndex(int index)
         {
             Color[] defaults = {
-                Color.FromArgb(255, 87, 87), Color.FromArgb(87, 155, 255), Color.FromArgb(87, 255, 87),
-                Color.FromArgb(255, 255, 87), Color.FromArgb(255, 87, 255), Color.FromArgb(87, 255, 255),
-                Color.Orange, Color.Orchid, Color.LightSeaGreen
-            };
+            Color.FromArgb(255, 87, 87),    // Красный
+            Color.FromArgb(87, 155, 255),   // Синий
+            Color.FromArgb(87, 255, 87),    // Зеленый
+            Color.FromArgb(255, 255, 87),   // Желтый
+            Color.FromArgb(255, 87, 255),   // Пурпурный
+            Color.FromArgb(87, 255, 255),   // Голубой
+            Color.Orange,
+            Color.Orchid,
+            Color.LightSeaGreen
+        };
             return defaults[index % defaults.Length];
         }
         #endregion
