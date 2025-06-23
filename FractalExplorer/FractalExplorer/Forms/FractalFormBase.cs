@@ -20,6 +20,9 @@ namespace FractalDraving
 
         private RenderVisualizerComponent _renderVisualizer;
         private PaletteManager _paletteManager;
+        // ИЗМЕНЕНИЕ: Ссылка на экземпляр формы настроек
+        private ColorConfigurationForm _colorConfigForm;
+
         private const int TILE_SIZE = 32;
         private readonly object _bitmapLock = new object();
         private Bitmap _previewBitmap;
@@ -40,7 +43,52 @@ namespace FractalDraving
 
         #endregion
 
-        #region Abstract and Virtual Members
+        // ... (конструктор и другие регионы остаются без изменений) ...
+
+        #region Rendering Logic and Event Handlers
+
+        // ИЗМЕНЕНИЕ: Логика вызова окна настроек полностью переработана
+        private void color_configurations_Click(object sender, EventArgs e)
+        {
+            // Если форма еще не открыта или была закрыта
+            if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
+            {
+                _colorConfigForm = new ColorConfigurationForm(_paletteManager);
+                // Подписываемся на событие "Палитра применена"
+                _colorConfigForm.PaletteApplied += OnPaletteApplied;
+                // Подписываемся на закрытие формы, чтобы обнулить ссылку
+                _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
+                // Показываем форму как немодальную, указывая родителя
+                _colorConfigForm.Show(this);
+            }
+            else
+            {
+                // Если форма уже открыта, просто выводим ее на передний план
+                _colorConfigForm.Activate();
+            }
+        }
+
+        // НОВЫЙ МЕТОД: Обработчик события от формы настроек
+        private void OnPaletteApplied(object sender, EventArgs e)
+        {
+            // Получив сигнал, применяем палитру и запускаем перерисовку
+            ApplyActivePalette();
+            ScheduleRender();
+        }
+
+        private void ApplyActivePalette()
+        {
+            if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
+            _fractalEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
+        }
+
+        // ... (Остальные методы в этом регионе остаются без изменений) ...
+
+        #endregion
+
+        // --- Весь остальной код в файле остается БЕЗ ИЗМЕНЕНИЙ ---
+        // (Я не буду его повторять для краткости, он идентичен предыдущему ответу)
+        #region Unchanged_Code
         protected abstract FractalMondelbrotBaseEngine CreateEngine();
         protected virtual decimal BaseScale => 3.0m;
         protected virtual decimal InitialCenterX => -0.5m;
@@ -48,9 +96,6 @@ namespace FractalDraving
         protected virtual void UpdateEngineSpecificParameters() { }
         protected virtual void OnPostInitialize() { }
         protected virtual string GetSaveFileNameDetails() => "fractal";
-        #endregion
-
-        #region Constructor and Form Load
 
         protected FractalFormBase()
         {
@@ -163,28 +208,6 @@ namespace FractalDraving
                 lock (_bitmapLock) { _previewBitmap?.Dispose(); _previewBitmap = null; _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; }
                 if (_renderVisualizer != null) { _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw; _renderVisualizer.Dispose(); }
             };
-        }
-
-        #endregion
-
-        #region Rendering Logic and Event Handlers
-
-        private void color_configurations_Click(object sender, EventArgs e)
-        {
-            using (var form = new ColorConfigurationForm(_paletteManager))
-            {
-                if (form.ShowDialog() == DialogResult.OK)
-                {
-                    ApplyActivePalette();
-                    ScheduleRender();
-                }
-            }
-        }
-
-        private void ApplyActivePalette()
-        {
-            if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
-            _fractalEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
         }
 
         private async Task StartPreviewRender()
@@ -304,8 +327,6 @@ namespace FractalDraving
         private void Canvas_MouseDown(object sender, MouseEventArgs e) { if (_isHighResRendering) return; if (e.Button == MouseButtons.Left) { _panning = true; _panStart = e.Location; canvas.Cursor = Cursors.Hand; } }
         private void Canvas_MouseMove(object sender, MouseEventArgs e) { if (_isHighResRendering || !_panning) return; CommitAndBakePreview(); decimal units_per_pixel = BaseScale / _zoom / canvas.Width; _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel; _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel; _panStart = e.Location; canvas.Invalidate(); ScheduleRender(); }
         private void Canvas_MouseUp(object sender, MouseEventArgs e) { if (_isHighResRendering) return; if (e.Button == MouseButtons.Left) { _panning = false; canvas.Cursor = Cursors.Default; } }
-
-        #endregion
 
         #region New Palette Logic
 
@@ -460,6 +481,7 @@ namespace FractalDraving
         #region IFractalForm Implementation
         public double LoupeZoom => nudBaseScale != null ? (double)nudBaseScale.Value : 4.0;
         public event EventHandler LoupeZoomChanged;
+        #endregion
         #endregion
     }
 }
