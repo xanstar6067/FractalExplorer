@@ -3,21 +3,23 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows.Forms;
+using FractalExplorer.Core; // --- ВОТ ЭТО ИЗМЕНЕНИЕ ---
 
 namespace FractalExplorer
 {
-    // Простая структура для хранения данных одной палитры
     public class NewtonColorPalette
     {
         public string Name { get; set; }
         public List<Color> RootColors { get; set; } = new List<Color>();
         public Color BackgroundColor { get; set; } = Color.Black;
         public bool IsGradient { get; set; } = false;
+
+        [JsonIgnore]
         public bool IsBuiltIn { get; set; } = false;
     }
 
-    // Локальный менеджер палитр только для Бассейнов Ньютона
     public class NewtonPaletteManager
     {
         private const string PALETTE_FILE = "newton_palettes.json";
@@ -33,16 +35,10 @@ namespace FractalExplorer
 
         private void LoadPalettes()
         {
-            // --- ВОССТАНОВЛЕННЫЙ И РАСШИРЕННЫЙ СПИСОК ПАЛИТР ---
-
-            // Палитра по умолчанию
+            // Список встроенных палитр
             Palettes.Add(new NewtonColorPalette { Name = "Оттенки серого (Градиент)", RootColors = new List<Color> { Color.White, Color.LightGray, Color.DarkGray }, IsGradient = true, IsBuiltIn = true });
-
-            // Палитры, у которых нет заданных цветов (они будут генерироваться автоматически)
             Palettes.Add(new NewtonColorPalette { Name = "Классика (Гармонический)", IsGradient = false, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Классика (Гармонический, Градиент)", IsGradient = true, IsBuiltIn = true });
-
-            // Восстановленные палитры
             Palettes.Add(new NewtonColorPalette { Name = "Чёрно-белый (Дискретный)", RootColors = new List<Color> { Color.White }, IsGradient = false, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Пастель (Дискретная)", RootColors = new List<Color> { Color.FromArgb(255, 182, 193), Color.FromArgb(173, 216, 230), Color.FromArgb(189, 252, 201), Color.FromArgb(253, 253, 150) }, IsGradient = false, IsBuiltIn = true, BackgroundColor = Color.FromArgb(40, 40, 40) });
             Palettes.Add(new NewtonColorPalette { Name = "Контраст (Дискретный)", RootColors = new List<Color> { Color.Red, Color.Yellow, Color.Blue }, IsGradient = false, IsBuiltIn = true });
@@ -50,13 +46,17 @@ namespace FractalExplorer
             Palettes.Add(new NewtonColorPalette { Name = "Психоделика (Градиент)", RootColors = new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan }, IsGradient = true, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Огонь и Лёд (Градиент)", RootColors = new List<Color> { Color.FromArgb(255, 100, 0), Color.FromArgb(0, 100, 255), Color.FromArgb(255, 200, 0), Color.FromArgb(0, 200, 255) }, IsGradient = true, IsBuiltIn = true });
 
-            // Загружаем пользовательские палитры
             if (File.Exists(PALETTE_FILE))
             {
                 try
                 {
                     string json = File.ReadAllText(PALETTE_FILE);
-                    var customPalettes = JsonSerializer.Deserialize<List<NewtonColorPalette>>(json);
+
+                    var options = new JsonSerializerOptions();
+                    options.Converters.Add(new JsonColorConverter()); // Теперь компилятор найдет этот класс
+
+                    var customPalettes = JsonSerializer.Deserialize<List<NewtonColorPalette>>(json, options);
+
                     if (customPalettes != null)
                     {
                         Palettes.AddRange(customPalettes);
@@ -74,7 +74,12 @@ namespace FractalExplorer
             try
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
-                string json = JsonSerializer.Serialize(customPalettes, new JsonSerializerOptions { WriteIndented = true });
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                options.Converters.Add(new JsonColorConverter()); // И здесь он тоже будет найден
+
+                string json = JsonSerializer.Serialize(customPalettes, options);
+
                 File.WriteAllText(PALETTE_FILE, json);
             }
             catch (Exception ex)
