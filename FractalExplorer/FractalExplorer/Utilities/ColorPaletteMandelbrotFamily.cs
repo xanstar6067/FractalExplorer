@@ -28,12 +28,12 @@ namespace FractalExplorer.Core
         /// <summary>
         /// Получает список всех доступных цветовых палитр (включая встроенные и пользовательские).
         /// </summary>
-        public List<PaletteManagerBase> Palettes { get; private set; }
+        public List<PaletteManagerMandelbrotFamily> Palettes { get; private set; }
 
         /// <summary>
         /// Получает или устанавливает активную (текущую используемую) цветовую палитру.
         /// </summary>
-        public PaletteManagerBase ActivePalette { get; set; }
+        public PaletteManagerMandelbrotFamily ActivePalette { get; set; }
 
         #endregion
 
@@ -46,7 +46,7 @@ namespace FractalExplorer.Core
         /// </summary>
         public ColorPaletteMandelbrotFamily()
         {
-            Palettes = new List<PaletteManagerBase>();
+            Palettes = new List<PaletteManagerMandelbrotFamily>();
             LoadPalettes();
 
             // Инициализируем активную палитру:
@@ -78,7 +78,7 @@ namespace FractalExplorer.Core
                     // Добавляем наш кастомный конвертер для System.Drawing.Color
                     options.Converters.Add(new JsonColorConverter());
 
-                    var customPalettes = JsonSerializer.Deserialize<List<PaletteManagerBase>>(json, options);
+                    var customPalettes = JsonSerializer.Deserialize<List<PaletteManagerMandelbrotFamily>>(json, options);
 
                     if (customPalettes != null)
                     {
@@ -135,20 +135,20 @@ namespace FractalExplorer.Core
             // 1. Палитра по умолчанию "Стандартный серый".
             // Она использует специальную логарифмическую формулу для расчета цвета,
             // поэтому список Colors пуст, а IsGradient установлен в False (т.к. это не простой линейный градиент).
-            Palettes.Add(new PaletteManagerBase("Стандартный серый", new List<Color>(), false, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Стандартный серый", new List<Color>(), false, true));
 
             // 2. "Черно-белый" градиент.
             // Это линейный градиент от белого к черному.
-            Palettes.Add(new PaletteManagerBase("Черно-белый", new List<Color> { Color.White, Color.Black }, true, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Черно-белый", new List<Color> { Color.White, Color.Black }, true, true));
 
             // Примечание: Старая палитра "Черно-белый" (которая была дискретной и вызывала проблемы) удалена.
 
             // 3. Остальные палитры (без изменений в их определении, только форматирование)
-            Palettes.Add(new PaletteManagerBase("Классика", new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) }, true, true));
-            Palettes.Add(new PaletteManagerBase("Радуга", new List<Color> { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Indigo, Color.Violet }, true, true));
-            Palettes.Add(new PaletteManagerBase("Огонь", new List<Color> { Color.Black, Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), Color.White }, true, true));
-            Palettes.Add(new PaletteManagerBase("Лёд", new List<Color> { Color.Black, Color.FromArgb(0, 0, 100), Color.FromArgb(0, 120, 200), Color.FromArgb(170, 220, 255), Color.White }, true, true));
-            Palettes.Add(new PaletteManagerBase("Психоделика", new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan, Color.FromArgb(230, 230, 250) }, true, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Классика", new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) }, true, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Радуга", new List<Color> { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Blue, Color.Indigo, Color.Violet }, true, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Огонь", new List<Color> { Color.Black, Color.FromArgb(200, 0, 0), Color.FromArgb(255, 100, 0), Color.FromArgb(255, 255, 100), Color.White }, true, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Лёд", new List<Color> { Color.Black, Color.FromArgb(0, 0, 100), Color.FromArgb(0, 120, 200), Color.FromArgb(170, 220, 255), Color.White }, true, true));
+            Palettes.Add(new PaletteManagerMandelbrotFamily("Психоделика", new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan, Color.FromArgb(230, 230, 250) }, true, true));
         }
 
         #endregion

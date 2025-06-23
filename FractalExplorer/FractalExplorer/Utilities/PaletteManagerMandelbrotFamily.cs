@@ -8,7 +8,7 @@ namespace FractalExplorer.Utilities
     /// Базовый класс для определения цветовой палитры.
     /// Содержит имя палитры, список цветов, флаг градиента и признак, является ли палитра встроенной.
     /// </summary>
-    public class PaletteManagerBase
+    public class PaletteManagerMandelbrotFamily
     {
         #region Properties
 
@@ -41,19 +41,19 @@ namespace FractalExplorer.Utilities
         #region Constructors
 
         /// <summary>
-        /// Инициализирует новый пустой экземпляр класса <see cref="PaletteManagerBase"/>.
+        /// Инициализирует новый пустой экземпляр класса <see cref="PaletteManagerMandelbrotFamily"/>.
         /// Используется для десериализации.
         /// </summary>
-        public PaletteManagerBase() { }
+        public PaletteManagerMandelbrotFamily() { }
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="PaletteManagerBase"/> с заданными параметрами.
+        /// Инициализирует новый экземпляр класса <see cref="PaletteManagerMandelbrotFamily"/> с заданными параметрами.
         /// </summary>
         /// <param name="name">Имя палитры.</param>
         /// <param name="colors">Список цветов палитры.</param>
         /// <param name="isGradient">Флаг, указывающий, является ли палитра градиентом.</param>
         /// <param name="isBuiltIn">Флаг, указывающий, является ли палитра встроенной.</param>
-        public PaletteManagerBase(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false)
+        public PaletteManagerMandelbrotFamily(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false)
         {
             Name = name;
             Colors = colors;

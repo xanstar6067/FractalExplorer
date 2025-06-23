@@ -26,7 +26,7 @@ namespace FractalExplorer.Core
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
-        private PaletteManagerBase _selectedPalette;
+        private PaletteManagerMandelbrotFamily _selectedPalette;
 
         #endregion
 
@@ -294,7 +294,7 @@ namespace FractalExplorer.Core
             {
                 newName = $"Новая палитра {++counter}";
             }
-            var newPalette = new PaletteManagerBase(newName, new List<Color> { Color.Black, Color.White }, true);
+            var newPalette = new PaletteManagerMandelbrotFamily(newName, new List<Color> { Color.Black, Color.White }, true);
             _paletteManager.Palettes.Add(newPalette);
             PopulatePaletteList(); // Обновляем список палитр в UI
             lbPalettes.SelectedItem = newPalette.Name; // Выбираем новую палитру в списке

@@ -1031,7 +1031,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="palette">Объект палитры.</param>
         /// <returns>Функция, преобразующая количество итераций в цвет.</returns>
-        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerBase palette)
+        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
         {
             if (palette.Name == "Стандартный серый")
             {
