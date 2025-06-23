@@ -21,6 +21,7 @@ namespace FractalDraving
     {
         #region Fields
 
+        // ИЗМЕНЕНИЕ: Компонент визуализатора теперь имеет свой таймер и требует размер плитки
         private RenderVisualizerComponent _renderVisualizer;
 
         private const int TILE_SIZE = 32;
@@ -92,7 +93,10 @@ namespace FractalDraving
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
 
-            _renderVisualizer = new RenderVisualizerComponent();
+            // ИЗМЕНЕНИЕ: Инициализация визуализатора с размером плитки
+            _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
+            // ИЗМЕНЕНИЕ: Подписка на событие запроса перерисовки от визуализатора
+            _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
 
             InitializePaletteCheckBoxes();
             InitializeControls();
@@ -107,6 +111,16 @@ namespace FractalDraving
 
             HandlePaletteSelectionLogic();
             ScheduleRender();
+        }
+
+        // НОВЫЙ МЕТОД: Обработчик события от визуализатора
+        private void OnVisualizerNeedsRedraw()
+        {
+            // Асинхронно запрашиваем перерисовку холста, чтобы не блокировать поток таймера визуализатора
+            if (canvas.IsHandleCreated && !canvas.IsDisposed)
+            {
+                canvas.BeginInvoke((Action)(() => canvas.Invalidate()));
+            }
         }
 
         private void InitializeControls()
@@ -207,7 +221,13 @@ namespace FractalDraving
                     _currentRenderingBitmap?.Dispose();
                     _currentRenderingBitmap = null;
                 }
-                _renderVisualizer?.Dispose();
+
+                // ИЗМЕНЕНИЕ: Отписываемся и освобождаем ресурсы визуализатора
+                if (_renderVisualizer != null)
+                {
+                    _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
+                    _renderVisualizer.Dispose();
+                }
             };
         }
 
@@ -237,13 +257,6 @@ namespace FractalDraving
             await StartPreviewRender();
         }
 
-        /// <summary>
-        /// Запускает процесс плавного рендеринга с наложением.
-        /// </summary>
-        // In FractalFormBase.cs
-
-        // In FractalFormBase.cs
-
         private async Task StartPreviewRender()
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -253,7 +266,7 @@ namespace FractalDraving
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
 
-            _renderVisualizer?.NotifyRenderSessionStart(); // Уведомляем о начале сессии рендеринга
+            _renderVisualizer?.NotifyRenderSessionStart();
 
             var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
 
@@ -297,10 +310,8 @@ namespace FractalDraving
                     ct.ThrowIfCancellationRequested();
 
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
-                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
-                    {
-                        canvas.Invoke((Action)(() => canvas.Invalidate(tile.Bounds)));
-                    }
+
+                    // УБРАН ВЫЗОВ Invalidate()
 
                     var tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int bytesPerPixel);
 
@@ -336,8 +347,7 @@ namespace FractalDraving
                     {
                         if (ct.IsCancellationRequested) return;
 
-                        // ИЗМЕНЕНИЕ ЗДЕСЬ: Инвалидируем ВЕСЬ холст
-                        canvas.Invalidate();
+                        // УБРАН ВЫЗОВ Invalidate()
 
                         if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                         {
@@ -394,7 +404,7 @@ namespace FractalDraving
             {
                 _isRenderingPreview = false;
                 _renderVisualizer?.NotifyRenderSessionComplete();
-                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
+                //if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate(); // Этот вызов убран, т.к. NotifyRenderSessionComplete сделает это
 
                 if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
                 {
@@ -423,9 +433,6 @@ namespace FractalDraving
 
         #region Event Handlers
 
-        /// <summary>
-        /// Отрисовывает холст, совмещая старый и новый битмапы.
-        /// </summary>
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
@@ -483,10 +490,13 @@ namespace FractalDraving
             }
             if (_renderVisualizer != null && _isRenderingPreview)
             {
-                // ИЗМЕНЕННЫЙ ВЫЗОВ: передаем canvas.ClientRectangle для границ сессии
-                _renderVisualizer.DrawVisualization(e.Graphics, canvas.ClientRectangle);
+                // ИЗМЕНЕНИЕ: Вызов визуализатора без лишних аргументов
+                _renderVisualizer.DrawVisualization(e.Graphics);
             }
         }
+
+        // ... (остальные методы без изменений)
+        #region Unchanged_Methods
 
         private void ParamControl_Changed(object sender, EventArgs e)
         {
@@ -502,37 +512,29 @@ namespace FractalDraving
         {
             if (_isHighResRendering) return;
 
-            // >>> ИЗМЕНЕНИЕ ЗДЕСЬ <<<
-            // "Запекаем" текущий вид (фон + новые плитки) в единый фон перед трансформацией.
             CommitAndBakePreview();
 
-            // Логика зума относительно курсора
             decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
             decimal scaleBeforeZoom = BaseScale / _zoom;
 
-            // Вычисляем комплексные координаты точки под курсором
             decimal mouseRe = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
             decimal mouseIm = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
 
-            // Применяем новый зум
             _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, _zoom * zoomFactor));
 
-            // Пересчитываем центр так, чтобы точка под курсором осталась на месте
             decimal scaleAfterZoom = BaseScale / _zoom;
             _centerX = mouseRe - (e.X - canvas.Width / 2.0m) * scaleAfterZoom / canvas.Width;
             _centerY = mouseIm + (e.Y - canvas.Height / 2.0m) * scaleAfterZoom / canvas.Height;
 
-            // Немедленно перерисовываем холст, чтобы показать трансформацию
             canvas.Invalidate();
 
-            // Обновляем UI и планируем новый детальный рендер
             if (nudZoom.Value != _zoom)
             {
-                nudZoom.Value = _zoom; // Это вызовет ScheduleRender через событие ValueChanged
+                nudZoom.Value = _zoom;
             }
             else
             {
-                ScheduleRender(); // Если значение не изменилось (уперлись в лимит)
+                ScheduleRender();
             }
         }
 
@@ -551,24 +553,17 @@ namespace FractalDraving
         {
             if (_isHighResRendering || !_panning) return;
 
-            // >>> ИЗМЕНЕНИЕ ЗДЕСЬ <<<
-            // "Запекаем" текущий вид (фон + новые плитки) в единый фон перед панорамированием.
             CommitAndBakePreview();
 
-            // Единицы комплексной плоскости на пиксель для текущего вида
             decimal units_per_pixel = BaseScale / _zoom / canvas.Width;
 
-            // Смещаем центр на дельту движения мыши
             _centerX -= (decimal)(e.X - _panStart.X) * units_per_pixel;
             _centerY += (decimal)(e.Y - _panStart.Y) * units_per_pixel;
 
-            // Обновляем стартовую точку для следующего смещения
             _panStart = e.Location;
 
-            // Немедленно перерисовываем холст для отображения сдвига
             canvas.Invalidate();
 
-            // Планируем новый детальный рендер
             ScheduleRender();
         }
 
@@ -677,6 +672,7 @@ namespace FractalDraving
             }
         }
         #endregion
+        #endregion
 
         #region Palette Logic
 
@@ -760,13 +756,8 @@ namespace FractalDraving
 
         #region Helpers
 
-        /// <summary>
-        /// "Запекает" текущее состояние холста (фон + новые плитки) в основной _previewBitmap.
-        /// Вызывается при начале нового действия пользователя (зум, панорамирование).
-        /// </summary>
         private void CommitAndBakePreview()
         {
-            // Проверяем, есть ли вообще что запекать.
             lock (_bitmapLock)
             {
                 if (!_isRenderingPreview || _currentRenderingBitmap == null)
@@ -775,25 +766,18 @@ namespace FractalDraving
                 }
             }
 
-            // Немедленно отменяем текущий рендер.
-            // Важно делать это *вне* блокировки, чтобы избежать дедлоков.
             _previewRenderCts?.Cancel();
 
             lock (_bitmapLock)
             {
-                // После отмены еще раз проверяем, на случай если состояние изменилось.
                 if (_currentRenderingBitmap == null) return;
 
-                // Создаем новый битмап, на котором будем смешивать слои.
-                // Формат 24bpp, так как прозрачность больше не нужна.
                 var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
                 using (var g = Graphics.FromImage(bakedBitmap))
                 {
                     g.Clear(Color.Black);
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
 
-                    // 1. Рисуем старый фон с его текущей трансформацией.
-                    // Это в точности та же логика, что и в Canvas_Paint.
                     if (_previewBitmap != null)
                     {
                         try
@@ -824,20 +808,15 @@ namespace FractalDraving
                         catch (Exception) { /* Игнорируем */ }
                     }
 
-                    // 2. Поверх рисуем новые, уже отрисованные плитки.
                     g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
 
-                // 3. Продвигаем "запеченный" битмап на место основного.
                 _previewBitmap?.Dispose();
                 _previewBitmap = bakedBitmap;
 
-                // 4. Очищаем слой рендеринга.
                 _currentRenderingBitmap.Dispose();
                 _currentRenderingBitmap = null;
 
-                // 5. КРИТИЧЕСКИ ВАЖНО: обновляем "отрендеренные" координаты.
-                // Теперь наш новый фон соответствует текущему положению и зуму.
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;

@@ -1,68 +1,77 @@
-﻿// RenderVisualizerComponent.cs
+﻿// RenderVisualizerComponent.cs (Оптимизированная версия)
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Collections.Generic; // Для List<Rectangle>
-using System; // Для Math
+using System.Threading;
 
 public class RenderVisualizerComponent : IDisposable
 {
-    // Для зеленых рамок отдельных плиток
+    // --- Конфигурация ---
+    private readonly int _tileSize; // Размер плитки для быстрой калькуляции координат
+
+    // --- Состояние ---
     private readonly ConcurrentDictionary<Rectangle, byte> _activeTiles = new ConcurrentDictionary<Rectangle, byte>();
-    private Pen _tileBorderPen;
-    private Color _tileBorderColor = Color.FromArgb(180, 77, 255, 77); // Полупрозрачный зеленый
-    private float _tileBorderThickness = 1.5f;
-
-    // Для красной рамки всей сессии рендеринга
-    private Pen _sessionBorderPen;
-    private Color _sessionBorderColor = Color.FromArgb(180, 255, 0, 0); // Полупрозрачный красный
-    private float _sessionBorderThickness = 2f;
-    private bool _isRenderSessionActive = false;
-
-    // НОВОЕ: Список всех ЗАВЕРШЕННЫХ плиток в текущей сессии
     private readonly object _completedTilesListLock = new object();
-    private List<Rectangle> _completedTilesList = new List<Rectangle>();
+    private readonly List<Rectangle> _completedTilesList = new List<Rectangle>();
+    private volatile bool _isRenderSessionActive = false;
 
-    public RenderVisualizerComponent()
+    // --- Объекты для рисования ---
+    private readonly Pen _tileBorderPen;
+    private readonly Pen _sessionBorderPen;
+
+    // --- Логика асинхронного обновления ---
+    private readonly System.Threading.Timer _redrawTimer;
+    private volatile bool _isDirty = false;
+    public event Action NeedsRedraw;
+
+    /// <summary>
+    /// Конструктор теперь требует размер плитки для оптимизации.
+    /// </summary>
+    public RenderVisualizerComponent(int tileSize)
     {
-        _tileBorderPen = new Pen(_tileBorderColor, _tileBorderThickness);
-        // Для _sessionBorderPen можно попробовать PenAlignment, если линии будут выглядеть смещенными
-        // _sessionBorderPen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset; // или Center
-        _sessionBorderPen = new Pen(_sessionBorderColor, _sessionBorderThickness);
+        _tileSize = tileSize > 0 ? tileSize : 32; // Проверка на корректность
+
+        _tileBorderPen = new Pen(Color.FromArgb(180, 77, 255, 77), 1.5f);
+        _sessionBorderPen = new Pen(Color.FromArgb(180, 255, 0, 0), 2f);
+
+        // Таймер запустится при старте сессии рендеринга
+        _redrawTimer = new System.Threading.Timer(OnRedrawTimerTick, null, Timeout.Infinite, Timeout.Infinite);
     }
 
-    public void SetTileAppearance(Color borderColor, float thickness)
+    /// <summary>
+    /// Метод, вызываемый таймером. Проверяет, были ли изменения, и запрашивает перерисовку.
+    /// </summary>
+    private void OnRedrawTimerTick(object state)
     {
-        _tileBorderColor = borderColor;
-        _tileBorderThickness = thickness;
-        _tileBorderPen?.Dispose();
-        _tileBorderPen = new Pen(_tileBorderColor, _tileBorderThickness);
-    }
-
-    public void SetSessionBorderAppearance(Color borderColor, float thickness)
-    {
-        _sessionBorderColor = borderColor;
-        _sessionBorderThickness = thickness;
-        _sessionBorderPen?.Dispose();
-        _sessionBorderPen = new Pen(_sessionBorderColor, _sessionBorderThickness);
-        // Если меняем толщину, нужно пересоздать перо или обновить его Alignment, если используется
-        // _sessionBorderPen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+        if (_isDirty)
+        {
+            _isDirty = false;
+            NeedsRedraw?.Invoke();
+        }
     }
 
     public void NotifyRenderSessionStart()
     {
         _isRenderSessionActive = true;
-        ClearActiveTiles();
+        _activeTiles.Clear();
         lock (_completedTilesListLock)
         {
-            _completedTilesList.Clear(); // Очищаем список завершенных плиток
+            _completedTilesList.Clear();
         }
+        _isDirty = true;
+        // Запускаем таймер с интервалом 33 мс (~30 FPS)
+        _redrawTimer.Change(0, 33);
     }
 
     public void NotifyRenderSessionComplete()
     {
         _isRenderSessionActive = false;
-        ClearActiveTiles();
+        // Останавливаем таймер
+        _redrawTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        _isDirty = true;
+        OnRedrawTimerTick(null); // Запрашиваем финальную перерисовку, чтобы очистить холст
     }
 
     public void NotifyTileRenderStart(Rectangle tileBounds)
@@ -70,118 +79,81 @@ public class RenderVisualizerComponent : IDisposable
         if (_isRenderSessionActive)
         {
             _activeTiles.TryAdd(tileBounds, 0);
+            _isDirty = true; // Отмечаем, что состояние изменилось
         }
     }
 
     public void NotifyTileRenderComplete(Rectangle tileBounds)
     {
         _activeTiles.TryRemove(tileBounds, out _);
-
         if (_isRenderSessionActive)
         {
             lock (_completedTilesListLock)
             {
-                // Проверяем, нет ли уже такой плитки (на всякий случай, хотя не должно быть)
-                if (!_completedTilesList.Contains(tileBounds))
-                {
-                    _completedTilesList.Add(tileBounds);
-                }
+                _completedTilesList.Add(tileBounds);
             }
+            _isDirty = true; // Отмечаем, что состояние изменилось
         }
     }
 
-    public void ClearActiveTiles()
+    /// <summary>
+    /// Оптимизированный метод отрисовки. Вызывается из события Paint формы.
+    /// </summary>
+    public void DrawVisualization(Graphics g)
     {
-        _activeTiles.Clear();
-    }
+        if (!_isRenderSessionActive && _activeTiles.IsEmpty) return;
 
-    public void DrawVisualization(Graphics g, Rectangle canvasBounds)
-    {
         List<Rectangle> currentCompletedTilesSnapshot;
         lock (_completedTilesListLock)
         {
-            currentCompletedTilesSnapshot = new List<Rectangle>(_completedTilesList); // Создаем копию для безопасной итерации
+            currentCompletedTilesSnapshot = new List<Rectangle>(_completedTilesList);
         }
 
-        // 1. Рисуем "ступенчатую" красную рамку для объединенной области ЗАВЕРШЕННЫХ плиток
-        if (_isRenderSessionActive && _sessionBorderPen != null && currentCompletedTilesSnapshot.Any())
+        // 1. Отрисовка красной рамки завершённых плиток (Алгоритм O(N))
+        if (_sessionBorderPen != null && currentCompletedTilesSnapshot.Any())
         {
-            // Установка качества рендеринга может помочь с линиями
-            // g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-            foreach (var currentTile in currentCompletedTilesSnapshot)
+            // Создаём карту для быстрого (O(1)) поиска соседей
+            var tileMap = new HashSet<Point>();
+            foreach (var rect in currentCompletedTilesSnapshot)
             {
-                // Координаты текущей плитки
-                int rLeft = currentTile.Left;
-                int rTop = currentTile.Top;
-                int rRight = currentTile.Right;
-                int rBottom = currentTile.Bottom;
+                tileMap.Add(new Point(rect.X / _tileSize, rect.Y / _tileSize));
+            }
 
-                // Проверка верхней стороны currentTile
-                bool hasAdjacentTop = currentCompletedTilesSnapshot.Any(other =>
-                    other != currentTile && // Не сама плитка
-                    other.Bottom == rTop && // Нижняя сторона другой плитки совпадает с верхней текущей
-                    Math.Max(other.Left, rLeft) < Math.Min(other.Right, rRight) // Горизонтальное перекрытие
-                );
-                if (!hasAdjacentTop)
-                {
-                    g.DrawLine(_sessionBorderPen, rLeft, rTop, rRight, rTop);
-                }
+            foreach (var tile in currentCompletedTilesSnapshot)
+            {
+                var tileCoord = new Point(tile.X / _tileSize, tile.Y / _tileSize);
 
-                // Проверка нижней стороны currentTile
-                bool hasAdjacentBottom = currentCompletedTilesSnapshot.Any(other =>
-                    other != currentTile &&
-                    other.Top == rBottom && // Верхняя сторона другой плитки совпадает с нижней текущей
-                    Math.Max(other.Left, rLeft) < Math.Min(other.Right, rRight) // Горизонтальное перекрытие
-                );
-                if (!hasAdjacentBottom)
-                {
-                    g.DrawLine(_sessionBorderPen, rLeft, rBottom, rRight, rBottom);
-                }
+                // Рисуем верхнюю грань, если сверху нет соседа
+                if (!tileMap.Contains(new Point(tileCoord.X, tileCoord.Y - 1)))
+                    g.DrawLine(_sessionBorderPen, tile.Left, tile.Top, tile.Right, tile.Top);
 
-                // Проверка левой стороны currentTile
-                bool hasAdjacentLeft = currentCompletedTilesSnapshot.Any(other =>
-                    other != currentTile &&
-                    other.Right == rLeft && // Правая сторона другой плитки совпадает с левой текущей
-                    Math.Max(other.Top, rTop) < Math.Min(other.Bottom, rBottom) // Вертикальное перекрытие
-                );
-                if (!hasAdjacentLeft)
-                {
-                    g.DrawLine(_sessionBorderPen, rLeft, rTop, rLeft, rBottom);
-                }
+                // Рисуем нижнюю грань, если снизу нет соседа
+                if (!tileMap.Contains(new Point(tileCoord.X, tileCoord.Y + 1)))
+                    g.DrawLine(_sessionBorderPen, tile.Left, tile.Bottom, tile.Right, tile.Bottom);
 
-                // Проверка правой стороны currentTile
-                bool hasAdjacentRight = currentCompletedTilesSnapshot.Any(other =>
-                    other != currentTile &&
-                    other.Left == rRight && // Левая сторона другой плитки совпадает с правой текущей
-                    Math.Max(other.Top, rTop) < Math.Min(other.Bottom, rBottom) // Вертикальное перекрытие
-                );
-                if (!hasAdjacentRight)
-                {
-                    g.DrawLine(_sessionBorderPen, rRight, rTop, rRight, rBottom);
-                }
+                // Рисуем левую грань, если слева нет соседа
+                if (!tileMap.Contains(new Point(tileCoord.X - 1, tileCoord.Y)))
+                    g.DrawLine(_sessionBorderPen, tile.Left, tile.Top, tile.Left, tile.Bottom);
+
+                // Рисуем правую грань, если справа нет соседа
+                if (!tileMap.Contains(new Point(tileCoord.X + 1, tileCoord.Y)))
+                    g.DrawLine(_sessionBorderPen, tile.Right, tile.Top, tile.Right, tile.Bottom);
             }
         }
 
-        // 2. Рисуем зеленые рамки для активных плиток (обрабатываемых в данный момент)
+        // 2. Отрисовка зелёных рамок для активных (обрабатываемых) плиток
         if (!_activeTiles.IsEmpty && _tileBorderPen != null)
         {
-            var tilesToDraw = _activeTiles.Keys.ToList();
-
-            foreach (var tileRect in tilesToDraw)
+            foreach (var tileRect in _activeTiles.Keys)
             {
-                RectangleF visualTileBounds = tileRect;
-                visualTileBounds.Inflate(-_tileBorderThickness / 2f, -_tileBorderThickness / 2f);
-                if (visualTileBounds.Width > 0 && visualTileBounds.Height > 0)
-                {
-                    g.DrawRectangle(_tileBorderPen, visualTileBounds.X, visualTileBounds.Y, visualTileBounds.Width, visualTileBounds.Height);
-                }
+                g.DrawRectangle(_tileBorderPen, tileRect.X, tileRect.Y, tileRect.Width - 1, tileRect.Height - 1);
             }
         }
     }
 
     public void Dispose()
     {
+        _redrawTimer?.Dispose();
         _tileBorderPen?.Dispose();
         _sessionBorderPen?.Dispose();
         GC.SuppressFinalize(this);
