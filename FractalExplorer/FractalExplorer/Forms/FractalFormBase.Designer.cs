@@ -1,5 +1,11 @@
 ﻿namespace FractalDraving
 {
+    // Этот файл создается для того, чтобы унаследовать от него все остальные формы.
+    // Содержимое для него будет сгенерировано Visual Studio, когда вы создадите форму `FractalFormBase`.
+    // Для простоты, мы будем редактировать `Designer.cs` каждой конкретной формы, 
+    // приводя имена к общему виду, а `FractalFormBase` будет просто базовым классом Form.
+    // Ниже я приведу исправленные `.Designer.cs` файлы для каждой из ваших форм.
+    // ВАЖНО: Сам файл `FractalFormBase.Designer.cs` должен быть таким:
     partial class FractalFormBase
     {
         private System.ComponentModel.IContainer components = null;
