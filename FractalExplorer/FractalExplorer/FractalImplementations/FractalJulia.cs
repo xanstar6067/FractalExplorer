@@ -2,7 +2,9 @@ using FractalDraving;
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.Selectors;
+using System.Drawing;
 using System.Drawing.Imaging;
+using System.Threading.Tasks;
 
 namespace FractalExplorer.Projects
 {
@@ -33,33 +35,34 @@ namespace FractalExplorer.Projects
 
         protected override void OnPostInitialize()
         {
-            // Скрываем ненужные для Жюлиа контролы
-            mondelbrotClassicBox.Visible = false;
+            var classicBox = this.Controls.Find("mondelbrotClassicBox", true).FirstOrDefault();
+            if (classicBox != null) classicBox.Visible = false;
 
-            // Настраиваем видимость специфичных для Жюлиа контролов
-            mandelbrotPreviewPanel.Visible = true;
-            lblRe.Visible = true;
-            nudRe.Visible = true;
-            lblIm.Visible = true;
-            nudIm.Visible = true;
+            var previewPanel = this.Controls.Find("mandelbrotPreviewPanel", true).FirstOrDefault();
+            if (previewPanel != null) previewPanel.Visible = true;
 
-            // Подписываемся на события превью
-            mandelbrotPreviewCanvas.Click += mandelbrotCanvas_Click;
-            mandelbrotPreviewCanvas.Paint += mandelbrotCanvas_Paint;
+            this.Controls.Find("lblRe", true).FirstOrDefault()?.Show();
+            this.Controls.Find("nudRe", true).FirstOrDefault()?.Show();
+            this.Controls.Find("lblIm", true).FirstOrDefault()?.Show();
+            this.Controls.Find("nudIm", true).FirstOrDefault()?.Show();
 
-            // Запускаем рендер превью
-            Task.Run(() => RenderAndDisplayMandelbrotSet());
+            var previewCanvas = this.Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault() as PictureBox;
+            if (previewCanvas != null)
+            {
+                previewCanvas.Click += mandelbrotCanvas_Click;
+                previewCanvas.Paint += mandelbrotCanvas_Paint;
+                Task.Run(() => RenderAndDisplayMandelbrotSet());
+            }
         }
 
         protected override void UpdateEngineSpecificParameters()
         {
-            // Передаем константу C в движок
             _fractalEngine.C = new ComplexDecimal(nudRe.Value, nudIm.Value);
 
-            // Обновляем маркер на превью, если он есть
-            if (mandelbrotPreviewCanvas.IsHandleCreated && !mandelbrotPreviewCanvas.IsDisposed)
+            var previewCanvas = this.Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault();
+            if (previewCanvas != null && previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
-                mandelbrotPreviewCanvas.Invalidate();
+                previewCanvas.Invalidate();
             }
         }
 
@@ -67,15 +70,16 @@ namespace FractalExplorer.Projects
 
         private void RenderAndDisplayMandelbrotSet()
         {
-            if (mandelbrotPreviewCanvas == null || mandelbrotPreviewCanvas.Width <= 0 || mandelbrotPreviewCanvas.Height <= 0) return;
-            Bitmap mandelbrotImage = RenderMandelbrotSetInternal(mandelbrotPreviewCanvas.Width, mandelbrotPreviewCanvas.Height, MANDELBROT_PREVIEW_ITERATIONS);
-            if (mandelbrotPreviewCanvas.IsHandleCreated && !mandelbrotPreviewCanvas.IsDisposed)
+            var previewCanvas = this.Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault() as PictureBox;
+            if (previewCanvas == null || previewCanvas.Width <= 0 || previewCanvas.Height <= 0) return;
+            Bitmap mandelbrotImage = RenderMandelbrotSetInternal(previewCanvas.Width, previewCanvas.Height, MANDELBROT_PREVIEW_ITERATIONS);
+            if (previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
-                mandelbrotPreviewCanvas.Invoke(() =>
+                previewCanvas.Invoke((System.Action)(() =>
                 {
-                    mandelbrotPreviewCanvas.Image?.Dispose();
-                    mandelbrotPreviewCanvas.Image = mandelbrotImage;
-                });
+                    previewCanvas.Image?.Dispose();
+                    previewCanvas.Image = mandelbrotImage;
+                }));
             }
             else
             {
@@ -87,11 +91,11 @@ namespace FractalExplorer.Projects
         {
             Bitmap bmp = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
 
-            // Создаем движок специально для этого превью
             var engine = new MandelbrotEngine
             {
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
+                // ИСПОЛЬЗУЕМ ЛОКАЛЬНУЮ ВЕРСИЮ МЕТОДА
                 Palette = GetPaletteMandelbrotClassicColor,
                 Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE,
                 CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2,
@@ -99,32 +103,22 @@ namespace FractalExplorer.Projects
             };
 
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
-
-            // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-            // Создаем один буфер для всего изображения превью
-            int bytes = Math.Abs(bmpData.Stride) * canvasHeight;
+            int bytes = System.Math.Abs(bmpData.Stride) * canvasHeight;
             byte[] buffer = new byte[bytes];
             int bytesPerPixel = Image.GetPixelFormatSize(bmp.PixelFormat) / 8;
-
-            // Создаем одну большую плитку, покрывающую все превью
             var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
 
-            // Вызываем новый, исправленный RenderTile
             engine.RenderTile(buffer, bmpData.Stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
 
-            // Копируем готовый буфер в битмап
             System.Runtime.InteropServices.Marshal.Copy(buffer, 0, bmpData.Scan0, bytes);
-
-            // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
             bmp.UnlockBits(bmpData);
             return bmp;
         }
 
         private void mandelbrotCanvas_Paint(object sender, PaintEventArgs e)
         {
-            if (mandelbrotPreviewCanvas?.Image == null) return;
+            var previewCanvas = sender as PictureBox;
+            if (previewCanvas?.Image == null) return;
 
             decimal reRange = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE;
             decimal imRange = MANDELBROT_MAX_IM - MANDELBROT_MIN_IM;
@@ -134,18 +128,18 @@ namespace FractalExplorer.Projects
             if (reRange > 0 && imRange > 0 && currentCRe >= MANDELBROT_MIN_RE && currentCRe <= MANDELBROT_MAX_RE &&
                 currentCIm >= MANDELBROT_MIN_IM && currentCIm <= MANDELBROT_MAX_IM)
             {
-                int markerX = (int)((currentCRe - MANDELBROT_MIN_RE) / reRange * mandelbrotPreviewCanvas.Width);
-                int markerY = (int)((MANDELBROT_MAX_IM - currentCIm) / imRange * mandelbrotPreviewCanvas.Height);
+                int markerX = (int)((currentCRe - MANDELBROT_MIN_RE) / reRange * previewCanvas.Width);
+                int markerY = (int)((MANDELBROT_MAX_IM - currentCIm) / imRange * previewCanvas.Height);
 
                 using (Pen markerPen = new Pen(Color.FromArgb(200, Color.LimeGreen), 1.5f))
                 {
-                    e.Graphics.DrawLine(markerPen, 0, markerY, mandelbrotPreviewCanvas.Width, markerY);
-                    e.Graphics.DrawLine(markerPen, markerX, 0, markerX, mandelbrotPreviewCanvas.Height);
+                    e.Graphics.DrawLine(markerPen, 0, markerY, previewCanvas.Width, markerY);
+                    e.Graphics.DrawLine(markerPen, markerX, 0, markerX, previewCanvas.Height);
                 }
             }
         }
 
-        private void mandelbrotCanvas_Click(object sender, EventArgs e)
+        private void mandelbrotCanvas_Click(object sender, System.EventArgs e)
         {
             double initialRe = (double)nudRe.Value;
             double initialIm = (double)nudIm.Value;
@@ -169,11 +163,34 @@ namespace FractalExplorer.Projects
 
         protected override string GetSaveFileNameDetails()
         {
-            // Форматируем Re и Im для имени файла
             string reStr = nudRe.Value.ToString("F15", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
             string imStr = nudIm.Value.ToString("F15", System.Globalization.CultureInfo.InvariantCulture).Replace(".", "_");
             return $"julia_re{reStr}_im{imStr}";
         }
+
+        // НОВЫЙ МЕТОД: Локальная копия функции цвета для превью
+        private Color GetPaletteMandelbrotClassicColor(int iter, int maxIter, int maxClrIter)
+        {
+            if (iter == maxIter) return Color.Black;
+            double t_classic = (double)iter / maxIter;
+            byte r, g, b;
+            if (t_classic < 0.5)
+            {
+                double t = t_classic * 2;
+                r = (byte)(t * 200);
+                g = (byte)(t * 50);
+                b = (byte)(t * 30);
+            }
+            else
+            {
+                double t = (t_classic - 0.5) * 2;
+                r = (byte)(200 + t * 55);
+                g = (byte)(50 + t * 205);
+                b = (byte)(30 + t * 225);
+            }
+            return Color.FromArgb(r, g, b);
+        }
+
         #endregion
     }
 }
