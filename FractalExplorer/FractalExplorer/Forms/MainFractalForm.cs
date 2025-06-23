@@ -1,5 +1,5 @@
 using System;
-using System.Windows.Forms; // Добавлен using для System.Windows.Forms, если он не был добавлен автоматически
+using System.Windows.Forms; // Р”РѕР±Р°РІР»РµРЅ using РґР»СЏ System.Windows.Forms, РµСЃР»Рё РѕРЅ РЅРµ Р±С‹Р» РґРѕР±Р°РІР»РµРЅ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё
 using FractalDraving;
 using FractalExplorer.Projects;
 
@@ -7,12 +7,12 @@ using FractalExplorer.Projects;
 namespace FractalExplorer
 {
     /// <summary>
-    /// Главная форма приложения, служащая хабом для запуска различных фрактальных форм.
+    /// Р“Р»Р°РІРЅР°СЏ С„РѕСЂРјР° РїСЂРёР»РѕР¶РµРЅРёСЏ, СЃР»СѓР¶Р°С‰Р°СЏ С…Р°Р±РѕРј РґР»СЏ Р·Р°РїСѓСЃРєР° СЂР°Р·Р»РёС‡РЅС‹С… С„СЂР°РєС‚Р°Р»СЊРЅС‹С… С„РѕСЂРј.
     /// </summary>
     public partial class MainFractalForm : Form
     {
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="MainFractalForm"/>.
+        /// РРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚ РЅРѕРІС‹Р№ СЌРєР·РµРјРїР»СЏСЂ РєР»Р°СЃСЃР° <see cref="MainFractalForm"/>.
         /// </summary>
         public MainFractalForm()
         {
@@ -22,32 +22,32 @@ namespace FractalExplorer
         #region Event Handlers
 
         /// <summary>
-        /// Обработчик события загрузки формы.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ Р·Р°РіСЂСѓР·РєРё С„РѕСЂРјС‹.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void MainFractalForm_Load(object sender, EventArgs e)
         {
-            // Этот метод может быть пустым, если не требуется никакой инициализации при загрузке.
+            // Р­С‚РѕС‚ РјРµС‚РѕРґ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј, РµСЃР»Рё РЅРµ С‚СЂРµР±СѓРµС‚СЃСЏ РЅРёРєР°РєРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РїСЂРё Р·Р°РіСЂСѓР·РєРµ.
         }
 
         /// <summary>
-        /// Обработчик события загрузки формы, сгенерированный дизайнером.
-        /// (Функция-заглушка, не удалять).
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ Р·Р°РіСЂСѓР·РєРё С„РѕСЂРјС‹, СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅРЅС‹Р№ РґРёР·Р°Р№РЅРµСЂРѕРј.
+        /// (Р¤СѓРЅРєС†РёСЏ-Р·Р°РіР»СѓС€РєР°, РЅРµ СѓРґР°Р»СЏС‚СЊ).
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void MainFractalForm_Load_1(object sender, EventArgs e)
         {
-            // Оставлен как заглушка, как указано в оригинале.
+            // РћСЃС‚Р°РІР»РµРЅ РєР°Рє Р·Р°РіР»СѓС€РєР°, РєР°Рє СѓРєР°Р·Р°РЅРѕ РІ РѕСЂРёРіРёРЅР°Р»Рµ.
         }
 
         /// <summary>
-        /// Обработчик события клика по кнопке "Launch Mondelbrot".
-        /// Открывает новую форму для фрактала Мандельброта.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ РєР»РёРєР° РїРѕ РєРЅРѕРїРєРµ "Launch Mondelbrot".
+        /// РћС‚РєСЂС‹РІР°РµС‚ РЅРѕРІСѓСЋ С„РѕСЂРјСѓ РґР»СЏ С„СЂР°РєС‚Р°Р»Р° РњР°РЅРґРµР»СЊР±СЂРѕС‚Р°.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void btnLaunchMondelbrot_Click(object sender, EventArgs e)
         {
             var form = new FractalMondelbrot();
@@ -55,11 +55,11 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Обработчик события клика по кнопке "Launch Julia".
-        /// Открывает новую форму для фрактала Жюлиа.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ РєР»РёРєР° РїРѕ РєРЅРѕРїРєРµ "Launch Julia".
+        /// РћС‚РєСЂС‹РІР°РµС‚ РЅРѕРІСѓСЋ С„РѕСЂРјСѓ РґР»СЏ С„СЂР°РєС‚Р°Р»Р° Р–СЋР»РёР°.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void btnLaunchJulia_Click(object sender, EventArgs e)
         {
             var form = new FractalJulia();
@@ -67,11 +67,11 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Обработчик события клика по кнопке "Launch Serpinsky".
-        /// Открывает новую форму для фрактала Серпинского.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ РєР»РёРєР° РїРѕ РєРЅРѕРїРєРµ "Launch Serpinsky".
+        /// РћС‚РєСЂС‹РІР°РµС‚ РЅРѕРІСѓСЋ С„РѕСЂРјСѓ РґР»СЏ С„СЂР°РєС‚Р°Р»Р° РЎРµСЂРїРёРЅСЃРєРѕРіРѕ.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void btnLaunchSerpinsky_Click(object sender, EventArgs e)
         {
             var form = new FractalSerpinsky();
@@ -79,11 +79,11 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Обработчик события клика по кнопке "Launch Newton".
-        /// Открывает новую форму для фрактала Ньютона.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ РєР»РёРєР° РїРѕ РєРЅРѕРїРєРµ "Launch Newton".
+        /// РћС‚РєСЂС‹РІР°РµС‚ РЅРѕРІСѓСЋ С„РѕСЂРјСѓ РґР»СЏ С„СЂР°РєС‚Р°Р»Р° РќСЊСЋС‚РѕРЅР°.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void btnLaunchNewton_Click(object sender, EventArgs e)
         {
             var form = new NewtonPools();
@@ -91,11 +91,11 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Обработчик события клика по кнопке "Launch Burning Ship Julia".
-        /// Открывает новую форму для фрактала "Пылающий корабль" Жюлиа.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ РєР»РёРєР° РїРѕ РєРЅРѕРїРєРµ "Launch Burning Ship Julia".
+        /// РћС‚РєСЂС‹РІР°РµС‚ РЅРѕРІСѓСЋ С„РѕСЂРјСѓ РґР»СЏ С„СЂР°РєС‚Р°Р»Р° "РџС‹Р»Р°СЋС‰РёР№ РєРѕСЂР°Р±Р»СЊ" Р–СЋР»РёР°.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void btnLaunchBurningShipJulia_Click(object sender, EventArgs e)
         {
             var form = new FractalJuliaBurningShip();
@@ -103,11 +103,11 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Обработчик события клика по кнопке "Launch Burning Ship Mandelbrot".
-        /// Открывает новую форму для фрактала "Пылающий корабль" Мандельброта.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕР±С‹С‚РёСЏ РєР»РёРєР° РїРѕ РєРЅРѕРїРєРµ "Launch Burning Ship Mandelbrot".
+        /// РћС‚РєСЂС‹РІР°РµС‚ РЅРѕРІСѓСЋ С„РѕСЂРјСѓ РґР»СЏ С„СЂР°РєС‚Р°Р»Р° "РџС‹Р»Р°СЋС‰РёР№ РєРѕСЂР°Р±Р»СЊ" РњР°РЅРґРµР»СЊР±СЂРѕС‚Р°.
         /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        /// <param name="sender">РСЃС‚РѕС‡РЅРёРє СЃРѕР±С‹С‚РёСЏ.</param>
+        /// <param name="e">РђСЂРіСѓРјРµРЅС‚С‹ СЃРѕР±С‹С‚РёСЏ.</param>
         private void btnLaunchBurningShipMandelbrot_Click(object sender, EventArgs e)
         {
             var form = new FractalMondelbrotBurningShip();
