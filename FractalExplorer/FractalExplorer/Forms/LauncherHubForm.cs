@@ -87,14 +87,7 @@ namespace FractalExplorer
         /// <param name="e">Аргументы события.</param>
         private void MainFractalForm_Load_1(object sender, EventArgs e)
         {
-            // Оставлен как заглушка, как указано в оригинале,
-            // но теперь мы используем MainFractalForm_Load для установки версии.
-            // Если этот обработчик назначен в дизайнере, убедитесь, что
-            // вызов DisplayAppVersionInTitle() происходит в правильном месте
-            // или перенесите логику из MainFractalForm_Load сюда, если этот используется.
-            // Для чистоты, лучше использовать только один обработчик Load.
-            // Я бы рекомендовал удалить этот (MainFractalForm_Load_1) и убедиться,
-            // что в дизайнере событие Load привязано к MainFractalForm_Load.
+
         }
 
         /// <summary>
