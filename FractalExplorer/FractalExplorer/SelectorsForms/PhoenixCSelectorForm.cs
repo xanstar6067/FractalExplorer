@@ -42,7 +42,7 @@ namespace FractalExplorer.SelectorsForms
 
         private ComplexDecimal _fixedC2;
 
-        private const int SLICE_ITERATIONS = 75;
+        private const int SLICE_ITERATIONS = 175;
         private const int RENDER_DEBOUNCE_MILLISECONDS = 300;
         private readonly PhoenixEngine _sliceRenderEngine;
         #endregion
@@ -650,7 +650,6 @@ namespace FractalExplorer.SelectorsForms
         {
             ComplexDecimal c1Result = new ComplexDecimal(nudPReal.Value, nudQImaginary.Value);
             ParametersSelected?.Invoke(c1Result, _fixedC2);
-            this.Close();
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
