@@ -1,6 +1,7 @@
 ﻿using FractalExplorer.Core;
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
+using FractalExplorer.SelectorsForms;
 using FractalExplorer.Utilities; // Предполагаем, что палитры здесь
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,7 @@ namespace FractalExplorer.Forms
         private RenderVisualizerComponent _renderVisualizer;
         private ColorPaletteMandelbrotFamily _paletteManager;
         private ColorConfigurationMandelbrotFamilyForm _colorConfigForm;
+        private PhoenixCSelectorForm _phoenixCSelectorWindow;
 
         private const int TILE_SIZE = 32;
         private readonly object _bitmapLock = new object();
@@ -777,7 +779,60 @@ namespace FractalExplorer.Forms
         #region Phoenix Specific UI
         private void btnSelectPhoenixParameters_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Окно выбора параметров C1/C2 для Феникса будет реализовано позже.", "В разработке", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // Текущие значения C1 и C2 из основной формы
+            ComplexDecimal currentC1 = new ComplexDecimal(nudC1Re.Value, nudC1Im.Value);
+            ComplexDecimal currentC2 = new ComplexDecimal(nudC2Re.Value, nudC2Im.Value);
+
+            if (_phoenixCSelectorWindow == null || _phoenixCSelectorWindow.IsDisposed)
+            {
+                _phoenixCSelectorWindow = new PhoenixCSelectorForm(this, currentC1, currentC2);
+                _phoenixCSelectorWindow.ParametersSelected += (selectedC1, selectedC2) =>
+                {
+                    // selectedC1.Real - это выбранное P.Re
+                    // selectedC1.Imaginary - это выбранное Q.Im
+
+                    // Обновляем NumericUpDown на основной форме
+                    // Важно: не вызываем ScheduleRender напрямую из этого обработчика,
+                    // так как изменение Value у NumericUpDown само вызовет ParamControl_Changed,
+                    // который уже вызовет ScheduleRender. Это предотвратит двойной рендер.
+
+                    bool c1ReChanged = false;
+                    bool c1ImChanged = false;
+
+                    if (nudC1Re.Value != selectedC1.Real)
+                    {
+                        nudC1Re.Value = selectedC1.Real;
+                        c1ReChanged = true;
+                    }
+                    if (nudC1Im.Value != selectedC1.Imaginary)
+                    {
+                        nudC1Im.Value = selectedC1.Imaginary;
+                        c1ImChanged = true;
+                    }
+
+                    // C2 мы пока не меняем в селекторе, но если бы меняли, то так:
+                    // if (nudC2Re.Value != selectedC2.Real) nudC2Re.Value = selectedC2.Real;
+                    // if (nudC2Im.Value != selectedC2.Imaginary) nudC2Im.Value = selectedC2.Imaginary;
+
+                    // Если значения не изменились, ScheduleRender не будет вызван автоматически,
+                    // но это маловероятно, если пользователь что-то выбрал.
+                    // На всякий случай, если ни одно значение C1 не изменилось, а нам все равно нужен ререндер
+                    // (например, если C2 изменилось бы), то можно было бы вызвать ScheduleRender явно.
+                    // Но в данном случае, если C1 не изменилось, то и ререндер не особо нужен.
+                };
+                _phoenixCSelectorWindow.FormClosed += (s, args) =>
+                {
+                    _phoenixCSelectorWindow.Dispose(); // Убедимся, что ресурсы освобождены
+                    _phoenixCSelectorWindow = null;
+                };
+                _phoenixCSelectorWindow.Show(this); // Показываем как немодальное окно, связанное с этой формой
+            }
+            else
+            {
+                // Если окно уже существует, просто активируем его и передаем текущие значения
+                _phoenixCSelectorWindow.SetSelectedParameters(currentC1); // Передаем только C1, так как C2 не меняется в селекторе
+                _phoenixCSelectorWindow.Activate();
+            }
         }
         #endregion
 
