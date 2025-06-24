@@ -185,7 +185,7 @@ namespace FractalExplorer.SelectorsForms
             // lblFixedQForPSlice
             // 
             lblFixedQForPSlice.AutoSize = true;
-            lblFixedQForPSlice.Location = new Point(170, 9);
+            lblFixedQForPSlice.Location = new Point(193, 9);
             lblFixedQForPSlice.Name = "lblFixedQForPSlice";
             lblFixedQForPSlice.Size = new Size(76, 15);
             lblFixedQForPSlice.TabIndex = 14;
@@ -194,7 +194,7 @@ namespace FractalExplorer.SelectorsForms
             // lblFixedPForQSlice
             // 
             lblFixedPForQSlice.AutoSize = true;
-            lblFixedPForQSlice.Location = new Point(535, 9);
+            lblFixedPForQSlice.Location = new Point(556, 9);
             lblFixedPForQSlice.Name = "lblFixedPForQSlice";
             lblFixedPForQSlice.Size = new Size(74, 15);
             lblFixedPForQSlice.TabIndex = 15;
