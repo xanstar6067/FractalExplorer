@@ -108,6 +108,7 @@ namespace FractalExplorer.Forms
 
         private void InitializeEventHandlers()
         {
+            // Подписки на изменения NumericUpDown и ComboBox (эти остаются, т.к. их нет в Designer.cs)
             nudC1Re.ValueChanged += ParamControl_Changed;
             nudC1Im.ValueChanged += ParamControl_Changed;
             nudC2Re.ValueChanged += ParamControl_Changed;
@@ -118,10 +119,14 @@ namespace FractalExplorer.Forms
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
 
-            btnSaveHighRes.Click += btnSaveHighRes_Click;
-            color_configurations.Click += color_configurations_Click;
-            btnSelectPhoenixParameters.Click += btnSelectPhoenixParameters_Click;
+            // УБИРАЕМ ПОВТОРНЫЕ ПОДПИСКИ ДЛЯ КНОПОК, так как они уже есть в Designer.cs
+            // btnSaveHighRes.Click += btnSaveHighRes_Click; 
+            // color_configurations.Click += color_configurations_Click; 
+            // btnSelectPhoenixParameters.Click += btnSelectPhoenixParameters_Click;
+            // btnRender.Click += btnRender_Click; // Также убираем, если в Designer.cs уже есть this.btnRender.Click += new System.EventHandler(this.btnRender_Click);
 
+            // Оставляем подписки, которые не генерируются дизайнером автоматически или для которых мы хотим явный контроль здесь
+            // Например, для канваса и изменения размера формы:
             canvas.MouseWheel += Canvas_MouseWheel;
             canvas.MouseDown += Canvas_MouseDown;
             canvas.MouseMove += Canvas_MouseMove;
