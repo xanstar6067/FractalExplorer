@@ -9,12 +9,12 @@ namespace FractalExplorer
     /// <summary>
     /// Главная форма приложения, служащая хабом для запуска различных фрактальных форм.
     /// </summary>
-    public partial class MainFractalForm : Form
+    public partial class LauncherHubForm : Form
     {
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="MainFractalForm"/>.
+        /// Инициализирует новый экземпляр класса <see cref="LauncherHubForm"/>.
         /// </summary>
-        public MainFractalForm()
+        public LauncherHubForm()
         {
             InitializeComponent();
         }

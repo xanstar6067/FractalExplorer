@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer
 {
-    partial class MainFractalForm
+    partial class LauncherHubForm
     {
         /// <summary>
         ///  Required designer variable.
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainFractalForm));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LauncherHubForm));
             tabPageJulia = new TabPage();
             btnLaunchBurningShipComplex = new Button();
             richTextBox2 = new RichTextBox();
