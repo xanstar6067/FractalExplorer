@@ -584,20 +584,26 @@ namespace FractalExplorer.SelectorsForms
             if (oldReRange <= 0 || oldImRange <= 0) return;
 
             double mouseReal = minRe + e.X / (double)canvas.Width * oldReRange;
-            double mouseImaginary = maxIm - e.Y / (double)canvas.Height * oldImRange;
+            double mouseImaginary = maxIm - e.Y / (double)canvas.Height * oldImRange; // Y инвертирован для отображения
 
             double newReRange = oldReRange / zoomFactor;
             double newImRange = oldImRange / zoomFactor;
 
-            const double MIN_ALLOWED_RANGE = 1e-9;
-            if (newReRange < MIN_ALLOWED_RANGE || newImRange < MIN_ALLOWED_RANGE) return;
+            const double MIN_ALLOWED_RANGE = 1e-12; // Сделаем чуть меньше, чтобы дать больше свободы зума
+            if (newReRange < MIN_ALLOWED_RANGE || newImRange < MIN_ALLOWED_RANGE ||
+                newReRange > 1e3 || newImRange > 1e3) // Ограничение на слишком большой диапазон
+            {
+                return;
+            }
 
             minRe = mouseReal - (e.X / (double)canvas.Width) * newReRange;
             maxRe = minRe + newReRange;
-            minIm = mouseImaginary - (1.0 - e.Y / (double)canvas.Height) * newImRange;
+            minIm = mouseImaginary - (1.0 - e.Y / (double)canvas.Height) * newImRange; // (1.0 - ratio) т.к. mouseImaginary уже с учетом инверсии Y
             maxIm = minIm + newImRange;
 
-            canvas.Invalidate();
+            canvas.Invalidate(); // Немедленная перерисовка текущего битмапа с новым масштабом/положением
+
+            // Запускаем отложенный рендер для обновления битмапа с высокой детализацией
             if (isPSlice) ScheduleRenderSliceP(); else ScheduleRenderSliceQ();
         }
 
@@ -610,6 +616,7 @@ namespace FractalExplorer.SelectorsForms
                 (sender as PictureBox).Cursor = Cursors.Hand;
             }
         }
+
         private void SliceCanvas_MouseMove(object sender, MouseEventArgs e, bool isPSlice)
         {
             PictureBox canvas = sender as PictureBox;
@@ -622,25 +629,39 @@ namespace FractalExplorer.SelectorsForms
             ref double minIm = ref (isPSlice ? ref _slicePMinIm : ref _sliceQMinIm);
             ref double maxIm = ref (isPSlice ? ref _slicePMaxIm : ref _sliceQMaxIm);
 
-            double rRange = maxRe - minRe; double iRange = maxIm - minIm;
+            double rRange = maxRe - minRe;
+            double iRange = maxIm - minIm;
             if (rRange <= 0 || iRange <= 0) return;
 
-            double dx = (e.X - panStart.X) * (rRange / canvas.Width);
-            double dy = (e.Y - panStart.Y) * (iRange / canvas.Height);
+            // Преобразуем смещение мыши в пикселях в смещение в комплексных координатах
+            double deltaXPixels = e.X - panStart.X;
+            double deltaYPixels = e.Y - panStart.Y;
 
-            minRe -= dx; maxRe -= dx;
-            minIm += dy; maxIm += dy; // Y-ось инвертирована
+            double deltaRe = deltaXPixels * (rRange / canvas.Width);
+            double deltaIm = deltaYPixels * (iRange / canvas.Height); // Для Y-оси экрана, направленной вниз
+
+            minRe -= deltaRe;
+            maxRe -= deltaRe;
+            minIm += deltaIm; // Если экранный Y идет вниз, а комплексный Im вверх, то при смещении мыши вниз (deltaYPixels > 0), minIm должен УВЕЛИЧИТЬСЯ
+            maxIm += deltaIm;
+
             panStart = e.Location;
 
-            canvas.Invalidate();
-            if (isPSlice) ScheduleRenderSliceP(); else ScheduleRenderSliceQ();
+            canvas.Invalidate(); // Немедленная перерисовка текущего битмапа с новым положением
+            // Полный рендер будет запущен в MouseUp
         }
+
         private void SliceCanvas_MouseUp(object sender, MouseEventArgs e, bool isPSlice)
         {
-            if (e.Button == MouseButtons.Left)
+            bool wasPanning;
+            if (isPSlice) { wasPanning = _panningSliceP; _panningSliceP = false; }
+            else { wasPanning = _panningSliceQ; _panningSliceQ = false; }
+
+            (sender as PictureBox).Cursor = Cursors.Default;
+
+            if (wasPanning) // Если было панорамирование, запускаем полный рендер
             {
-                if (isPSlice) _panningSliceP = false; else _panningSliceQ = false;
-                (sender as PictureBox).Cursor = Cursors.Default;
+                if (isPSlice) ScheduleRenderSliceP(); else ScheduleRenderSliceQ();
             }
         }
 
