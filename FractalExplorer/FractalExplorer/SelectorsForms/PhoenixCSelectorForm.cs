@@ -139,15 +139,35 @@ namespace FractalExplorer.SelectorsForms
         #region UI Update and Value Handling
         private void NudValues_Changed(object sender, EventArgs e)
         {
-            // Обновляем _currentC1_P и _currentC1_Q на основе всех nud-ов.
-            // Важно: nudPImaginary и nudQReal представляют оси, а не части фиксированных параметров.
-            _currentC1_P = new ComplexDecimal(nudPReal.Value, nudPImaginary.Value);
-            _currentC1_Q = new ComplexDecimal(nudQReal.Value, nudQImaginary.Value);
-
             UpdateFixedValueLabels();
-            // Перерисовываем маркеры на канвасах
+
+            // Перерисовываем ОБА канваса, чтобы обновить маркеры
             sliceCanvasP.Invalidate();
             sliceCanvasQ.Invalidate();
+
+            // Если изменилось значение P (nudPReal), которое используется как фиксированное для среза Q,
+            // то инициируем перерендер среза Q.
+            if (sender == nudPReal)
+            {
+                ScheduleRenderSliceQ(true); // true для немедленного рендера
+            }
+            // Если изменилось значение Q (nudQImaginary), которое используется как фиксированное для среза P,
+            // то инициируем перерендер среза P.
+            else if (sender == nudQImaginary)
+            {
+                ScheduleRenderSliceP(true);
+            }
+            // Если пользователь вручную изменил nudPImaginary или nudQReal,
+            // которые влияют на z0 при рендеринге соответствующего среза,
+            // также нужно перерендерить этот срез.
+            else if (sender == nudPImaginary) // nudPImaginary влияет на z0 для среза P
+            {
+                ScheduleRenderSliceP(true);
+            }
+            else if (sender == nudQReal) // nudQReal в текущей реализации не влияет на z0 для среза Q, но если бы влиял, то:
+            {
+                // ScheduleRenderSliceQ(true); // Если бы nudQReal влиял на z0 для среза Q
+            }
         }
 
         private void UpdateFixedValueLabels()
@@ -242,12 +262,16 @@ namespace FractalExplorer.SelectorsForms
 
             int w = sliceCanvasP.Width;
             int h = sliceCanvasP.Height;
-            double minR = _slicePMinRe; double maxR = _slicePMaxRe;
-            double minI = _slicePMinIm; double maxI = _slicePMaxIm;
-            ComplexDecimal fixedQValue = new ComplexDecimal(nudQReal.Value, nudQImaginary.Value);
+            double minR_axis = _slicePMinRe; // Диапазон для Re(P) - ось X
+            double maxR_axis = _slicePMaxRe;
+            double minI_axis = _slicePMinIm; // Диапазон для Im(P) - ось Y
+            double maxI_axis = _slicePMaxIm;
+
+            // Q фиксировано: берем компоненты из соответствующих NumericUpDown
+            ComplexDecimal fixedQ_for_slice = new ComplexDecimal(nudQReal.Value, nudQImaginary.Value);
 
             _sliceRenderEngine.Palette = GetClassicPalette();
-            _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS; // Для градиентной палитры "Классика"
+            _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS;
 
             Bitmap newBitmap = null;
             try
@@ -259,19 +283,48 @@ namespace FractalExplorer.SelectorsForms
                     byte[] buffer = new byte[Math.Abs(bmpData.Stride) * h];
                     long renderedPixels = 0;
 
-                    Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y =>
+                    Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y_pixel =>
                     {
                         if (token.IsCancellationRequested) return;
-                        for (int x = 0; x < w; x++)
+                        for (int x_pixel = 0; x_pixel < w; x_pixel++)
                         {
-                            decimal pRe = (decimal)(minR + x * (maxR - minR) / w);
-                            decimal pIm = (decimal)(maxI - y * (maxI - minI) / h); // Y инвертирован
-                            ComplexDecimal currentP = new ComplexDecimal(pRe, pIm);
+                            // Преобразуем пиксельные координаты в значения для P
+                            decimal pRe_val = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
+                            decimal pIm_val = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h); // Y инвертирован
 
-                            // z_start (0,0) для генерации карты параметров
-                            int iter = _sliceRenderEngine.CalculateIterations(ComplexDecimal.Zero, ComplexDecimal.Zero, currentP, fixedQValue);
+                            ComplexDecimal currentP_param = new ComplexDecimal(pRe_val, pIm_val);
+
+                            // Формируем C1 для движка: C1.Real = P.Re, C1.Imaginary = Q.Im (если Q скаляр, или Q.Re если P.Im=0)
+                            // В нашем движке C1.Real = P, C1.Imaginary = Q.
+                            // P у нас комплексное (currentP_param). Q у нас комплексное (fixedQ_for_slice).
+                            // Это не соответствует формуле с скалярными P и Q.
+                            // Формула в движке: x_next = z_curr.Re^2 - z_curr.Im^2 + C1.Real + C1.Imaginary * z_prev.Re;
+                            //                                                        P_scalar  Q_scalar
+                            // Значит, C1.Real должен быть P, а C1.Imaginary должен быть Q.
+                            // Если мы рендерим срез по P (currentP_param), то P должен быть скаляром pRe_val (X-ось).
+                            // А pIm_val (Y-ось) может влиять на z0 или быть проигнорирован для выбора P.
+                            // Для простоты, пусть P = pRe_val, а Q = fixedQ_for_slice.Imaginary (скаляр).
+                            // Если мы хотим 2D срез для P, то P само должно быть комплексным в формуле.
+
+                            // ИСПРАВЛЕНИЕ ЛОГИКИ:
+                            // Для среза P, мы перебираем pRe_val (ось X) и pIm_val (ось Y).
+                            // Эти два значения вместе формируют *скаляр P* и *скаляр Q* для передачи в движок.
+                            // Например: P = pRe_val, Q = pIm_val. Это один вариант.
+                            // Или: P = pRe_val, а Q фиксировано (из nudQImaginary.Value). pIm_val (ось Y) влияет на z0.Im.
+                            //
+                            // Давай придерживаться идеи, что sliceCanvasP выбирает P (скаляр) и sliceCanvasQ выбирает Q (скаляр).
+                            // Ось X канваса P = значение P. Ось Y канваса P = Im(z0).
+                            // Ось X канваса Q = значение Q. Ось Y канваса Q = Im(z0).
+
+                            decimal p_scalar_for_engine = pRe_val; // P берем с X-оси среза P
+                            decimal q_scalar_for_engine = fixedQ_for_slice.Imaginary; // Q берем из фиксированного значения (компонента Q)
+
+                            ComplexDecimal c1_engine_param = new ComplexDecimal(p_scalar_for_engine, q_scalar_for_engine);
+                            ComplexDecimal z0_for_slice = new ComplexDecimal(0, pIm_val); // Y-ось среза P влияет на Im(z0)
+
+                            int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
                             Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
-                            int idx = y * bmpData.Stride + x * 3;
+                            int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B; buffer[idx + 1] = c.G; buffer[idx + 2] = c.R;
                         }
                         long currentProgress = Interlocked.Increment(ref renderedPixels);
@@ -289,15 +342,15 @@ namespace FractalExplorer.SelectorsForms
                     sliceCanvasP.Invoke((Action)(() => {
                         _slicePBitmap?.Dispose();
                         _slicePBitmap = newBitmap;
-                        _renderedSlicePMinRe = minR; _renderedSlicePMaxRe = maxR;
-                        _renderedSlicePMinIm = minI; _renderedSlicePMaxIm = maxI;
+                        _renderedSlicePMinRe = minR_axis; _renderedSlicePMaxRe = maxR_axis;
+                        _renderedSlicePMinIm = minI_axis; _renderedSlicePMaxIm = maxI_axis;
                         sliceCanvasP.Invalidate();
                     }));
                 }
                 else { newBitmap?.Dispose(); }
             }
             catch (OperationCanceledException) { newBitmap?.Dispose(); }
-            catch (Exception ex) { newBitmap?.Dispose(); MessageBox.Show($"Ошибка рендера среза P: {ex.Message}"); }
+            catch (Exception ex) { newBitmap?.Dispose(); MessageBox.Show($"Ошибка рендера среза P: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             finally
             {
                 _isRenderingSliceP = false;
@@ -319,9 +372,13 @@ namespace FractalExplorer.SelectorsForms
 
             int w = sliceCanvasQ.Width;
             int h = sliceCanvasQ.Height;
-            double minR = _sliceQMinRe; double maxR = _sliceQMaxRe;
-            double minI = _sliceQMinIm; double maxI = _sliceQMaxIm;
-            ComplexDecimal fixedPValue = new ComplexDecimal(nudPReal.Value, nudPImaginary.Value);
+            double minR_axis = _sliceQMinRe; // Диапазон для Re(Q) - ось X
+            double maxR_axis = _sliceQMaxRe;
+            double minI_axis = _sliceQMinIm; // Диапазон для Im(Q) - ось Y
+            double maxI_axis = _sliceQMaxIm;
+
+            // P фиксировано: берем компоненты из соответствующих NumericUpDown
+            ComplexDecimal fixedP_for_slice = new ComplexDecimal(nudPReal.Value, nudPImaginary.Value);
 
             _sliceRenderEngine.Palette = GetClassicPalette();
             _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS;
@@ -336,17 +393,28 @@ namespace FractalExplorer.SelectorsForms
                     byte[] buffer = new byte[Math.Abs(bmpData.Stride) * h];
                     long renderedPixels = 0;
 
-                    Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y =>
+                    Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y_pixel =>
                     {
                         if (token.IsCancellationRequested) return;
-                        for (int x = 0; x < w; x++)
+                        for (int x_pixel = 0; x_pixel < w; x_pixel++)
                         {
-                            decimal qRe = (decimal)(minR + x * (maxR - minR) / w);
-                            decimal qIm = (decimal)(maxI - y * (maxI - minI) / h);
-                            ComplexDecimal currentQ = new ComplexDecimal(qRe, qIm);
-                            int iter = _sliceRenderEngine.CalculateIterations(ComplexDecimal.Zero, ComplexDecimal.Zero, fixedPValue, currentQ);
+                            // Преобразуем пиксельные координаты в значения для Q
+                            decimal qRe_val = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
+                            decimal qIm_val = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h); // Y инвертирован
+
+                            // ИСПРАВЛЕНИЕ ЛОГИКИ:
+                            // P = fixedP_for_slice.Real (скаляр)
+                            // Q = qRe_val (скаляр, с X-оси среза Q)
+                            // Y-ось среза Q (qIm_val) влияет на z0.Im
+                            decimal p_scalar_for_engine = fixedP_for_slice.Real;
+                            decimal q_scalar_for_engine = qRe_val;
+
+                            ComplexDecimal c1_engine_param = new ComplexDecimal(p_scalar_for_engine, q_scalar_for_engine);
+                            ComplexDecimal z0_for_slice = new ComplexDecimal(0, qIm_val); // Y-ось среза Q влияет на Im(z0)
+
+                            int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
                             Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
-                            int idx = y * bmpData.Stride + x * 3;
+                            int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B; buffer[idx + 1] = c.G; buffer[idx + 2] = c.R;
                         }
                         long currentProgress = Interlocked.Increment(ref renderedPixels);
@@ -364,15 +432,15 @@ namespace FractalExplorer.SelectorsForms
                     sliceCanvasQ.Invoke((Action)(() => {
                         _sliceQBitmap?.Dispose();
                         _sliceQBitmap = newBitmap;
-                        _renderedSliceQMinRe = minR; _renderedSliceQMaxRe = maxR;
-                        _renderedSliceQMinIm = minI; _renderedSliceQMaxIm = maxI;
+                        _renderedSliceQMinRe = minR_axis; _renderedSliceQMaxRe = maxR_axis;
+                        _renderedSliceQMinIm = minI_axis; _renderedSliceQMaxIm = maxI_axis;
                         sliceCanvasQ.Invalidate();
                     }));
                 }
                 else { newBitmap?.Dispose(); }
             }
             catch (OperationCanceledException) { newBitmap?.Dispose(); }
-            catch (Exception ex) { newBitmap?.Dispose(); MessageBox.Show($"Ошибка рендера среза Q: {ex.Message}"); }
+            catch (Exception ex) { newBitmap?.Dispose(); MessageBox.Show($"Ошибка рендера среза Q: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             finally
             {
                 _isRenderingSliceQ = false;
