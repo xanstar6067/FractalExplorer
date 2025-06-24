@@ -42,7 +42,7 @@ namespace FractalExplorer.SelectorsForms
 
         private ComplexDecimal _fixedC2;
 
-        private const int SLICE_ITERATIONS = 175;
+        private const int SLICE_ITERATIONS = 275;
         private const int RENDER_DEBOUNCE_MILLISECONDS = 300;
         private readonly PhoenixEngine _sliceRenderEngine;
         #endregion
@@ -58,8 +58,8 @@ namespace FractalExplorer.SelectorsForms
             _ownerForm = owner;
 
             nudPReal.Value = initialC1.Real;
-            nudPImaginary.Value = 0; // Используется как Im(z0) для среза P
-            nudQReal.Value = 0;      // Используется как Im(z0) для среза Q (если Q скаляр, или Re(z0) если Q комплексное)
+            nudPImaginary.Value = 0;
+            nudQReal.Value = 0;
             nudQImaginary.Value = initialC1.Imaginary;
 
             _fixedC2 = initialC2;
@@ -68,7 +68,9 @@ namespace FractalExplorer.SelectorsForms
             {
                 MaxIterations = SLICE_ITERATIONS,
                 ThresholdSquared = 4.0m,
-                C2 = _fixedC2
+                C2 = _fixedC2,
+                Palette = GetSliceRenderPalette(), // Устанавливаем палитру здесь
+                MaxColorIterations = SLICE_ITERATIONS // Для серой палитры это будет использоваться как maxClrIter
             };
 
             SetupSliceCanvasEvents(sliceCanvasP, true);
@@ -96,7 +98,6 @@ namespace FractalExplorer.SelectorsForms
             _renderedSliceQMinRe = _sliceQMinRe; _renderedSliceQMaxRe = _sliceQMaxRe;
             _renderedSliceQMinIm = _sliceQMinIm; _renderedSliceQMaxIm = _sliceQMaxIm;
 
-            // Запускаем начальный рендер через таймеры, чтобы гарантировать, что форма видима
             _renderDebounceTimerSliceP.Start();
             _renderDebounceTimerSliceQ.Start();
         }
@@ -129,23 +130,22 @@ namespace FractalExplorer.SelectorsForms
             sliceCanvasP.Invalidate();
             sliceCanvasQ.Invalidate();
 
-            if (sender == nudPReal) // P изменился, перерендерить Q-срез, который от него зависит
+            if (sender == nudPReal)
             {
                 _renderDebounceTimerSliceQ.Stop(); _renderDebounceTimerSliceQ.Start();
             }
-            else if (sender == nudQImaginary) // Q изменился, перерендерить P-срез
+            else if (sender == nudQImaginary)
             {
                 _renderDebounceTimerSliceP.Stop(); _renderDebounceTimerSliceP.Start();
             }
-            else if (sender == nudPImaginary) // Im(z0) для среза P изменился
+            else if (sender == nudPImaginary)
             {
                 _renderDebounceTimerSliceP.Stop(); _renderDebounceTimerSliceP.Start();
             }
-            else if (sender == nudQReal) // Im(z0) для среза Q изменился (если nudQReal используется для z0.Im среза Q)
+            else if (sender == nudQReal)
             {
-                // В текущей логике RenderSliceQAsync nudQReal не используется для z0.Im, там qIm_val (Y-ось)
-                // Если бы nudQReal влиял на вид среза Q (например, на Re(z0)), то:
-                // _renderDebounceTimerSliceQ.Stop(); _renderDebounceTimerSliceQ.Start();
+                // Если nudQReal используется для z0.Im среза Q (в RenderSliceQAsync сейчас используется qIm_val - Y-ось канваса)
+                // Если бы он влиял, то: _renderDebounceTimerSliceQ.Stop(); _renderDebounceTimerSliceQ.Start();
             }
         }
 
@@ -163,19 +163,16 @@ namespace FractalExplorer.SelectorsForms
             if (nudPReal.Value != c1FromOwner.Real)
             {
                 nudPReal.Value = c1FromOwner.Real;
-                triggerRenderQ = true; // P изменился, влияет на Q-срез
+                triggerRenderQ = true;
             }
             if (nudQImaginary.Value != c1FromOwner.Imaginary)
             {
                 nudQImaginary.Value = c1FromOwner.Imaginary;
-                triggerRenderP = true; // Q изменился, влияет на P-срез
+                triggerRenderP = true;
             }
 
-            // nudPImaginary и nudQReal не меняются извне этим методом,
-            // они управляются кликами по срезам или ручным вводом в селекторе
-
-            UpdateFixedValueLabels(); // Обновит метки
-            sliceCanvasP.Invalidate(); // Обновит маркеры
+            UpdateFixedValueLabels();
+            sliceCanvasP.Invalidate();
             sliceCanvasQ.Invalidate();
 
             if (triggerRenderP) { _renderDebounceTimerSliceP.Stop(); _renderDebounceTimerSliceP.Start(); }
@@ -183,40 +180,18 @@ namespace FractalExplorer.SelectorsForms
         }
         #endregion
 
-        #region Rendering Slices (RenderSlicePAsync, RenderSliceQAsync, GetClassicPalette, LerpColor)
-        // Эти методы остаются такими же, как в предыдущем ответе, с исправленной логикой
-        // передачи p_scalar_for_engine, q_scalar_for_engine и z0_for_slice.
-        // Я не буду их здесь дублировать для краткости, но они должны быть в этом файле.
-        // Важно: Убедись, что в RenderSlicePAsync используется fixedQ_scalar = nudQImaginary.Value;
-        //        А в RenderSliceQAsync используется fixedP_scalar = nudPReal.Value;
-
-        private Func<int, int, int, Color> GetClassicPalette()
+        #region Rendering Slices
+        private Func<int, int, int, Color> GetSliceRenderPalette()
         {
-            var classicColors = new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) };
-            int colorCount = classicColors.Count;
-
-            return (iter, maxIter, maxColorIterParam) =>
+            return (iter, maxIter, maxClrIter) =>
             {
                 if (iter == maxIter) return Color.Black;
-                if (maxColorIterParam <= 1) return classicColors[0];
+                if (maxClrIter <= 0) return Color.Gray;
 
-                double t = (double)Math.Min(iter, maxColorIterParam - 1) / (maxColorIterParam - 1);
-                double scaledT = t * (colorCount - 1);
-                int index1 = (int)Math.Floor(scaledT);
-                int index2 = Math.Min(index1 + 1, colorCount - 1);
-                double localT = scaledT - index1;
-                index1 = Math.Max(0, Math.Min(index1, colorCount - 1));
-                index2 = Math.Max(0, Math.Min(index2, colorCount - 1));
-
-                // Clamp color components
-                Color c1 = classicColors[index1];
-                Color c2 = classicColors[index2];
-                return Color.FromArgb(
-                    ClampColorComponent((int)(c1.A + (c2.A - c1.A) * localT)),
-                    ClampColorComponent((int)(c1.R + (c2.R - c1.R) * localT)),
-                    ClampColorComponent((int)(c1.G + (c2.G - c1.G) * localT)),
-                    ClampColorComponent((int)(c1.B + (c2.B - c1.B) * localT))
-                );
+                double tLog = Math.Log(Math.Min(iter, maxClrIter) + 1) / Math.Log(maxClrIter + 1);
+                int cValRaw = (int)(255.0 * (1 - tLog));
+                int cVal = ClampColorComponent(cValRaw);
+                return Color.FromArgb(cVal, cVal, cVal);
             };
         }
         private static int ClampColorComponent(int component)
@@ -226,12 +201,11 @@ namespace FractalExplorer.SelectorsForms
             return component;
         }
 
-
         private async Task RenderSlicePAsync()
         {
             if (_isRenderingSliceP || sliceCanvasP.Width <= 0 || sliceCanvasP.Height <= 0) return;
             _isRenderingSliceP = true;
-            _ctsSliceP?.Cancel(); // Отменяем предыдущий рендер, если он был
+            _ctsSliceP?.Cancel();
             _ctsSliceP = new CancellationTokenSource();
             var token = _ctsSliceP.Token;
 
@@ -245,10 +219,9 @@ namespace FractalExplorer.SelectorsForms
             double minI_axis = _slicePMinIm;
             double maxI_axis = _slicePMaxIm;
 
-            decimal fixedQ_scalar = nudQImaginary.Value; // Q фиксировано
+            decimal fixedQ_scalar = nudQImaginary.Value;
 
-            _sliceRenderEngine.Palette = GetClassicPalette();
-            _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS;
+            // Палитра и MaxColorIterations уже установлены в _sliceRenderEngine в конструкторе
 
             Bitmap newBitmap = null;
             try
@@ -272,7 +245,7 @@ namespace FractalExplorer.SelectorsForms
                             ComplexDecimal z0_for_slice = new ComplexDecimal(0, z0_im_for_slice_visual);
 
                             int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
-                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
+                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS); // Используем палитру из движка
                             int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B; buffer[idx + 1] = c.G; buffer[idx + 2] = c.R;
                         }
@@ -326,10 +299,9 @@ namespace FractalExplorer.SelectorsForms
             double minI_axis = _sliceQMinIm;
             double maxI_axis = _sliceQMaxIm;
 
-            decimal fixedP_scalar = nudPReal.Value; // P фиксировано
+            decimal fixedP_scalar = nudPReal.Value;
 
-            _sliceRenderEngine.Palette = GetClassicPalette();
-            _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS;
+            // Палитра и MaxColorIterations уже установлены в _sliceRenderEngine
 
             Bitmap newBitmap = null;
             try
@@ -353,7 +325,7 @@ namespace FractalExplorer.SelectorsForms
                             ComplexDecimal z0_for_slice = new ComplexDecimal(0, z0_im_for_slice_visual);
 
                             int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
-                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
+                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS); // Используем палитру из движка
                             int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B; buffer[idx + 1] = c.G; buffer[idx + 2] = c.R;
                         }
@@ -426,13 +398,13 @@ namespace FractalExplorer.SelectorsForms
             }
 
             float offsetX = (float)((renderedMinRe - currentMinRe) / currentComplexWidth * canvas.Width);
-            float offsetY = (float)((currentMaxIm - renderedMaxIm) / currentComplexHeight * canvas.Height); // Y инвертирован
+            float offsetY = (float)((currentMaxIm - renderedMaxIm) / currentComplexHeight * canvas.Height);
             float destWidthPixels = (float)(renderedComplexWidth / currentComplexWidth * canvas.Width);
             float destHeightPixels = (float)(renderedComplexHeight / currentComplexHeight * canvas.Height);
 
             if (destWidthPixels > 0 && destHeightPixels > 0)
             {
-                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor; // Для пиксельных фракталов
+                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
                 e.Graphics.DrawImage(bmpToDraw, new RectangleF(offsetX, offsetY, destWidthPixels, destHeightPixels));
             }
             else
@@ -447,21 +419,21 @@ namespace FractalExplorer.SelectorsForms
             decimal valX_axis;
             decimal valY_axis_z0_Im;
 
-            double minX_map, maxX_map; // Диапазон для X-оси карты (P или Q)
-            double minY_map, maxY_map; // Диапазон для Y-оси карты (z0.Im)
+            double minX_map, maxX_map;
+            double minY_map, maxY_map;
 
 
             if (isPSliceTarget)
             {
-                valX_axis = nudPReal.Value;         // Значение P (скаляр)
-                valY_axis_z0_Im = nudPImaginary.Value; // Значение Im(z0) для этого среза
+                valX_axis = nudPReal.Value;
+                valY_axis_z0_Im = nudPImaginary.Value;
                 minX_map = _slicePMinRe; maxX_map = _slicePMaxRe;
                 minY_map = _slicePMinIm; maxY_map = _slicePMaxIm;
             }
             else
             {
-                valX_axis = nudQImaginary.Value;    // Значение Q (скаляр)
-                valY_axis_z0_Im = nudQReal.Value;   // Значение Im(z0) для этого среза (здесь nudQReal.Value используется для z0.Im среза Q)
+                valX_axis = nudQImaginary.Value;
+                valY_axis_z0_Im = nudQReal.Value;    // Здесь nudQReal используется для z0.Im среза Q
                 minX_map = _sliceQMinRe; maxX_map = _sliceQMaxRe;
                 minY_map = _sliceQMinIm; maxY_map = _sliceQMaxIm;
             }
@@ -471,10 +443,8 @@ namespace FractalExplorer.SelectorsForms
 
             if (xRange_map > 0 && yRange_map > 0 && canvas.Width > 0 && canvas.Height > 0)
             {
-                // Преобразуем значение X-оси (P или Q) в пиксельную координату X
                 int markerX_pixel = (int)(((double)valX_axis - minX_map) / xRange_map * canvas.Width);
-                // Преобразуем значение Y-оси (z0.Im) в пиксельную координату Y
-                int markerY_pixel = (int)((maxY_map - (double)valY_axis_z0_Im) / yRange_map * canvas.Height); // Y инвертирован
+                int markerY_pixel = (int)((maxY_map - (double)valY_axis_z0_Im) / yRange_map * canvas.Height);
 
                 int size = 7;
                 using (Pen p = new Pen(Color.LimeGreen, 2))
@@ -490,9 +460,9 @@ namespace FractalExplorer.SelectorsForms
             PictureBox canvas = sender as PictureBox;
             if (e.Button != MouseButtons.Left || canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            double currentMinRe_map = isPSliceTarget ? _slicePMinRe : _sliceQMinRe; // X-ось карты
+            double currentMinRe_map = isPSliceTarget ? _slicePMinRe : _sliceQMinRe;
             double currentMaxRe_map = isPSliceTarget ? _slicePMaxRe : _sliceQMaxRe;
-            double currentMinIm_map = isPSliceTarget ? _slicePMinIm : _sliceQMinIm; // Y-ось карты (z0.Im)
+            double currentMinIm_map = isPSliceTarget ? _slicePMinIm : _sliceQMinIm;
             double currentMaxIm_map = isPSliceTarget ? _slicePMaxIm : _sliceQMaxIm;
 
             double xRange_map = currentMaxRe_map - currentMinRe_map;
@@ -510,17 +480,15 @@ namespace FractalExplorer.SelectorsForms
 
             if (isPSliceTarget)
             {
-                nudPReal.Value = selectedValueOnXAxis;         // Устанавливаем P
-                nudPImaginary.Value = selectedValueOnYAxis_for_z0Im; // Устанавливаем Im(z0) для среза P
+                nudPReal.Value = selectedValueOnXAxis;
+                nudPImaginary.Value = selectedValueOnYAxis_for_z0Im;
             }
             else
             {
-                nudQImaginary.Value = selectedValueOnXAxis;      // Устанавливаем Q
-                nudQReal.Value = selectedValueOnYAxis_for_z0Im;    // Устанавливаем Im(z0) для среза Q (здесь nudQReal хранит это значение)
+                nudQImaginary.Value = selectedValueOnXAxis;
+                nudQReal.Value = selectedValueOnYAxis_for_z0Im;
             }
-            // NudValues_Changed вызовется автоматически, обновит лейблы, маркеры и запустит ререндер нужных срезов.
         }
-
 
         private void SliceCanvas_MouseWheel(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
