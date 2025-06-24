@@ -1,8 +1,6 @@
-using System;
 using System.Reflection; // Для доступа к атрибутам сборки
-using System.Windows.Forms;
-using FractalDraving; // Если FractalMondelbrot, FractalJulia и т.д. в этом namespace
-using FractalExplorer.Projects; // Или где находятся ваши классы FractalMondelbrot, FractalJulia и т.д.
+using FractalExplorer.Forms;
+using FractalExplorer.Projects; 
 
 namespace FractalExplorer
 {
@@ -30,7 +28,7 @@ namespace FractalExplorer
         /// <param name="e">Аргументы события.</param>
         private void MainFractalForm_Load(object sender, EventArgs e)
         {
-            
+
         }
 
         /// <summary>
@@ -168,6 +166,19 @@ namespace FractalExplorer
         private void btnLaunchBurningShipMandelbrot_Click(object sender, EventArgs e)
         {
             var form = new FractalMondelbrotBurningShip();
+            form.Show();
+        }
+
+
+        /// <summary>
+        /// Обработчик события клика по кнопке "Launch Phoenix".
+        /// Открывает новую форму для фрактала Феникс.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
+        private void btnLaunchPhoenix_Click(object sender, EventArgs e)
+        {
+            var form = new FractalPhoenixForm();
             form.Show();
         }
 

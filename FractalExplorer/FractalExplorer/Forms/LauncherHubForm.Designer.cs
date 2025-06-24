@@ -34,6 +34,7 @@
             richTextBox2 = new RichTextBox();
             btnLaunchJulia = new Button();
             tabPageMandelbrot = new TabPage();
+            button1 = new Button();
             richTextBox1 = new RichTextBox();
             btnLaunchMondelbrot = new Button();
             tabControlFractals = new TabControl();
@@ -43,12 +44,15 @@
             tabPageNewtonPools = new TabPage();
             richTextBox4 = new RichTextBox();
             btnLaunchNewton = new Button();
-            button1 = new Button();
+            tabPagePhoenix = new TabPage();
+            richTextBox5 = new RichTextBox();
+            btnLaunchPhoenix = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
             tabPageSerpinsky.SuspendLayout();
             tabPageNewtonPools.SuspendLayout();
+            tabPagePhoenix.SuspendLayout();
             SuspendLayout();
             // 
             // tabPageJulia
@@ -108,6 +112,16 @@
             tabPageMandelbrot.Text = "Множество Мандельброта";
             tabPageMandelbrot.UseVisualStyleBackColor = true;
             // 
+            // button1
+            // 
+            button1.Location = new Point(8, 76);
+            button1.Name = "button1";
+            button1.Size = new Size(131, 55);
+            button1.TabIndex = 3;
+            button1.Text = "Запустить\r\nГорящий корабль";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += btnLaunchBurningShipMandelbrot_Click;
+            // 
             // richTextBox1
             // 
             richTextBox1.BackColor = SystemColors.Window;
@@ -137,6 +151,7 @@
             tabControlFractals.Controls.Add(tabPageJulia);
             tabControlFractals.Controls.Add(tabPageSerpinsky);
             tabControlFractals.Controls.Add(tabPageNewtonPools);
+            tabControlFractals.Controls.Add(tabPagePhoenix);
             tabControlFractals.Dock = DockStyle.Right;
             tabControlFractals.Font = new Font("Segoe UI", 10F);
             tabControlFractals.Location = new Point(0, 0);
@@ -215,17 +230,42 @@
             btnLaunchNewton.UseVisualStyleBackColor = true;
             btnLaunchNewton.Click += btnLaunchNewton_Click;
             // 
-            // button1
+            // tabPagePhoenix
             // 
-            button1.Location = new Point(8, 76);
-            button1.Name = "button1";
-            button1.Size = new Size(131, 55);
-            button1.TabIndex = 3;
-            button1.Text = "Запустить\r\nГорящий корабль";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += btnLaunchBurningShipMandelbrot_Click;
+            tabPagePhoenix.Controls.Add(richTextBox5);
+            tabPagePhoenix.Controls.Add(btnLaunchPhoenix);
+            tabPagePhoenix.Location = new Point(4, 26);
+            tabPagePhoenix.Name = "tabPagePhoenix";
+            tabPagePhoenix.Padding = new Padding(3);
+            tabPagePhoenix.Size = new Size(792, 195);
+            tabPagePhoenix.TabIndex = 4;
+            tabPagePhoenix.Text = "Феникс";
+            tabPagePhoenix.UseVisualStyleBackColor = true;
             // 
-            // MainFractalForm
+            // richTextBox5
+            // 
+            richTextBox5.BackColor = SystemColors.Window;
+            richTextBox5.BorderStyle = BorderStyle.None;
+            richTextBox5.Dock = DockStyle.Right;
+            richTextBox5.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
+            richTextBox5.Location = new Point(184, 3);
+            richTextBox5.Name = "richTextBox5";
+            richTextBox5.ReadOnly = true;
+            richTextBox5.Size = new Size(605, 189);
+            richTextBox5.TabIndex = 8;
+            richTextBox5.Text = "Погрузитесь в Phoenix \n\nОсобенности:\n";
+            // 
+            // btnLaunchPhoenix
+            // 
+            btnLaunchPhoenix.Location = new Point(8, 15);
+            btnLaunchPhoenix.Name = "btnLaunchPhoenix";
+            btnLaunchPhoenix.Size = new Size(131, 44);
+            btnLaunchPhoenix.TabIndex = 7;
+            btnLaunchPhoenix.Text = "Запустить";
+            btnLaunchPhoenix.UseVisualStyleBackColor = true;
+            btnLaunchPhoenix.Click += btnLaunchPhoenix_Click;
+            // 
+            // LauncherHubForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -233,7 +273,7 @@
             Controls.Add(tabControlFractals);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
-            Name = "MainFractalForm";
+            Name = "LauncherHubForm";
             Text = "Менеджер фракталов";
             Load += MainFractalForm_Load_1;
             tabPageJulia.ResumeLayout(false);
@@ -241,6 +281,7 @@
             tabControlFractals.ResumeLayout(false);
             tabPageSerpinsky.ResumeLayout(false);
             tabPageNewtonPools.ResumeLayout(false);
+            tabPagePhoenix.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -261,5 +302,8 @@
         private Button btnLaunchNewton;
         private Button btnLaunchBurningShipComplex;
         private Button button1;
+        private TabPage tabPagePhoenix;
+        private RichTextBox richTextBox5;
+        private Button btnLaunchPhoenix;
     }
 }
