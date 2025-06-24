@@ -6,17 +6,16 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using FractalExplorer.Engines; // Для PhoenixEngine и ComplexDecimal
-using FractalExplorer.Resources; // Для IFractalForm (если понадобится для LoupeZoom)
+using FractalExplorer.Engines;
+using FractalExplorer.Resources;
 
 namespace FractalExplorer.SelectorsForms
 {
     public partial class PhoenixCSelectorForm : Form
     {
         #region Fields
-        private readonly FractalExplorer.Forms.FractalPhoenixForm _ownerForm; // Ссылка на основную форму
+        private readonly FractalExplorer.Forms.FractalPhoenixForm _ownerForm;
 
-        // Параметры для среза по P (Q фиксировано)
         private Bitmap _slicePBitmap;
         private double _slicePMinRe = -2.0;
         private double _slicePMaxRe = 2.0;
@@ -29,7 +28,6 @@ namespace FractalExplorer.SelectorsForms
         private volatile bool _isRenderingSliceP = false;
         private System.Windows.Forms.Timer _renderDebounceTimerSliceP;
 
-        // Параметры для среза по Q (P фиксировано)
         private Bitmap _sliceQBitmap;
         private double _sliceQMinRe = -2.0;
         private double _sliceQMaxRe = 2.0;
@@ -42,21 +40,15 @@ namespace FractalExplorer.SelectorsForms
         private volatile bool _isRenderingSliceQ = false;
         private System.Windows.Forms.Timer _renderDebounceTimerSliceQ;
 
-
-        private ComplexDecimal _currentC1_P; // Текущий P = (nudPReal, nudPImaginary)
-        private ComplexDecimal _currentC1_Q; // Текущий Q = (nudQReal, nudQImaginary)
-        // C2 берем из основной формы и не меняем в селекторе
         private ComplexDecimal _fixedC2;
 
-        private const int SLICE_ITERATIONS = 75; // Итерации для рендера срезов
+        private const int SLICE_ITERATIONS = 75;
         private const int RENDER_DEBOUNCE_MILLISECONDS = 300;
-
-        // Движок для рендеринга срезов
         private readonly PhoenixEngine _sliceRenderEngine;
         #endregion
 
         #region Events
-        public event Action<ComplexDecimal, ComplexDecimal> ParametersSelected; // C1, C2
+        public event Action<ComplexDecimal, ComplexDecimal> ParametersSelected;
         #endregion
 
         #region Constructor
@@ -64,16 +56,10 @@ namespace FractalExplorer.SelectorsForms
         {
             InitializeComponent();
             _ownerForm = owner;
-            _currentC1_P = new ComplexDecimal(initialC1.Real, 0); // Для среза P, P.Im будет второй осью
-            _currentC1_Q = new ComplexDecimal(0, initialC1.Imaginary); // Для среза Q, Q.Re будет второй осью
-            // Более точно:
-            // _currentC1_P - это будет сам параметр P, который мы выбираем на sliceCanvasP. Его Re и Im - это оси.
-            // _currentC1_Q - это будет сам параметр Q, который мы выбираем на sliceCanvasQ. Его Re и Im - это оси.
 
-            // Инициализируем NumericUpDowns из initialC1
             nudPReal.Value = initialC1.Real;
-            nudPImaginary.Value = 0; // Это будет ось Y для среза P
-            nudQReal.Value = 0;      // Это будет ось X для среза Q
+            nudPImaginary.Value = 0; // Используется как Im(z0) для среза P
+            nudQReal.Value = 0;      // Используется как Im(z0) для среза Q (если Q скаляр, или Re(z0) если Q комплексное)
             nudQImaginary.Value = initialC1.Imaginary;
 
             _fixedC2 = initialC2;
@@ -81,26 +67,23 @@ namespace FractalExplorer.SelectorsForms
             _sliceRenderEngine = new PhoenixEngine
             {
                 MaxIterations = SLICE_ITERATIONS,
-                ThresholdSquared = 4.0m, // Стандартный порог
-                // Палитру установим при рендере
-                C2 = _fixedC2 // C2 фиксирован для рендера срезов
+                ThresholdSquared = 4.0m,
+                C2 = _fixedC2
             };
 
-            SetupSliceCanvas(sliceCanvasP, ref _renderedSlicePMinRe, ref _renderedSlicePMaxRe, ref _renderedSlicePMinIm, ref _renderedSlicePMaxIm, progressBarSliceP);
-            SetupSliceCanvas(sliceCanvasQ, ref _renderedSliceQMinRe, ref _renderedSliceQMaxRe, ref _renderedSliceQMinIm, ref _renderedSliceQMaxIm, progressBarSliceQ);
+            SetupSliceCanvasEvents(sliceCanvasP, true);
+            SetupSliceCanvasEvents(sliceCanvasQ, false);
 
             _renderDebounceTimerSliceP = new System.Windows.Forms.Timer { Interval = RENDER_DEBOUNCE_MILLISECONDS };
-            _renderDebounceTimerSliceP.Tick += (s, e) => ScheduleRenderSliceP();
+            _renderDebounceTimerSliceP.Tick += RenderDebounceTimerSliceP_Tick;
             _renderDebounceTimerSliceQ = new System.Windows.Forms.Timer { Interval = RENDER_DEBOUNCE_MILLISECONDS };
-            _renderDebounceTimerSliceQ.Tick += (s, e) => ScheduleRenderSliceQ();
-
+            _renderDebounceTimerSliceQ.Tick += RenderDebounceTimerSliceQ_Tick;
 
             this.Load += SelectorForm_Load;
 
-            // Подписки для NumericUpDowns
             nudPReal.ValueChanged += NudValues_Changed;
-            nudPImaginary.ValueChanged += NudValues_Changed; // Это будет виртуальная ось Y среза P
-            nudQReal.ValueChanged += NudValues_Changed;      // Это будет виртуальная ось X среза Q
+            nudPImaginary.ValueChanged += NudValues_Changed;
+            nudQReal.ValueChanged += NudValues_Changed;
             nudQImaginary.ValueChanged += NudValues_Changed;
 
             UpdateFixedValueLabels();
@@ -108,30 +91,33 @@ namespace FractalExplorer.SelectorsForms
 
         private void SelectorForm_Load(object sender, EventArgs e)
         {
-            // Устанавливаем начальные значения для рендеринга (копируем из текущих)
             _renderedSlicePMinRe = _slicePMinRe; _renderedSlicePMaxRe = _slicePMaxRe;
             _renderedSlicePMinIm = _slicePMinIm; _renderedSlicePMaxIm = _slicePMaxIm;
             _renderedSliceQMinRe = _sliceQMinRe; _renderedSliceQMaxRe = _sliceQMaxRe;
             _renderedSliceQMinIm = _sliceQMinIm; _renderedSliceQMaxIm = _sliceQMaxIm;
 
-            Task.Run(() => RenderSlicePAsync());
-            Task.Run(() => RenderSliceQAsync());
+            // Запускаем начальный рендер через таймеры, чтобы гарантировать, что форма видима
+            _renderDebounceTimerSliceP.Start();
+            _renderDebounceTimerSliceQ.Start();
         }
 
-        private void SetupSliceCanvas(PictureBox canvas, ref double minRe, ref double maxRe, ref double minIm, ref double maxIm, ProgressBar pb)
+        private void SetupSliceCanvasEvents(PictureBox canvas, bool isPSliceTarget)
         {
-            canvas.Paint += (s, e) => SliceCanvas_Paint(s, e, canvas == sliceCanvasP);
-            canvas.MouseClick += (s, e) => SliceCanvas_MouseClick(s, e, canvas == sliceCanvasP);
-            canvas.MouseWheel += (s, e) => SliceCanvas_MouseWheel(s, e, canvas == sliceCanvasP);
-            canvas.MouseDown += (s, e) => SliceCanvas_MouseDown(s, e, canvas == sliceCanvasP);
-            canvas.MouseMove += (s, e) => SliceCanvas_MouseMove(s, e, canvas == sliceCanvasP);
-            canvas.MouseUp += (s, e) => SliceCanvas_MouseUp(s, e, canvas == sliceCanvasP);
+            canvas.Paint += (s, e) => SliceCanvas_Paint(s, e, isPSliceTarget);
+            canvas.MouseClick += (s, e) => SliceCanvas_MouseClick(s, e, isPSliceTarget);
+            canvas.MouseWheel += (s, e) => SliceCanvas_MouseWheel(s, e, isPSliceTarget);
+            canvas.MouseDown += (s, e) => SliceCanvas_MouseDown(s, e, isPSliceTarget);
+            canvas.MouseMove += (s, e) => SliceCanvas_MouseMove(s, e, isPSliceTarget);
+            canvas.MouseUp += (s, e) => SliceCanvas_MouseUp(s, e, isPSliceTarget);
             canvas.Resize += (s, e) => {
                 if (canvas.Width > 0 && canvas.Height > 0)
                 {
-                    if (canvas == sliceCanvasP) ScheduleRenderSliceP(true); else ScheduleRenderSliceQ(true);
+                    var timer = isPSliceTarget ? _renderDebounceTimerSliceP : _renderDebounceTimerSliceQ;
+                    timer.Stop();
+                    timer.Start();
                 }
             };
+            var pb = isPSliceTarget ? progressBarSliceP : progressBarSliceQ;
             pb.Visible = false;
         }
         #endregion
@@ -140,79 +126,76 @@ namespace FractalExplorer.SelectorsForms
         private void NudValues_Changed(object sender, EventArgs e)
         {
             UpdateFixedValueLabels();
-
-            // Перерисовываем ОБА канваса, чтобы обновить маркеры
             sliceCanvasP.Invalidate();
             sliceCanvasQ.Invalidate();
 
-            // Если изменилось значение P (nudPReal), которое используется как фиксированное для среза Q,
-            // то инициируем перерендер среза Q.
-            if (sender == nudPReal)
+            if (sender == nudPReal) // P изменился, перерендерить Q-срез, который от него зависит
             {
-                ScheduleRenderSliceQ(true); // true для немедленного рендера
+                _renderDebounceTimerSliceQ.Stop(); _renderDebounceTimerSliceQ.Start();
             }
-            // Если изменилось значение Q (nudQImaginary), которое используется как фиксированное для среза P,
-            // то инициируем перерендер среза P.
-            else if (sender == nudQImaginary)
+            else if (sender == nudQImaginary) // Q изменился, перерендерить P-срез
             {
-                ScheduleRenderSliceP(true);
+                _renderDebounceTimerSliceP.Stop(); _renderDebounceTimerSliceP.Start();
             }
-            // Если пользователь вручную изменил nudPImaginary или nudQReal,
-            // которые влияют на z0 при рендеринге соответствующего среза,
-            // также нужно перерендерить этот срез.
-            else if (sender == nudPImaginary) // nudPImaginary влияет на z0 для среза P
+            else if (sender == nudPImaginary) // Im(z0) для среза P изменился
             {
-                ScheduleRenderSliceP(true);
+                _renderDebounceTimerSliceP.Stop(); _renderDebounceTimerSliceP.Start();
             }
-            else if (sender == nudQReal) // nudQReal в текущей реализации не влияет на z0 для среза Q, но если бы влиял, то:
+            else if (sender == nudQReal) // Im(z0) для среза Q изменился (если nudQReal используется для z0.Im среза Q)
             {
-                // ScheduleRenderSliceQ(true); // Если бы nudQReal влиял на z0 для среза Q
+                // В текущей логике RenderSliceQAsync nudQReal не используется для z0.Im, там qIm_val (Y-ось)
+                // Если бы nudQReal влиял на вид среза Q (например, на Re(z0)), то:
+                // _renderDebounceTimerSliceQ.Stop(); _renderDebounceTimerSliceQ.Start();
             }
         }
 
         private void UpdateFixedValueLabels()
         {
-            // Для среза P (оси P.Re, P.Im), Q фиксирован значениями из nudQReal и nudQImaginary
-            ComplexDecimal fixedQ = new ComplexDecimal(nudQReal.Value, nudQImaginary.Value);
-            lblFixedQForPSlice.Text = $"(Q = {fixedQ.Real:F4} ; {fixedQ.Imaginary:F4}i)";
-
-            // Для среза Q (оси Q.Re, Q.Im), P фиксирован значениями из nudPReal и nudPImaginary
-            ComplexDecimal fixedP = new ComplexDecimal(nudPReal.Value, nudPImaginary.Value);
-            lblFixedPForQSlice.Text = $"(P = {fixedP.Real:F4} ; {fixedP.Imaginary:F4}i)";
+            lblFixedQForPSlice.Text = $"(Q фикс. = {nudQImaginary.Value:F4})";
+            lblFixedPForQSlice.Text = $"(P фикс. = {nudPReal.Value:F4})";
         }
 
-
-        public void SetSelectedParameters(ComplexDecimal c1)
+        public void SetSelectedParameters(ComplexDecimal c1FromOwner)
         {
-            bool changed = false;
-            if (nudPReal.Value != c1.Real) { nudPReal.Value = c1.Real; changed = true; }
-            if (nudQImaginary.Value != c1.Imaginary) { nudQImaginary.Value = c1.Imaginary; changed = true; }
+            bool triggerRenderP = false;
+            bool triggerRenderQ = false;
 
-            // nudPImaginary и nudQReal - это оси срезов, они не должны меняться этим методом,
-            // они меняются кликом по срезу или ручным вводом.
-            // Если они тоже должны меняться, то нужно передавать и "осевые" значения.
-
-            if (changed)
+            if (nudPReal.Value != c1FromOwner.Real)
             {
-                _currentC1_P = new ComplexDecimal(nudPReal.Value, nudPImaginary.Value); // Обновляем P
-                _currentC1_Q = new ComplexDecimal(nudQReal.Value, nudQImaginary.Value); // Обновляем Q
-                UpdateFixedValueLabels();
-                sliceCanvasP.Invalidate();
-                sliceCanvasQ.Invalidate();
+                nudPReal.Value = c1FromOwner.Real;
+                triggerRenderQ = true; // P изменился, влияет на Q-срез
             }
-        }
+            if (nudQImaginary.Value != c1FromOwner.Imaginary)
+            {
+                nudQImaginary.Value = c1FromOwner.Imaginary;
+                triggerRenderP = true; // Q изменился, влияет на P-срез
+            }
 
+            // nudPImaginary и nudQReal не меняются извне этим методом,
+            // они управляются кликами по срезам или ручным вводом в селекторе
+
+            UpdateFixedValueLabels(); // Обновит метки
+            sliceCanvasP.Invalidate(); // Обновит маркеры
+            sliceCanvasQ.Invalidate();
+
+            if (triggerRenderP) { _renderDebounceTimerSliceP.Stop(); _renderDebounceTimerSliceP.Start(); }
+            if (triggerRenderQ) { _renderDebounceTimerSliceQ.Stop(); _renderDebounceTimerSliceQ.Start(); }
+        }
         #endregion
 
-        #region Rendering Slices
+        #region Rendering Slices (RenderSlicePAsync, RenderSliceQAsync, GetClassicPalette, LerpColor)
+        // Эти методы остаются такими же, как в предыдущем ответе, с исправленной логикой
+        // передачи p_scalar_for_engine, q_scalar_for_engine и z0_for_slice.
+        // Я не буду их здесь дублировать для краткости, но они должны быть в этом файле.
+        // Важно: Убедись, что в RenderSlicePAsync используется fixedQ_scalar = nudQImaginary.Value;
+        //        А в RenderSliceQAsync используется fixedP_scalar = nudPReal.Value;
 
         private Func<int, int, int, Color> GetClassicPalette()
         {
-            // Палитра "Классика" из ColorPaletteMandelbrotFamily
             var classicColors = new List<Color> { Color.FromArgb(0, 0, 0), Color.FromArgb(200, 50, 30), Color.FromArgb(255, 255, 255) };
             int colorCount = classicColors.Count;
 
-            return (iter, maxIter, maxColorIterParam) => // maxColorIterParam здесь будет SLICE_ITERATIONS
+            return (iter, maxIter, maxColorIterParam) =>
             {
                 if (iter == maxIter) return Color.Black;
                 if (maxColorIterParam <= 1) return classicColors[0];
@@ -224,51 +207,45 @@ namespace FractalExplorer.SelectorsForms
                 double localT = scaledT - index1;
                 index1 = Math.Max(0, Math.Min(index1, colorCount - 1));
                 index2 = Math.Max(0, Math.Min(index2, colorCount - 1));
-                return LerpColor(classicColors[index1], classicColors[index2], localT);
+
+                // Clamp color components
+                Color c1 = classicColors[index1];
+                Color c2 = classicColors[index2];
+                return Color.FromArgb(
+                    ClampColorComponent((int)(c1.A + (c2.A - c1.A) * localT)),
+                    ClampColorComponent((int)(c1.R + (c2.R - c1.R) * localT)),
+                    ClampColorComponent((int)(c1.G + (c2.G - c1.G) * localT)),
+                    ClampColorComponent((int)(c1.B + (c2.B - c1.B) * localT))
+                );
             };
         }
-        private Color LerpColor(Color a, Color b, double t)
+        private static int ClampColorComponent(int component)
         {
-            t = Math.Max(0, Math.Min(1, t));
-            return Color.FromArgb(
-                (int)(a.A + (b.A - a.A) * t),
-                (int)(a.R + (b.R - a.R) * t),
-                (int)(a.G + (b.G - a.G) * t),
-                (int)(a.B + (b.B - a.B) * t));
+            if (component < 0) return 0;
+            if (component > 255) return 255;
+            return component;
         }
 
-
-        private void ScheduleRenderSliceP(bool immediate = false)
-        {
-            _renderDebounceTimerSliceP.Stop();
-            if (immediate) RenderSlicePAsync(); else _renderDebounceTimerSliceP.Start();
-        }
-        private void ScheduleRenderSliceQ(bool immediate = false)
-        {
-            _renderDebounceTimerSliceQ.Stop();
-            if (immediate) RenderSliceQAsync(); else _renderDebounceTimerSliceQ.Start();
-        }
 
         private async Task RenderSlicePAsync()
         {
             if (_isRenderingSliceP || sliceCanvasP.Width <= 0 || sliceCanvasP.Height <= 0) return;
             _isRenderingSliceP = true;
-            _ctsSliceP?.Cancel();
+            _ctsSliceP?.Cancel(); // Отменяем предыдущий рендер, если он был
             _ctsSliceP = new CancellationTokenSource();
             var token = _ctsSliceP.Token;
 
-            if (progressBarSliceP.IsHandleCreated && !progressBarSliceP.IsDisposed)
-                progressBarSliceP.Invoke((Action)(() => { progressBarSliceP.Value = 0; progressBarSliceP.Visible = true; }));
+            var pb = progressBarSliceP;
+            if (pb.IsHandleCreated && !pb.IsDisposed) pb.Invoke((Action)(() => { pb.Value = 0; pb.Visible = true; }));
 
             int w = sliceCanvasP.Width;
             int h = sliceCanvasP.Height;
-            double minR_axis = _slicePMinRe; // Диапазон для Re(P) - ось X
+            double minR_axis = _slicePMinRe;
             double maxR_axis = _slicePMaxRe;
-            double minI_axis = _slicePMinIm; // Диапазон для Im(P) - ось Y
+            double minI_axis = _slicePMinIm;
             double maxI_axis = _slicePMaxIm;
 
-            // Q фиксировано: берем компоненты из соответствующих NumericUpDown
-            ComplexDecimal fixedQ_for_slice = new ComplexDecimal(nudQReal.Value, nudQImaginary.Value);
+            decimal fixedQ_scalar = nudQImaginary.Value; // Q фиксировано
 
             _sliceRenderEngine.Palette = GetClassicPalette();
             _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS;
@@ -281,55 +258,27 @@ namespace FractalExplorer.SelectorsForms
                     Bitmap bmp = new Bitmap(w, h, PixelFormat.Format24bppRgb);
                     BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, bmp.PixelFormat);
                     byte[] buffer = new byte[Math.Abs(bmpData.Stride) * h];
-                    long renderedPixels = 0;
+                    long renderedLines = 0;
 
                     Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y_pixel =>
                     {
                         if (token.IsCancellationRequested) return;
                         for (int x_pixel = 0; x_pixel < w; x_pixel++)
                         {
-                            // Преобразуем пиксельные координаты в значения для P
-                            decimal pRe_val = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
-                            decimal pIm_val = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h); // Y инвертирован
+                            decimal p_scalar_for_engine = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
+                            decimal z0_im_for_slice_visual = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h);
 
-                            ComplexDecimal currentP_param = new ComplexDecimal(pRe_val, pIm_val);
-
-                            // Формируем C1 для движка: C1.Real = P.Re, C1.Imaginary = Q.Im (если Q скаляр, или Q.Re если P.Im=0)
-                            // В нашем движке C1.Real = P, C1.Imaginary = Q.
-                            // P у нас комплексное (currentP_param). Q у нас комплексное (fixedQ_for_slice).
-                            // Это не соответствует формуле с скалярными P и Q.
-                            // Формула в движке: x_next = z_curr.Re^2 - z_curr.Im^2 + C1.Real + C1.Imaginary * z_prev.Re;
-                            //                                                        P_scalar  Q_scalar
-                            // Значит, C1.Real должен быть P, а C1.Imaginary должен быть Q.
-                            // Если мы рендерим срез по P (currentP_param), то P должен быть скаляром pRe_val (X-ось).
-                            // А pIm_val (Y-ось) может влиять на z0 или быть проигнорирован для выбора P.
-                            // Для простоты, пусть P = pRe_val, а Q = fixedQ_for_slice.Imaginary (скаляр).
-                            // Если мы хотим 2D срез для P, то P само должно быть комплексным в формуле.
-
-                            // ИСПРАВЛЕНИЕ ЛОГИКИ:
-                            // Для среза P, мы перебираем pRe_val (ось X) и pIm_val (ось Y).
-                            // Эти два значения вместе формируют *скаляр P* и *скаляр Q* для передачи в движок.
-                            // Например: P = pRe_val, Q = pIm_val. Это один вариант.
-                            // Или: P = pRe_val, а Q фиксировано (из nudQImaginary.Value). pIm_val (ось Y) влияет на z0.Im.
-                            //
-                            // Давай придерживаться идеи, что sliceCanvasP выбирает P (скаляр) и sliceCanvasQ выбирает Q (скаляр).
-                            // Ось X канваса P = значение P. Ось Y канваса P = Im(z0).
-                            // Ось X канваса Q = значение Q. Ось Y канваса Q = Im(z0).
-
-                            decimal p_scalar_for_engine = pRe_val; // P берем с X-оси среза P
-                            decimal q_scalar_for_engine = fixedQ_for_slice.Imaginary; // Q берем из фиксированного значения (компонента Q)
-
-                            ComplexDecimal c1_engine_param = new ComplexDecimal(p_scalar_for_engine, q_scalar_for_engine);
-                            ComplexDecimal z0_for_slice = new ComplexDecimal(0, pIm_val); // Y-ось среза P влияет на Im(z0)
+                            ComplexDecimal c1_engine_param = new ComplexDecimal(p_scalar_for_engine, fixedQ_scalar);
+                            ComplexDecimal z0_for_slice = new ComplexDecimal(0, z0_im_for_slice_visual);
 
                             int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
                             Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
                             int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B; buffer[idx + 1] = c.G; buffer[idx + 2] = c.R;
                         }
-                        long currentProgress = Interlocked.Increment(ref renderedPixels);
-                        if (progressBarSliceP.IsHandleCreated && !progressBarSliceP.IsDisposed)
-                            progressBarSliceP.Invoke((Action)(() => progressBarSliceP.Value = (int)(100.0 * currentProgress / h)));
+                        long currentProgress = Interlocked.Increment(ref renderedLines);
+                        if (pb.IsHandleCreated && !pb.IsDisposed)
+                            pb.Invoke((Action)(() => pb.Value = (int)(100.0 * currentProgress / h)));
                     });
                     token.ThrowIfCancellationRequested();
                     Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
@@ -337,7 +286,7 @@ namespace FractalExplorer.SelectorsForms
                     return bmp;
                 }, token);
 
-                if (sliceCanvasP.IsHandleCreated && !sliceCanvasP.IsDisposed)
+                if (this.IsHandleCreated && !this.IsDisposed && sliceCanvasP.IsHandleCreated && !sliceCanvasP.IsDisposed)
                 {
                     sliceCanvasP.Invoke((Action)(() => {
                         _slicePBitmap?.Dispose();
@@ -350,12 +299,12 @@ namespace FractalExplorer.SelectorsForms
                 else { newBitmap?.Dispose(); }
             }
             catch (OperationCanceledException) { newBitmap?.Dispose(); }
-            catch (Exception ex) { newBitmap?.Dispose(); MessageBox.Show($"Ошибка рендера среза P: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { newBitmap?.Dispose(); if (this.IsHandleCreated && !this.IsDisposed) MessageBox.Show($"Ошибка рендера среза P: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             finally
             {
                 _isRenderingSliceP = false;
-                if (progressBarSliceP.IsHandleCreated && !progressBarSliceP.IsDisposed)
-                    progressBarSliceP.Invoke((Action)(() => { progressBarSliceP.Visible = false; progressBarSliceP.Value = 0; }));
+                if (pb.IsHandleCreated && !pb.IsDisposed)
+                    pb.Invoke((Action)(() => { pb.Visible = false; pb.Value = 0; }));
             }
         }
 
@@ -367,18 +316,17 @@ namespace FractalExplorer.SelectorsForms
             _ctsSliceQ = new CancellationTokenSource();
             var token = _ctsSliceQ.Token;
 
-            if (progressBarSliceQ.IsHandleCreated && !progressBarSliceQ.IsDisposed)
-                progressBarSliceQ.Invoke((Action)(() => { progressBarSliceQ.Value = 0; progressBarSliceQ.Visible = true; }));
+            var pb = progressBarSliceQ;
+            if (pb.IsHandleCreated && !pb.IsDisposed) pb.Invoke((Action)(() => { pb.Value = 0; pb.Visible = true; }));
 
             int w = sliceCanvasQ.Width;
             int h = sliceCanvasQ.Height;
-            double minR_axis = _sliceQMinRe; // Диапазон для Re(Q) - ось X
+            double minR_axis = _sliceQMinRe;
             double maxR_axis = _sliceQMaxRe;
-            double minI_axis = _sliceQMinIm; // Диапазон для Im(Q) - ось Y
+            double minI_axis = _sliceQMinIm;
             double maxI_axis = _sliceQMaxIm;
 
-            // P фиксировано: берем компоненты из соответствующих NumericUpDown
-            ComplexDecimal fixedP_for_slice = new ComplexDecimal(nudPReal.Value, nudPImaginary.Value);
+            decimal fixedP_scalar = nudPReal.Value; // P фиксировано
 
             _sliceRenderEngine.Palette = GetClassicPalette();
             _sliceRenderEngine.MaxColorIterations = SLICE_ITERATIONS;
@@ -391,35 +339,27 @@ namespace FractalExplorer.SelectorsForms
                     Bitmap bmp = new Bitmap(w, h, PixelFormat.Format24bppRgb);
                     BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, bmp.PixelFormat);
                     byte[] buffer = new byte[Math.Abs(bmpData.Stride) * h];
-                    long renderedPixels = 0;
+                    long renderedLines = 0;
 
                     Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y_pixel =>
                     {
                         if (token.IsCancellationRequested) return;
                         for (int x_pixel = 0; x_pixel < w; x_pixel++)
                         {
-                            // Преобразуем пиксельные координаты в значения для Q
-                            decimal qRe_val = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
-                            decimal qIm_val = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h); // Y инвертирован
+                            decimal q_scalar_for_engine = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
+                            decimal z0_im_for_slice_visual = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h);
 
-                            // ИСПРАВЛЕНИЕ ЛОГИКИ:
-                            // P = fixedP_for_slice.Real (скаляр)
-                            // Q = qRe_val (скаляр, с X-оси среза Q)
-                            // Y-ось среза Q (qIm_val) влияет на z0.Im
-                            decimal p_scalar_for_engine = fixedP_for_slice.Real;
-                            decimal q_scalar_for_engine = qRe_val;
-
-                            ComplexDecimal c1_engine_param = new ComplexDecimal(p_scalar_for_engine, q_scalar_for_engine);
-                            ComplexDecimal z0_for_slice = new ComplexDecimal(0, qIm_val); // Y-ось среза Q влияет на Im(z0)
+                            ComplexDecimal c1_engine_param = new ComplexDecimal(fixedP_scalar, q_scalar_for_engine);
+                            ComplexDecimal z0_for_slice = new ComplexDecimal(0, z0_im_for_slice_visual);
 
                             int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
                             Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
                             int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B; buffer[idx + 1] = c.G; buffer[idx + 2] = c.R;
                         }
-                        long currentProgress = Interlocked.Increment(ref renderedPixels);
-                        if (progressBarSliceQ.IsHandleCreated && !progressBarSliceQ.IsDisposed)
-                            progressBarSliceQ.Invoke((Action)(() => progressBarSliceQ.Value = (int)(100.0 * currentProgress / h)));
+                        long currentProgress = Interlocked.Increment(ref renderedLines);
+                        if (pb.IsHandleCreated && !pb.IsDisposed)
+                            pb.Invoke((Action)(() => pb.Value = (int)(100.0 * currentProgress / h)));
                     });
                     token.ThrowIfCancellationRequested();
                     Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
@@ -427,7 +367,7 @@ namespace FractalExplorer.SelectorsForms
                     return bmp;
                 }, token);
 
-                if (sliceCanvasQ.IsHandleCreated && !sliceCanvasQ.IsDisposed)
+                if (this.IsHandleCreated && !this.IsDisposed && sliceCanvasQ.IsHandleCreated && !sliceCanvasQ.IsDisposed)
                 {
                     sliceCanvasQ.Invoke((Action)(() => {
                         _sliceQBitmap?.Dispose();
@@ -440,241 +380,276 @@ namespace FractalExplorer.SelectorsForms
                 else { newBitmap?.Dispose(); }
             }
             catch (OperationCanceledException) { newBitmap?.Dispose(); }
-            catch (Exception ex) { newBitmap?.Dispose(); MessageBox.Show($"Ошибка рендера среза Q: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { newBitmap?.Dispose(); if (this.IsHandleCreated && !this.IsDisposed) MessageBox.Show($"Ошибка рендера среза Q: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             finally
             {
                 _isRenderingSliceQ = false;
-                if (progressBarSliceQ.IsHandleCreated && !progressBarSliceQ.IsDisposed)
-                    progressBarSliceQ.Invoke((Action)(() => { progressBarSliceQ.Visible = false; progressBarSliceQ.Value = 0; }));
+                if (pb.IsHandleCreated && !pb.IsDisposed)
+                    pb.Invoke((Action)(() => { pb.Visible = false; pb.Value = 0; }));
             }
         }
-
-
         #endregion
 
-        #region Canvas Interaction (Common for both slices)
-
-        private void SliceCanvas_Paint(object sender, PaintEventArgs e, bool isPSlice)
+        #region Canvas Interaction
+        private void SliceCanvas_Paint(object sender, PaintEventArgs e, bool isPSliceTarget)
         {
             PictureBox canvas = sender as PictureBox;
-            Bitmap bmp = isPSlice ? _slicePBitmap : _sliceQBitmap;
-            double rMin = isPSlice ? _renderedSlicePMinRe : _renderedSliceQMinRe;
-            double rMax = isPSlice ? _renderedSlicePMaxRe : _renderedSliceQMaxRe;
-            double iMin = isPSlice ? _renderedSlicePMinIm : _renderedSliceQMinIm;
-            double iMax = isPSlice ? _renderedSlicePMaxIm : _renderedSliceQMaxIm;
-            double cMinRe = isPSlice ? _slicePMinRe : _sliceQMinRe;
-            double cMaxRe = isPSlice ? _slicePMaxRe : _sliceQMaxRe;
-            double cMinIm = isPSlice ? _slicePMinIm : _sliceQMinIm;
-            double cMaxIm = isPSlice ? _slicePMaxIm : _sliceQMaxIm;
+            Bitmap bmpToDraw = isPSliceTarget ? _slicePBitmap : _sliceQBitmap;
+
+            double renderedMinRe = isPSliceTarget ? _renderedSlicePMinRe : _renderedSliceQMinRe;
+            double renderedMaxRe = isPSliceTarget ? _renderedSlicePMaxRe : _renderedSliceQMaxRe;
+            double renderedMinIm = isPSliceTarget ? _renderedSlicePMinIm : _renderedSliceQMinIm;
+            double renderedMaxIm = isPSliceTarget ? _renderedSlicePMaxIm : _renderedSliceQMaxIm;
+
+            double currentMinRe = isPSliceTarget ? _slicePMinRe : _sliceQMinRe;
+            double currentMaxRe = isPSliceTarget ? _slicePMaxRe : _sliceQMaxRe;
+            double currentMinIm = isPSliceTarget ? _slicePMinIm : _sliceQMinIm;
+            double currentMaxIm = isPSliceTarget ? _slicePMaxIm : _sliceQMaxIm;
 
             e.Graphics.Clear(Color.DimGray);
-            if (bmp == null || canvas.Width <= 0 || canvas.Height <= 0)
+            if (bmpToDraw == null || canvas.Width <= 0 || canvas.Height <= 0)
             {
-                DrawMarker(e.Graphics, canvas, isPSlice);
+                DrawMarker(e.Graphics, canvas, isPSliceTarget);
                 return;
             }
 
-            double renderedW = rMax - rMin; double renderedH = iMax - iMin;
-            double currentW = cMaxRe - cMinRe; double currentH = cMaxIm - cMinIm;
+            double renderedComplexWidth = renderedMaxRe - renderedMinRe;
+            double renderedComplexHeight = renderedMaxIm - renderedMinIm;
+            double currentComplexWidth = currentMaxRe - currentMinRe;
+            double currentComplexHeight = currentMaxIm - currentMinIm;
 
-            if (renderedW <= 0 || renderedH <= 0 || currentW <= 0 || currentH <= 0)
+            if (renderedComplexWidth <= 0 || renderedComplexHeight <= 0 || currentComplexWidth <= 0 || currentComplexHeight <= 0)
             {
-                e.Graphics.DrawImageUnscaled(bmp, Point.Empty); DrawMarker(e.Graphics, canvas, isPSlice); return;
+                if (bmpToDraw != null) e.Graphics.DrawImageUnscaled(bmpToDraw, Point.Empty);
+                DrawMarker(e.Graphics, canvas, isPSliceTarget);
+                return;
             }
 
-            float offX = (float)((rMin - cMinRe) / currentW * canvas.Width);
-            float offY = (float)((cMaxIm - iMax) / currentH * canvas.Height);
-            float destW = (float)(renderedW / currentW * canvas.Width);
-            float destH = (float)(renderedH / currentH * canvas.Height);
+            float offsetX = (float)((renderedMinRe - currentMinRe) / currentComplexWidth * canvas.Width);
+            float offsetY = (float)((currentMaxIm - renderedMaxIm) / currentComplexHeight * canvas.Height); // Y инвертирован
+            float destWidthPixels = (float)(renderedComplexWidth / currentComplexWidth * canvas.Width);
+            float destHeightPixels = (float)(renderedComplexHeight / currentComplexHeight * canvas.Height);
 
-            if (destW > 0 && destH > 0)
+            if (destWidthPixels > 0 && destHeightPixels > 0)
             {
-                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                e.Graphics.DrawImage(bmp, new RectangleF(offX, offY, destW, destH));
+                e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor; // Для пиксельных фракталов
+                e.Graphics.DrawImage(bmpToDraw, new RectangleF(offsetX, offsetY, destWidthPixels, destHeightPixels));
             }
             else
             {
-                e.Graphics.DrawImageUnscaled(bmp, Point.Empty);
+                if (bmpToDraw != null) e.Graphics.DrawImageUnscaled(bmpToDraw, Point.Empty);
             }
-            DrawMarker(e.Graphics, canvas, isPSlice);
+            DrawMarker(e.Graphics, canvas, isPSliceTarget);
         }
 
-        private void DrawMarker(Graphics g, PictureBox canvas, bool isPSlice)
+        private void DrawMarker(Graphics g, PictureBox canvas, bool isPSliceTarget)
         {
-            decimal valRe, valIm;
-            double minRe, maxRe, minIm, maxIm;
+            decimal valX_axis;
+            decimal valY_axis_z0_Im;
 
-            if (isPSlice)
+            double minX_map, maxX_map; // Диапазон для X-оси карты (P или Q)
+            double minY_map, maxY_map; // Диапазон для Y-оси карты (z0.Im)
+
+
+            if (isPSliceTarget)
             {
-                valRe = nudPReal.Value; // Ось X среза P - это P.Re
-                valIm = nudPImaginary.Value; // Ось Y среза P - это P.Im
-                minRe = _slicePMinRe; maxRe = _slicePMaxRe;
-                minIm = _slicePMinIm; maxIm = _slicePMaxIm;
+                valX_axis = nudPReal.Value;         // Значение P (скаляр)
+                valY_axis_z0_Im = nudPImaginary.Value; // Значение Im(z0) для этого среза
+                minX_map = _slicePMinRe; maxX_map = _slicePMaxRe;
+                minY_map = _slicePMinIm; maxY_map = _slicePMaxIm;
             }
-            else // QSlice
+            else
             {
-                valRe = nudQReal.Value; // Ось X среза Q - это Q.Re
-                valIm = nudQImaginary.Value; // Ось Y среза Q - это Q.Im
-                minRe = _sliceQMinRe; maxRe = _sliceQMaxRe;
-                minIm = _sliceQMinIm; maxIm = _sliceQMaxIm;
+                valX_axis = nudQImaginary.Value;    // Значение Q (скаляр)
+                valY_axis_z0_Im = nudQReal.Value;   // Значение Im(z0) для этого среза (здесь nudQReal.Value используется для z0.Im среза Q)
+                minX_map = _sliceQMinRe; maxX_map = _sliceQMaxRe;
+                minY_map = _sliceQMinIm; maxY_map = _sliceQMaxIm;
             }
 
-            double rRange = maxRe - minRe;
-            double iRange = maxIm - minIm;
+            double xRange_map = maxX_map - minX_map;
+            double yRange_map = maxY_map - minY_map;
 
-            if (rRange > 0 && iRange > 0 && canvas.Width > 0 && canvas.Height > 0)
+            if (xRange_map > 0 && yRange_map > 0 && canvas.Width > 0 && canvas.Height > 0)
             {
-                int markerX = (int)(((double)valRe - minRe) / rRange * canvas.Width);
-                int markerY = (int)((maxIm - (double)valIm) / iRange * canvas.Height); // Y инвертирован
+                // Преобразуем значение X-оси (P или Q) в пиксельную координату X
+                int markerX_pixel = (int)(((double)valX_axis - minX_map) / xRange_map * canvas.Width);
+                // Преобразуем значение Y-оси (z0.Im) в пиксельную координату Y
+                int markerY_pixel = (int)((maxY_map - (double)valY_axis_z0_Im) / yRange_map * canvas.Height); // Y инвертирован
+
                 int size = 7;
                 using (Pen p = new Pen(Color.LimeGreen, 2))
                 {
-                    g.DrawLine(p, markerX - size, markerY, markerX + size, markerY);
-                    g.DrawLine(p, markerX, markerY - size, markerX, markerY + size);
+                    g.DrawLine(p, markerX_pixel - size, markerY_pixel, markerX_pixel + size, markerY_pixel);
+                    g.DrawLine(p, markerX_pixel, markerY_pixel - size, markerX_pixel, markerY_pixel + size);
                 }
             }
         }
 
-
-        private void SliceCanvas_MouseClick(object sender, MouseEventArgs e, bool isPSlice)
+        private void SliceCanvas_MouseClick(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             PictureBox canvas = sender as PictureBox;
             if (e.Button != MouseButtons.Left || canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            double currentMinRe = isPSlice ? _slicePMinRe : _sliceQMinRe;
-            double currentMaxRe = isPSlice ? _slicePMaxRe : _sliceQMaxRe;
-            double currentMinIm = isPSlice ? _slicePMinIm : _sliceQMinIm;
-            double currentMaxIm = isPSlice ? _slicePMaxIm : _sliceQMaxIm;
+            double currentMinRe_map = isPSliceTarget ? _slicePMinRe : _sliceQMinRe; // X-ось карты
+            double currentMaxRe_map = isPSliceTarget ? _slicePMaxRe : _sliceQMaxRe;
+            double currentMinIm_map = isPSliceTarget ? _slicePMinIm : _sliceQMinIm; // Y-ось карты (z0.Im)
+            double currentMaxIm_map = isPSliceTarget ? _slicePMaxIm : _sliceQMaxIm;
 
-            double realRange = currentMaxRe - currentMinRe;
-            double imaginaryRange = currentMaxIm - currentMinIm;
+            double xRange_map = currentMaxRe_map - currentMinRe_map;
+            double yRange_map = currentMaxIm_map - currentMinIm_map;
 
-            if (realRange <= 0 || imaginaryRange <= 0) return;
+            if (xRange_map <= 0 || yRange_map <= 0) return;
 
-            decimal selectedRe = (decimal)(currentMinRe + e.X / (double)canvas.Width * realRange);
-            decimal selectedIm = (decimal)(currentMaxIm - e.Y / (double)canvas.Height * imaginaryRange);
+            decimal selectedValueOnXAxis = ClampDecimal((decimal)(currentMinRe_map + e.X / (double)canvas.Width * xRange_map),
+                                                       isPSliceTarget ? nudPReal.Minimum : nudQImaginary.Minimum,
+                                                       isPSliceTarget ? nudPReal.Maximum : nudQImaginary.Maximum);
 
-            if (isPSlice)
+            decimal selectedValueOnYAxis_for_z0Im = ClampDecimal((decimal)(currentMaxIm_map - e.Y / (double)canvas.Height * yRange_map),
+                                                                isPSliceTarget ? nudPImaginary.Minimum : nudQReal.Minimum,
+                                                                isPSliceTarget ? nudPImaginary.Maximum : nudQReal.Maximum);
+
+            if (isPSliceTarget)
             {
-                nudPReal.Value = selectedRe;
-                nudPImaginary.Value = selectedIm; // P.Im - это Y-ось среза
+                nudPReal.Value = selectedValueOnXAxis;         // Устанавливаем P
+                nudPImaginary.Value = selectedValueOnYAxis_for_z0Im; // Устанавливаем Im(z0) для среза P
             }
-            else // QSlice
+            else
             {
-                nudQReal.Value = selectedRe;
-                nudQImaginary.Value = selectedIm; // Q.Im - это Y-ось среза
+                nudQImaginary.Value = selectedValueOnXAxis;      // Устанавливаем Q
+                nudQReal.Value = selectedValueOnYAxis_for_z0Im;    // Устанавливаем Im(z0) для среза Q (здесь nudQReal хранит это значение)
             }
-            // NudValues_Changed вызовется автоматически и обновит _currentC1_P/_Q и лейблы
+            // NudValues_Changed вызовется автоматически, обновит лейблы, маркеры и запустит ререндер нужных срезов.
         }
 
 
-        private void SliceCanvas_MouseWheel(object sender, MouseEventArgs e, bool isPSlice)
+        private void SliceCanvas_MouseWheel(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             PictureBox canvas = sender as PictureBox;
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
 
             double zoomFactor = e.Delta > 0 ? 1.25 : 1.0 / 1.25;
-            ref double minRe = ref (isPSlice ? ref _slicePMinRe : ref _sliceQMinRe);
-            ref double maxRe = ref (isPSlice ? ref _slicePMaxRe : ref _sliceQMaxRe);
-            ref double minIm = ref (isPSlice ? ref _slicePMinIm : ref _sliceQMinIm);
-            ref double maxIm = ref (isPSlice ? ref _slicePMaxIm : ref _sliceQMaxIm);
+            ref double minRe_map = ref (isPSliceTarget ? ref _slicePMinRe : ref _sliceQMinRe);
+            ref double maxRe_map = ref (isPSliceTarget ? ref _slicePMaxRe : ref _sliceQMaxRe);
+            ref double minIm_map = ref (isPSliceTarget ? ref _slicePMinIm : ref _sliceQMinIm);
+            ref double maxIm_map = ref (isPSliceTarget ? ref _slicePMaxIm : ref _sliceQMaxIm);
 
-            double oldReRange = maxRe - minRe;
-            double oldImRange = maxIm - minIm;
-            if (oldReRange <= 0 || oldImRange <= 0) return;
+            double oldReRange_map = maxRe_map - minRe_map;
+            double oldImRange_map = maxIm_map - minIm_map;
+            if (oldReRange_map <= 0 || oldImRange_map <= 0) return;
 
-            double mouseReal = minRe + e.X / (double)canvas.Width * oldReRange;
-            double mouseImaginary = maxIm - e.Y / (double)canvas.Height * oldImRange; // Y инвертирован для отображения
+            double mouseX_canvas = e.X;
+            double mouseY_canvas = e.Y;
 
-            double newReRange = oldReRange / zoomFactor;
-            double newImRange = oldImRange / zoomFactor;
+            double mouseRe_complex_map = minRe_map + (mouseX_canvas / canvas.Width) * oldReRange_map;
+            double mouseIm_complex_map = maxIm_map - (mouseY_canvas / canvas.Height) * oldImRange_map;
 
-            const double MIN_ALLOWED_RANGE = 1e-12; // Сделаем чуть меньше, чтобы дать больше свободы зума
-            if (newReRange < MIN_ALLOWED_RANGE || newImRange < MIN_ALLOWED_RANGE ||
-                newReRange > 1e3 || newImRange > 1e3) // Ограничение на слишком большой диапазон
+            double newReRange_map = oldReRange_map / zoomFactor;
+            double newImRange_map = oldImRange_map / zoomFactor;
+
+            const double MIN_ALLOWED_RANGE = 1e-12;
+            const double MAX_ALLOWED_RANGE = 1e4;
+            if (newReRange_map < MIN_ALLOWED_RANGE || newImRange_map < MIN_ALLOWED_RANGE ||
+                newReRange_map > MAX_ALLOWED_RANGE || newImRange_map > MAX_ALLOWED_RANGE)
             {
                 return;
             }
 
-            minRe = mouseReal - (e.X / (double)canvas.Width) * newReRange;
-            maxRe = minRe + newReRange;
-            minIm = mouseImaginary - (1.0 - e.Y / (double)canvas.Height) * newImRange; // (1.0 - ratio) т.к. mouseImaginary уже с учетом инверсии Y
-            maxIm = minIm + newImRange;
+            minRe_map = mouseRe_complex_map - (mouseX_canvas / canvas.Width) * newReRange_map;
+            maxRe_map = minRe_map + newReRange_map;
 
-            canvas.Invalidate(); // Немедленная перерисовка текущего битмапа с новым масштабом/положением
+            minIm_map = mouseIm_complex_map - (1.0 - (mouseY_canvas / canvas.Height)) * newImRange_map;
+            maxIm_map = minIm_map + newImRange_map;
 
-            // Запускаем отложенный рендер для обновления битмапа с высокой детализацией
-            if (isPSlice) ScheduleRenderSliceP(); else ScheduleRenderSliceQ();
+            canvas.Invalidate();
+
+            var timer = isPSliceTarget ? _renderDebounceTimerSliceP : _renderDebounceTimerSliceQ;
+            timer.Stop();
+            timer.Start();
         }
 
-        private void SliceCanvas_MouseDown(object sender, MouseEventArgs e, bool isPSlice)
+        private void SliceCanvas_MouseDown(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             if (e.Button == MouseButtons.Left)
             {
-                if (isPSlice) { _panningSliceP = true; _panStartSliceP = e.Location; }
+                if (isPSliceTarget) { _panningSliceP = true; _panStartSliceP = e.Location; }
                 else { _panningSliceQ = true; _panStartSliceQ = e.Location; }
                 (sender as PictureBox).Cursor = Cursors.Hand;
             }
         }
-
-        private void SliceCanvas_MouseMove(object sender, MouseEventArgs e, bool isPSlice)
+        private void SliceCanvas_MouseMove(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             PictureBox canvas = sender as PictureBox;
-            bool isPanning = isPSlice ? _panningSliceP : _panningSliceQ;
+            bool isPanning = isPSliceTarget ? _panningSliceP : _panningSliceQ;
             if (!isPanning || canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            ref Point panStart = ref (isPSlice ? ref _panStartSliceP : ref _panStartSliceQ);
-            ref double minRe = ref (isPSlice ? ref _slicePMinRe : ref _sliceQMinRe);
-            ref double maxRe = ref (isPSlice ? ref _slicePMaxRe : ref _sliceQMaxRe);
-            ref double minIm = ref (isPSlice ? ref _slicePMinIm : ref _sliceQMinIm);
-            ref double maxIm = ref (isPSlice ? ref _slicePMaxIm : ref _sliceQMaxIm);
+            ref Point panStart = ref (isPSliceTarget ? ref _panStartSliceP : ref _panStartSliceQ);
+            ref double minRe_map = ref (isPSliceTarget ? ref _slicePMinRe : ref _sliceQMinRe);
+            ref double maxRe_map = ref (isPSliceTarget ? ref _slicePMaxRe : ref _sliceQMaxRe);
+            ref double minIm_map = ref (isPSliceTarget ? ref _slicePMinIm : ref _sliceQMinIm);
+            ref double maxIm_map = ref (isPSliceTarget ? ref _slicePMaxIm : ref _sliceQMaxIm);
 
-            double rRange = maxRe - minRe;
-            double iRange = maxIm - minIm;
-            if (rRange <= 0 || iRange <= 0) return;
+            double rRange_map = maxRe_map - minRe_map;
+            double iRange_map = maxIm_map - minIm_map;
+            if (rRange_map <= 0 || iRange_map <= 0) return;
 
-            // Преобразуем смещение мыши в пикселях в смещение в комплексных координатах
             double deltaXPixels = e.X - panStart.X;
             double deltaYPixels = e.Y - panStart.Y;
 
-            double deltaRe = deltaXPixels * (rRange / canvas.Width);
-            double deltaIm = deltaYPixels * (iRange / canvas.Height); // Для Y-оси экрана, направленной вниз
+            double deltaRe_map = deltaXPixels * (rRange_map / canvas.Width);
+            double deltaIm_map = deltaYPixels * (iRange_map / canvas.Height);
 
-            minRe -= deltaRe;
-            maxRe -= deltaRe;
-            minIm += deltaIm; // Если экранный Y идет вниз, а комплексный Im вверх, то при смещении мыши вниз (deltaYPixels > 0), minIm должен УВЕЛИЧИТЬСЯ
-            maxIm += deltaIm;
+            minRe_map -= deltaRe_map;
+            maxRe_map -= deltaRe_map;
+            minIm_map += deltaIm_map;
+            maxIm_map += deltaIm_map;
 
             panStart = e.Location;
-
-            canvas.Invalidate(); // Немедленная перерисовка текущего битмапа с новым положением
-            // Полный рендер будет запущен в MouseUp
+            canvas.Invalidate();
         }
-
-        private void SliceCanvas_MouseUp(object sender, MouseEventArgs e, bool isPSlice)
+        private void SliceCanvas_MouseUp(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             bool wasPanning;
-            if (isPSlice) { wasPanning = _panningSliceP; _panningSliceP = false; }
+            var timerToStart = isPSliceTarget ? _renderDebounceTimerSliceP : _renderDebounceTimerSliceQ;
+
+            if (isPSliceTarget) { wasPanning = _panningSliceP; _panningSliceP = false; }
             else { wasPanning = _panningSliceQ; _panningSliceQ = false; }
 
             (sender as PictureBox).Cursor = Cursors.Default;
 
-            if (wasPanning) // Если было панорамирование, запускаем полный рендер
+            if (wasPanning)
             {
-                if (isPSlice) ScheduleRenderSliceP(); else ScheduleRenderSliceQ();
+                timerToStart.Stop();
+                timerToStart.Start();
             }
         }
 
         #endregion
 
+        #region Timer Tick Handlers
+        private async void RenderDebounceTimerSliceP_Tick(object sender, EventArgs e)
+        {
+            _renderDebounceTimerSliceP.Stop();
+            if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+            {
+                await RenderSlicePAsync();
+            }
+        }
+
+        private async void RenderDebounceTimerSliceQ_Tick(object sender, EventArgs e)
+        {
+            _renderDebounceTimerSliceQ.Stop();
+            if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
+            {
+                await RenderSliceQAsync();
+            }
+        }
+        #endregion
+
         #region Form Actions
         private void btnApply_Click(object sender, EventArgs e)
         {
-            // Собираем C1 из nudPReal (для P.Re) и nudQImaginary (для Q.Im)
-            // P.Im и Q.Re - это выбранные значения на срезах.
-            ComplexDecimal c1 = new ComplexDecimal(nudPReal.Value, nudQImaginary.Value);
-            // C2 остается тем, что пришло из основной формы (_fixedC2)
-            ParametersSelected?.Invoke(c1, _fixedC2);
+            ComplexDecimal c1Result = new ComplexDecimal(nudPReal.Value, nudQImaginary.Value);
+            ParametersSelected?.Invoke(c1Result, _fixedC2);
             this.Close();
         }
 
@@ -687,14 +662,23 @@ namespace FractalExplorer.SelectorsForms
         #region Form Closing
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _ctsSliceP?.Cancel(); _ctsSliceP?.Dispose();
-            _ctsSliceQ?.Cancel(); _ctsSliceQ?.Dispose();
-            _renderDebounceTimerSliceP?.Stop(); _renderDebounceTimerSliceP?.Dispose();
-            _renderDebounceTimerSliceQ?.Stop(); _renderDebounceTimerSliceQ?.Dispose();
-            _slicePBitmap?.Dispose();
-            _sliceQBitmap?.Dispose();
+            _ctsSliceP?.Cancel(); _ctsSliceP?.Dispose(); _ctsSliceP = null;
+            _ctsSliceQ?.Cancel(); _ctsSliceQ?.Dispose(); _ctsSliceQ = null;
+
+            _renderDebounceTimerSliceP?.Stop(); _renderDebounceTimerSliceP?.Dispose(); _renderDebounceTimerSliceP = null;
+            _renderDebounceTimerSliceQ?.Stop(); _renderDebounceTimerSliceQ?.Dispose(); _renderDebounceTimerSliceQ = null;
+
+            _slicePBitmap?.Dispose(); _slicePBitmap = null;
+            _sliceQBitmap?.Dispose(); _sliceQBitmap = null;
+
             base.OnFormClosed(e);
         }
         #endregion
+        private decimal ClampDecimal(decimal value, decimal min, decimal max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        }
     }
 }
