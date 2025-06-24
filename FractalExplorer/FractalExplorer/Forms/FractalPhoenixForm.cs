@@ -1,6 +1,7 @@
-﻿using FractalExplorer.Core; // Для ColorPaletteMandelbrotFamily и ColorConfigurationMandelbrotFamilyForm
+﻿using FractalExplorer.Core;
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
+using FractalExplorer.Utilities; // Предполагаем, что палитры здесь
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -11,19 +12,17 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
-
 // using FractalExplorer.Selectors; // Для PhoenixCSelectorForm - добавим позже
 
 namespace FractalExplorer.Forms
 {
-    public partial class FractalPhoenixForm : Form //, IFractalForm // IFractalForm пока не реализуем
+    public partial class FractalPhoenixForm : Form
     {
         #region Fields
         private PhoenixEngine _fractalEngine;
         private RenderVisualizerComponent _renderVisualizer;
         private ColorPaletteMandelbrotFamily _paletteManager;
-        private ColorConfigurationMandelbrotFamilyForm _colorConfigForm; // Используем тот же менеджер и форму настроек палитры
+        private ColorConfigurationMandelbrotFamilyForm _colorConfigForm;
 
         private const int TILE_SIZE = 32;
         private readonly object _bitmapLock = new object();
@@ -46,37 +45,18 @@ namespace FractalExplorer.Forms
         private bool _panning = false;
 
         private System.Windows.Forms.Timer _renderDebounceTimer;
-        private const decimal BASE_SCALE = 4.0m; // Базовый масштаб для Феникса
+        private const decimal BASE_SCALE = 4.0m;
         #endregion
 
         #region Constructor
         public FractalPhoenixForm()
         {
-            InitializeComponent(); // Этот метод из Designer.cs
+            InitializeComponent();
             Text = "Фрактал Феникс";
         }
         #endregion
 
-        #region UI Initialization & Event Handlers from FractalMandelbrotFamilyForm
-        private async void btnRender_Click(object sender, EventArgs e)
-        {
-            // Отменяем любой текущий рендер предпросмотра и останавливаем таймер,
-            // чтобы избежать двойного запуска или конфликтов.
-            _previewRenderCts?.Cancel();
-            _renderDebounceTimer.Stop();
-
-            // Если уже идет рендеринг высокого разрешения или другой рендеринг предпросмотра,
-            // просто выходим (или можно добавить сообщение пользователю).
-            if (_isHighResRendering || _isRenderingPreview)
-            {
-                // Можно показать MessageBox, если нужно
-                // MessageBox.Show("Рендеринг уже выполняется.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            // Немедленно запускаем рендеринг предпросмотра.
-            await StartPreviewRender();
-        }
+        #region UI Initialization & Event Handlers
         private void InitializeControls()
         {
             int cores = Environment.ProcessorCount;
@@ -88,26 +68,25 @@ namespace FractalExplorer.Forms
             cbThreads.Items.Add("Auto");
             cbThreads.SelectedItem = "Auto";
 
-            nudIterations.Minimum = 10; // Мин. итераций для Феникса
+            nudIterations.Minimum = 10;
             nudIterations.Maximum = 100000;
-            nudIterations.Value = 100; // Итераций по умолчанию
+            nudIterations.Value = 100;
 
             nudThreshold.Minimum = 2m;
             nudThreshold.Maximum = 1000m;
             nudThreshold.DecimalPlaces = 1;
             nudThreshold.Increment = 0.1m;
-            nudThreshold.Value = 4m; // Порог (2*2) для Феникса
+            nudThreshold.Value = 4m;
 
-            nudZoom.DecimalPlaces = 15; // Увеличим точность для глубокого зума
+            nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
-            nudZoom.Minimum = 0.000000000000001m; // 1e-15m
-            nudZoom.Maximum = 1000000000000000m;  // 1e15m
-            _zoom = BASE_SCALE / 4.0m; // Начальный зум
+            nudZoom.Minimum = 0.000000000000001m;
+            nudZoom.Maximum = 1000000000000000m;
+            _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
-            // Начальные значения для C1 (P, Q) и C2 (пока неактивны в рендере)
-            nudC1Re.Value = 0.56m;   // P
-            nudC1Im.Value = -0.5m; // Q  (Классический Феникс часто имеет Q < 0)
+            nudC1Re.Value = 0.56m;
+            nudC1Im.Value = -0.5m;
             nudC2Re.Value = 0.0m;
             nudC2Im.Value = 0.0m;
 
@@ -131,15 +110,14 @@ namespace FractalExplorer.Forms
         {
             nudC1Re.ValueChanged += ParamControl_Changed;
             nudC1Im.ValueChanged += ParamControl_Changed;
-            nudC2Re.ValueChanged += ParamControl_Changed; // Пока не влияет на рендер, но для консистентности
-            nudC2Im.ValueChanged += ParamControl_Changed; // Пока не влияет на рендер
+            nudC2Re.ValueChanged += ParamControl_Changed;
+            nudC2Im.ValueChanged += ParamControl_Changed;
 
             nudIterations.ValueChanged += ParamControl_Changed;
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
 
-            btnRender.Click += (s, e) => ScheduleRender();
             btnSaveHighRes.Click += btnSaveHighRes_Click;
             color_configurations.Click += color_configurations_Click;
             btnSelectPhoenixParameters.Click += btnSelectPhoenixParameters_Click;
@@ -161,16 +139,16 @@ namespace FractalExplorer.Forms
         private void FractalPhoenixForm_Load(object sender, EventArgs e)
         {
             _paletteManager = new ColorPaletteMandelbrotFamily();
-            _fractalEngine = new PhoenixEngine(); // Создаем наш PhoenixEngine
+            _fractalEngine = new PhoenixEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
 
             InitializeControls();
-            InitializeEventHandlers();
+            InitializeEventHandlers(); // Убедимся, что обработчик btnRender.Click назначен здесь или в дизайнере
 
-            _centerX = 0.0m; // Начальный центр для Феникса
+            _centerX = 0.0m;
             _centerY = 0.0m;
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
@@ -217,8 +195,19 @@ namespace FractalExplorer.Forms
             {
                 if (nudZoom.Value != _zoom) _zoom = nudZoom.Value;
             }
-            // Для C1, C2 значения напрямую читаются в UpdateEngineParameters
             ScheduleRender();
+        }
+
+        private async void btnRender_Click(object sender, EventArgs e)
+        {
+            _previewRenderCts?.Cancel();
+            _renderDebounceTimer.Stop();
+
+            if (_isHighResRendering || _isRenderingPreview)
+            {
+                return;
+            }
+            await StartPreviewRender();
         }
 
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
@@ -261,7 +250,7 @@ namespace FractalExplorer.Forms
 
             decimal unitsPerPixel = BASE_SCALE / _zoom / canvas.Width;
             _centerX -= (decimal)(e.X - _panStart.X) * unitsPerPixel;
-            _centerY += (decimal)(e.Y - _panStart.Y) * unitsPerPixel; // Y инвертирован в координатах мыши
+            _centerY += (decimal)(e.Y - _panStart.Y) * unitsPerPixel;
             _panStart = e.Location;
 
             canvas.Invalidate();
@@ -378,15 +367,14 @@ namespace FractalExplorer.Forms
             var currentRenderedCenterY = _centerY;
             var currentRenderedZoom = _zoom;
 
-            // Создаем копию движка для безопасного использования в параллельных потоках
-            var renderEngineCopy = new PhoenixEngine(); // Используем PhoenixEngine
+            var renderEngineCopy = new PhoenixEngine();
             renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
             renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
             renderEngineCopy.CenterX = _fractalEngine.CenterX;
             renderEngineCopy.CenterY = _fractalEngine.CenterY;
             renderEngineCopy.Scale = _fractalEngine.Scale;
             renderEngineCopy.C1 = _fractalEngine.C1;
-            renderEngineCopy.C2 = _fractalEngine.C2; // C2 пока не используется, но передаем
+            renderEngineCopy.C2 = _fractalEngine.C2;
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
 
@@ -449,8 +437,8 @@ namespace FractalExplorer.Forms
                     if (_currentRenderingBitmap == newRenderingBitmap)
                     {
                         _previewBitmap?.Dispose();
-                        _previewBitmap = _currentRenderingBitmap; // _currentRenderingBitmap становится _previewBitmap
-                        _currentRenderingBitmap = null;          // Очищаем _currentRenderingBitmap
+                        _previewBitmap = _currentRenderingBitmap;
+                        _currentRenderingBitmap = null;
                         _renderedCenterX = currentRenderedCenterX;
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
@@ -505,7 +493,7 @@ namespace FractalExplorer.Forms
             {
                 if (_currentRenderingBitmap == null) return;
 
-                var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb); // Используем 24bppRgb
+                var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
                 using (var g = Graphics.FromImage(bakedBitmap))
                 {
                     g.Clear(Color.Black);
@@ -563,7 +551,7 @@ namespace FractalExplorer.Forms
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BASE_SCALE / _zoom;
             _fractalEngine.C1 = new ComplexDecimal(nudC1Re.Value, nudC1Im.Value);
-            _fractalEngine.C2 = new ComplexDecimal(nudC2Re.Value, nudC2Im.Value); // Пока не используется в рендере, но сохраняем
+            _fractalEngine.C2 = new ComplexDecimal(nudC2Re.Value, nudC2Im.Value);
             ApplyActivePalette();
         }
 
@@ -619,10 +607,9 @@ namespace FractalExplorer.Forms
 
                     try
                     {
-                        var renderEngine = new PhoenixEngine(); // Создаем новый экземпляр для сохранения
-                        UpdateEngineParameters(); // Обновляем параметры текущего _fractalEngine
+                        var renderEngine = new PhoenixEngine();
+                        UpdateEngineParameters();
 
-                        // Копируем параметры
                         renderEngine.MaxIterations = _fractalEngine.MaxIterations;
                         renderEngine.ThresholdSquared = _fractalEngine.ThresholdSquared;
                         renderEngine.CenterX = _fractalEngine.CenterX;
@@ -630,7 +617,7 @@ namespace FractalExplorer.Forms
                         renderEngine.Scale = _fractalEngine.Scale;
                         renderEngine.C1 = _fractalEngine.C1;
                         renderEngine.C2 = _fractalEngine.C2;
-                        renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette); // Важно!
+                        renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
                         renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
 
                         int threadCount = GetThreadCount();
@@ -670,23 +657,59 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Palette Management
+
+        // Вспомогательный метод для ограничения значения компонента цвета
+        private static int ClampColorComponent(int component)
+        {
+            if (component < 0) return 0;
+            if (component > 255) return 255;
+            return component;
+        }
+        // Перегрузка для double, если потребуется (хотя текущий LerpColor возвращает int компоненты)
+        private static int ClampColorComponent(double component)
+        {
+            if (component < 0) return 0;
+            if (component > 255) return 255;
+            return (int)component;
+        }
+
+
         private void ApplyActivePalette()
         {
             if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
             _fractalEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
-            _fractalEngine.MaxColorIterations = _paletteManager.ActivePalette.IsGradient ? _fractalEngine.MaxIterations : _paletteManager.ActivePalette.Colors.Count;
 
+            var activePalette = _paletteManager.ActivePalette;
+
+            if (activePalette.Name == "Стандартный серый")
+            {
+                _fractalEngine.MaxColorIterations = Math.Max(1, _fractalEngine.MaxIterations);
+            }
+            else if (activePalette.IsGradient)
+            {
+                _fractalEngine.MaxColorIterations = Math.Max(1, _fractalEngine.MaxIterations);
+            }
+            else // Дискретная палитра (не "Стандартный серый")
+            {
+                _fractalEngine.MaxColorIterations = Math.Max(1, activePalette.Colors.Count);
+            }
         }
 
         private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
         {
             if (palette.Name == "Стандартный серый")
             {
-                return (iter, maxIter, maxClrIter) =>
+                return (iter, maxIter, maxClrIter) => // maxClrIter здесь будет равен _fractalEngine.MaxIterations
                 {
                     if (iter == maxIter) return Color.Black;
+                    if (maxClrIter <= 0) return Color.Gray; // Защита, если MaxIterations вдруг 0
+
+                    // Math.Log(1) = 0. Если maxClrIter = 0, то maxClrIter + 1 = 1, Math.Log(1)=0. Деление на 0.
+                    // Поэтому выше мы установили Math.Max(1, _fractalEngine.MaxIterations)
+                    // Теперь maxClrIter всегда >= 1. Значит maxClrIter + 1 >= 2. Math.Log(maxClrIter + 1) > 0.
                     double tLog = Math.Log(Math.Min(iter, maxClrIter) + 1) / Math.Log(maxClrIter + 1);
-                    int cVal = (int)(255.0 * (1 - tLog));
+                    int cValRaw = (int)(255.0 * (1 - tLog));
+                    int cVal = ClampColorComponent(cValRaw);
                     return Color.FromArgb(cVal, cVal, cVal);
                 };
             }
@@ -701,25 +724,34 @@ namespace FractalExplorer.Forms
             return (iter, maxIter, maxColorIterationsParam) =>
             {
                 if (iter == maxIter) return Color.Black;
-                int actualMaxColorIter = isGradient ? maxColorIterationsParam : colorCount;
 
                 if (isGradient)
                 {
-                    double t = (double)Math.Min(iter, actualMaxColorIter - 1) / (actualMaxColorIter - 1); // -1 для правильной интерполяции до последнего цвета
-                    if (actualMaxColorIter <= 1) t = 0; // если всего один цвет в градиенте или меньше
+                    // maxColorIterationsParam здесь равен _fractalEngine.MaxIterations (и >= 1)
+                    if (maxColorIterationsParam == 1) // Если MaxIterations движка = 1
+                    {
+                        return colors[0]; // Берем первый цвет палитры
+                    }
+                    // Делитель (maxColorIterationsParam - 1) теперь будет >= 0.
+                    // Если maxColorIterationsParam = 1, делитель = 0. Этот случай обработан выше.
+                    // Значит, maxColorIterationsParam >= 2, делитель >= 1.
+                    double t = (double)Math.Min(iter, maxColorIterationsParam - 1) / (maxColorIterationsParam - 1);
 
                     double scaledT = t * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
                     double localT = scaledT - index1;
-                    if (index1 < 0) index1 = 0; // Защита
-                    if (index2 < 0) index2 = 0; // Защита
+
+                    // Дополнительная проверка индексов на всякий случай, хотя не должна быть нужна при правильной логике
+                    index1 = Math.Max(0, Math.Min(index1, colorCount - 1));
+                    index2 = Math.Max(0, Math.Min(index2, colorCount - 1));
+
                     return LerpColor(colors[index1], colors[index2], localT);
                 }
                 else
                 {
-                    int index = Math.Min(iter, actualMaxColorIter - 1) % colorCount; // actualMaxColorIter здесь colorCount
-                    if (index < 0) index = 0; // Защита
+                    // maxColorIterationsParam здесь равен colorCount (и >= 1)
+                    int index = iter % colorCount;
                     return colors[index];
                 }
             };
@@ -727,12 +759,12 @@ namespace FractalExplorer.Forms
 
         private Color LerpColor(Color a, Color b, double t)
         {
-            t = Math.Max(0, Math.Min(1, t));
+            t = Math.Max(0, Math.Min(1, t)); // t всегда в [0,1]
             return Color.FromArgb(
-                (int)(a.A + (b.A - a.A) * t),
-                (int)(a.R + (b.R - a.R) * t),
-                (int)(a.G + (b.G - a.G) * t),
-                (int)(a.B + (b.B - a.B) * t)
+                ClampColorComponent((int)(a.A + (b.A - a.A) * t)),
+                ClampColorComponent((int)(a.R + (b.R - a.R) * t)),
+                ClampColorComponent((int)(a.G + (b.G - a.G) * t)),
+                ClampColorComponent((int)(a.B + (b.B - a.B) * t))
             );
         }
         #endregion
@@ -740,30 +772,7 @@ namespace FractalExplorer.Forms
         #region Phoenix Specific UI
         private void btnSelectPhoenixParameters_Click(object sender, EventArgs e)
         {
-            // Здесь будет код для открытия PhoenixCSelectorForm
             MessageBox.Show("Окно выбора параметров C1/C2 для Феникса будет реализовано позже.", "В разработке", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            // Пример, как это может выглядеть (закомментировано, так как PhoenixCSelectorForm еще не создан):
-            /*
-            if (_phoenixCSelectorWindow == null || _phoenixCSelectorWindow.IsDisposed)
-            {
-                _phoenixCSelectorWindow = new PhoenixCSelectorForm(this, (double)nudC1Re.Value, (double)nudC1Im.Value, (double)nudC2Re.Value, (double)nudC2Im.Value);
-                _phoenixCSelectorWindow.ParametersSelected += (c1, c2) =>
-                {
-                    nudC1Re.Value = (decimal)c1.Real;
-                    nudC1Im.Value = (decimal)c1.Imaginary;
-                    nudC2Re.Value = (decimal)c2.Real;
-                    nudC2Im.Value = (decimal)c2.Imaginary;
-                    ScheduleRender(); // Перерисовать с новыми параметрами
-                };
-                _phoenixCSelectorWindow.FormClosed += (s, args) => _phoenixCSelectorWindow = null;
-                _phoenixCSelectorWindow.Show(this);
-            }
-            else
-            {
-                _phoenixCSelectorWindow.Activate();
-                _phoenixCSelectorWindow.SetSelectedParameters((double)nudC1Re.Value, (double)nudC1Im.Value, (double)nudC2Re.Value, (double)nudC2Im.Value);
-            }
-            */
         }
         #endregion
 
@@ -775,8 +784,8 @@ namespace FractalExplorer.Forms
             if (_previewRenderCts != null)
             {
                 _previewRenderCts.Cancel();
-                Thread.Sleep(50);
-                _previewRenderCts.Dispose();
+                try { _previewRenderCts.Dispose(); } catch { /* Игнор */ }
+                _previewRenderCts = null;
             }
             lock (_bitmapLock)
             {
@@ -789,8 +798,11 @@ namespace FractalExplorer.Forms
             {
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
                 _renderVisualizer.Dispose();
+                _renderVisualizer = null;
             }
-            _colorConfigForm?.Close(); // Закрываем форму настроек цвета, если она открыта
+            _colorConfigForm?.Close();
+            _colorConfigForm?.Dispose(); // Важно вызвать Dispose
+            _colorConfigForm = null;
         }
         #endregion
     }
