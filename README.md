@@ -81,12 +81,48 @@ Welcome to Fractal Explorer! This is a Windows Forms application written in C# t
 
 ## 🖼️ Screenshots
 
-*(You can add screenshots of your application here)*
-*   *Main window (Launcher Hub)*
-*   *Mandelbrot Set window*
-*   *Julia Set window with 'C' selector*
-*   *Palette editor*
-*   *Newton Pools window with formula input*
+<div class="gallery">
+  <a href="Pictures/HubMainWindow.png">
+    <img src="Pictures/HubMainWindow.png" alt="Hub Main Window" style="width:150px;">
+  </a>
+  <a href="Pictures/Mandelbrot.png">
+    <img src="Pictures/Mandelbrot.png" alt="Mandelbrot" style="width:150px;">
+  </a>
+  <a href="Pictures/MandelbrotBurningShip.png">
+    <img src="Pictures/MandelbrotBurningShip.png" alt="Mandelbrot Burning Ship" style="width:150px;">
+  </a>
+  <a href="Pictures/Julia.png">
+    <img src="Pictures/Julia.png" alt="Julia" style="width:150px;">
+  </a>
+  <a href="Pictures/JuliaBurningShip.png">
+    <img src="Pictures/JuliaBurningShip.png" alt="Julia Burning Ship" style="width:150px;">
+  </a>
+  <a href="Pictures/Sierpinski.png">
+    <img src="Pictures/Sierpinski.png" alt="Sierpinski" style="width:150px;">
+  </a>
+  <a href="Pictures/NewtonPools.png">
+    <img src="Pictures/NewtonPools.png" alt="Newton Pools" style="width:150px;">
+  </a>
+</div>
+
+<style>
+  .gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .gallery img {
+    border: 1px solid #ddd;
+    padding: 5px;
+    transition: transform 0.2s;
+  }
+  .gallery img:hover {
+    transform: scale(1.1);
+  }
+  a {
+    text-decoration: none;
+  }
+</style>
 
 ## 📜 License
 
@@ -175,12 +211,48 @@ Welcome to Fractal Explorer! This is a Windows Forms application written in C# t
 
 ## 🖼️ Скриншоты
 
-*(Здесь вы можете добавить скриншоты вашего приложения)*
-*   *Главное окно (Launcher Hub)*
-*   *Окно фрактала Мандельброта*
-*   *Окно фрактала Жюлиа с селектором 'C'*
-*   *Редактор палитр*
-*   *Окно Бассейнов Ньютона с вводом формулы*
+<div class="gallery">
+  <a href="Pictures/HubMainWindow.png">
+    <img src="Pictures/HubMainWindow.png" alt="Hub Main Window" style="width:150px;">
+  </a>
+  <a href="Pictures/Mandelbrot.png">
+    <img src="Pictures/Mandelbrot.png" alt="Mandelbrot" style="width:150px;">
+  </a>
+  <a href="Pictures/MandelbrotBurningShip.png">
+    <img src="Pictures/MandelbrotBurningShip.png" alt="Mandelbrot Burning Ship" style="width:150px;">
+  </a>
+  <a href="Pictures/Julia.png">
+    <img src="Pictures/Julia.png" alt="Julia" style="width:150px;">
+  </a>
+  <a href="Pictures/JuliaBurningShip.png">
+    <img src="Pictures/JuliaBurningShip.png" alt="Julia Burning Ship" style="width:150px;">
+  </a>
+  <a href="Pictures/Sierpinski.png">
+    <img src="Pictures/Sierpinski.png" alt="Sierpinski" style="width:150px;">
+  </a>
+  <a href="Pictures/NewtonPools.png">
+    <img src="Pictures/NewtonPools.png" alt="Newton Pools" style="width:150px;">
+  </a>
+</div>
+
+<style>
+  .gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .gallery img {
+    border: 1px solid #ddd;
+    padding: 5px;
+    transition: transform 0.2s;
+  }
+  .gallery img:hover {
+    transform: scale(1.1);
+  }
+  a {
+    text-decoration: none;
+  }
+</style>
 
 ## 📜 Лицензия
 
