@@ -126,7 +126,7 @@ Welcome to Fractal Explorer! This is a Windows Forms application written in C# t
 
 ## 📜 License
 
-
+This project is distributed under the Apache 2.0 license. The full text of the license is available in [LICENSE.md](LICENSE.md).
 
 # Исследователь Фракталов (Fractal Explorer)
 
@@ -256,9 +256,9 @@ Welcome to Fractal Explorer! This is a Windows Forms application written in C# t
 
 ## 📜 Лицензия
 
-
+Этот проект распространяется под лицензией Apache 2.0. Полный текст лицензии доступен в [LICENSE.md](LICENSE.md).
 
 ---
 
-All project AI generated
-Весь проект создан при помощи ИИ
+Project AI generated
+Проект создан при помощи ИИ
