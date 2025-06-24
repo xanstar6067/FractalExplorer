@@ -98,7 +98,7 @@ Welcome to Fractal Explorer! This is a Windows Forms application written in C# t
     <img src="Pictures/JuliaBurningShip.png" alt="Julia Burning Ship" style="width:150px;">
   </a>
   <a href="Pictures/Serpinski.png">
-    <img src="Pictures/Sierpinski.png" alt="Sierpinski" style="width:150px;">
+    <img src="Pictures/Serpinski.png" alt="Serpinski" style="width:150px;">
   </a>
   <a href="Pictures/NewtonPools.png">
     <img src="Pictures/NewtonPools.png" alt="Newton Pools" style="width:150px;">
@@ -228,7 +228,7 @@ Welcome to Fractal Explorer! This is a Windows Forms application written in C# t
     <img src="Pictures/JuliaBurningShip.png" alt="Julia Burning Ship" style="width:150px;">
   </a>
   <a href="Pictures/Serpinski.png">
-    <img src="Pictures/Sierpinski.png" alt="Sierpinski" style="width:150px;">
+    <img src="Pictures/Serpinski.png" alt="Serpinski" style="width:150px;">
   </a>
   <a href="Pictures/NewtonPools.png">
     <img src="Pictures/NewtonPools.png" alt="Newton Pools" style="width:150px;">
