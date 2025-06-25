@@ -47,6 +47,7 @@
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
             canvas = new PictureBox();
+            btnStateManager = new Button();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
@@ -63,6 +64,7 @@
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(btnStateManager);
             pnlControls.Controls.Add(color_configurations);
             pnlControls.Controls.Add(mandelbrotPreviewPanel);
             pnlControls.Controls.Add(nudSaveWidth);
@@ -302,10 +304,10 @@
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(12, 432);
+            nudBaseScale.Location = new Point(0, 216);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
-            nudBaseScale.Size = new Size(40, 23);
+            nudBaseScale.Size = new Size(26, 23);
             nudBaseScale.TabIndex = 18;
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
@@ -319,7 +321,17 @@
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
-            // FractalFormBase
+            // btnStateManager
+            // 
+            btnStateManager.Location = new Point(28, 423);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(75, 23);
+            btnStateManager.TabIndex = 34;
+            btnStateManager.Text = "button1";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
+            // 
+            // FractalMandelbrotFamilyForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -327,7 +339,7 @@
             Controls.Add(canvas);
             Controls.Add(pnlControls);
             MinimumSize = new Size(1100, 675);
-            Name = "FractalFormBase";
+            Name = "FractalMandelbrotFamilyForm";
             Text = "FractalFormBase";
             Load += FormBase_Load;
             pnlControls.ResumeLayout(false);
@@ -373,5 +385,6 @@
         protected System.Windows.Forms.Button color_configurations;
         // Этот контрол нужен для IFractalForm, но он невидимый.
         protected System.Windows.Forms.NumericUpDown nudBaseScale;
+        private Button btnStateManager;
     }
 }

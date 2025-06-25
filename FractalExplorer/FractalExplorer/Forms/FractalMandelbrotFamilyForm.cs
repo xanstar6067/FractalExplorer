@@ -1130,6 +1130,11 @@ namespace FractalDraving
             return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+
+        }
+
         #endregion
 
         #region IFractalForm Implementation
