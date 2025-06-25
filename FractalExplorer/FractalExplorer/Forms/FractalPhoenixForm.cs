@@ -2,7 +2,7 @@
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.SelectorsForms;
-using FractalExplorer.Utilities; // Предполагаем, что палитры здесь
+using FractalExplorer.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,11 +13,13 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-// using FractalExplorer.Selectors; // Для PhoenixCSelectorForm - добавим позже
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.StateBaseImplementations;
+using System.Text.Json;
 
 namespace FractalExplorer.Forms
 {
-    public partial class FractalPhoenixForm : Form
+    public partial class FractalPhoenixForm : Form, ISaveLoadCapableFractal
     {
         #region Fields
         private PhoenixEngine _fractalEngine;
@@ -120,15 +122,6 @@ namespace FractalExplorer.Forms
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
-
-            // УБИРАЕМ ПОВТОРНЫЕ ПОДПИСКИ ДЛЯ КНОПОК, так как они уже есть в Designer.cs
-            // btnSaveHighRes.Click += btnSaveHighRes_Click; 
-            // color_configurations.Click += color_configurations_Click; 
-            // btnSelectPhoenixParameters.Click += btnSelectPhoenixParameters_Click;
-            // btnRender.Click += btnRender_Click; // Также убираем, если в Designer.cs уже есть this.btnRender.Click += new System.EventHandler(this.btnRender_Click);
-
-            // Оставляем подписки, которые не генерируются дизайнером автоматически или для которых мы хотим явный контроль здесь
-            // Например, для канваса и изменения размера формы:
             canvas.MouseWheel += Canvas_MouseWheel;
             canvas.MouseDown += Canvas_MouseDown;
             canvas.MouseMove += Canvas_MouseMove;
@@ -153,7 +146,7 @@ namespace FractalExplorer.Forms
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
 
             InitializeControls();
-            InitializeEventHandlers(); // Убедимся, что обработчик btnRender.Click назначен здесь или в дизайнере
+            InitializeEventHandlers();
 
             _centerX = 0.0m;
             _centerY = 0.0m;
@@ -866,9 +859,179 @@ namespace FractalExplorer.Forms
         }
         #endregion
 
+        #region ISaveLoadCapableFractal Implementation
+
+        public string FractalTypeIdentifier => "Phoenix";
+
+        public Type ConcreteSaveStateType => typeof(PhoenixSaveState);
+
+        // Вспомогательный класс для параметров превью Феникса
+        protected class PhoenixPreviewParams
+        {
+            public decimal CenterX { get; set; }
+            public decimal CenterY { get; set; }
+            public decimal Zoom { get; set; }
+            public int Iterations { get; set; }
+            public string PaletteName { get; set; }
+            public decimal Threshold { get; set; }
+            public decimal C1Re { get; set; }
+            public decimal C1Im { get; set; }
+            public decimal C2Re { get; set; }
+            public decimal C2Im { get; set; }
+        }
+
+        public FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            var state = new PhoenixSaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                Threshold = nudThreshold.Value,
+                Iterations = (int)nudIterations.Value,
+                PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+                C1Re = nudC1Re.Value,
+                C1Im = nudC1Im.Value,
+                C2Re = nudC2Re.Value,
+                C2Im = nudC2Im.Value
+            };
+
+            var previewParams = new PhoenixPreviewParams
+            {
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = Math.Min(state.Iterations, 75), // Меньше итераций для превью
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold,
+                C1Re = state.C1Re,
+                C1Im = state.C1Im,
+                C2Re = state.C2Re,
+                C2Im = state.C2Im
+            };
+
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams);
+            return state;
+        }
+
+        public void LoadState(FractalSaveStateBase stateBase)
+        {
+            if (stateBase is PhoenixSaveState state)
+            {
+                _isRenderingPreview = false;
+                _previewRenderCts?.Cancel();
+                _renderDebounceTimer.Stop();
+
+                _centerX = state.CenterX;
+                _centerY = state.CenterY;
+                _zoom = state.Zoom;
+
+                // Обновляем UI
+                nudZoom.Value = state.Zoom;
+                nudThreshold.Value = state.Threshold;
+                nudIterations.Value = state.Iterations;
+                nudC1Re.Value = state.C1Re;
+                nudC1Im.Value = state.C1Im;
+                nudC2Re.Value = state.C2Re;
+                nudC2Im.Value = state.C2Im;
+
+                var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
+                if (paletteToLoad != null)
+                {
+                    _paletteManager.ActivePalette = paletteToLoad;
+                    ApplyActivePalette();
+                }
+
+                lock (_bitmapLock)
+                {
+                    _previewBitmap?.Dispose();
+                    _previewBitmap = null;
+                    _currentRenderingBitmap?.Dispose();
+                    _currentRenderingBitmap = null;
+                }
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
+
+                UpdateEngineParameters();
+                ScheduleRender();
+            }
+            else
+            {
+                MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
+        {
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            PhoenixPreviewParams previewParams;
+            try
+            {
+                previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson);
+            }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            var previewEngine = new PhoenixEngine();
+
+            previewEngine.CenterX = previewParams.CenterX;
+            previewEngine.CenterY = previewParams.CenterY;
+            if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
+            previewEngine.Scale = 4.0m / previewParams.Zoom; // Для Феникса BaseScale = 4.0
+            previewEngine.MaxIterations = previewParams.Iterations;
+            previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+            previewEngine.C1 = new ComplexDecimal(previewParams.C1Re, previewParams.C1Im);
+            previewEngine.C2 = new ComplexDecimal(previewParams.C2Re, previewParams.C2Im);
+
+            var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName)
+                                      ?? _paletteManager.Palettes.First();
+
+            previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+            if (paletteForPreview.Name == "Стандартный серый" || paletteForPreview.IsGradient)
+            {
+                previewEngine.MaxColorIterations = Math.Max(1, previewParams.Iterations);
+            }
+            else
+            {
+                previewEngine.MaxColorIterations = Math.Max(1, paletteForPreview.Colors.Count);
+            }
+
+            return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
+        }
+
+        public List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<PhoenixSaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            var specificSaves = saves.Cast<PhoenixSaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
+        }
+
+        #endregion
+
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-
+            using (var dialog = new SaveLoadDialogForm(this)) // Укажи полный namespace, если нужно
+            {
+                dialog.ShowDialog(this);
+            }
         }
     }
 }
