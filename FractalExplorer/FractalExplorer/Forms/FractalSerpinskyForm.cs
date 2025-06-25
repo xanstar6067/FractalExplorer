@@ -486,9 +486,26 @@ namespace FractalExplorer
         {
             if (stateBase is SerpinskySaveState state)
             {
+                // Останавливаем текущие рендеры
                 previewRenderCts?.Cancel();
                 renderTimer.Stop();
 
+                // 1. Создаем временный объект палитры из загруженного состояния.
+                // Имя палитры можно составить из имени сохранения, чтобы было понятно.
+                var loadedPalette = new SerpinskyColorPalette
+                {
+                    Name = $"Загружено: {state.SaveName}",
+                    FractalColor = state.FractalColor,
+                    BackgroundColor = state.BackgroundColor,
+                    IsBuiltIn = false // Важно, чтобы ее можно было рассматривать как временную/пользовательскую
+                };
+
+                // 2. Устанавливаем эту палитру как активную в менеджере.
+                // Мы не добавляем ее в общий список, чтобы не засорять его,
+                // просто делаем ее текущей.
+                _paletteManager.ActivePalette = loadedPalette;
+
+                // 3. Устанавливаем RenderMode, чтобы обновить ограничения nudIterations
                 if (state.RenderMode == SerpinskyRenderMode.Geometric)
                 {
                     FractalTypeIsGeometry.Checked = true;
@@ -498,6 +515,7 @@ namespace FractalExplorer
                     FractalTypeIsChaos.Checked = true;
                 }
 
+                // 4. Безопасно устанавливаем значения контролов
                 decimal safeIterations = Math.Max(nudIterations.Minimum, Math.Min(nudIterations.Maximum, state.Iterations));
                 nudIterations.Value = safeIterations;
 
@@ -507,10 +525,11 @@ namespace FractalExplorer
                 decimal safeZoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, (decimal)state.Zoom));
                 nudZoom.Value = safeZoom;
 
-                _engine.FractalColor = state.FractalColor;
-                _engine.BackgroundColor = state.BackgroundColor;
-
+                // 5. Вызываем UpdateEngineParameters, который теперь вызовет ApplyActivePalette
+                // и применит цвета из нашей новой, только что установленной `loadedPalette`.
                 UpdateEngineParameters();
+
+                // 6. Запускаем рендер.
                 ScheduleRender();
             }
             else
