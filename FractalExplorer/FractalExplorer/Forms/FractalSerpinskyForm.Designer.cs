@@ -28,411 +28,323 @@
         /// </summary>
         private void InitializeComponent()
         {
-            panel1 = new Panel();
-            abortRender = new Button();
-            panel3 = new Panel();
-            label2 = new Label();
-            label1 = new Label();
-            colorColor = new CheckBox();
-            renderBW = new CheckBox();
-            colorGrayscale = new CheckBox();
-            colorBackground = new CheckBox();
-            colorFractal = new CheckBox();
-            FractalTypeIsChaos = new CheckBox();
-            FractalTypeIsGeometry = new CheckBox();
-            panel2 = new Panel();
-            canvasPalette = new PictureBox();
-            nudW2 = new NumericUpDown();
-            nudH2 = new NumericUpDown();
-            progressPNGSerpinsky = new ProgressBar();
-            label8 = new Label();
-            label5 = new Label();
-            nudZoom = new NumericUpDown();
-            btnRender = new Button();
-            progressBarSerpinsky = new ProgressBar();
-            label6 = new Label();
-            cbCPUThreads = new ComboBox();
-            btnSavePNG = new Button();
-            label3 = new Label();
-            nudIterations = new NumericUpDown();
-            canvasSerpinsky = new PictureBox();
-            btnStateManager = new Button();
-            color_configurations = new Button();
-            panel1.SuspendLayout();
-            panel3.SuspendLayout();
-            panel2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudW2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudH2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).BeginInit();
-            SuspendLayout();
+            this.panel1 = new System.Windows.Forms.Panel();
+            this.color_configurations = new System.Windows.Forms.Button();
+            this.btnStateManager = new System.Windows.Forms.Button();
+            this.abortRender = new System.Windows.Forms.Button();
+            this.FractalTypeIsChaos = new System.Windows.Forms.CheckBox();
+            this.FractalTypeIsGeometry = new System.Windows.Forms.CheckBox();
+            this.nudW2 = new System.Windows.Forms.NumericUpDown();
+            this.nudH2 = new System.Windows.Forms.NumericUpDown();
+            this.progressPNGSerpinsky = new System.Windows.Forms.ProgressBar();
+            this.label8 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.nudZoom = new System.Windows.Forms.NumericUpDown();
+            this.btnRender = new System.Windows.Forms.Button();
+            this.progressBarSerpinsky = new System.Windows.Forms.ProgressBar();
+            this.label6 = new System.Windows.Forms.Label();
+            this.cbCPUThreads = new System.Windows.Forms.ComboBox();
+            this.btnSavePNG = new System.Windows.Forms.Button();
+            this.label3 = new System.Windows.Forms.Label();
+            this.nudIterations = new System.Windows.Forms.NumericUpDown();
+            this.canvasSerpinsky = new System.Windows.Forms.PictureBox();
+            this.panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudW2)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudH2)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudZoom)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudIterations)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.canvasSerpinsky)).BeginInit();
+            this.SuspendLayout();
             // 
             // panel1
             // 
-            panel1.Controls.Add(color_configurations);
-            panel1.Controls.Add(abortRender);
-            panel1.Controls.Add(btnStateManager);
-            panel1.Controls.Add(panel3);
-            panel1.Controls.Add(FractalTypeIsChaos);
-            panel1.Controls.Add(FractalTypeIsGeometry);
-            panel1.Controls.Add(panel2);
-            panel1.Controls.Add(nudW2);
-            panel1.Controls.Add(nudH2);
-            panel1.Controls.Add(progressPNGSerpinsky);
-            panel1.Controls.Add(label8);
-            panel1.Controls.Add(label5);
-            panel1.Controls.Add(nudZoom);
-            panel1.Controls.Add(btnRender);
-            panel1.Controls.Add(progressBarSerpinsky);
-            panel1.Controls.Add(label6);
-            panel1.Controls.Add(cbCPUThreads);
-            panel1.Controls.Add(btnSavePNG);
-            panel1.Controls.Add(label3);
-            panel1.Controls.Add(nudIterations);
-            panel1.Dock = DockStyle.Left;
-            panel1.Location = new Point(0, 0);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(231, 636);
-            panel1.TabIndex = 1;
-            // 
-            // abortRender
-            // 
-            abortRender.Location = new Point(130, 154);
-            abortRender.Name = "abortRender";
-            abortRender.Size = new Size(89, 23);
-            abortRender.TabIndex = 39;
-            abortRender.Text = "Отмена";
-            abortRender.UseVisualStyleBackColor = true;
-            abortRender.Click += abortRender_Click;
-            // 
-            // panel3
-            // 
-            panel3.Controls.Add(label2);
-            panel3.Controls.Add(label1);
-            panel3.Controls.Add(colorColor);
-            panel3.Controls.Add(renderBW);
-            panel3.Controls.Add(colorGrayscale);
-            panel3.Controls.Add(colorBackground);
-            panel3.Controls.Add(colorFractal);
-            panel3.Dock = DockStyle.Bottom;
-            panel3.Location = new Point(0, 431);
-            panel3.Name = "panel3";
-            panel3.Size = new Size(231, 83);
-            panel3.TabIndex = 38;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(35, 65);
-            label2.Name = "label2";
-            label2.Size = new Size(164, 15);
-            label2.TabIndex = 38;
-            label2.Text = "Кликни для настройки цвета";
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(67, 7);
-            label1.Name = "label1";
-            label1.Size = new Size(91, 15);
-            label1.TabIndex = 32;
-            label1.Text = "Выберите цвет.";
-            // 
-            // colorColor
-            // 
-            colorColor.AutoSize = true;
-            colorColor.Location = new Point(169, 25);
-            colorColor.Name = "colorColor";
-            colorColor.Size = new Size(52, 19);
-            colorColor.TabIndex = 37;
-            colorColor.Text = "Цвет";
-            colorColor.UseVisualStyleBackColor = true;
-            // 
-            // renderBW
-            // 
-            renderBW.AutoSize = true;
-            renderBW.Location = new Point(15, 25);
-            renderBW.Name = "renderBW";
-            renderBW.Size = new Size(41, 19);
-            renderBW.TabIndex = 17;
-            renderBW.Text = "ЧБ";
-            renderBW.UseVisualStyleBackColor = true;
-            // 
-            // colorGrayscale
-            // 
-            colorGrayscale.AutoSize = true;
-            colorGrayscale.Location = new Point(60, 25);
-            colorGrayscale.Name = "colorGrayscale";
-            colorGrayscale.Size = new Size(112, 19);
-            colorGrayscale.TabIndex = 30;
-            colorGrayscale.Text = "Оттенки серого";
-            colorGrayscale.UseVisualStyleBackColor = true;
-            // 
-            // colorBackground
-            // 
-            colorBackground.AutoSize = true;
-            colorBackground.Location = new Point(76, 44);
-            colorBackground.Name = "colorBackground";
-            colorBackground.Size = new Size(49, 19);
-            colorBackground.TabIndex = 33;
-            colorBackground.Text = "Фон";
-            colorBackground.UseVisualStyleBackColor = true;
-            // 
-            // colorFractal
-            // 
-            colorFractal.AutoSize = true;
-            colorFractal.Location = new Point(131, 44);
-            colorFractal.Name = "colorFractal";
-            colorFractal.Size = new Size(66, 19);
-            colorFractal.TabIndex = 34;
-            colorFractal.Text = "Фигура";
-            colorFractal.UseVisualStyleBackColor = true;
-            // 
-            // FractalTypeIsChaos
-            // 
-            FractalTypeIsChaos.AutoSize = true;
-            FractalTypeIsChaos.Location = new Point(130, 85);
-            FractalTypeIsChaos.Name = "FractalTypeIsChaos";
-            FractalTypeIsChaos.Size = new Size(81, 19);
-            FractalTypeIsChaos.TabIndex = 36;
-            FractalTypeIsChaos.Text = "Игра хаос";
-            FractalTypeIsChaos.UseVisualStyleBackColor = true;
-            // 
-            // FractalTypeIsGeometry
-            // 
-            FractalTypeIsGeometry.AutoSize = true;
-            FractalTypeIsGeometry.Location = new Point(13, 85);
-            FractalTypeIsGeometry.Name = "FractalTypeIsGeometry";
-            FractalTypeIsGeometry.Size = new Size(118, 19);
-            FractalTypeIsGeometry.TabIndex = 35;
-            FractalTypeIsGeometry.Text = "Геометрический";
-            FractalTypeIsGeometry.UseVisualStyleBackColor = true;
-            // 
-            // panel2
-            // 
-            panel2.BorderStyle = BorderStyle.FixedSingle;
-            panel2.Controls.Add(canvasPalette);
-            panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 514);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(231, 122);
-            panel2.TabIndex = 31;
-            // 
-            // canvasPalette
-            // 
-            canvasPalette.Dock = DockStyle.Fill;
-            canvasPalette.Location = new Point(0, 0);
-            canvasPalette.Name = "canvasPalette";
-            canvasPalette.Size = new Size(229, 120);
-            canvasPalette.TabIndex = 3;
-            canvasPalette.TabStop = false;
-            canvasPalette.Click += cancasPalette_Click;
-            // 
-            // nudW2
-            // 
-            nudW2.Location = new Point(8, 256);
-            nudW2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-            nudW2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudW2.Name = "nudW2";
-            nudW2.Size = new Size(86, 23);
-            nudW2.TabIndex = 23;
-            nudW2.Value = new decimal(new int[] { 1920, 0, 0, 0 });
-            // 
-            // nudH2
-            // 
-            nudH2.Location = new Point(120, 256);
-            nudH2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-            nudH2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudH2.Name = "nudH2";
-            nudH2.Size = new Size(83, 23);
-            nudH2.TabIndex = 22;
-            nudH2.Value = new decimal(new int[] { 1080, 0, 0, 0 });
-            // 
-            // progressPNGSerpinsky
-            // 
-            progressPNGSerpinsky.Location = new Point(4, 285);
-            progressPNGSerpinsky.Name = "progressPNGSerpinsky";
-            progressPNGSerpinsky.Size = new Size(218, 23);
-            progressPNGSerpinsky.TabIndex = 21;
-            // 
-            // label8
-            // 
-            label8.AutoSize = true;
-            label8.Location = new Point(80, 180);
-            label8.Name = "label8";
-            label8.Size = new Size(67, 15);
-            label8.TabIndex = 20;
-            label8.Text = "Обработка";
-            // 
-            // label5
-            // 
-            label5.AutoSize = true;
-            label5.Location = new Point(13, 38);
-            label5.Name = "label5";
-            label5.Size = new Size(86, 15);
-            label5.TabIndex = 16;
-            label5.Text = "Приближение";
-            // 
-            // nudZoom
-            // 
-            nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
-            nudZoom.Location = new Point(12, 56);
-            nudZoom.Maximum = new decimal(new int[] { 268435455, 1042612833, 542101086, 0 });
-            nudZoom.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudZoom.Name = "nudZoom";
-            nudZoom.Size = new Size(196, 23);
-            nudZoom.TabIndex = 2;
-            nudZoom.Value = new decimal(new int[] { 1, 0, 0, 0 });
-            // 
-            // btnRender
-            // 
-            btnRender.Location = new Point(-1, 154);
-            btnRender.Name = "btnRender";
-            btnRender.Size = new Size(123, 23);
-            btnRender.TabIndex = 2;
-            btnRender.Text = "Запустить рендер";
-            btnRender.UseVisualStyleBackColor = true;
-            btnRender.Click += btnRender_Click;
-            // 
-            // progressBarSerpinsky
-            // 
-            progressBarSerpinsky.Location = new Point(1, 198);
-            progressBarSerpinsky.Name = "progressBarSerpinsky";
-            progressBarSerpinsky.Size = new Size(218, 23);
-            progressBarSerpinsky.TabIndex = 14;
-            // 
-            // label6
-            // 
-            label6.AutoSize = true;
-            label6.Location = new Point(15, 107);
-            label6.Name = "label6";
-            label6.Size = new Size(69, 15);
-            label6.TabIndex = 13;
-            label6.Text = "Потоки ЦП";
-            // 
-            // cbCPUThreads
-            // 
-            cbCPUThreads.FormattingEnabled = true;
-            cbCPUThreads.Location = new Point(15, 125);
-            cbCPUThreads.Name = "cbCPUThreads";
-            cbCPUThreads.Size = new Size(195, 23);
-            cbCPUThreads.TabIndex = 12;
-            // 
-            // btnSavePNG
-            // 
-            btnSavePNG.Location = new Point(22, 227);
-            btnSavePNG.Name = "btnSavePNG";
-            btnSavePNG.Size = new Size(164, 23);
-            btnSavePNG.TabIndex = 11;
-            btnSavePNG.Text = "Сохранить изображение";
-            btnSavePNG.UseVisualStyleBackColor = true;
-            btnSavePNG.Click += btnSavePNG_Click;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Location = new Point(138, 14);
-            label3.Name = "label3";
-            label3.Size = new Size(61, 15);
-            label3.TabIndex = 6;
-            label3.Text = "Итерации";
-            // 
-            // nudIterations
-            // 
-            nudIterations.Location = new Point(12, 12);
-            nudIterations.Maximum = new decimal(new int[] { 1000000, 0, 0, 0 });
-            nudIterations.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
-            nudIterations.Name = "nudIterations";
-            nudIterations.Size = new Size(120, 23);
-            nudIterations.TabIndex = 2;
-            nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
-            // 
-            // canvasSerpinsky
-            // 
-            canvasSerpinsky.Dock = DockStyle.Fill;
-            canvasSerpinsky.Location = new Point(231, 0);
-            canvasSerpinsky.Name = "canvasSerpinsky";
-            canvasSerpinsky.Size = new Size(853, 636);
-            canvasSerpinsky.TabIndex = 2;
-            canvasSerpinsky.TabStop = false;
-            // 
-            // btnStateManager
-            // 
-            btnStateManager.Location = new Point(4, 315);
-            btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(218, 34);
-            btnStateManager.TabIndex = 43;
-            btnStateManager.Text = "Менеджер сохранений";
-            btnStateManager.UseVisualStyleBackColor = true;
-            btnStateManager.Click += btnStateManager_Click;
+            this.panel1.Controls.Add(this.color_configurations);
+            this.panel1.Controls.Add(this.btnStateManager);
+            this.panel1.Controls.Add(this.abortRender);
+            this.panel1.Controls.Add(this.FractalTypeIsChaos);
+            this.panel1.Controls.Add(this.FractalTypeIsGeometry);
+            this.panel1.Controls.Add(this.nudW2);
+            this.panel1.Controls.Add(this.nudH2);
+            this.panel1.Controls.Add(this.progressPNGSerpinsky);
+            this.panel1.Controls.Add(this.label8);
+            this.panel1.Controls.Add(this.label5);
+            this.panel1.Controls.Add(this.nudZoom);
+            this.panel1.Controls.Add(this.btnRender);
+            this.panel1.Controls.Add(this.progressBarSerpinsky);
+            this.panel1.Controls.Add(this.label6);
+            this.panel1.Controls.Add(this.cbCPUThreads);
+            this.panel1.Controls.Add(this.btnSavePNG);
+            this.panel1.Controls.Add(this.label3);
+            this.panel1.Controls.Add(this.nudIterations);
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Left;
+            this.panel1.Location = new System.Drawing.Point(0, 0);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(231, 636);
+            this.panel1.TabIndex = 1;
             // 
             // color_configurations
             // 
-            color_configurations.Location = new Point(4, 355);
-            color_configurations.Name = "color_configurations";
-            color_configurations.Size = new Size(218, 34);
-            color_configurations.TabIndex = 44;
-            color_configurations.Text = "Настроить палитру";
-            color_configurations.UseVisualStyleBackColor = true;
-            color_configurations.Click += color_configurations_Click;
+            this.color_configurations.Location = new System.Drawing.Point(4, 396);
+            this.color_configurations.Name = "color_configurations";
+            this.color_configurations.Size = new System.Drawing.Size(218, 34);
+            this.color_configurations.TabIndex = 15;
+            this.color_configurations.Text = "Настроить палитру";
+            this.color_configurations.UseVisualStyleBackColor = true;
+            this.color_configurations.Click += new System.EventHandler(this.color_configurations_Click);
+            // 
+            // btnStateManager
+            // 
+            this.btnStateManager.Location = new System.Drawing.Point(4, 356);
+            this.btnStateManager.Name = "btnStateManager";
+            this.btnStateManager.Size = new System.Drawing.Size(218, 34);
+            this.btnStateManager.TabIndex = 14;
+            this.btnStateManager.Text = "Менеджер сохранений";
+            this.btnStateManager.UseVisualStyleBackColor = true;
+            this.btnStateManager.Click += new System.EventHandler(this.btnStateManager_Click);
+            // 
+            // abortRender
+            // 
+            this.abortRender.Location = new System.Drawing.Point(130, 201);
+            this.abortRender.Name = "abortRender";
+            this.abortRender.Size = new System.Drawing.Size(89, 23);
+            this.abortRender.TabIndex = 6;
+            this.abortRender.Text = "Отмена";
+            this.abortRender.UseVisualStyleBackColor = true;
+            this.abortRender.Click += new System.EventHandler(this.abortRender_Click);
+            // 
+            // FractalTypeIsChaos
+            // 
+            this.FractalTypeIsChaos.AutoSize = true;
+            this.FractalTypeIsChaos.Location = new System.Drawing.Point(130, 85);
+            this.FractalTypeIsChaos.Name = "FractalTypeIsChaos";
+            this.FractalTypeIsChaos.Size = new System.Drawing.Size(81, 19);
+            this.FractalTypeIsChaos.TabIndex = 3;
+            this.FractalTypeIsChaos.Text = "Игра хаос";
+            this.FractalTypeIsChaos.UseVisualStyleBackColor = true;
+            // 
+            // FractalTypeIsGeometry
+            // 
+            this.FractalTypeIsGeometry.AutoSize = true;
+            this.FractalTypeIsGeometry.Location = new System.Drawing.Point(13, 85);
+            this.FractalTypeIsGeometry.Name = "FractalTypeIsGeometry";
+            this.FractalTypeIsGeometry.Size = new System.Drawing.Size(118, 19);
+            this.FractalTypeIsGeometry.TabIndex = 2;
+            this.FractalTypeIsGeometry.Text = "Геометрический";
+            this.FractalTypeIsGeometry.UseVisualStyleBackColor = true;
+            // 
+            // nudW2
+            // 
+            this.nudW2.Location = new System.Drawing.Point(8, 297);
+            this.nudW2.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.nudW2.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nudW2.Name = "nudW2";
+            this.nudW2.Size = new System.Drawing.Size(86, 23);
+            this.nudW2.TabIndex = 9;
+            this.nudW2.Value = new decimal(new int[] {
+            1920,
+            0,
+            0,
+            0});
+            // 
+            // nudH2
+            // 
+            this.nudH2.Location = new System.Drawing.Point(120, 297);
+            this.nudH2.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.nudH2.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nudH2.Name = "nudH2";
+            this.nudH2.Size = new System.Drawing.Size(83, 23);
+            this.nudH2.TabIndex = 10;
+            this.nudH2.Value = new decimal(new int[] {
+            1080,
+            0,
+            0,
+            0});
+            // 
+            // progressPNGSerpinsky
+            // 
+            this.progressPNGSerpinsky.Location = new System.Drawing.Point(4, 327);
+            this.progressPNGSerpinsky.Name = "progressPNGSerpinsky";
+            this.progressPNGSerpinsky.Size = new System.Drawing.Size(218, 23);
+            this.progressPNGSerpinsky.TabIndex = 12;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(80, 227);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(67, 15);
+            this.label8.TabIndex = 7;
+            this.label8.Text = "Обработка";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(13, 38);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(86, 15);
+            this.label5.TabIndex = 16;
+            this.label5.Text = "Приближение";
+            // 
+            // nudZoom
+            // 
+            this.nudZoom.DecimalPlaces = 2;
+            this.nudZoom.Location = new System.Drawing.Point(12, 56);
+            this.nudZoom.Maximum = new decimal(new int[] {
+            10000000,
+            0,
+            0,
+            0});
+            this.nudZoom.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            131072});
+            this.nudZoom.Name = "nudZoom";
+            this.nudZoom.Size = new System.Drawing.Size(196, 23);
+            this.nudZoom.TabIndex = 1;
+            this.nudZoom.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            // 
+            // btnRender
+            // 
+            this.btnRender.Location = new System.Drawing.Point(4, 201);
+            this.btnRender.Name = "btnRender";
+            this.btnRender.Size = new System.Drawing.Size(123, 23);
+            this.btnRender.TabIndex = 5;
+            this.btnRender.Text = "Запустить рендер";
+            this.btnRender.UseVisualStyleBackColor = true;
+            this.btnRender.Click += new System.EventHandler(this.btnRender_Click);
+            // 
+            // progressBarSerpinsky
+            // 
+            this.progressBarSerpinsky.Location = new System.Drawing.Point(4, 245);
+            this.progressBarSerpinsky.Name = "progressBarSerpinsky";
+            this.progressBarSerpinsky.Size = new System.Drawing.Size(218, 23);
+            this.progressBarSerpinsky.TabIndex = 8;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(15, 154);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(69, 15);
+            this.label6.TabIndex = 13;
+            this.label6.Text = "Потоки ЦП";
+            // 
+            // cbCPUThreads
+            // 
+            this.cbCPUThreads.FormattingEnabled = true;
+            this.cbCPUThreads.Location = new System.Drawing.Point(15, 172);
+            this.cbCPUThreads.Name = "cbCPUThreads";
+            this.cbCPUThreads.Size = new System.Drawing.Size(195, 23);
+            this.cbCPUThreads.TabIndex = 4;
+            // 
+            // btnSavePNG
+            // 
+            this.btnSavePNG.Location = new System.Drawing.Point(22, 268);
+            this.btnSavePNG.Name = "btnSavePNG";
+            this.btnSavePNG.Size = new System.Drawing.Size(182, 23);
+            this.btnSavePNG.TabIndex = 11;
+            this.btnSavePNG.Text = "Сохранить изображение";
+            this.btnSavePNG.UseVisualStyleBackColor = true;
+            this.btnSavePNG.Click += new System.EventHandler(this.btnSavePNG_Click);
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(138, 14);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(61, 15);
+            this.label3.TabIndex = 6;
+            this.label3.Text = "Итерации";
+            // 
+            // nudIterations
+            // 
+            this.nudIterations.Location = new System.Drawing.Point(12, 12);
+            this.nudIterations.Maximum = new decimal(new int[] {
+            20,
+            0,
+            0,
+            0});
+            this.nudIterations.Name = "nudIterations";
+            this.nudIterations.Size = new System.Drawing.Size(120, 23);
+            this.nudIterations.TabIndex = 0;
+            this.nudIterations.Value = new decimal(new int[] {
+            8,
+            0,
+            0,
+            0});
+            // 
+            // canvasSerpinsky
+            // 
+            this.canvasSerpinsky.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.canvasSerpinsky.Location = new System.Drawing.Point(231, 0);
+            this.canvasSerpinsky.Name = "canvasSerpinsky";
+            this.canvasSerpinsky.Size = new System.Drawing.Size(853, 636);
+            this.canvasSerpinsky.TabIndex = 2;
+            this.canvasSerpinsky.TabStop = false;
             // 
             // FractalSerpinsky
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1084, 636);
-            Controls.Add(canvasSerpinsky);
-            Controls.Add(panel1);
-            MinimumSize = new Size(1100, 675);
-            Name = "FractalSerpinsky";
-            Text = "Треугольник Серпинского";
-            panel1.ResumeLayout(false);
-            panel1.PerformLayout();
-            panel3.ResumeLayout(false);
-            panel3.PerformLayout();
-            panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)canvasPalette).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudW2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudH2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
-            ((System.ComponentModel.ISupportInitialize)canvasSerpinsky).EndInit();
-            ResumeLayout(false);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(1084, 636);
+            this.Controls.Add(this.canvasSerpinsky);
+            this.Controls.Add(this.panel1);
+            this.MinimumSize = new System.Drawing.Size(1100, 675);
+            this.Name = "FractalSerpinsky";
+            this.Text = "Треугольник Серпинского";
+            this.panel1.ResumeLayout(false);
+            this.panel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudW2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudH2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudZoom)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudIterations)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.canvasSerpinsky)).EndInit();
+            this.ResumeLayout(false);
+
         }
 
         #endregion
 
-        private Panel panel1;
-        private NumericUpDown nudW2;
-        private NumericUpDown nudH2;
-        private ProgressBar progressPNGSerpinsky;
-        private Label label8;
-        private CheckBox renderBW;
-        private Label label5;
-        private NumericUpDown nudZoom;
-        private Button btnRender;
-        private ProgressBar progressBarSerpinsky;
-        private Label label6;
-        private ComboBox cbCPUThreads;
-        private Button btnSavePNG;
-        private Label label3;
-        private NumericUpDown nudIterations;
-        private CheckBox colorGrayscale;
-        private Panel panel2;
-        private PictureBox canvasPalette;
-        private PictureBox canvasSerpinsky;
-        private Label label1;
-        private CheckBox colorBackground;
-        private CheckBox colorFractal;
-        private CheckBox FractalTypeIsChaos;
-        private CheckBox FractalTypeIsGeometry;
-        private CheckBox colorColor;
-        private Panel panel3;
-        private Label label2;
-        private Button abortRender;
-        private Button color_configurations;
-        private Button btnStateManager;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.NumericUpDown nudW2;
+        private System.Windows.Forms.NumericUpDown nudH2;
+        private System.Windows.Forms.ProgressBar progressPNGSerpinsky;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.NumericUpDown nudZoom;
+        private System.Windows.Forms.Button btnRender;
+        private System.Windows.Forms.ProgressBar progressBarSerpinsky;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.ComboBox cbCPUThreads;
+        private System.Windows.Forms.Button btnSavePNG;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.NumericUpDown nudIterations;
+        private System.Windows.Forms.PictureBox canvasSerpinsky;
+        private System.Windows.Forms.CheckBox FractalTypeIsChaos;
+        private System.Windows.Forms.CheckBox FractalTypeIsGeometry;
+        private System.Windows.Forms.Button abortRender;
+        private System.Windows.Forms.Button color_configurations;
+        private System.Windows.Forms.Button btnStateManager;
     }
 }
