@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

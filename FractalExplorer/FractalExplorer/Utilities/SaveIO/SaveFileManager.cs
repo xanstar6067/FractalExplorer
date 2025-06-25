@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 using FractalExplorer.Core;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 
 
 namespace FractalExplorer.Utilities.SaveIO

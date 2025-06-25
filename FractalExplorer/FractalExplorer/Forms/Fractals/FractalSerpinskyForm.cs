@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System;
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
 using System.Text.Json;
 using System.Linq;
 using FractalExplorer.SelectorsForms;

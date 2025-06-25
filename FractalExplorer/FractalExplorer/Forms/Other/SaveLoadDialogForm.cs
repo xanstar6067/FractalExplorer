@@ -4,8 +4,8 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks; // Для Task
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
-using FractalExplorer.Utilities.SaveIO; // Для ISaveLoadCapableFractal, FractalSaveStateBase
+using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations; // Для ISaveLoadCapableFractal, FractalSaveStateBase
 
 namespace FractalExplorer.Forms // Убедись, что namespace соответствует твоему
 {
