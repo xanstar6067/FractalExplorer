@@ -1135,16 +1135,6 @@ namespace FractalDraving
             return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
-        private void btnStateManager_Click(object sender, EventArgs e)
-        {
-            // 'this' здесь - это экземпляр FractalMandelbrot, FractalJulia и т.д.
-            // который реализует ISaveLoadCapableFractal
-            using (var dialog = new SaveLoadDialogForm(this))
-            {
-                dialog.ShowDialog(this);
-            }
-        }
-
         #endregion
 
         #region IFractalForm Implementation
@@ -1161,19 +1151,21 @@ namespace FractalDraving
 
         #endregion
 
-        // НОВЫЙ РЕГИОН ДЛЯ РЕАЛИЗАЦИИ ISaveLoadCapableFractal
-        // =======================================================================
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+            // 'this' здесь - это экземпляр FractalMandelbrot, FractalJulia и т.д.
+            // который реализует ISaveLoadCapableFractal
+            using (var dialog = new SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
+        }
+
         #region ISaveLoadCapableFractal Implementation
 
-        // Этот метод должен быть переопределен в каждом конкретном наследнике (Mandelbrot, Julia, etc.)
         public abstract string FractalTypeIdentifier { get; }
-
-        // Этот метод должен быть переопределен в каждом конкретном наследнике,
-        // чтобы возвращать typeof(MandelbrotFamilySaveState) или typeof(JuliaFamilySaveState)
         public abstract Type ConcreteSaveStateType { get; }
 
-        // Внутренний класс для параметров превью, чтобы не тащить все поля SaveState
-        // Он может быть общим для всех MandelbrotFamily фракталов.
         protected class PreviewParams
         {
             public decimal CenterX { get; set; }
@@ -1191,14 +1183,6 @@ namespace FractalDraving
         // особенно для JuliaFamilySaveState, чтобы добавить параметры C.
         public virtual FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
-            // Конкретный тип будет создан в переопределенном методе наследника
-            // Здесь мы ожидаем, что наследник вызовет base.GetCurrentStateForSave()
-            // и затем заполнит свои специфичные поля.
-            // Эта базовая реализация НЕ должна вызываться напрямую, если только нет
-            // неабстрактного наследника, который не переопределяет этот метод (что плохо).
-            // Правильнее сделать этот метод abstract или иметь конкретную реализацию в наследниках.
-            // Поскольку мы в абстрактном классе, и тип состояния зависит от наследника,
-            // сделаем его таким, чтобы он вызывался из наследника.
 
             MandelbrotFamilySaveState state;
 
@@ -1391,21 +1375,13 @@ namespace FractalDraving
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
 
-        // Эти методы должны быть переопределены в наследниках, чтобы работать с конкретными типами состояний.
-        // Реализация здесь будет генерировать исключение, чтобы напомнить об этом.
         public virtual List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
-            // Пример для наследника (например, FractalMondelbrot):
-            // var specificSaves = SaveFileManager.LoadSaves<MandelbrotFamilySaveState>(this.FractalTypeIdentifier);
-            // return specificSaves.Cast<FractalSaveStateBase>().ToList();
             throw new NotImplementedException($"Метод LoadAllSavesForThisType должен быть переопределен в классе {this.GetType().Name}, чтобы загружать состояния типа {this.ConcreteSaveStateType.Name}.");
         }
 
         public virtual void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
-            // Пример для наследника (например, FractalMondelbrot):
-            // var specificSaves = saves.Cast<MandelbrotFamilySaveState>().ToList();
-            // SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
             throw new NotImplementedException($"Метод SaveAllSavesForThisType должен быть переопределен в классе {this.GetType().Name}, чтобы сохранять состояния типа {this.ConcreteSaveStateType.Name}.");
         }
 

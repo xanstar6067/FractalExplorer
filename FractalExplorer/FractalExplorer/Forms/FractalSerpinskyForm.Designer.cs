@@ -57,7 +57,7 @@
             nudIterations = new NumericUpDown();
             canvasSerpinsky = new PictureBox();
             btnStateManager = new Button();
-            button1 = new Button();
+            color_configurations = new Button();
             panel1.SuspendLayout();
             panel3.SuspendLayout();
             panel2.SuspendLayout();
@@ -71,7 +71,7 @@
             // 
             // panel1
             // 
-            panel1.Controls.Add(button1);
+            panel1.Controls.Add(color_configurations);
             panel1.Controls.Add(abortRender);
             panel1.Controls.Add(btnStateManager);
             panel1.Controls.Add(panel3);
@@ -366,15 +366,17 @@
             btnStateManager.TabIndex = 43;
             btnStateManager.Text = "Менеджер сохранений";
             btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
             // 
-            // button1
+            // color_configurations
             // 
-            button1.Location = new Point(4, 355);
-            button1.Name = "button1";
-            button1.Size = new Size(218, 34);
-            button1.TabIndex = 44;
-            button1.Text = "Настроить палитру";
-            button1.UseVisualStyleBackColor = true;
+            color_configurations.Location = new Point(4, 355);
+            color_configurations.Name = "color_configurations";
+            color_configurations.Size = new Size(218, 34);
+            color_configurations.TabIndex = 44;
+            color_configurations.Text = "Настроить палитру";
+            color_configurations.UseVisualStyleBackColor = true;
+            color_configurations.Click += color_configurations_Click;
             // 
             // FractalSerpinsky
             // 
@@ -430,7 +432,7 @@
         private Panel panel3;
         private Label label2;
         private Button abortRender;
-        private Button button1;
+        private Button color_configurations;
         private Button btnStateManager;
     }
 }

@@ -1122,8 +1122,6 @@ namespace FractalExplorer
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
-        #endregion
-
         private void btnStateManager_Click(object sender, EventArgs e)
         {
             // 'this' здесь - это экземпляр NewtonPools, реализующий ISaveLoadCapableFractal
@@ -1132,5 +1130,7 @@ namespace FractalExplorer
                 dialog.ShowDialog(this);
             }
         }
+
+        #endregion
     }
 }

@@ -861,6 +861,13 @@ namespace FractalExplorer.Forms
 
         #region ISaveLoadCapableFractal Implementation
 
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new SaveLoadDialogForm(this)) // Укажи полный namespace, если нужно
+            {
+                dialog.ShowDialog(this);
+            }
+        }
         public string FractalTypeIdentifier => "Phoenix";
 
         public Type ConcreteSaveStateType => typeof(PhoenixSaveState);
@@ -1025,13 +1032,5 @@ namespace FractalExplorer.Forms
         }
 
         #endregion
-
-        private void btnStateManager_Click(object sender, EventArgs e)
-        {
-            using (var dialog = new SaveLoadDialogForm(this)) // Укажи полный namespace, если нужно
-            {
-                dialog.ShowDialog(this);
-            }
-        }
     }
 }
