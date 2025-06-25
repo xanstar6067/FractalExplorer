@@ -1,6 +1,6 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
-using FractalExplorer.Forms.SelectorsForms;
+using FractalExplorer.Forms.SelectorsForms.Selector;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms; // Явное добавление для Form, PictureBox, etc.
 
-namespace FractalExplorer.Forms.SelectorsForms
+namespace FractalExplorer.Forms.SelectorsForms.Selector
 {
     /// <summary>
     /// Форма для выбора комплексного параметра 'c' (для фрактала Жюлиа)
