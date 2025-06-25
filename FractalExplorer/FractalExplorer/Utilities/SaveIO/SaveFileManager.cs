@@ -4,11 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
-using FractalExplorer.Core; // Для JsonColorConverter, JsonComplexDecimalConverter
+using FractalExplorer.Core;
 
 
-namespace FractalExplorer.Utilities
+namespace FractalExplorer.Utilities.SaveIO
 {
     public static class SaveFileManager
     {
