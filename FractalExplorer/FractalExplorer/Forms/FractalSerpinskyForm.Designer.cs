@@ -56,6 +56,8 @@
             label3 = new Label();
             nudIterations = new NumericUpDown();
             canvasSerpinsky = new PictureBox();
+            btnStateManager = new Button();
+            button1 = new Button();
             panel1.SuspendLayout();
             panel3.SuspendLayout();
             panel2.SuspendLayout();
@@ -69,7 +71,9 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(button1);
             panel1.Controls.Add(abortRender);
+            panel1.Controls.Add(btnStateManager);
             panel1.Controls.Add(panel3);
             panel1.Controls.Add(FractalTypeIsChaos);
             panel1.Controls.Add(FractalTypeIsGeometry);
@@ -95,7 +99,7 @@
             // 
             // abortRender
             // 
-            abortRender.Location = new Point(134, 271);
+            abortRender.Location = new Point(130, 154);
             abortRender.Name = "abortRender";
             abortRender.Size = new Size(89, 23);
             abortRender.TabIndex = 39;
@@ -228,7 +232,7 @@
             // 
             // nudW2
             // 
-            nudW2.Location = new Point(12, 373);
+            nudW2.Location = new Point(8, 256);
             nudW2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudW2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudW2.Name = "nudW2";
@@ -238,7 +242,7 @@
             // 
             // nudH2
             // 
-            nudH2.Location = new Point(124, 373);
+            nudH2.Location = new Point(120, 256);
             nudH2.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             nudH2.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudH2.Name = "nudH2";
@@ -248,7 +252,7 @@
             // 
             // progressPNGSerpinsky
             // 
-            progressPNGSerpinsky.Location = new Point(8, 402);
+            progressPNGSerpinsky.Location = new Point(4, 285);
             progressPNGSerpinsky.Name = "progressPNGSerpinsky";
             progressPNGSerpinsky.Size = new Size(218, 23);
             progressPNGSerpinsky.TabIndex = 21;
@@ -256,7 +260,7 @@
             // label8
             // 
             label8.AutoSize = true;
-            label8.Location = new Point(84, 297);
+            label8.Location = new Point(80, 180);
             label8.Name = "label8";
             label8.Size = new Size(67, 15);
             label8.TabIndex = 20;
@@ -284,7 +288,7 @@
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(3, 271);
+            btnRender.Location = new Point(-1, 154);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(123, 23);
             btnRender.TabIndex = 2;
@@ -294,7 +298,7 @@
             // 
             // progressBarSerpinsky
             // 
-            progressBarSerpinsky.Location = new Point(5, 315);
+            progressBarSerpinsky.Location = new Point(1, 198);
             progressBarSerpinsky.Name = "progressBarSerpinsky";
             progressBarSerpinsky.Size = new Size(218, 23);
             progressBarSerpinsky.TabIndex = 14;
@@ -302,7 +306,7 @@
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(19, 224);
+            label6.Location = new Point(15, 107);
             label6.Name = "label6";
             label6.Size = new Size(69, 15);
             label6.TabIndex = 13;
@@ -311,14 +315,14 @@
             // cbCPUThreads
             // 
             cbCPUThreads.FormattingEnabled = true;
-            cbCPUThreads.Location = new Point(19, 242);
+            cbCPUThreads.Location = new Point(15, 125);
             cbCPUThreads.Name = "cbCPUThreads";
             cbCPUThreads.Size = new Size(195, 23);
             cbCPUThreads.TabIndex = 12;
             // 
             // btnSavePNG
             // 
-            btnSavePNG.Location = new Point(26, 344);
+            btnSavePNG.Location = new Point(22, 227);
             btnSavePNG.Name = "btnSavePNG";
             btnSavePNG.Size = new Size(164, 23);
             btnSavePNG.TabIndex = 11;
@@ -353,6 +357,24 @@
             canvasSerpinsky.Size = new Size(853, 636);
             canvasSerpinsky.TabIndex = 2;
             canvasSerpinsky.TabStop = false;
+            // 
+            // btnStateManager
+            // 
+            btnStateManager.Location = new Point(4, 315);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(218, 34);
+            btnStateManager.TabIndex = 43;
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            // 
+            // button1
+            // 
+            button1.Location = new Point(4, 355);
+            button1.Name = "button1";
+            button1.Size = new Size(218, 34);
+            button1.TabIndex = 44;
+            button1.Text = "Настроить палитру";
+            button1.UseVisualStyleBackColor = true;
             // 
             // FractalSerpinsky
             // 
@@ -408,5 +430,7 @@
         private Panel panel3;
         private Label label2;
         private Button abortRender;
+        private Button button1;
+        private Button btnStateManager;
     }
 }
