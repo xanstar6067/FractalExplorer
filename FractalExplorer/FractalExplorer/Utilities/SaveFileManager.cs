@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Windows.Forms; // Для Application.StartupPath и MessageBox
-
+using System.Windows.Forms;
+using FractalExplorer.Utilities;
 using FractalExplorer.Core; // Для JsonColorConverter, JsonComplexDecimalConverter
 
 

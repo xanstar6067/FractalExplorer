@@ -11,9 +11,12 @@ namespace FractalExplorer.Utilities
         public decimal CenterX { get; set; }
         public decimal CenterY { get; set; }
         public decimal Zoom { get; set; }
-        public decimal Threshold { get; set; } // Сохраняем сам порог, а не квадрат
+        public decimal Threshold { get; set; }
         public int Iterations { get; set; }
         public string PaletteName { get; set; }
+        // Дополнительные поля, если нужны для рендера превью,
+        // но они также могут быть в PreviewParametersJson
+        public string PreviewEngineType { get; set; } // "Mandelbrot" или "Julia" или "BurningShipMandelbrot" и т.д.
 
         public MandelbrotFamilySaveState() { /* Для десериализации */ }
 
