@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 
 namespace FractalExplorer.SelectorsForms
 {

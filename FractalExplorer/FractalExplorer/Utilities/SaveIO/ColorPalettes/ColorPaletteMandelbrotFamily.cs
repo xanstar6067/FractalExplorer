@@ -5,9 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
+using FractalExplorer.Core;
 using FractalExplorer.Utilities;
 
-namespace FractalExplorer.Core 
+namespace FractalExplorer.Utilities.SaveIO.ColorPalettes 
 {
     /// <summary>
     /// Управляет коллекцией цветовых палитр, их загрузкой, сохранением и активной палитрой.

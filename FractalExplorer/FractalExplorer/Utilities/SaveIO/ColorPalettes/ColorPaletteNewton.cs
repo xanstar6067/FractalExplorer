@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 using System.Windows.Forms;
 using FractalExplorer.Core;
 
-namespace FractalExplorer.Utilities
+namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
 {
     /// <summary>
     /// Представляет цветовую палитру, специфичную для фракталов Ньютона.
@@ -160,7 +160,7 @@ namespace FractalExplorer.Utilities
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                options.Converters.Add(new Core.JsonColorConverter());
+                options.Converters.Add(new JsonColorConverter());
                 string json = JsonSerializer.Serialize(customPalettes, options);
 
                 // --- НАЧАЛО ИЗМЕНЕНИЯ ---

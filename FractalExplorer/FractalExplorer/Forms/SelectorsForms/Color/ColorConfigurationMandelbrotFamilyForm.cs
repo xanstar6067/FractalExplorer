@@ -1,4 +1,5 @@
 ﻿using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using System;
 using System.Collections.Generic;
 using System.Drawing;

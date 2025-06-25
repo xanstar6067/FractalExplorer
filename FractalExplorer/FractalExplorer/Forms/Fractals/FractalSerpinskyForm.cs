@@ -12,7 +12,8 @@ using System.Linq;
 using FractalExplorer.SelectorsForms;
 using System.Collections.Generic;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using FractalExplorer.Utilities.SaveIO; // Добавлено для List<>
+using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes; // Добавлено для List<>
 
 namespace FractalExplorer
 {
