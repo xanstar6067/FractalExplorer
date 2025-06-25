@@ -12,9 +12,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
 using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using FractalExplorer.Utilities.SaveIO;
 
 namespace FractalExplorer
 {

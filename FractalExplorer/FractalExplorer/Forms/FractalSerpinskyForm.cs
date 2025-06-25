@@ -11,7 +11,8 @@ using System.Text.Json;
 using System.Linq;
 using FractalExplorer.SelectorsForms;
 using System.Collections.Generic;
-using FractalExplorer.Utilities.SaveIO.SaveStateImplementations; // Добавлено для List<>
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using FractalExplorer.Utilities.SaveIO; // Добавлено для List<>
 
 namespace FractalExplorer
 {
