@@ -12,6 +12,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.StateBaseImplementations;
+using System.Text.Json;
 
 namespace FractalExplorer
 {
@@ -20,7 +23,7 @@ namespace FractalExplorer
     /// Позволяет задавать комплексные функции, находить их корни и визуализировать
     /// бассейны притяжения этих корней с различными настройками палитры.
     /// </summary>
-    public partial class NewtonPools : Form
+    public partial class NewtonPools : Form, ISaveLoadCapableFractal
     {
         #region Fields
 
@@ -948,11 +951,186 @@ namespace FractalExplorer
 
         #endregion
 
+        #region ISaveLoadCapableFractal Implementation
 
+        public string FractalTypeIdentifier => "NewtonPools";
+
+        public Type ConcreteSaveStateType => typeof(NewtonSaveState);
+
+        // Вспомогательный класс для параметров превью Ньютона
+        protected class NewtonPreviewParams
+        {
+            public string Formula { get; set; }
+            public decimal CenterX { get; set; }
+            public decimal CenterY { get; set; }
+            public decimal Zoom { get; set; }
+            public int Iterations { get; set; } // Уменьшенные итерации для превью
+            public NewtonColorPalette PaletteSnapshot { get; set; }
+        }
+
+        public FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            // Важно: Убедимся, что текущая активная палитра в менеджере синхронизирована
+            // с цветами, отображаемыми на UI.
+            _paletteManager.ActivePalette.BackgroundColor = _engine.BackgroundColor;
+            _paletteManager.ActivePalette.IsGradient = _engine.UseGradient;
+            _paletteManager.ActivePalette.RootColors = new List<Color>(_engine.RootColors);
+
+            
+
+            var state = new NewtonSaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                Formula = richTextInput.Text,
+                CenterX = (decimal)_centerX, // Приводим double к decimal
+                CenterY = (decimal)_centerY,
+                Zoom = (decimal)_zoom,
+                Iterations = (int)nudIterations.Value,
+                // Сохраняем "снимок" текущей активной палитры
+                PaletteSnapshot = _paletteManager.ActivePalette
+            };
+
+            var previewParams = new NewtonPreviewParams
+            {
+                Formula = state.Formula,
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = Math.Min(state.Iterations, 50), // Уменьшаем итерации для превью
+                PaletteSnapshot = state.PaletteSnapshot
+            };
+
+            var jsonOptions = new JsonSerializerOptions();
+            jsonOptions.Converters.Add(new Core.JsonColorConverter());
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, jsonOptions);
+
+            return state;
+        }
+
+        public void LoadState(FractalSaveStateBase stateBase)
+        {
+            if (stateBase is NewtonSaveState state)
+            {
+                _isRenderingPreview = false;
+                _previewRenderCts?.Cancel();
+                _renderDebounceTimer.Stop();
+
+                // Устанавливаем параметры
+                _centerX = (double)state.CenterX;
+                _centerY = (double)state.CenterY;
+                _zoom = (double)state.Zoom;
+
+                // Обновляем UI
+                richTextInput.Text = state.Formula;
+                nudZoom.Value = (decimal)_zoom;
+                nudIterations.Value = state.Iterations;
+
+                // Загружаем палитру. Так как палитра сохранена целиком,
+                // мы можем просто установить ее как активную в менеджере.
+                // Можно добавить логику для проверки, есть ли уже палитра с таким именем.
+                _paletteManager.ActivePalette = state.PaletteSnapshot;
+
+                // Применяем параметры к движку (UpdateEngineParameters сделает это)
+                UpdateEngineParameters();
+
+                // Сбрасываем рендеринг
+                lock (_bitmapLock)
+                {
+                    _previewBitmap?.Dispose();
+                    _previewBitmap = null;
+                    _currentRenderingBitmap?.Dispose();
+                    _currentRenderingBitmap = null;
+                }
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
+
+                ScheduleRender();
+            }
+            else
+            {
+                MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
+        {
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            NewtonPreviewParams previewParams;
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions();
+                jsonOptions.Converters.Add(new Core.JsonColorConverter());
+                previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+            }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            var previewEngine = new FractalNewtonEngine();
+            if (!previewEngine.SetFormula(previewParams.Formula, out _))
+            {
+                // Если формула невалидна в сохраненном состоянии
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка формулы", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            previewEngine.CenterX = (double)previewParams.CenterX;
+            previewEngine.CenterY = (double)previewParams.CenterY;
+            if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
+            previewEngine.Scale = 3.0 / (double)previewParams.Zoom; // Для Ньютона BaseScale = 3.0
+            previewEngine.MaxIterations = previewParams.Iterations;
+
+            // Настраиваем палитру движка из снимка
+            var palette = previewParams.PaletteSnapshot;
+            previewEngine.BackgroundColor = palette.BackgroundColor;
+            previewEngine.UseGradient = palette.IsGradient;
+            if (palette.RootColors != null && palette.RootColors.Count > 0)
+            {
+                previewEngine.RootColors = palette.RootColors.ToArray();
+            }
+            else
+            {
+                // Если в снимке нет цветов, генерируем их на основе найденных корней
+                previewEngine.RootColors = ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(previewEngine.Roots.Count).ToArray();
+            }
+
+            // Рендерим с 1 потоком для превью
+            return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
+        }
+
+        public List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<NewtonSaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            var specificSaves = saves.Cast<NewtonSaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
+        }
+
+        #endregion
 
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-
+            // 'this' здесь - это экземпляр NewtonPools, реализующий ISaveLoadCapableFractal
+            using (var dialog = new Forms.SaveLoadDialogForm(this)) // Укажи полный namespace, если нужно
+            {
+                dialog.ShowDialog(this);
+            }
         }
     }
 }
