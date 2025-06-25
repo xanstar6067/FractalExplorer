@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Core;
 using FractalExplorer.Engines;
+using FractalExplorer.Forms;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
@@ -12,6 +13,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using FractalExplorer.Utilities.StateBaseImplementations;
+using System.Text.Json;
+
 
 namespace FractalDraving
 {
@@ -20,7 +24,7 @@ namespace FractalDraving
     /// Предоставляет общую логику для управления движком рендеринга,
     /// палитрой, масштабированием, панорамированием и сохранением изображений.
     /// </summary>
-    public abstract partial class FractalMandelbrotFamilyForm : Form, IFractalForm
+    public abstract partial class FractalMandelbrotFamilyForm : Form, IFractalForm, ISaveLoadCapableFractal
     {
         #region Fields
 
@@ -1132,7 +1136,12 @@ namespace FractalDraving
 
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-
+            // 'this' здесь - это экземпляр FractalMandelbrot, FractalJulia и т.д.
+            // который реализует ISaveLoadCapableFractal
+            using (var dialog = new SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
         }
 
         #endregion
@@ -1148,6 +1157,256 @@ namespace FractalDraving
         /// Событие, которое возникает при изменении значения зума лупы.
         /// </summary>
         public event EventHandler LoupeZoomChanged;
+
+        #endregion
+
+        // НОВЫЙ РЕГИОН ДЛЯ РЕАЛИЗАЦИИ ISaveLoadCapableFractal
+        // =======================================================================
+        #region ISaveLoadCapableFractal Implementation
+
+        // Этот метод должен быть переопределен в каждом конкретном наследнике (Mandelbrot, Julia, etc.)
+        public abstract string FractalTypeIdentifier { get; }
+
+        // Этот метод должен быть переопределен в каждом конкретном наследнике,
+        // чтобы возвращать typeof(MandelbrotFamilySaveState) или typeof(JuliaFamilySaveState)
+        public abstract Type ConcreteSaveStateType { get; }
+
+        // Внутренний класс для параметров превью, чтобы не тащить все поля SaveState
+        // Он может быть общим для всех MandelbrotFamily фракталов.
+        protected class PreviewParams
+        {
+            public decimal CenterX { get; set; }
+            public decimal CenterY { get; set; }
+            public decimal Zoom { get; set; }
+            public int Iterations { get; set; } // Итерации для превью
+            public string PaletteName { get; set; }
+            public decimal Threshold { get; set; } // Порог для превью
+            public decimal CRe { get; set; } // Для Жюлиа
+            public decimal CIm { get; set; } // Для Жюлиа
+            public string PreviewEngineType { get; set; } // "Mandelbrot", "Julia", "MandelbrotBurningShip" и т.д.
+        }
+
+        // Этот метод будет базовым, но может быть переопределен в наследниках,
+        // особенно для JuliaFamilySaveState, чтобы добавить параметры C.
+        public virtual FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            // Конкретный тип будет создан в переопределенном методе наследника
+            // Здесь мы ожидаем, что наследник вызовет base.GetCurrentStateForSave()
+            // и затем заполнит свои специфичные поля.
+            // Эта базовая реализация НЕ должна вызываться напрямую, если только нет
+            // неабстрактного наследника, который не переопределяет этот метод (что плохо).
+            // Правильнее сделать этот метод abstract или иметь конкретную реализацию в наследниках.
+            // Поскольку мы в абстрактном классе, и тип состояния зависит от наследника,
+            // сделаем его таким, чтобы он вызывался из наследника.
+
+            MandelbrotFamilySaveState state;
+
+            if (this is FractalJulia || this is FractalJuliaBurningShip)
+            {
+                state = new JuliaFamilySaveState(this.FractalTypeIdentifier);
+            }
+            else
+            {
+                state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier);
+            }
+
+            state.SaveName = saveName;
+            state.Timestamp = DateTime.Now;
+
+            state.CenterX = _centerX;
+            state.CenterY = _centerY;
+            state.Zoom = _zoom;
+            state.Threshold = nudThreshold.Value;
+            state.Iterations = (int)nudIterations.Value;
+            state.PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый";
+            state.PreviewEngineType = this.FractalTypeIdentifier;
+
+
+            // Заполнение параметров для PreviewParametersJson
+            var previewParams = new PreviewParams
+            {
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                Iterations = Math.Min((int)nudIterations.Value, 75), // Меньше итераций для превью
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold, // Используем тот же порог для превью
+                PreviewEngineType = state.PreviewEngineType
+            };
+
+            if (state is JuliaFamilySaveState juliaState) // Эта проверка важна здесь
+            {
+                // Если nudRe/nudIm существуют и видимы (т.е. это форма Жюлиа)
+                if (nudRe != null && nudIm != null && nudRe.Visible)
+                {
+                    juliaState.CRe = nudRe.Value;
+                    juliaState.CIm = nudIm.Value;
+                    previewParams.CRe = juliaState.CRe;
+                    previewParams.CIm = juliaState.CIm;
+                }
+            }
+
+            var jsonOptions = new JsonSerializerOptions();
+            // jsonOptions.Converters.Add(new JsonComplexDecimalConverter()); // Не нужен для PreviewParams, если там нет ComplexDecimal
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, jsonOptions);
+
+            return state;
+        }
+
+        public virtual void LoadState(FractalSaveStateBase stateBase)
+        {
+            // Убедимся, что тип состояния соответствует ожидаемому для этой формы/ее наследников
+            if (!(stateBase is MandelbrotFamilySaveState state))
+            {
+                MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            _isRenderingPreview = false;
+            _previewRenderCts?.Cancel();
+            _renderDebounceTimer.Stop();
+
+            _centerX = state.CenterX;
+            _centerY = state.CenterY;
+            _zoom = state.Zoom;
+
+            nudZoom.Value = ClampDecimal(_zoom, nudZoom.Minimum, nudZoom.Maximum);
+            nudThreshold.Value = ClampDecimal(state.Threshold, nudThreshold.Minimum, nudThreshold.Maximum);
+            nudIterations.Value = ClampInt(state.Iterations, (int)nudIterations.Minimum, (int)nudIterations.Maximum);
+
+            var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
+            if (paletteToLoad != null)
+            {
+                _paletteManager.ActivePalette = paletteToLoad;
+                ApplyActivePalette();
+            }
+
+            if (state is JuliaFamilySaveState juliaState)
+            {
+                // Если элементы управления для C существуют и видимы
+                if (nudRe != null && nudIm != null && nudRe.Visible)
+                {
+                    nudRe.Value = ClampDecimal(juliaState.CRe, nudRe.Minimum, nudRe.Maximum);
+                    nudIm.Value = ClampDecimal(juliaState.CIm, nudIm.Minimum, nudIm.Maximum);
+                }
+            }
+
+            lock (_bitmapLock)
+            {
+                _previewBitmap?.Dispose();
+                _previewBitmap = null;
+                _currentRenderingBitmap?.Dispose();
+                _currentRenderingBitmap = null;
+            }
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+
+            UpdateEngineParameters(); // Важно обновить параметры движка
+            ScheduleRender();
+        }
+
+        // Вспомогательные методы для ограничения значений при загрузке
+        private decimal ClampDecimal(decimal value, decimal min, decimal max)
+        {
+            return Math.Max(min, Math.Min(max, value));
+        }
+        private int ClampInt(int value, int min, int max)
+        {
+            return Math.Max(min, Math.Min(max, value));
+        }
+
+
+        public virtual Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
+        {
+            if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            PreviewParams previewParams;
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions();
+                // jsonOptions.Converters.Add(new JsonComplexDecimalConverter()); // Не нужен, если в PreviewParams нет ComplexDecimal
+                previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson, jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка десериализации PreviewParametersJson: {ex.Message}");
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            FractalMandelbrotFamilyEngine previewEngine = null;
+
+            switch (previewParams.PreviewEngineType)
+            {
+                case "Mandelbrot":
+                    previewEngine = new MandelbrotEngine();
+                    break;
+                case "Julia":
+                    previewEngine = new JuliaEngine();
+                    ((JuliaEngine)previewEngine).C = new ComplexDecimal(previewParams.CRe, previewParams.CIm);
+                    break;
+                case "MandelbrotBurningShip":
+                    previewEngine = new MandelbrotBurningShipEngine();
+                    break;
+                case "JuliaBurningShip":
+                    previewEngine = new JuliaBurningShipEngine();
+                    ((JuliaBurningShipEngine)previewEngine).C = new ComplexDecimal(previewParams.CRe, previewParams.CIm);
+                    break;
+                default:
+                    var bmpError = new Bitmap(previewWidth, previewHeight);
+                    using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkOrange); TextRenderer.DrawText(g, "Неизв. тип движка", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                    return bmpError;
+            }
+
+            previewEngine.CenterX = previewParams.CenterX;
+            previewEngine.CenterY = previewParams.CenterY;
+            // В превью BaseScale может отличаться от текущего в форме, поэтому используем константу или свойство, если оно есть
+            decimal previewBaseScale = this.BaseScale; // Используем BaseScale текущей формы
+            if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m; // Защита от деления на ноль
+            previewEngine.Scale = previewBaseScale / previewParams.Zoom;
+            previewEngine.MaxIterations = previewParams.Iterations;
+            previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+
+            var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName)
+                                  ?? _paletteManager.Palettes.First();
+
+            previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+            if (paletteForPreview.Name == "Стандартный серый" || paletteForPreview.IsGradient)
+            {
+                previewEngine.MaxColorIterations = Math.Max(1, previewParams.Iterations);
+            }
+            else
+            {
+                previewEngine.MaxColorIterations = Math.Max(1, paletteForPreview.Colors.Count);
+            }
+
+            return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
+        }
+
+        // Эти методы должны быть переопределены в наследниках, чтобы работать с конкретными типами состояний.
+        // Реализация здесь будет генерировать исключение, чтобы напомнить об этом.
+        public virtual List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            // Пример для наследника (например, FractalMondelbrot):
+            // var specificSaves = SaveFileManager.LoadSaves<MandelbrotFamilySaveState>(this.FractalTypeIdentifier);
+            // return specificSaves.Cast<FractalSaveStateBase>().ToList();
+            throw new NotImplementedException($"Метод LoadAllSavesForThisType должен быть переопределен в классе {this.GetType().Name}, чтобы загружать состояния типа {this.ConcreteSaveStateType.Name}.");
+        }
+
+        public virtual void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            // Пример для наследника (например, FractalMondelbrot):
+            // var specificSaves = saves.Cast<MandelbrotFamilySaveState>().ToList();
+            // SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
+            throw new NotImplementedException($"Метод SaveAllSavesForThisType должен быть переопределен в классе {this.GetType().Name}, чтобы сохранять состояния типа {this.ConcreteSaveStateType.Name}.");
+        }
 
         #endregion
     }

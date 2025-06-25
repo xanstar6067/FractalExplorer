@@ -1,5 +1,6 @@
 using FractalDraving;
 using FractalExplorer.Engines;
+using FractalExplorer.Utilities;
 
 namespace FractalExplorer.Projects
 {
@@ -55,6 +56,28 @@ namespace FractalExplorer.Projects
         protected override string GetSaveFileNameDetails()
         {
             return "mandelbrot";
+        }
+
+        #endregion
+
+        #region ISaveLoadCapableFractal Overrides
+
+        public override string FractalTypeIdentifier => "Mandelbrot";
+
+        public override Type ConcreteSaveStateType => typeof(MandelbrotFamilySaveState);
+
+        public override List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<MandelbrotFamilySaveState>(this.FractalTypeIdentifier);
+            // Преобразуем список конкретного типа в список базового типа
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            // Преобразуем список базового типа обратно в список конкретного типа перед сохранением
+            var specificSaves = saves.Cast<MandelbrotFamilySaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
         #endregion

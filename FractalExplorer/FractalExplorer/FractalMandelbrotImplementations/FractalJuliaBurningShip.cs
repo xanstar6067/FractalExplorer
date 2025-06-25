@@ -2,6 +2,7 @@
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.Selectors;
+using FractalExplorer.Utilities;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -317,6 +318,26 @@ namespace FractalExplorer.Projects
                 b = (byte)(30 + t * 225);
             }
             return Color.FromArgb(r, g, b);
+        }
+
+        #endregion
+
+        #region ISaveLoadCapableFractal Overrides
+
+        public override string FractalTypeIdentifier => "JuliaBurningShip";
+
+        public override Type ConcreteSaveStateType => typeof(JuliaFamilySaveState);
+
+        public override List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<JuliaFamilySaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            var specificSaves = saves.Cast<JuliaFamilySaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
         #endregion
