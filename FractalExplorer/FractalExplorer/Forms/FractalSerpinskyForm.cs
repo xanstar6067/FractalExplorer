@@ -1051,15 +1051,9 @@ namespace FractalExplorer
                 previewRenderCts?.Cancel();
                 renderTimer.Stop();
 
-                // Устанавливаем параметры
-                this.centerX = state.CenterX;
-                this.centerY = state.CenterY;
-                this.currentZoom = state.Zoom;
-
-                // Обновляем UI
-                nudZoom.Value = (decimal)state.Zoom;
-                nudIterations.Value = state.Iterations;
-
+                // 1. Устанавливаем RenderMode ПЕРВЫМ.
+                // Это вызовет событие FractalType_CheckedChanged, которое корректно
+                // обновит Minimum и Maximum для nudIterations.
                 if (state.RenderMode == SerpinskyRenderMode.Geometric)
                 {
                     FractalTypeIsGeometry.Checked = true;
@@ -1069,6 +1063,7 @@ namespace FractalExplorer
                     FractalTypeIsChaos.Checked = true;
                 }
 
+                // 2. Устанавливаем ColorMode.
                 switch (state.ColorMode)
                 {
                     case SerpinskyColorMode.BlackAndWhite:
@@ -1081,6 +1076,19 @@ namespace FractalExplorer
                         colorColor.Checked = true;
                         break;
                 }
+
+                // 3. Теперь, когда ограничения обновлены, БЕЗОПАСНО устанавливаем значение итераций.
+                // Добавим Clamp на всякий случай, если даже после смены режима значение выходит за рамки.
+                decimal safeIterations = Math.Max(nudIterations.Minimum, Math.Min(nudIterations.Maximum, state.Iterations));
+                nudIterations.Value = safeIterations;
+
+                // 4. Устанавливаем остальные параметры
+                this.centerX = state.CenterX;
+                this.centerY = state.CenterY;
+                this.currentZoom = state.Zoom;
+
+                decimal safeZoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, (decimal)state.Zoom));
+                nudZoom.Value = safeZoom;
 
                 // Загружаем цвета
                 _engine.FractalColor = state.FractalColor;
