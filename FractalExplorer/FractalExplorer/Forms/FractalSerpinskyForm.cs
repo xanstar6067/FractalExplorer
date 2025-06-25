@@ -329,6 +329,7 @@ namespace FractalExplorer
         {
             if (_engine == null || _paletteManager?.ActivePalette == null) return;
             var activePalette = _paletteManager.ActivePalette;
+            _engine.ColorMode = SerpinskyColorMode.CustomColor;
             _engine.FractalColor = activePalette.FractalColor;
             _engine.BackgroundColor = activePalette.BackgroundColor;
         }
