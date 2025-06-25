@@ -47,10 +47,4 @@
 
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Cloo.clSharp" Version="1.0.1" />
-    <PackageReference Include="FSharp.Core" Version="9.0.300" />
-    <PackageReference Include="MathNet.Symbolics" Version="0.25.0" />
-  </ItemGroup>
-
 </Project>
