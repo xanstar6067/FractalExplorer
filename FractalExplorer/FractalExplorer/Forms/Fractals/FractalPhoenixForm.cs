@@ -2,7 +2,6 @@
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.SelectorsForms;
-using FractalExplorer.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Drawing;

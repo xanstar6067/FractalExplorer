@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Text.Json.Serialization;
 
-namespace FractalExplorer.Utilities
+namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
 {
     /// <summary>
     /// Базовый класс для определения цветовой палитры.

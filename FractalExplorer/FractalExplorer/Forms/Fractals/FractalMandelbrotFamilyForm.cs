@@ -3,7 +3,6 @@ using FractalExplorer.Engines;
 using FractalExplorer.Forms;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
-using FractalExplorer.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
