@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            btnStateManager = new Button();
             btnConfigurePalette = new Button();
             panel2 = new Panel();
             panel5 = new Panel();
@@ -67,6 +68,7 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(btnStateManager);
             panel1.Controls.Add(btnConfigurePalette);
             panel1.Controls.Add(panel2);
             panel1.Controls.Add(nudW);
@@ -87,6 +89,16 @@
             panel1.Name = "panel1";
             panel1.Size = new Size(231, 636);
             panel1.TabIndex = 0;
+            // 
+            // btnStateManager
+            // 
+            btnStateManager.Location = new Point(7, 337);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(218, 34);
+            btnStateManager.TabIndex = 42;
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
             // 
             // btnConfigurePalette
             // 
@@ -360,5 +372,6 @@
         private System.Windows.Forms.Panel panel4;
         private System.Windows.Forms.Panel panel5;
         private System.Windows.Forms.Button btnConfigurePalette;
+        private Button btnStateManager;
     }
 }

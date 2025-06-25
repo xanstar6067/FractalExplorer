@@ -1,6 +1,7 @@
 using FractalDraving;
 using FractalExplorer.Engines;
 using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.SaveStateImplementations;
 
 namespace FractalExplorer.Projects
 {

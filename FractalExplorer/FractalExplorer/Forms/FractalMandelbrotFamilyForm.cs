@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using FractalExplorer.Utilities.StateBaseImplementations;
 using System.Text.Json;
+using FractalExplorer.Utilities.SaveStateImplementations;
 
 
 namespace FractalDraving

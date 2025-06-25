@@ -947,5 +947,12 @@ namespace FractalExplorer
         }
 
         #endregion
+
+
+
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FractalExplorer.Utilities
+namespace FractalExplorer.Utilities.SaveStateImplementations
 {
     public class MandelbrotFamilySaveState : FractalSaveStateBase
     {
