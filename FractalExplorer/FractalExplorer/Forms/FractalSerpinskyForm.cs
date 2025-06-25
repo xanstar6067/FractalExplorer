@@ -6,6 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System;
 using System.Windows.Forms;
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.StateBaseImplementations;
+using System.Text.Json;
 
 namespace FractalExplorer
 {
@@ -14,7 +17,7 @@ namespace FractalExplorer
     /// Предоставляет пользовательский интерфейс для настройки параметров фрактала,
     /// режимов рендеринга и цветовой схемы.
     /// </summary>
-    public partial class FractalSerpinsky : Form
+    public partial class FractalSerpinsky : Form, ISaveLoadCapableFractal
     {
         #region Fields
 
@@ -966,10 +969,204 @@ namespace FractalExplorer
 
         #endregion
 
+        #region ISaveLoadCapableFractal Implementation
+
+        public string FractalTypeIdentifier => "Serpinsky";
+
+        public Type ConcreteSaveStateType => typeof(SerpinskySaveState);
+
+        // Вспомогательный класс для параметров превью Серпинского
+        protected class SerpinskyPreviewParams
+        {
+            public SerpinskyRenderMode RenderMode { get; set; }
+            public SerpinskyColorMode ColorMode { get; set; }
+            public int Iterations { get; set; } // Уменьшенные итерации для превью
+            public double Zoom { get; set; }
+            public double CenterX { get; set; }
+            public double CenterY { get; set; }
+            public Color FractalColor { get; set; }
+            public Color BackgroundColor { get; set; }
+        }
+
+        public FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            var state = new SerpinskySaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                RenderMode = FractalTypeIsGeometry.Checked ? SerpinskyRenderMode.Geometric : SerpinskyRenderMode.Chaos,
+                ColorMode = GetCurrentColorMode(),
+                Iterations = (int)nudIterations.Value,
+                Zoom = (double)nudZoom.Value,
+                CenterX = this.centerX,
+                CenterY = this.centerY,
+                FractalColor = _engine.FractalColor,
+                BackgroundColor = _engine.BackgroundColor
+            };
+
+            // Параметры для превью с учетом производительности
+            var previewParams = new SerpinskyPreviewParams
+            {
+                RenderMode = state.RenderMode,
+                ColorMode = state.ColorMode,
+                Zoom = state.Zoom,
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                FractalColor = state.FractalColor,
+                BackgroundColor = state.BackgroundColor
+            };
+
+            if (state.RenderMode == SerpinskyRenderMode.Geometric)
+            {
+                // ОГРАНИЧЕНИЕ: не больше 5 итераций для геометрического превью
+                previewParams.Iterations = Math.Min(state.Iterations, 5);
+            }
+            else // Chaos
+            {
+                // ОГРАНИЧЕНИЕ: не больше 20 000 точек для превью "Игры Хаоса"
+                previewParams.Iterations = Math.Min(state.Iterations, 20000);
+            }
+
+            var jsonOptions = new JsonSerializerOptions();
+            jsonOptions.Converters.Add(new Core.JsonColorConverter());
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, jsonOptions);
+
+            return state;
+        }
+
+        // Вспомогательный метод для GetCurrentStateForSave
+        private SerpinskyColorMode GetCurrentColorMode()
+        {
+            if (renderBW.Checked) return SerpinskyColorMode.BlackAndWhite;
+            if (colorGrayscale.Checked) return SerpinskyColorMode.Grayscale;
+            return SerpinskyColorMode.CustomColor;
+        }
+
+
+        public void LoadState(FractalSaveStateBase stateBase)
+        {
+            if (stateBase is SerpinskySaveState state)
+            {
+                // Останавливаем текущие рендеры
+                previewRenderCts?.Cancel();
+                renderTimer.Stop();
+
+                // Устанавливаем параметры
+                this.centerX = state.CenterX;
+                this.centerY = state.CenterY;
+                this.currentZoom = state.Zoom;
+
+                // Обновляем UI
+                nudZoom.Value = (decimal)state.Zoom;
+                nudIterations.Value = state.Iterations;
+
+                if (state.RenderMode == SerpinskyRenderMode.Geometric)
+                {
+                    FractalTypeIsGeometry.Checked = true;
+                }
+                else
+                {
+                    FractalTypeIsChaos.Checked = true;
+                }
+
+                switch (state.ColorMode)
+                {
+                    case SerpinskyColorMode.BlackAndWhite:
+                        renderBW.Checked = true;
+                        break;
+                    case SerpinskyColorMode.Grayscale:
+                        colorGrayscale.Checked = true;
+                        break;
+                    case SerpinskyColorMode.CustomColor:
+                        colorColor.Checked = true;
+                        break;
+                }
+
+                // Загружаем цвета
+                _engine.FractalColor = state.FractalColor;
+                _engine.BackgroundColor = state.BackgroundColor;
+
+                // Обновляем палитру и запускаем рендер
+                UpdatePaletteCanvas();
+                UpdateEngineParameters();
+                ScheduleRender();
+            }
+            else
+            {
+                MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
+        {
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            SerpinskyPreviewParams previewParams;
+            try
+            {
+                var jsonOptions = new JsonSerializerOptions();
+                jsonOptions.Converters.Add(new Core.JsonColorConverter());
+                previewParams = JsonSerializer.Deserialize<SerpinskyPreviewParams>(state.PreviewParametersJson, jsonOptions);
+            }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            var previewEngine = new FractalSerpinskyEngine
+            {
+                RenderMode = previewParams.RenderMode,
+                ColorMode = previewParams.ColorMode,
+                Iterations = previewParams.Iterations, // Используем УМЕНЬШЕННЫЕ итерации из превью
+                Zoom = previewParams.Zoom,
+                CenterX = previewParams.CenterX,
+                CenterY = previewParams.CenterY,
+                FractalColor = previewParams.FractalColor,
+                BackgroundColor = previewParams.BackgroundColor
+            };
+
+            // Рендерим в битмап
+            Bitmap bmp = new Bitmap(previewWidth, previewHeight, PixelFormat.Format32bppArgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, previewWidth, previewHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            byte[] buffer = new byte[bmpData.Stride * previewHeight];
+
+            // Рендеринг в 1 поток для превью
+            previewEngine.RenderToBuffer(buffer, previewWidth, previewHeight, bmpData.Stride, 4, 1, CancellationToken.None, progress => { });
+
+            Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+            bmp.UnlockBits(bmpData);
+
+            return bmp;
+        }
+
+        public List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<SerpinskySaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            var specificSaves = saves.Cast<SerpinskySaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
+        }
+
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-
+            using (var dialog = new Forms.SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
         }
+
+        #endregion
 
         private void color_configurations_Click(object sender, EventArgs e)
         {
