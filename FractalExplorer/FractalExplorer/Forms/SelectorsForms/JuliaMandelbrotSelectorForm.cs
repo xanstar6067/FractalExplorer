@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms; // Явное добавление для Form, PictureBox, etc.
 
-namespace FractalExplorer.Selectors
+namespace FractalExplorer.Forms.SelectorsForms
 {
     /// <summary>
     /// Форма для выбора комплексного параметра 'c' (для фрактала Жюлиа)
@@ -387,7 +387,7 @@ namespace FractalExplorer.Selectors
             Bitmap bitmap = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
             BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bitmap.PixelFormat);
             int stride = bitmapData.Stride;
-            IntPtr scan0 = bitmapData.Scan0;
+            nint scan0 = bitmapData.Scan0;
             int bufferSize = Math.Abs(stride) * canvasHeight;
             byte[] pixelBuffer = new byte[bufferSize];
 
