@@ -23,6 +23,7 @@
         protected void InitializeComponent()
         {
             pnlControls = new Panel();
+            btnStateManager = new Button();
             color_configurations = new Button();
             mandelbrotPreviewPanel = new Panel();
             mandelbrotPreviewCanvas = new PictureBox();
@@ -47,7 +48,6 @@
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
             canvas = new PictureBox();
-            btnStateManager = new Button();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
@@ -92,6 +92,16 @@
             pnlControls.Name = "pnlControls";
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
+            // 
+            // btnStateManager
+            // 
+            btnStateManager.Location = new Point(3, 379);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(218, 32);
+            btnStateManager.TabIndex = 34;
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
             // 
             // color_configurations
             // 
@@ -151,7 +161,7 @@
             // lblProgress
             // 
             lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(80, 376);
+            lblProgress.Location = new Point(80, 414);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(67, 15);
             lblProgress.TabIndex = 20;
@@ -189,7 +199,7 @@
             // 
             // pbRenderProgress
             // 
-            pbRenderProgress.Location = new Point(3, 394);
+            pbRenderProgress.Location = new Point(3, 432);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(218, 23);
             pbRenderProgress.TabIndex = 14;
@@ -320,16 +330,6 @@
             canvas.Size = new Size(853, 636);
             canvas.TabIndex = 1;
             canvas.TabStop = false;
-            // 
-            // btnStateManager
-            // 
-            btnStateManager.Location = new Point(28, 423);
-            btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(75, 23);
-            btnStateManager.TabIndex = 34;
-            btnStateManager.Text = "button1";
-            btnStateManager.UseVisualStyleBackColor = true;
-            btnStateManager.Click += btnStateManager_Click;
             // 
             // FractalMandelbrotFamilyForm
             // 
