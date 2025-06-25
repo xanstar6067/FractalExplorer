@@ -44,6 +44,7 @@ namespace FractalExplorer.Forms
             nudThreshold = new NumericUpDown();
             nudIterations = new NumericUpDown();
             canvas = new PictureBox();
+            btnStateManager = new Button();
             pnlControls.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudC2Im).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudC2Re).BeginInit();
@@ -59,6 +60,7 @@ namespace FractalExplorer.Forms
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(btnStateManager);
             pnlControls.Controls.Add(btnSelectPhoenixParameters);
             pnlControls.Controls.Add(lblC2Im);
             pnlControls.Controls.Add(nudC2Im);
@@ -223,7 +225,7 @@ namespace FractalExplorer.Forms
             // lblProgress
             // 
             lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(80, 468);
+            lblProgress.Location = new Point(80, 510);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(67, 15);
             lblProgress.TabIndex = 20;
@@ -262,7 +264,7 @@ namespace FractalExplorer.Forms
             // 
             // pbRenderProgress
             // 
-            pbRenderProgress.Location = new Point(12, 486);
+            pbRenderProgress.Location = new Point(12, 528);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(204, 23);
             pbRenderProgress.TabIndex = 14;
@@ -343,6 +345,16 @@ namespace FractalExplorer.Forms
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
+            // btnStateManager
+            // 
+            btnStateManager.Location = new Point(12, 471);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(204, 32);
+            btnStateManager.TabIndex = 35;
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
+            // 
             // FractalPhoenixForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -399,5 +411,6 @@ namespace FractalExplorer.Forms
         protected System.Windows.Forms.Label lblC2Im;
         protected System.Windows.Forms.NumericUpDown nudC2Im;
         protected System.Windows.Forms.Button btnSelectPhoenixParameters;
+        private Button btnStateManager;
     }
 }

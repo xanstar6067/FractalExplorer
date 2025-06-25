@@ -14,6 +14,8 @@ namespace FractalExplorer.Utilities.StateBaseImplementations
         public decimal Threshold { get; set; }
         public int Iterations { get; set; }
         public string PaletteName { get; set; }
+
+        // Специфичные для Феникса параметры
         public decimal C1Re { get; set; }
         public decimal C1Im { get; set; }
         public decimal C2Re { get; set; }

@@ -865,5 +865,10 @@ namespace FractalExplorer.Forms
             _colorConfigForm = null;
         }
         #endregion
+
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
