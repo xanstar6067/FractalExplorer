@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FractalExplorer.Utilities;
 
-namespace FractalExplorer.Utilities.StateBaseImplementations
+namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
 {
     public class NewtonSaveState : FractalSaveStateBase
     {

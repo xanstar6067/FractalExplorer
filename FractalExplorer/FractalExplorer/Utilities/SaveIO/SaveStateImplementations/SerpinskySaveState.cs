@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FractalExplorer.Utilities.StateBaseImplementations
+namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
 {
     public class SerpinskySaveState : FractalSaveStateBase
     {

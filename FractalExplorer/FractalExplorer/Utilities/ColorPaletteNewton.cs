@@ -129,7 +129,8 @@ namespace FractalExplorer.Utilities
                 try
                 {
                     string json = File.ReadAllText(PALETTE_FILE);
-
+                    string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+                    string filePath = Path.Combine(savesDirectory, PALETTE_FILE);
                     var options = new JsonSerializerOptions();
                     // Добавляем конвертер для System.Drawing.Color
                     options.Converters.Add(new JsonColorConverter());
@@ -157,20 +158,24 @@ namespace FractalExplorer.Utilities
         {
             try
             {
-                // Выбираем только пользовательские палитры для сохранения
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
-
-                var options = new JsonSerializerOptions { WriteIndented = true }; // Форматируем JSON для удобочитаемости
-                // Добавляем конвертер для System.Drawing.Color
-                options.Converters.Add(new JsonColorConverter());
-
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                options.Converters.Add(new Core.JsonColorConverter());
                 string json = JsonSerializer.Serialize(customPalettes, options);
 
-                File.WriteAllText(PALETTE_FILE, json);
+                // --- НАЧАЛО ИЗМЕНЕНИЯ ---
+                string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+                if (!Directory.Exists(savesDirectory))
+                {
+                    Directory.CreateDirectory(savesDirectory);
+                }
+                string filePath = Path.Combine(savesDirectory, PALETTE_FILE);
+                // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+
+                File.WriteAllText(filePath, json);
             }
             catch (Exception ex)
             {
-                // Отображаем сообщение об ошибке, если сохранение не удалось
                 MessageBox.Show($"Не удалось сохранить палитры для Ньютона: {ex.Message}", "Ошибка сохранения палитр", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

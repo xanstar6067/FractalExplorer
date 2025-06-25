@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using System;
 using System.Windows.Forms;
 using FractalExplorer.Utilities;
-using FractalExplorer.Utilities.StateBaseImplementations;
 using System.Text.Json;
 using System.Linq;
 using FractalExplorer.SelectorsForms;
-using System.Collections.Generic; // Добавлено для List<>
+using System.Collections.Generic;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations; // Добавлено для List<>
 
 namespace FractalExplorer
 {

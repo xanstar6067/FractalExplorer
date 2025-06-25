@@ -3,7 +3,7 @@ using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.Selectors;
 using FractalExplorer.Utilities;
-using FractalExplorer.Utilities.SaveStateImplementations;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
