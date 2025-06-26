@@ -1,25 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
-using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System.Text.Json;
+using FractalDraving;
+using FractalExplorer;
 using FractalExplorer.Engines;
-using System.Text.Json;    
-using FractalDraving;       
-using FractalExplorer.Forms;  
-using FractalExplorer;        
-using System.Drawing;         
-
+using FractalExplorer.Forms;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 
 namespace FractalExplorer.Utilities
 {
     public static class PresetManager
     {
+        #region Constants
+
         private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 175;
         private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 175;
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
 
+        #endregion
+
+        #region Public API / Dispatcher
 
         /// <summary>
         /// Возвращает список предустановленных точек интереса (пресетов) для указанного типа фрактала.
@@ -42,12 +46,16 @@ namespace FractalExplorer.Utilities
                     return GetPhoenixPresets();
                 case "Serpinsky":
                     return GetSerpinskyPresets();
-                case "NewtonPools": // Добавим кейс для Ньютона, если понадобятся пресеты
+                case "NewtonPools":
                     return GetNewtonPoolsPresets();
                 default:
                     return new List<FractalSaveStateBase>();
             }
         }
+
+        #endregion
+
+        #region Mandelbrot-Julia Family Presets
 
         private static List<FractalSaveStateBase> GetMandelbrotPresets()
         {
@@ -73,7 +81,7 @@ namespace FractalExplorer.Utilities
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
-                PreviewEngineType = "Mandelbrot" // Этот параметр теперь менее важен, если RenderPreview каждой формы сам знает свой движок
+                PreviewEngineType = "Mandelbrot"
             };
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
             presets.Add(preset1);
@@ -443,6 +451,10 @@ namespace FractalExplorer.Utilities
             return presets;
         }
 
+        #endregion
+
+        #region Phoenix Family Presets
+
         private static List<FractalSaveStateBase> GetPhoenixPresets()
         {
             var presets = new List<FractalSaveStateBase>();
@@ -462,7 +474,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Радуга",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1Ph = new FractalPhoenixForm.PhoenixPreviewParams // Используем класс из FractalPhoenixForm
+            var previewParams1Ph = new FractalPhoenixForm.PhoenixPreviewParams
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
@@ -543,6 +555,10 @@ namespace FractalExplorer.Utilities
             return presets;
         }
 
+        #endregion
+
+        #region Serpinsky Fractal Presets
+
         private static List<FractalSaveStateBase> GetSerpinskyPresets()
         {
             var presets = new List<FractalSaveStateBase>();
@@ -561,7 +577,7 @@ namespace FractalExplorer.Utilities
                 BackgroundColor = Color.White,
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1S = new FractalSerpinsky.SerpinskyPreviewParams // Используем класс из FractalSerpinskyForm
+            var previewParams1S = new FractalSerpinsky.SerpinskyPreviewParams
             {
                 RenderMode = preset1.RenderMode,
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC),
@@ -602,7 +618,10 @@ namespace FractalExplorer.Utilities
             return presets;
         }
 
-        // Заглушка для Ньютона, если понадобятся пресеты
+        #endregion
+
+        #region Newton Pool Presets
+
         private static List<FractalSaveStateBase> GetNewtonPoolsPresets()
         {
             var presets = new List<FractalSaveStateBase>();
@@ -610,12 +629,12 @@ namespace FractalExplorer.Utilities
             jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter()); // Для сериализации Color внутри PaletteSnapshot
 
             // --- Пресет 1: Классический z^3 - 1 ---
-            var palette1 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette // Указываем полный namespace, если нужно
+            var palette1 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
             {
-                Name = "NewtonPreset1_Classic", // Имя для снимка палитры
+                Name = "NewtonPreset1_Classic",
                 RootColors = new List<Color> { Color.FromArgb(255, 100, 100), Color.FromArgb(100, 255, 100), Color.FromArgb(100, 100, 255) },
-                BackgroundColor = Color.FromArgb(20, 0, 0), // Темно-красный фон
-                IsGradient = false // Дискретные цвета для корней
+                BackgroundColor = Color.FromArgb(20, 0, 0),
+                IsGradient = false
             };
             var preset1 = new NewtonSaveState("NewtonPools")
             {
@@ -625,10 +644,10 @@ namespace FractalExplorer.Utilities
                 CenterY = 0m,
                 Zoom = 1.0m,
                 Iterations = 100,
-                PaletteSnapshot = palette1, // Используем созданный снимок
+                PaletteSnapshot = palette1,
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1N = new NewtonPools.NewtonPreviewParams // Используем класс из NewtonPools
+            var previewParams1N = new NewtonPools.NewtonPreviewParams
             {
                 Formula = preset1.Formula,
                 CenterX = preset1.CenterX,
@@ -646,7 +665,7 @@ namespace FractalExplorer.Utilities
                 Name = "NewtonPreset2_Gradient",
                 RootColors = new List<Color> { Color.Cyan, Color.Magenta, Color.Yellow, Color.Lime },
                 BackgroundColor = Color.Black,
-                IsGradient = true // Градиент
+                IsGradient = true
             };
             var preset2 = new NewtonSaveState("NewtonPools")
             {
@@ -654,7 +673,7 @@ namespace FractalExplorer.Utilities
                 Formula = "z^4-1",
                 CenterX = 0m,
                 CenterY = 0m,
-                Zoom = 1.2m, // Немного другой зум
+                Zoom = 1.2m,
                 Iterations = 80,
                 PaletteSnapshot = palette2,
                 Timestamp = DateTime.MinValue
@@ -675,9 +694,8 @@ namespace FractalExplorer.Utilities
             var palette3 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
             {
                 Name = "NewtonPreset3_Complex",
-                // Для 5 корней можно сгенерировать цвета или задать вручную
                 RootColors = new List<Color> { Color.Orange, Color.Purple, Color.GreenYellow, Color.SkyBlue, Color.HotPink },
-                BackgroundColor = Color.FromArgb(10, 10, 30), // Темно-синий
+                BackgroundColor = Color.FromArgb(10, 10, 30),
                 IsGradient = false
             };
             var preset3 = new NewtonSaveState("NewtonPools")
@@ -715,7 +733,7 @@ namespace FractalExplorer.Utilities
             {
                 SaveName = "Ньютон: z^3-2*z+2 (Сдвиг)",
                 Formula = "z^3-2*z+2",
-                CenterX = 0.5m, // Небольшой сдвиг центра
+                CenterX = 0.5m,
                 CenterY = -0.3m,
                 Zoom = 2.0m,
                 Iterations = 150,
@@ -736,5 +754,7 @@ namespace FractalExplorer.Utilities
 
             return presets;
         }
+
+        #endregion
     }
 }
