@@ -1,4 +1,5 @@
 ﻿using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.JsonConverters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,14 +47,22 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             Palettes.Add(new SerpinskyColorPalette { Name = "Огонь и ночь", FractalColor = Color.OrangeRed, BackgroundColor = Color.FromArgb(10, 0, 20), IsBuiltIn = true });
             Palettes.Add(new SerpinskyColorPalette { Name = "Глубокий океан", FractalColor = Color.Aqua, BackgroundColor = Color.DarkSlateBlue, IsBuiltIn = true });
 
-            string filePath = Path.Combine(Application.StartupPath, PALETTE_FILE);
+            // Формируем путь к файлу в подпапке "Saves"
+            string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+            if (!Directory.Exists(savesDirectory))
+            {
+                return;
+            }
+            string filePath = Path.Combine(savesDirectory, PALETTE_FILE);
+
             if (File.Exists(filePath))
             {
                 try
                 {
                     string json = File.ReadAllText(filePath);
                     var options = new JsonSerializerOptions();
-                    options.Converters.Add(new JsonConverters.JsonColorConverter());
+                    // Используйте правильное пространство имен после перемещения файла
+                    options.Converters.Add(new JsonColorConverter());
                     var customPalettes = JsonSerializer.Deserialize<List<SerpinskyColorPalette>>(json, options);
                     if (customPalettes != null)
                     {
@@ -73,9 +82,15 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                options.Converters.Add(new JsonConverters.JsonColorConverter());
+                options.Converters.Add(new JsonColorConverter());
                 string json = JsonSerializer.Serialize(customPalettes, options);
-                string filePath = Path.Combine(Application.StartupPath, PALETTE_FILE);
+
+                // Создаем папку "Saves", если она не существует
+                string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+                Directory.CreateDirectory(savesDirectory);
+
+                // Формируем путь к файлу в подпапке "Saves"
+                string filePath = Path.Combine(savesDirectory, PALETTE_FILE);
                 File.WriteAllText(filePath, json);
             }
             catch (Exception ex)
