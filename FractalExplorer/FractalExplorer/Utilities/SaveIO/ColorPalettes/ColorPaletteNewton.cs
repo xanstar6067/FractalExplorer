@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Forms;
-using FractalExplorer.Core;
+using FractalExplorer.Utilities;
 
 namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
 {
@@ -139,7 +139,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
 
                     var options = new JsonSerializerOptions();
                     // Добавляем конвертер для System.Drawing.Color
-                    options.Converters.Add(new JsonColorConverter());
+                    options.Converters.Add(new JsonConverters.JsonColorConverter());
 
                     var customPalettes = JsonSerializer.Deserialize<List<NewtonColorPalette>>(json, options);
 
@@ -166,7 +166,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                options.Converters.Add(new JsonColorConverter());
+                options.Converters.Add(new JsonConverters.JsonColorConverter());
                 string json = JsonSerializer.Serialize(customPalettes, options);
 
                 // --- НАЧАЛО ИЗМЕНЕНИЯ ---

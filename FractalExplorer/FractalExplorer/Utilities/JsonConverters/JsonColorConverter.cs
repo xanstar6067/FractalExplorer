@@ -4,10 +4,10 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace FractalExplorer.Core
+namespace FractalExplorer.Utilities.JsonConverters
 {
     /// <summary>
-    /// Кастомный конвертер для <see cref="System.Drawing.Color"/>, который позволяет
+    /// Кастомный конвертер для <see cref="Color"/>, который позволяет
     /// корректно сериализовать и десериализовать цвета в JSON.
     /// Цвет сохраняется в формате #AARRGGBB.
     /// </summary>
@@ -19,9 +19,9 @@ namespace FractalExplorer.Core
         /// Читает цвет из JSON. Ожидает строку в формате #AARRGGBB.
         /// </summary>
         /// <param name="reader">Объект <see cref="Utf8JsonReader"/> для чтения JSON.</param>
-        /// <param name="typeToConvert">Тип, который требуется преобразовать (ожидается <see cref="System.Drawing.Color"/>).</param>
+        /// <param name="typeToConvert">Тип, который требуется преобразовать (ожидается <see cref="Color"/>).</param>
         /// <param name="options">Параметры сериализации JSON.</param>
-        /// <returns>Десериализованный объект <see cref="System.Drawing.Color"/>.</returns>
+        /// <returns>Десериализованный объект <see cref="Color"/>.</returns>
         /// <exception cref="JsonException">Выбрасывается, если в JSON ожидалась строка, но найден другой тип токена.</exception>
         public override Color Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -67,7 +67,7 @@ namespace FractalExplorer.Core
         /// Записывает цвет в JSON в виде строки формата #AARRGGBB.
         /// </summary>
         /// <param name="writer">Объект <see cref="Utf8JsonWriter"/> для записи JSON.</param>
-        /// <param name="value">Объект <see cref="System.Drawing.Color"/> для сериализации.</param>
+        /// <param name="value">Объект <see cref="Color"/> для сериализации.</param>
         /// <param name="options">Параметры сериализации JSON.</param>
         public override void Write(Utf8JsonWriter writer, Color value, JsonSerializerOptions options)
         {

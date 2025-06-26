@@ -1002,7 +1002,7 @@ namespace FractalExplorer
             };
 
             var jsonOptions = new JsonSerializerOptions();
-            jsonOptions.Converters.Add(new Core.JsonColorConverter());
+            jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, jsonOptions);
 
             return state;
@@ -1067,7 +1067,7 @@ namespace FractalExplorer
             try
             {
                 var jsonOptions = new JsonSerializerOptions();
-                jsonOptions.Converters.Add(new Core.JsonColorConverter());
+                jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
                 previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
             }
             catch (Exception)

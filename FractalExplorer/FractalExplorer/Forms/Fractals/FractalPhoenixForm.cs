@@ -1,4 +1,4 @@
-﻿using FractalExplorer.Core;
+﻿using FractalExplorer.Utilities;
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using FractalExplorer.SelectorsForms;

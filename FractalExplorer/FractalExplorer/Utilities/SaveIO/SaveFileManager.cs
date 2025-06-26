@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
-using FractalExplorer.Core;
+using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 
 
@@ -35,7 +35,7 @@ namespace FractalExplorer.Utilities.SaveIO
                 // Для безопасности оставим, но с учетом List<T> это обычно работает.
                 // Вместо этого, лучше явно указывать тип при десериализации List<MyConcreteType>.
             };
-            options.Converters.Add(new JsonColorConverter());
+            options.Converters.Add(new JsonConverters.JsonColorConverter());
             options.Converters.Add(new JsonComplexDecimalConverter());
             return options;
         }

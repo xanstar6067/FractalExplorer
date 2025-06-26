@@ -6,7 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace FractalExplorer.Core
+namespace FractalExplorer.Utilities
 {
     /// <summary>
     /// Базовая форма для настройки цветовых палитр фракталов.

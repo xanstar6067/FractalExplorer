@@ -1,4 +1,4 @@
-﻿namespace FractalExplorer.Core
+﻿namespace FractalExplorer.Utilities
 {
     partial class ColorConfigurationMandelbrotFamilyForm
     {

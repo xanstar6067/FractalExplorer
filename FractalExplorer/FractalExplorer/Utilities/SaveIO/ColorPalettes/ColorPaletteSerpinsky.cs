@@ -1,4 +1,4 @@
-﻿using FractalExplorer.Core;
+﻿using FractalExplorer.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +53,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                 {
                     string json = File.ReadAllText(filePath);
                     var options = new JsonSerializerOptions();
-                    options.Converters.Add(new JsonColorConverter());
+                    options.Converters.Add(new JsonConverters.JsonColorConverter());
                     var customPalettes = JsonSerializer.Deserialize<List<SerpinskyColorPalette>>(json, options);
                     if (customPalettes != null)
                     {
@@ -73,7 +73,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                options.Converters.Add(new JsonColorConverter());
+                options.Converters.Add(new JsonConverters.JsonColorConverter());
                 string json = JsonSerializer.Serialize(customPalettes, options);
                 string filePath = Path.Combine(Application.StartupPath, PALETTE_FILE);
                 File.WriteAllText(filePath, json);
