@@ -124,13 +124,19 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             Palettes.Add(new NewtonColorPalette { Name = "Психоделика (Градиент)", RootColors = new List<Color> { Color.FromArgb(10, 0, 20), Color.Magenta, Color.Cyan }, IsGradient = true, IsBuiltIn = true });
             Palettes.Add(new NewtonColorPalette { Name = "Огонь и Лёд (Градиент)", RootColors = new List<Color> { Color.FromArgb(255, 100, 0), Color.FromArgb(0, 100, 255), Color.FromArgb(255, 200, 0), Color.FromArgb(0, 200, 255) }, IsGradient = true, IsBuiltIn = true });
 
-            if (File.Exists(PALETTE_FILE))
+            // Формируем правильный путь к файлу палитры в папке "Saves"
+            // Это изменение исправляет ошибку, когда проверка и чтение происходили из разных мест.
+            string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+            string filePath = Path.Combine(savesDirectory, PALETTE_FILE);
+
+            // Проверяем существование файла по ПОЛНОМУ ПУТИ
+            if (File.Exists(filePath))
             {
                 try
                 {
-                    string json = File.ReadAllText(PALETTE_FILE);
-                    string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
-                    string filePath = Path.Combine(savesDirectory, PALETTE_FILE);
+                    // Читаем JSON из этого же ПОЛНОГО ПУТИ
+                    string json = File.ReadAllText(filePath);
+
                     var options = new JsonSerializerOptions();
                     // Добавляем конвертер для System.Drawing.Color
                     options.Converters.Add(new JsonColorConverter());
