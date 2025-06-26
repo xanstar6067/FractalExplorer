@@ -58,7 +58,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, 75), // Итерации для превью
+                Iterations = Math.Min(preset1.Iterations, 175), // Итерации для превью
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = "Mandelbrot" // Тип движка для этого пресета
@@ -117,7 +117,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, 75),
+                Iterations = Math.Min(preset1.Iterations, 175),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 CRe = preset1.CRe,
@@ -178,7 +178,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, 75),
+                Iterations = Math.Min(preset1.Iterations, 175),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
@@ -209,7 +209,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, 75),
+                Iterations = Math.Min(preset1.Iterations, 175),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 CRe = preset1.CRe,
