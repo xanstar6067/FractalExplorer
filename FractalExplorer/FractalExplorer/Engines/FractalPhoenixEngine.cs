@@ -43,12 +43,23 @@ namespace FractalExplorer.Engines
 
             while (iter < MaxIterations && z_current.MagnitudeSquared <= ThresholdSquared)
             {
-                decimal x_next = z_current.Real * z_current.Real - z_current.Imaginary * z_current.Imaginary + p_const + q_const * z_prev.Real;
-                decimal y_next = 2 * z_current.Real * z_current.Imaginary + q_const * z_prev.Imaginary;
+                try
+                {
+                    // ОШИБКА ИСПРАВЛЕНА: Эти вычисления могут вызвать OverflowException
+                    decimal x_next = z_current.Real * z_current.Real - z_current.Imaginary * z_current.Imaginary + p_const + q_const * z_prev.Real;
+                    decimal y_next = 2 * z_current.Real * z_current.Imaginary + q_const * z_prev.Imaginary;
 
-                z_prev = z_current;
-                z_current = new ComplexDecimal(x_next, y_next);
-                iter++;
+                    z_prev = z_current;
+                    z_current = new ComplexDecimal(x_next, y_next);
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    // Если произошло арифметическое переполнение, это означает, что точка
+                    // гарантированно ушла в бесконечность. Мы прерываем цикл.
+                    iter = MaxIterations; // Устанавливаем iter в максимум, чтобы цвет был корректным для "убежавшей" точки.
+                    break;
+                }
             }
             return iter;
         }
