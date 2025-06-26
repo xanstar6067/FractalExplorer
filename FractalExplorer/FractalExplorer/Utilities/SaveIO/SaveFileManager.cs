@@ -36,7 +36,7 @@ namespace FractalExplorer.Utilities.SaveIO
                 // Вместо этого, лучше явно указывать тип при десериализации List<MyConcreteType>.
             };
             options.Converters.Add(new JsonConverters.JsonColorConverter());
-            options.Converters.Add(new JsonComplexDecimalConverter());
+            options.Converters.Add(new Utilities.JsonConverters.JsonComplexDecimalConverter()); //добавил явное определение неймспейса чтобы все работало
             return options;
         }
 
