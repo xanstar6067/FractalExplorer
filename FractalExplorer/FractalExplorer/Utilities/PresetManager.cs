@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using FractalExplorer.Engines; // Для SerpinskyRenderMode
-using System.Text.Json;     // Для JsonSerializer
-using FractalDraving;       // Для FractalMandelbrotFamilyForm.PreviewParams
-using FractalExplorer.Forms;  // Для FractalPhoenixForm.PhoenixPreviewParams
-using FractalExplorer;        // Для NewtonPools.NewtonPreviewParams и FractalSerpinsky.SerpinskyPreviewParams (убедитесь, что namespace корректны)
-using System.Drawing;         // Для Color в SerpinskyPreviewParams
+using FractalExplorer.Engines;
+using System.Text.Json;    
+using FractalDraving;       
+using FractalExplorer.Forms;  
+using FractalExplorer;        
+using System.Drawing;         
 
 
 namespace FractalExplorer.Utilities
@@ -15,8 +15,8 @@ namespace FractalExplorer.Utilities
     public static class PresetManager
     {
         private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 175;
-        private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 100; // Можно подобрать свое значение
-        private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50; // Для Ньютона, если будут пресеты
+        private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 175;
+        private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
 
