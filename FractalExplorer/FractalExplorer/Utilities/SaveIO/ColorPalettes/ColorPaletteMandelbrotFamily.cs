@@ -1,11 +1,12 @@
-﻿using System;
+﻿using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.JsonConverters;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
-using FractalExplorer.Utilities;
 
 namespace FractalExplorer.Utilities.SaveIO.ColorPalettes 
 {
@@ -69,14 +70,23 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
 
             try
             {
-                string filePath = Path.Combine(Application.StartupPath, CONFIG_FILE_NAME);
+                // Формируем путь к файлу в подпапке "Saves"
+                string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+                if (!Directory.Exists(savesDirectory))
+                {
+                    // Если папки нет, то и файла нет. Просто выходим.
+                    return;
+                }
+                string filePath = Path.Combine(savesDirectory, CONFIG_FILE_NAME);
+
                 if (File.Exists(filePath))
                 {
                     string json = File.ReadAllText(filePath);
 
                     var options = new JsonSerializerOptions();
                     // Добавляем наш кастомный конвертер для System.Drawing.Color
-                    options.Converters.Add(new JsonConverters.JsonColorConverter());
+                    // Используйте правильное пространство имен после перемещения файла
+                    options.Converters.Add(new JsonColorConverter());
 
                     var customPalettes = JsonSerializer.Deserialize<List<PaletteManagerMandelbrotFamily>>(json, options);
 
@@ -96,7 +106,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             {
                 // В случае ошибки загрузки файла, отображаем сообщение пользователю
                 // и продолжаем работу только с встроенными палитрами.
-                MessageBox.Show($"Ошибка загрузки файла палитр: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Ошибка загрузки файла палитр ('{CONFIG_FILE_NAME}'): {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -111,18 +121,23 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
 
                 var options = new JsonSerializerOptions { WriteIndented = true }; // Форматируем JSON для удобочитаемости
-                // Добавляем наш кастомный конвертер для System.Drawing.Color
-                options.Converters.Add(new JsonConverters.JsonColorConverter());
+                                                                                  // Добавляем наш кастомный конвертер для System.Drawing.Color
+                options.Converters.Add(new JsonColorConverter());
 
                 string json = JsonSerializer.Serialize(customPalettes, options);
 
-                string filePath = Path.Combine(Application.StartupPath, CONFIG_FILE_NAME);
+                // Создаем папку "Saves", если она не существует
+                string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+                Directory.CreateDirectory(savesDirectory); // Этот метод не делает ничего, если папка уже есть
+
+                // Формируем путь к файлу в подпапке "Saves"
+                string filePath = Path.Combine(savesDirectory, CONFIG_FILE_NAME);
                 File.WriteAllText(filePath, json);
             }
             catch (Exception ex)
             {
                 // Отображаем сообщение об ошибке, если сохранение не удалось
-                MessageBox.Show($"Ошибка сохранения файла палитр: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Ошибка сохранения файла палитр ('{CONFIG_FILE_NAME}'): {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
