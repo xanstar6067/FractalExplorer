@@ -958,7 +958,7 @@ namespace FractalExplorer
         public Type ConcreteSaveStateType => typeof(NewtonSaveState);
 
         // Вспомогательный класс для параметров превью Ньютона
-        protected class NewtonPreviewParams
+        public class NewtonPreviewParams
         {
             public string Formula { get; set; }
             public decimal CenterX { get; set; }

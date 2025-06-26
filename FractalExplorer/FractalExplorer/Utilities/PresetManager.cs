@@ -607,33 +607,133 @@ namespace FractalExplorer.Utilities
         {
             var presets = new List<FractalSaveStateBase>();
             var jsonOptions = new JsonSerializerOptions();
-            jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter());
-            // Пример (если бы он был)
-            /*
+            jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter()); // Для сериализации Color внутри PaletteSnapshot
+
+            // --- Пресет 1: Классический z^3 - 1 ---
+            var palette1 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette // Указываем полный namespace, если нужно
+            {
+                Name = "NewtonPreset1_Classic", // Имя для снимка палитры
+                RootColors = new List<Color> { Color.FromArgb(255, 100, 100), Color.FromArgb(100, 255, 100), Color.FromArgb(100, 100, 255) },
+                BackgroundColor = Color.FromArgb(20, 0, 0), // Темно-красный фон
+                IsGradient = false // Дискретные цвета для корней
+            };
             var preset1 = new NewtonSaveState("NewtonPools")
             {
-                SaveName = "Стандартный z^3-1", Formula = "z^3-1", CenterX = 0, CenterY = 0, Zoom = 1, Iterations = 100,
-                PaletteSnapshot = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette // Нужно создать и настроить палитру
-                {
-                    Name = "NewtonPreviewPalette",
-                    RootColors = new List<Color> { Color.Red, Color.Green, Color.Blue },
-                    BackgroundColor = Color.Black,
-                    IsGradient = false
-                },
+                SaveName = "Ньютон: z^3 - 1 (Классика)",
+                Formula = "z^3-1",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 1.0m,
+                Iterations = 100,
+                PaletteSnapshot = palette1, // Используем созданный снимок
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1N = new NewtonPools.NewtonPreviewParams
+            var previewParams1N = new NewtonPools.NewtonPreviewParams // Используем класс из NewtonPools
             {
                 Formula = preset1.Formula,
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
-                PaletteSnapshot = preset1.PaletteSnapshot // Передаем снимок палитры
+                PaletteSnapshot = preset1.PaletteSnapshot
             };
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1N, jsonOptions);
             presets.Add(preset1);
-            */
+
+            // --- Пресет 2: z^4 - 1 с градиентом ---
+            var palette2 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            {
+                Name = "NewtonPreset2_Gradient",
+                RootColors = new List<Color> { Color.Cyan, Color.Magenta, Color.Yellow, Color.Lime },
+                BackgroundColor = Color.Black,
+                IsGradient = true // Градиент
+            };
+            var preset2 = new NewtonSaveState("NewtonPools")
+            {
+                SaveName = "Ньютон: z^4 - 1 (Градиент)",
+                Formula = "z^4-1",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 1.2m, // Немного другой зум
+                Iterations = 80,
+                PaletteSnapshot = palette2,
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams2N = new NewtonPools.NewtonPreviewParams
+            {
+                Formula = preset2.Formula,
+                CenterX = preset2.CenterX,
+                CenterY = preset2.CenterY,
+                Zoom = preset2.Zoom,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
+                PaletteSnapshot = preset2.PaletteSnapshot
+            };
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2N, jsonOptions);
+            presets.Add(preset2);
+
+            // --- Пресет 3: Более сложная функция z^5 - z^2 + 1 ---
+            var palette3 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            {
+                Name = "NewtonPreset3_Complex",
+                // Для 5 корней можно сгенерировать цвета или задать вручную
+                RootColors = new List<Color> { Color.Orange, Color.Purple, Color.GreenYellow, Color.SkyBlue, Color.HotPink },
+                BackgroundColor = Color.FromArgb(10, 10, 30), // Темно-синий
+                IsGradient = false
+            };
+            var preset3 = new NewtonSaveState("NewtonPools")
+            {
+                SaveName = "Ньютон: z^5 - z^2 + 1",
+                Formula = "z^5 - z^2 + 1",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 1.5m,
+                Iterations = 120,
+                PaletteSnapshot = palette3,
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams3N = new NewtonPools.NewtonPreviewParams
+            {
+                Formula = preset3.Formula,
+                CenterX = preset3.CenterX,
+                CenterY = preset3.CenterY,
+                Zoom = preset3.Zoom,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
+                PaletteSnapshot = preset3.PaletteSnapshot
+            };
+            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3N, jsonOptions);
+            presets.Add(preset3);
+
+            // --- Пресет 4: z^3 - 2*z + 2 (из вашего списка) с градиентом и другим центром ---
+            var palette4 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            {
+                Name = "NewtonPreset4_Shifted",
+                RootColors = new List<Color> { Color.Teal, Color.Gold, Color.Crimson },
+                BackgroundColor = Color.FromArgb(5, 5, 5),
+                IsGradient = true
+            };
+            var preset4 = new NewtonSaveState("NewtonPools")
+            {
+                SaveName = "Ньютон: z^3-2*z+2 (Сдвиг)",
+                Formula = "z^3-2*z+2",
+                CenterX = 0.5m, // Небольшой сдвиг центра
+                CenterY = -0.3m,
+                Zoom = 2.0m,
+                Iterations = 150,
+                PaletteSnapshot = palette4,
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams4N = new NewtonPools.NewtonPreviewParams
+            {
+                Formula = preset4.Formula,
+                CenterX = preset4.CenterX,
+                CenterY = preset4.CenterY,
+                Zoom = preset4.Zoom,
+                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
+                PaletteSnapshot = preset4.PaletteSnapshot
+            };
+            preset4.PreviewParametersJson = JsonSerializer.Serialize(previewParams4N, jsonOptions);
+            presets.Add(preset4);
+
             return presets;
         }
     }
