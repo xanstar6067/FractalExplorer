@@ -5,12 +5,21 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Engines; // Для SerpinskyRenderMode
 using System.Text.Json;     // Для JsonSerializer
 using FractalDraving;       // Для FractalMandelbrotFamilyForm.PreviewParams
+using FractalExplorer.Forms;  // Для FractalPhoenixForm.PhoenixPreviewParams
+using FractalExplorer;        // Для NewtonPools.NewtonPreviewParams и FractalSerpinsky.SerpinskyPreviewParams (убедитесь, что namespace корректны)
+using System.Drawing;         // Для Color в SerpinskyPreviewParams
+
 
 namespace FractalExplorer.Utilities
 {
     public static class PresetManager
     {
-        private const int PREVIEW_ITERATION_LIMIT = 175; // Вынесем лимит в константу
+        private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 175;
+        private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 100; // Можно подобрать свое значение
+        private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50; // Для Ньютона, если будут пресеты
+        private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
+        private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
+
 
         /// <summary>
         /// Возвращает список предустановленных точек интереса (пресетов) для указанного типа фрактала.
@@ -33,6 +42,8 @@ namespace FractalExplorer.Utilities
                     return GetPhoenixPresets();
                 case "Serpinsky":
                     return GetSerpinskyPresets();
+                case "NewtonPools": // Добавим кейс для Ньютона, если понадобятся пресеты
+                    return GetNewtonPoolsPresets();
                 default:
                     return new List<FractalSaveStateBase>();
             }
@@ -59,10 +70,10 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
-                PreviewEngineType = "Mandelbrot"
+                PreviewEngineType = "Mandelbrot" // Этот параметр теперь менее важен, если RenderPreview каждой формы сам знает свой движок
             };
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
             presets.Add(preset1);
@@ -84,7 +95,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -98,7 +109,7 @@ namespace FractalExplorer.Utilities
                 SaveName = "Электрическая Розетка",
                 CenterX = 0.27488735305156m,
                 CenterY = 0.00494881779930m,
-                Zoom = 6500.0m, // Примерный зум, можно подобрать точнее
+                Zoom = 6500.0m,
                 Iterations = 800,
                 Threshold = 2.0m,
                 PaletteName = "Радуга",
@@ -109,7 +120,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -134,7 +145,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
                 Zoom = preset4.Zoom,
-                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset4.PaletteName,
                 Threshold = preset4.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -149,7 +160,6 @@ namespace FractalExplorer.Utilities
         {
             var presets = new List<FractalSaveStateBase>();
 
-            // Пресет 1: Классическая Спираль
             var preset1 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Классическая Спираль",
@@ -163,22 +173,21 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Психоделика",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1J = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 CRe = preset1.CRe,
                 CIm = preset1.CIm,
                 PreviewEngineType = "Julia"
             };
-            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1J);
             presets.Add(preset1);
 
-            // Пресет 2: Дендрит
             var preset2 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Дендрит",
@@ -192,22 +201,21 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Классика",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2J = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 CRe = preset2.CRe,
                 CIm = preset2.CIm,
                 PreviewEngineType = "Julia"
             };
-            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2J);
             presets.Add(preset2);
 
-            // NEW PRESET: Снежинка
             var preset3 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Снежинка",
@@ -221,22 +229,21 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Лёд",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3J = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 CRe = preset3.CRe,
                 CIm = preset3.CIm,
                 PreviewEngineType = "Julia"
             };
-            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3);
+            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3J);
             presets.Add(preset3);
 
-            // NEW PRESET: Огненный Вихрь
             var preset4 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Огненный Вихрь",
@@ -250,19 +257,19 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams4 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams4J = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
                 Zoom = preset4.Zoom,
-                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset4.PaletteName,
                 Threshold = preset4.Threshold,
                 CRe = preset4.CRe,
                 CIm = preset4.CIm,
                 PreviewEngineType = "Julia"
             };
-            preset4.PreviewParametersJson = JsonSerializer.Serialize(previewParams4);
+            preset4.PreviewParametersJson = JsonSerializer.Serialize(previewParams4J);
             presets.Add(preset4);
 
             return presets;
@@ -274,53 +281,51 @@ namespace FractalExplorer.Utilities
             var preset1 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Центральный Корабль",
-                CenterX = -0.5m, // Скорректировано для лучшего вида корабля
-                CenterY = -0.5m, // Скорректировано
-                Zoom = 0.8m,     // Немного отдалим, чтобы видеть больше
+                CenterX = -0.5m,
+                CenterY = -0.5m,
+                Zoom = 0.8m,
                 Iterations = 300,
                 Threshold = 2.0m,
                 PaletteName = "Огонь",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1BS = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
             };
-            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1BS);
             presets.Add(preset1);
 
-            // NEW PRESET: Глубоководный Корабль
             var preset2 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Глубоководный Корабль",
                 CenterX = -1.768739999999000m,
                 CenterY = -0.001640000000000m,
-                Zoom = 1000.0m, // Примерный зум
+                Zoom = 1000.0m,
                 Iterations = 500,
                 Threshold = 2.0m,
                 PaletteName = "Глубина",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2BS = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
             };
-            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2BS);
             presets.Add(preset2);
 
-            // NEW PRESET: Призрачные Паруса
             var preset3 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Призрачные Паруса",
@@ -332,17 +337,17 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Лёд",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3BS = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
             };
-            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3);
+            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3BS);
             presets.Add(preset3);
 
             return presets;
@@ -364,22 +369,21 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Лёд",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1JBS = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 CRe = preset1.CRe,
                 CIm = preset1.CIm,
                 PreviewEngineType = "JuliaBurningShip"
             };
-            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1JBS);
             presets.Add(preset1);
 
-            // NEW PRESET: Огненный Дракон
             var preset2 = new JuliaFamilySaveState("JuliaBurningShip")
             {
                 SaveName = "Огненный Дракон",
@@ -393,22 +397,21 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2JBS = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 CRe = preset2.CRe,
                 CIm = preset2.CIm,
                 PreviewEngineType = "JuliaBurningShip"
             };
-            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2JBS);
             presets.Add(preset2);
 
-            // NEW PRESET: Туманность Андромеды (стилизация)
             var preset3 = new JuliaFamilySaveState("JuliaBurningShip")
             {
                 SaveName = "Туманность Андромеды (стил.)",
@@ -422,19 +425,19 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Глубина",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3JBS = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT),
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 CRe = preset3.CRe,
                 CIm = preset3.CIm,
                 PreviewEngineType = "JuliaBurningShip"
             };
-            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3);
+            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3JBS);
             presets.Add(preset3);
 
             return presets;
@@ -443,7 +446,7 @@ namespace FractalExplorer.Utilities
         private static List<FractalSaveStateBase> GetPhoenixPresets()
         {
             var presets = new List<FractalSaveStateBase>();
-            // Пресет 1
+
             var preset1 = new PhoenixSaveState("Phoenix")
             {
                 SaveName = "Стандартный Феникс",
@@ -459,19 +462,29 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Радуга",
                 Timestamp = DateTime.MinValue
             };
-            // Для Phoenix пока не генерируем PreviewParametersJson,
-            // так как RenderPreview в FractalMandelbrotFamilyForm его не обработает.
-            // Нужна отдельная логика рендеринга превью для Phoenix.
+            var previewParams1Ph = new FractalPhoenixForm.PhoenixPreviewParams // Используем класс из FractalPhoenixForm
+            {
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                Zoom = preset1.Zoom,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
+                PaletteName = preset1.PaletteName,
+                Threshold = preset1.Threshold,
+                C1Re = preset1.C1Re,
+                C1Im = preset1.C1Im,
+                C2Re = preset1.C2Re,
+                C2Im = preset1.C2Im
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1Ph);
             presets.Add(preset1);
 
-            // NEW PRESET: Вихрь Феникса
             var preset2 = new PhoenixSaveState("Phoenix")
             {
                 SaveName = "Вихрь Феникса",
                 C1Re = 0.35m,
                 C1Im = -0.62m,
-                C2Re = -0.01m, // Небольшое значение для C2Re может дать интересные эффекты
-                C2Im = 0.005m, // Небольшое значение для C2Im
+                C2Re = -0.01m,
+                C2Im = 0.005m,
                 CenterX = 0.1m,
                 CenterY = -0.2m,
                 Zoom = 1.2m,
@@ -480,9 +493,22 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Психоделика",
                 Timestamp = DateTime.MinValue
             };
+            var previewParams2Ph = new FractalPhoenixForm.PhoenixPreviewParams
+            {
+                CenterX = preset2.CenterX,
+                CenterY = preset2.CenterY,
+                Zoom = preset2.Zoom,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
+                PaletteName = preset2.PaletteName,
+                Threshold = preset2.Threshold,
+                C1Re = preset2.C1Re,
+                C1Im = preset2.C1Im,
+                C2Re = preset2.C2Re,
+                C2Im = preset2.C2Im
+            };
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2Ph);
             presets.Add(preset2);
 
-            // NEW PRESET: Хвост Павлина
             var preset3 = new PhoenixSaveState("Phoenix")
             {
                 SaveName = "Хвост Павлина",
@@ -495,9 +521,23 @@ namespace FractalExplorer.Utilities
                 Zoom = 0.8m,
                 Iterations = 300,
                 Threshold = 4.0m,
-                PaletteName = "Лёд", // Или другая яркая палитра
+                PaletteName = "Лёд",
                 Timestamp = DateTime.MinValue
             };
+            var previewParams3Ph = new FractalPhoenixForm.PhoenixPreviewParams
+            {
+                CenterX = preset3.CenterX,
+                CenterY = preset3.CenterY,
+                Zoom = preset3.Zoom,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
+                PaletteName = preset3.PaletteName,
+                Threshold = preset3.Threshold,
+                C1Re = preset3.C1Re,
+                C1Im = preset3.C1Im,
+                C2Re = preset3.C2Re,
+                C2Im = preset3.C2Im
+            };
+            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3Ph);
             presets.Add(preset3);
 
             return presets;
@@ -505,35 +545,96 @@ namespace FractalExplorer.Utilities
 
         private static List<FractalSaveStateBase> GetSerpinskyPresets()
         {
-            // Для Серпинского оставляем как есть, превью для них требует 
-            // совершенно другой логики рендеринга, не связанной с MandelbrotFamilyEngine.
-            return new List<FractalSaveStateBase>
+            var presets = new List<FractalSaveStateBase>();
+            var jsonOptions = new JsonSerializerOptions();
+            jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter()); // Для сериализации Color
+
+            var preset1 = new SerpinskySaveState("Serpinsky")
             {
-                new SerpinskySaveState("Serpinsky")
-                {
-                    SaveName = "Классическая Геометрия",
-                    RenderMode = SerpinskyRenderMode.Geometric,
-                    Iterations = 8,
-                    Zoom = 1.0,
-                    CenterX = 0,
-                    CenterY = 0.1,
-                    FractalColor = System.Drawing.Color.Black,
-                    BackgroundColor = System.Drawing.Color.White,
-                    Timestamp = DateTime.MinValue
-                },
-                new SerpinskySaveState("Serpinsky")
-                {
-                    SaveName = "Ночной Хаос",
-                    RenderMode = SerpinskyRenderMode.Chaos,
-                    Iterations = 100000,
-                    Zoom = 1.0,
-                    CenterX = 0,
-                    CenterY = 0.1,
-                    FractalColor = System.Drawing.Color.OrangeRed,
-                    BackgroundColor = System.Drawing.Color.FromArgb(10, 0, 20),
-                    Timestamp = DateTime.MinValue
-                }
+                SaveName = "Классическая Геометрия",
+                RenderMode = SerpinskyRenderMode.Geometric,
+                Iterations = 8,
+                Zoom = 1.0,
+                CenterX = 0,
+                CenterY = 0.1,
+                FractalColor = Color.Black,
+                BackgroundColor = Color.White,
+                Timestamp = DateTime.MinValue
             };
+            var previewParams1S = new FractalSerpinsky.SerpinskyPreviewParams // Используем класс из FractalSerpinskyForm
+            {
+                RenderMode = preset1.RenderMode,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC),
+                Zoom = preset1.Zoom,
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                FractalColor = preset1.FractalColor,
+                BackgroundColor = preset1.BackgroundColor
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1S, jsonOptions);
+            presets.Add(preset1);
+
+            var preset2 = new SerpinskySaveState("Serpinsky")
+            {
+                SaveName = "Ночной Хаос",
+                RenderMode = SerpinskyRenderMode.Chaos,
+                Iterations = 100000,
+                Zoom = 1.0,
+                CenterX = 0,
+                CenterY = 0.1,
+                FractalColor = Color.OrangeRed,
+                BackgroundColor = Color.FromArgb(10, 0, 20),
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams2S = new FractalSerpinsky.SerpinskyPreviewParams
+            {
+                RenderMode = preset2.RenderMode,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS),
+                Zoom = preset2.Zoom,
+                CenterX = preset2.CenterX,
+                CenterY = preset2.CenterY,
+                FractalColor = preset2.FractalColor,
+                BackgroundColor = preset2.BackgroundColor
+            };
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2S, jsonOptions);
+            presets.Add(preset2);
+
+            return presets;
+        }
+
+        // Заглушка для Ньютона, если понадобятся пресеты
+        private static List<FractalSaveStateBase> GetNewtonPoolsPresets()
+        {
+            var presets = new List<FractalSaveStateBase>();
+            var jsonOptions = new JsonSerializerOptions();
+            jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter());
+            // Пример (если бы он был)
+            /*
+            var preset1 = new NewtonSaveState("NewtonPools")
+            {
+                SaveName = "Стандартный z^3-1", Formula = "z^3-1", CenterX = 0, CenterY = 0, Zoom = 1, Iterations = 100,
+                PaletteSnapshot = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette // Нужно создать и настроить палитру
+                {
+                    Name = "NewtonPreviewPalette",
+                    RootColors = new List<Color> { Color.Red, Color.Green, Color.Blue },
+                    BackgroundColor = Color.Black,
+                    IsGradient = false
+                },
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams1N = new NewtonPools.NewtonPreviewParams
+            {
+                Formula = preset1.Formula,
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                Zoom = preset1.Zoom,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
+                PaletteSnapshot = preset1.PaletteSnapshot // Передаем снимок палитры
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1N, jsonOptions);
+            presets.Add(preset1);
+            */
+            return presets;
         }
     }
 }

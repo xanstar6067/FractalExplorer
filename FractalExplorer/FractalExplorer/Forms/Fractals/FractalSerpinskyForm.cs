@@ -437,7 +437,7 @@ namespace FractalExplorer
         #region ISaveLoadCapableFractal Implementation
         public string FractalTypeIdentifier => "Serpinsky";
         public Type ConcreteSaveStateType => typeof(SerpinskySaveState);
-        protected class SerpinskyPreviewParams
+        public class SerpinskyPreviewParams
         {
             public SerpinskyRenderMode RenderMode { get; set; }
             public int Iterations { get; set; }

@@ -873,7 +873,7 @@ namespace FractalExplorer.Forms
         public Type ConcreteSaveStateType => typeof(PhoenixSaveState);
 
         // Вспомогательный класс для параметров превью Феникса
-        protected class PhoenixPreviewParams
+        public class PhoenixPreviewParams
         {
             public decimal CenterX { get; set; }
             public decimal CenterY { get; set; }
