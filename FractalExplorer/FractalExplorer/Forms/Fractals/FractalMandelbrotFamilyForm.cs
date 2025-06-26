@@ -16,7 +16,8 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-
+using System.Reflection;
+using System.Collections;
 
 namespace FractalDraving
 {
@@ -1151,16 +1152,6 @@ namespace FractalDraving
 
         #endregion
 
-        private void btnStateManager_Click(object sender, EventArgs e)
-        {
-            // 'this' здесь - это экземпляр FractalMandelbrot, FractalJulia и т.д.
-            // который реализует ISaveLoadCapableFractal
-            using (var dialog = new SaveLoadDialogForm(this))
-            {
-                dialog.ShowDialog(this);
-            }
-        }
-
         #region ISaveLoadCapableFractal Implementation
 
         public abstract string FractalTypeIdentifier { get; }
@@ -1177,6 +1168,16 @@ namespace FractalDraving
             public decimal CRe { get; set; } // Для Жюлиа
             public decimal CIm { get; set; } // Для Жюлиа
             public string PreviewEngineType { get; set; } // "Mandelbrot", "Julia", "MandelbrotBurningShip" и т.д.
+        }
+
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+            // 'this' здесь - это экземпляр FractalMandelbrot, FractalJulia и т.д.
+            // который реализует ISaveLoadCapableFractal
+            using (var dialog = new SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
         }
 
         // Этот метод будет базовым, но может быть переопределен в наследниках,
