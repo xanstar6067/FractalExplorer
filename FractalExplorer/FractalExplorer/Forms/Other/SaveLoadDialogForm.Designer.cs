@@ -90,7 +90,7 @@
             btnSaveAsNew.Name = "btnSaveAsNew";
             btnSaveAsNew.Size = new Size(103, 24);
             btnSaveAsNew.TabIndex = 3;
-            btnSaveAsNew.Text = "Сохранить как";
+            btnSaveAsNew.Text = "Сохранить";
             btnSaveAsNew.UseVisualStyleBackColor = true;
             btnSaveAsNew.Click += btnSaveAsNew_Click;
             // 
