@@ -28,149 +28,157 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.listBoxSaves = new System.Windows.Forms.ListBox();
-            this.pictureBoxPreview = new System.Windows.Forms.PictureBox();
-            this.textBoxSaveName = new System.Windows.Forms.TextBox();
-            this.btnLoad = new System.Windows.Forms.Button();
-            this.btnSaveAsNew = new System.Windows.Forms.Button();
-            this.btnDelete = new System.Windows.Forms.Button();
-            this.btnCancel = new System.Windows.Forms.Button();
-            this.labelSavesList = new System.Windows.Forms.Label();
-            this.labelPreview = new System.Windows.Forms.Label();
-            this.labelSaveName = new System.Windows.Forms.Label();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxPreview)).BeginInit();
-            this.SuspendLayout();
+            listBoxSaves = new ListBox();
+            pictureBoxPreview = new PictureBox();
+            textBoxSaveName = new TextBox();
+            btnLoad = new Button();
+            btnSaveAsNew = new Button();
+            btnDelete = new Button();
+            btnCancel = new Button();
+            labelSavesList = new Label();
+            labelPreview = new Label();
+            labelSaveName = new Label();
+            cbPresets = new CheckBox();
+            ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).BeginInit();
+            SuspendLayout();
             // 
             // listBoxSaves
             // 
-            this.listBoxSaves.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.listBoxSaves.FormattingEnabled = true;
-            this.listBoxSaves.ItemHeight = 15;
-            this.listBoxSaves.Location = new System.Drawing.Point(12, 35);
-            this.listBoxSaves.Name = "listBoxSaves";
-            this.listBoxSaves.Size = new System.Drawing.Size(280, 289);
-            this.listBoxSaves.TabIndex = 0;
-            this.listBoxSaves.SelectedIndexChanged += new System.EventHandler(this.listBoxSaves_SelectedIndexChanged);
+            listBoxSaves.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            listBoxSaves.FormattingEnabled = true;
+            listBoxSaves.ItemHeight = 15;
+            listBoxSaves.Location = new Point(12, 35);
+            listBoxSaves.Name = "listBoxSaves";
+            listBoxSaves.Size = new Size(280, 289);
+            listBoxSaves.TabIndex = 0;
+            listBoxSaves.SelectedIndexChanged += listBoxSaves_SelectedIndexChanged;
             // 
             // pictureBoxPreview
             // 
-            this.pictureBoxPreview.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pictureBoxPreview.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pictureBoxPreview.Location = new System.Drawing.Point(307, 35);
-            this.pictureBoxPreview.Name = "pictureBoxPreview";
-            this.pictureBoxPreview.Size = new System.Drawing.Size(365, 244);
-            this.pictureBoxPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pictureBoxPreview.TabIndex = 1;
-            this.pictureBoxPreview.TabStop = false;
+            pictureBoxPreview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            pictureBoxPreview.BorderStyle = BorderStyle.FixedSingle;
+            pictureBoxPreview.Location = new Point(307, 35);
+            pictureBoxPreview.Name = "pictureBoxPreview";
+            pictureBoxPreview.Size = new Size(365, 244);
+            pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBoxPreview.TabIndex = 1;
+            pictureBoxPreview.TabStop = false;
             // 
             // textBoxSaveName
             // 
-            this.textBoxSaveName.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxSaveName.Location = new System.Drawing.Point(307, 301);
-            this.textBoxSaveName.Name = "textBoxSaveName";
-            this.textBoxSaveName.Size = new System.Drawing.Size(256, 23);
-            this.textBoxSaveName.TabIndex = 2;
+            textBoxSaveName.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            textBoxSaveName.Location = new Point(307, 301);
+            textBoxSaveName.Name = "textBoxSaveName";
+            textBoxSaveName.Size = new Size(256, 23);
+            textBoxSaveName.TabIndex = 2;
             // 
             // btnLoad
             // 
-            this.btnLoad.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnLoad.Location = new System.Drawing.Point(497, 330);
-            this.btnLoad.Name = "btnLoad";
-            this.btnLoad.Size = new System.Drawing.Size(85, 28);
-            this.btnLoad.TabIndex = 4;
-            this.btnLoad.Text = "Загрузить";
-            this.btnLoad.UseVisualStyleBackColor = true;
-            this.btnLoad.Click += new System.EventHandler(this.btnLoad_Click);
+            btnLoad.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnLoad.Location = new Point(497, 330);
+            btnLoad.Name = "btnLoad";
+            btnLoad.Size = new Size(85, 28);
+            btnLoad.TabIndex = 4;
+            btnLoad.Text = "Загрузить";
+            btnLoad.UseVisualStyleBackColor = true;
+            btnLoad.Click += btnLoad_Click;
             // 
             // btnSaveAsNew
             // 
-            this.btnSaveAsNew.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSaveAsNew.Location = new System.Drawing.Point(569, 300);
-            this.btnSaveAsNew.Name = "btnSaveAsNew";
-            this.btnSaveAsNew.Size = new System.Drawing.Size(103, 24);
-            this.btnSaveAsNew.TabIndex = 3;
-            this.btnSaveAsNew.Text = "Сохранить как";
-            this.btnSaveAsNew.UseVisualStyleBackColor = true;
-            this.btnSaveAsNew.Click += new System.EventHandler(this.btnSaveAsNew_Click);
+            btnSaveAsNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnSaveAsNew.Location = new Point(569, 300);
+            btnSaveAsNew.Name = "btnSaveAsNew";
+            btnSaveAsNew.Size = new Size(103, 24);
+            btnSaveAsNew.TabIndex = 3;
+            btnSaveAsNew.Text = "Сохранить как";
+            btnSaveAsNew.UseVisualStyleBackColor = true;
+            btnSaveAsNew.Click += btnSaveAsNew_Click;
             // 
             // btnDelete
             // 
-            this.btnDelete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnDelete.Location = new System.Drawing.Point(12, 330);
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(85, 28);
-            this.btnDelete.TabIndex = 1;
-            this.btnDelete.Text = "Удалить";
-            this.btnDelete.UseVisualStyleBackColor = true;
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnDelete.Location = new Point(12, 330);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(85, 28);
+            btnDelete.TabIndex = 1;
+            btnDelete.Text = "Удалить";
+            btnDelete.UseVisualStyleBackColor = true;
+            btnDelete.Click += btnDelete_Click;
             // 
             // btnCancel
             // 
-            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCancel.Location = new System.Drawing.Point(588, 330);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(84, 28);
-            this.btnCancel.TabIndex = 5;
-            this.btnCancel.Text = "Отмена";
-            this.btnCancel.UseVisualStyleBackColor = true;
-            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnCancel.Location = new Point(588, 330);
+            btnCancel.Name = "btnCancel";
+            btnCancel.Size = new Size(84, 28);
+            btnCancel.TabIndex = 5;
+            btnCancel.Text = "Отмена";
+            btnCancel.UseVisualStyleBackColor = true;
+            btnCancel.Click += btnCancel_Click;
             // 
             // labelSavesList
             // 
-            this.labelSavesList.AutoSize = true;
-            this.labelSavesList.Location = new System.Drawing.Point(12, 13);
-            this.labelSavesList.Name = "labelSavesList";
-            this.labelSavesList.Size = new System.Drawing.Size(119, 15);
-            this.labelSavesList.TabIndex = 7;
-            this.labelSavesList.Text = "Список сохранений:";
+            labelSavesList.AutoSize = true;
+            labelSavesList.Location = new Point(12, 13);
+            labelSavesList.Name = "labelSavesList";
+            labelSavesList.Size = new Size(120, 15);
+            labelSavesList.TabIndex = 7;
+            labelSavesList.Text = "Список сохранений:";
             // 
             // labelPreview
             // 
-            this.labelPreview.AutoSize = true;
-            this.labelPreview.Location = new System.Drawing.Point(307, 13);
-            this.labelPreview.Name = "labelPreview";
-            this.labelPreview.Size = new System.Drawing.Size(81, 15);
-            this.labelPreview.TabIndex = 8;
-            this.labelPreview.Text = "Предпросмотр:";
+            labelPreview.AutoSize = true;
+            labelPreview.Location = new Point(307, 13);
+            labelPreview.Name = "labelPreview";
+            labelPreview.Size = new Size(93, 15);
+            labelPreview.TabIndex = 8;
+            labelPreview.Text = "Предпросмотр:";
             // 
             // labelSaveName
             // 
-            this.labelSaveName.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.labelSaveName.AutoSize = true;
-            this.labelSaveName.Location = new System.Drawing.Point(307, 283);
-            this.labelSaveName.Name = "labelSaveName";
-            this.labelSaveName.Size = new System.Drawing.Size(103, 15);
-            this.labelSaveName.TabIndex = 9;
-            this.labelSaveName.Text = "Имя сохранения:";
+            labelSaveName.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            labelSaveName.AutoSize = true;
+            labelSaveName.Location = new Point(307, 283);
+            labelSaveName.Name = "labelSaveName";
+            labelSaveName.Size = new Size(102, 15);
+            labelSaveName.TabIndex = 9;
+            labelSaveName.Text = "Имя сохранения:";
+            // 
+            // cbPresets
+            // 
+            cbPresets.AutoSize = true;
+            cbPresets.Location = new Point(180, 12);
+            cbPresets.Name = "cbPresets";
+            cbPresets.Size = new Size(112, 19);
+            cbPresets.TabIndex = 10;
+            cbPresets.Text = "Точки интереса";
+            cbPresets.UseVisualStyleBackColor = true;
             // 
             // SaveLoadDialogForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(684, 369);
-            this.Controls.Add(this.labelSaveName);
-            this.Controls.Add(this.labelPreview);
-            this.Controls.Add(this.labelSavesList);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnDelete);
-            this.Controls.Add(this.btnSaveAsNew);
-            this.Controls.Add(this.btnLoad);
-            this.Controls.Add(this.textBoxSaveName);
-            this.Controls.Add(this.pictureBoxPreview);
-            this.Controls.Add(this.listBoxSaves);
-            this.MinimumSize = new System.Drawing.Size(550, 350);
-            this.Name = "SaveLoadDialogForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Менеджер сохранений";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SaveLoadDialogForm_FormClosing);
-            this.Load += new System.EventHandler(this.SaveLoadDialogForm_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxPreview)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(684, 369);
+            Controls.Add(cbPresets);
+            Controls.Add(labelSaveName);
+            Controls.Add(labelPreview);
+            Controls.Add(labelSavesList);
+            Controls.Add(btnCancel);
+            Controls.Add(btnDelete);
+            Controls.Add(btnSaveAsNew);
+            Controls.Add(btnLoad);
+            Controls.Add(textBoxSaveName);
+            Controls.Add(pictureBoxPreview);
+            Controls.Add(listBoxSaves);
+            MinimumSize = new Size(550, 350);
+            Name = "SaveLoadDialogForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Менеджер сохранений";
+            FormClosing += SaveLoadDialogForm_FormClosing;
+            Load += SaveLoadDialogForm_Load;
+            ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
 
         }
 
@@ -186,5 +194,6 @@
         private System.Windows.Forms.Label labelSavesList;
         private System.Windows.Forms.Label labelPreview;
         private System.Windows.Forms.Label labelSaveName;
+        private CheckBox cbPresets;
     }
 }
