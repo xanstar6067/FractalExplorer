@@ -1162,7 +1162,7 @@ namespace FractalDraving
         public abstract string FractalTypeIdentifier { get; }
         public abstract Type ConcreteSaveStateType { get; }
 
-        protected class PreviewParams
+        public class PreviewParams
         {
             public decimal CenterX { get; set; }
             public decimal CenterY { get; set; }
