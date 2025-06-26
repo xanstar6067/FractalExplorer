@@ -2,45 +2,75 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Threading.Tasks; // Для Task
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using FractalExplorer.Utilities; // Для PresetManager
 using FractalExplorer.Utilities.SaveIO;
-using FractalExplorer.Utilities.SaveIO.SaveStateImplementations; // Для ISaveLoadCapableFractal, FractalSaveStateBase
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 
-namespace FractalExplorer.Forms // Убедись, что namespace соответствует твоему
+namespace FractalExplorer.Forms
 {
     public partial class SaveLoadDialogForm : Form
     {
         private readonly ISaveLoadCapableFractal _ownerFractalForm;
-        private List<FractalSaveStateBase> _saves;
-        private Bitmap _currentPreviewBitmap; // Для корректного Dispose
+
+        // _saves теперь всегда будет хранить ТЕКУЩИЙ отображаемый список.
+        // Это упрощает логику, так как не нужно передавать списки туда-сюда.
+        private List<FractalSaveStateBase> _displayedItems;
+
+        private Bitmap _currentPreviewBitmap;
 
         public SaveLoadDialogForm(ISaveLoadCapableFractal ownerFractalForm)
         {
-            InitializeComponent();
+            InitializeComponent(); // Здесь дизайнер уже создал cbPresets
             _ownerFractalForm = ownerFractalForm ?? throw new ArgumentNullException(nameof(ownerFractalForm));
-            // Устанавливаем заголовок окна в зависимости от типа фрактала
             this.Text = $"Сохранение/Загрузка: {_ownerFractalForm.FractalTypeIdentifier}";
+
+            // ИЗМЕНЕНИЕ: Убираем отсюда весь код программного создания CheckBox.
+            // Вместо этого добавляем обработчик события для чекбокса, созданного дизайнером.
+            // Убедитесь, что имя контрола в дизайнере - "cbPresets".
+            // Если вы назвали его по-другому, измените "this.cbPresets" на правильное имя.
+            var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox;
+            if (presetsCheckBox != null)
+            {
+                presetsCheckBox.CheckedChanged += new System.EventHandler(this.cbPresets_CheckedChanged);
+            }
         }
 
         private void SaveLoadDialogForm_Load(object sender, EventArgs e)
         {
-            LoadSavesList();
+            // По умолчанию показываем пользовательские сохранения
+            PopulateList(false);
             UpdateButtonsState();
         }
 
-        private void LoadSavesList()
+        private void PopulateList(bool showPresets)
         {
-            _saves = _ownerFractalForm.LoadAllSavesForThisType();
-            // Сортируем по дате, новые вверху (SaveFileManager теперь это делает при сохранении, но для надежности можно и здесь)
-            // _saves = _saves.OrderByDescending(s => s.Timestamp).ToList(); 
+            if (showPresets)
+            {
+                // Загружаем из кода через PresetManager
+                _displayedItems = PresetManager.GetPresetsFor(_ownerFractalForm.FractalTypeIdentifier)
+                                      .OrderBy(p => p.SaveName)
+                                      .ToList();
+            }
+            else
+            {
+                // Загружаем из файла
+                _displayedItems = _ownerFractalForm.LoadAllSavesForThisType()
+                                      .OrderByDescending(s => s.Timestamp)
+                                      .ToList();
+            }
 
             listBoxSaves.Items.Clear();
-            if (_saves != null) // Добавим проверку на null
+            if (_displayedItems != null)
             {
-                foreach (var save in _saves)
+                foreach (var item in _displayedItems)
                 {
-                    listBoxSaves.Items.Add($"{save.SaveName} ({save.Timestamp:yyyy-MM-dd HH:mm:ss})");
+                    // Для пресетов не показываем дату
+                    string displayText = showPresets
+                        ? item.SaveName
+                        : $"{item.SaveName} ({item.Timestamp:yyyy-MM-dd HH:mm:ss})";
+                    listBoxSaves.Items.Add(displayText);
                 }
             }
 
@@ -50,22 +80,25 @@ namespace FractalExplorer.Forms // Убедись, что namespace соотве
             }
             else
             {
-                ClearPreview(); // Очищаем превью, если список пуст
+                // Если список пуст, очищаем превью и поле имени
+                ClearPreview();
+                textBoxSaveName.Text = "";
             }
         }
 
         private void listBoxSaves_SelectedIndexChanged(object sender, EventArgs e)
         {
-            ClearPreview(); // Очищаем предыдущее превью
-            if (listBoxSaves.SelectedIndex >= 0 && _saves != null && listBoxSaves.SelectedIndex < _saves.Count)
+            ClearPreview();
+            if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
             {
-                var selectedState = _saves[listBoxSaves.SelectedIndex];
-                textBoxSaveName.Text = selectedState.SaveName; // Предзаполняем имя для удобства
+                var selectedState = _displayedItems[listBoxSaves.SelectedIndex];
+                textBoxSaveName.Text = selectedState.SaveName;
                 RenderAndDisplayPreview(selectedState);
             }
             UpdateButtonsState();
         }
 
+        // --- Методы RenderAndDisplayPreview и ClearPreview остаются без изменений ---
         private async void RenderAndDisplayPreview(FractalSaveStateBase state)
         {
             if (pictureBoxPreview.Width <= 0 || pictureBoxPreview.Height <= 0 || state == null)
@@ -74,30 +107,30 @@ namespace FractalExplorer.Forms // Убедись, что namespace соотве
                 return;
             }
 
-            // Показываем заглушку "Загрузка..."
             Bitmap loadingBmp = new Bitmap(pictureBoxPreview.Width, pictureBoxPreview.Height);
             using (var g = Graphics.FromImage(loadingBmp))
             {
                 g.Clear(Color.LightGray);
                 TextRenderer.DrawText(g, "Рендеринг превью...", Font, pictureBoxPreview.ClientRectangle, Color.Black, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             }
-            pictureBoxPreview.Image = loadingBmp; // Старый _currentPreviewBitmap будет освобожден при присваивании нового или в ClearPreview
+
+            _currentPreviewBitmap?.Dispose();
+            _currentPreviewBitmap = loadingBmp;
+            pictureBoxPreview.Image = _currentPreviewBitmap;
 
             try
             {
-                // Асинхронный рендер превью
                 Bitmap previewBitmap = await Task.Run(() => _ownerFractalForm.RenderPreview(state, pictureBoxPreview.Width, pictureBoxPreview.Height));
 
-                // Проверяем, что контрол все еще существует перед обновлением UI
-                if (pictureBoxPreview.IsHandleCreated && !pictureBoxPreview.IsDisposed)
+                if (IsHandleCreated && !IsDisposed && pictureBoxPreview.IsHandleCreated && !pictureBoxPreview.IsDisposed)
                 {
-                    _currentPreviewBitmap?.Dispose(); // Освобождаем старый, если он был
+                    _currentPreviewBitmap?.Dispose();
                     _currentPreviewBitmap = previewBitmap;
                     pictureBoxPreview.Image = _currentPreviewBitmap;
                 }
                 else
                 {
-                    previewBitmap?.Dispose(); // Если контрола нет, просто освобождаем новый битмап
+                    previewBitmap?.Dispose();
                 }
             }
             catch (Exception ex)
@@ -109,36 +142,44 @@ namespace FractalExplorer.Forms // Убедись, что namespace соотве
                     g.Clear(Color.MistyRose);
                     TextRenderer.DrawText(g, "Ошибка превью", Font, pictureBoxPreview.ClientRectangle, Color.Red, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
-                _currentPreviewBitmap?.Dispose(); // Освобождаем предыдущий битмап (мог быть loadingBmp или старый _currentPreviewBitmap)
-                _currentPreviewBitmap = errorBmp;
-                if (pictureBoxPreview.IsHandleCreated && !pictureBoxPreview.IsDisposed)
+
+                if (IsHandleCreated && !IsDisposed && pictureBoxPreview.IsHandleCreated && !pictureBoxPreview.IsDisposed)
                 {
+                    _currentPreviewBitmap?.Dispose();
+                    _currentPreviewBitmap = errorBmp;
                     pictureBoxPreview.Image = _currentPreviewBitmap;
+                }
+                else
+                {
+                    errorBmp.Dispose();
                 }
             }
         }
 
         private void ClearPreview()
         {
-            // Освобождаем предыдущий битмап перед тем, как очистить Image
             _currentPreviewBitmap?.Dispose();
             _currentPreviewBitmap = null;
             pictureBoxPreview.Image = null;
         }
 
+        // --- Остальные методы (btnLoad_Click, btnSaveAsNew_Click, btnDelete_Click) ---
 
         private void btnLoad_Click(object sender, EventArgs e)
         {
-            if (listBoxSaves.SelectedIndex >= 0 && _saves != null && listBoxSaves.SelectedIndex < _saves.Count)
+            if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
             {
-                _ownerFractalForm.LoadState(_saves[listBoxSaves.SelectedIndex]);
-                this.DialogResult = DialogResult.OK; // Устанавливаем результат диалога
+                _ownerFractalForm.LoadState(_displayedItems[listBoxSaves.SelectedIndex]);
+                this.DialogResult = DialogResult.OK;
                 this.Close();
             }
         }
 
         private void btnSaveAsNew_Click(object sender, EventArgs e)
         {
+            var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox;
+            if (presetsCheckBox.Checked) return; // Нельзя сохранять в режиме пресетов
+
             string saveName = textBoxSaveName.Text.Trim();
             if (string.IsNullOrWhiteSpace(saveName))
             {
@@ -147,16 +188,14 @@ namespace FractalExplorer.Forms // Убедись, что namespace соотве
                 return;
             }
 
-            if (_saves == null) _saves = new List<FractalSaveStateBase>();
+            var userSaves = _ownerFractalForm.LoadAllSavesForThisType();
 
-            // Проверка на дубликат имени
-            var existingSave = _saves.FirstOrDefault(s => s.SaveName.Equals(saveName, StringComparison.OrdinalIgnoreCase));
+            var existingSave = userSaves.FirstOrDefault(s => s.SaveName.Equals(saveName, StringComparison.OrdinalIgnoreCase));
             if (existingSave != null)
             {
                 if (MessageBox.Show($"Сохранение с именем '{saveName}' уже существует. Перезаписать?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    // Удаляем старое сохранение с таким же именем
-                    _saves.Remove(existingSave);
+                    userSaves.Remove(existingSave);
                 }
                 else
                 {
@@ -165,61 +204,70 @@ namespace FractalExplorer.Forms // Убедись, что namespace соотве
             }
 
             var newState = _ownerFractalForm.GetCurrentStateForSave(saveName);
-            _saves.Add(newState);
-            _ownerFractalForm.SaveAllSavesForThisType(_saves); // Сохраняем весь обновленный список
+            userSaves.Add(newState);
+            _ownerFractalForm.SaveAllSavesForThisType(userSaves);
 
-            // Перезагружаем и выбираем новый элемент
-            int previouslySelectedIndex = listBoxSaves.SelectedIndex; // Сохраняем, на всякий случай
-            LoadSavesList();
+            PopulateList(false); // Обновляем список пользовательских сохранений
 
-            // Пытаемся найти и выбрать только что сохраненный элемент
-            int newIndex = -1;
-            for (int i = 0; i < _saves.Count; i++) // Ищем в _saves, так как listBoxSaves.Items - это строки
-            {
-                if (_saves[i].SaveName == saveName && _saves[i].Timestamp == newState.Timestamp)
-                {
-                    newIndex = i;
-                    break;
-                }
-            }
-            if (newIndex != -1 && newIndex < listBoxSaves.Items.Count)
+            // Находим и выбираем только что сохраненный элемент
+            int newIndex = _displayedItems.FindIndex(s => s.SaveName == saveName && s.Timestamp == newState.Timestamp);
+            if (newIndex != -1)
             {
                 listBoxSaves.SelectedIndex = newIndex;
-            }
-            else if (listBoxSaves.Items.Count > 0) // Если не нашли, выбираем первый или последний
-            {
-                listBoxSaves.SelectedIndex = 0; // или _saves.Count - 1
             }
         }
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            if (listBoxSaves.SelectedIndex >= 0 && _saves != null && listBoxSaves.SelectedIndex < _saves.Count)
+            var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox;
+            if (presetsCheckBox.Checked) return; // Нельзя удалять пресеты
+
+            if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
             {
-                var stateToDelete = _saves[listBoxSaves.SelectedIndex];
+                var stateToDelete = _displayedItems[listBoxSaves.SelectedIndex];
                 if (MessageBox.Show($"Вы уверены, что хотите удалить сохранение '{stateToDelete.SaveName}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
-                    _saves.RemoveAt(listBoxSaves.SelectedIndex);
-                    _ownerFractalForm.SaveAllSavesForThisType(_saves);
-                    LoadSavesList(); // Перезагружаем список
+                    var userSaves = _ownerFractalForm.LoadAllSavesForThisType();
+                    var itemToRemove = userSaves.FirstOrDefault(s => s.SaveName == stateToDelete.SaveName && s.Timestamp == stateToDelete.Timestamp);
+                    if (itemToRemove != null)
+                    {
+                        userSaves.Remove(itemToRemove);
+                        _ownerFractalForm.SaveAllSavesForThisType(userSaves);
+                        PopulateList(false); // Перезагружаем список
+                    }
                 }
             }
         }
 
         private void UpdateButtonsState()
         {
+            var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox;
             bool itemSelected = listBoxSaves.SelectedIndex != -1;
+            bool presetsMode = presetsCheckBox.Checked;
+
             btnLoad.Enabled = itemSelected;
-            btnDelete.Enabled = itemSelected;
+            btnDelete.Enabled = itemSelected && !presetsMode;
+            btnSaveAsNew.Enabled = !presetsMode;
+            textBoxSaveName.Enabled = !presetsMode;
+        }
+
+        // ИЗМЕНЕНИЕ: Обработчик события теперь привязан к контролу, созданному дизайнером
+        private void cbPresets_CheckedChanged(object sender, EventArgs e)
+        {
+            var presetsCheckBox = sender as CheckBox;
+            if (presetsCheckBox != null)
+            {
+                PopulateList(presetsCheckBox.Checked);
+                UpdateButtonsState();
+            }
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel; // Устанавливаем результат диалога
+            this.DialogResult = DialogResult.Cancel;
             this.Close();
         }
 
-        // Важно освобождать ресурсы при закрытии формы
         private void SaveLoadDialogForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             ClearPreview();
