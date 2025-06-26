@@ -562,9 +562,14 @@ namespace FractalDraving
                                 e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
                             }
                         }
-                        catch (Exception)
+                        catch (ArgumentException)
                         {
-                            // Ошибки при интерполяции игнорируются, просто не будет показана интерполированная картинка.
+                            // ОШИБКА ИСПРАВЛЕНА: Если интерполяция не удалась из-за некорректных аргументов,
+                            // рисуем битмап без масштабирования как запасной вариант, чтобы избежать падения приложения.
+                            if (_previewBitmap != null)
+                            {
+                                e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                            }
                         }
                     }
                 }
