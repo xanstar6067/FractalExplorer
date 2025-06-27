@@ -1054,9 +1054,6 @@ namespace FractalDraving
             }
 
             _previewRenderCts?.Cancel(); // Отменяем текущий процесс рендеринга плиток.
-            // Примечание: Task.Run для RenderAsync может все еще продолжать выполняться
-            // некоторое время после отмены, но его результаты не будут записаны в _currentRenderingBitmap
-            // из-за проверки токена отмены.
 
             lock (_bitmapLock)
             {
@@ -1074,7 +1071,7 @@ namespace FractalDraving
                     g.Clear(Color.Black);
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear; // Для плавного масштабирования.
 
-                    // Отрисовываем старый предпросмотр (если есть), интерполируя его до текущего вида.
+                    // 1. Отрисовываем старый предпросмотр (если есть), интерполируя его до текущего вида.
                     // Это создает эффект "продолжения" движения.
                     if (_previewBitmap != null)
                     {
@@ -1108,12 +1105,14 @@ namespace FractalDraving
                         catch (Exception)
                         {
                             // Ошибки при интерполяции игнорируются, так как это вспомогательная функция.
-                            // Если что-то пошло не так, просто не будем отрисовывать старое превью.
                         }
                     }
-                    // Отрисовываем текущие, уже отрисованные плитки поверх (без масштабирования).
+                    // 2. Отрисовываем текущие, уже отрисованные плитки поверх (без масштабирования).
                     // Это гарантирует, что все, что уже было просчитано, будет включено в "запеченное" изображение.
-                    g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                    if (_currentRenderingBitmap != null)
+                    {
+                        g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                    }
                 }
 
                 _previewBitmap?.Dispose(); // Освобождаем старый предпросмотр.
