@@ -27,41 +27,112 @@ namespace FractalExplorer
     {
         #region Fields
 
+        /// <summary>
+        /// Экземпляр движка для рендеринга фрактала Ньютона.
+        /// </summary>
         private readonly FractalNewtonEngine _engine;
+
+        /// <summary>
+        /// Таймер для отложенного запуска рендеринга, чтобы избежать частых перерисовок.
+        /// </summary>
         private readonly System.Windows.Forms.Timer _renderDebounceTimer;
+
+        /// <summary>
+        /// Компонент для визуализации процесса рендеринга плиток.
+        /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
+
+        /// <summary>
+        /// Менеджер палитр, специфичный для фракталов Ньютона.
+        /// </summary>
         private NewtonPaletteManager _paletteManager;
+
+        /// <summary>
+        /// Форма для настройки цветовой палитры фрактала Ньютона.
+        /// </summary>
         private ColorConfigurationNewtonPoolsForm _colorSettingsForm;
 
-        // Базовый масштаб для преобразования мировых координат в экранные.
+        /// <summary>
+        /// Базовый масштаб для преобразования мировых координат в экранные.
+        /// </summary>
         private const double BASE_SCALE = 3.0;
 
-        // Размер одной плитки (тайла) для пошагового рендеринга.
+        /// <summary>
+        /// Размер одной плитки (тайла) для пошагового рендеринга.
+        /// </summary>
         private const int TILE_SIZE = 32;
 
-        // Объект для блокировки доступа к битмапам во время рендеринга, чтобы избежать состояний гонки.
+        /// <summary>
+        /// Объект для блокировки доступа к битмапам во время рендеринга.
+        /// </summary>
         private readonly object _bitmapLock = new object();
 
+        /// <summary>
+        /// Битмап, содержащий отрисованное изображение для предпросмотра.
+        /// </summary>
         private Bitmap _previewBitmap;
+
+        /// <summary>
+        /// Битмап, в который текущий момент происходит рендеринг плиток.
+        /// </summary>
         private Bitmap _currentRenderingBitmap;
+
+        /// <summary>
+        /// Токен отмены для операций рендеринга предпросмотра.
+        /// </summary>
         private CancellationTokenSource _previewRenderCts;
 
-        // Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении.
+        /// <summary>
+        /// Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении.
+        /// </summary>
         private volatile bool _isHighResRendering = false;
 
-        // Флаг, указывающий, выполняется ли сейчас рендеринг предпросмотра.
+        /// <summary>
+        /// Флаг, указывающий, выполняется ли сейчас рендеринг предпросмотра.
+        /// </summary>
         private volatile bool _isRenderingPreview = false;
 
+        /// <summary>
+        /// Текущий коэффициент масштабирования фрактала.
+        /// </summary>
         private double _zoom = 1.0;
+
+        /// <summary>
+        /// Текущая координата X центра видимой области фрактала.
+        /// </summary>
         private double _centerX = 0.0;
+
+        /// <summary>
+        /// Текущая координата Y центра видимой области фрактала.
+        /// </summary>
         private double _centerY = 0.0;
 
-        // Координаты и масштаб, по которым был отрисован _previewBitmap, для корректной интерполяции.
+        /// <summary>
+        /// Координата X центра, по которой был отрисован _previewBitmap.
+        /// Используется для интерполяции при панорамировании/масштабировании.
+        /// </summary>
         private double _renderedCenterX;
+
+        /// <summary>
+        /// Координата Y центра, по которой был отрисован _previewBitmap.
+        /// Используется для интерполяции при панорамировании/масштабировании.
+        /// </summary>
         private double _renderedCenterY;
+
+        /// <summary>
+        /// Коэффициент масштабирования, по которому был отрисован _previewBitmap.
+        /// Используется для интерполяции при панорамировании/масштабировании.
+        /// </summary>
         private double _renderedZoom;
 
+        /// <summary>
+        /// Начальная позиция курсора мыши при панорамировании.
+        /// </summary>
         private Point _panStart;
+
+        /// <summary>
+        /// Флаг, указывающий, находится ли пользователь в режиме панорамирования.
+        /// </summary>
         private bool _panning = false;
 
         /// <summary>

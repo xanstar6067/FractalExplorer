@@ -3,21 +3,12 @@ using FractalExplorer.Engines;
 using FractalExplorer.Forms;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using System.Reflection;
-using System.Collections;
 
 namespace FractalDraving
 {
