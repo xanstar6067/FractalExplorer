@@ -27,112 +27,41 @@ namespace FractalExplorer
     {
         #region Fields
 
-        /// <summary>
-        /// Экземпляр движка для рендеринга фрактала Ньютона.
-        /// </summary>
         private readonly FractalNewtonEngine _engine;
-
-        /// <summary>
-        /// Таймер для отложенного запуска рендеринга, чтобы избежать частых перерисовок.
-        /// </summary>
         private readonly System.Windows.Forms.Timer _renderDebounceTimer;
-
-        /// <summary>
-        /// Компонент для визуализации процесса рендеринга плиток.
-        /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
-
-        /// <summary>
-        /// Менеджер палитр, специфичный для фракталов Ньютона.
-        /// </summary>
         private NewtonPaletteManager _paletteManager;
-
-        /// <summary>
-        /// Форма для настройки цветовой палитры фрактала Ньютона.
-        /// </summary>
         private ColorConfigurationNewtonPoolsForm _colorSettingsForm;
 
-        /// <summary>
-        /// Базовый масштаб для преобразования мировых координат в экранные.
-        /// </summary>
+        // Базовый масштаб для преобразования мировых координат в экранные.
         private const double BASE_SCALE = 3.0;
 
-        /// <summary>
-        /// Размер одной плитки (тайла) для пошагового рендеринга.
-        /// </summary>
-        private const int TILE_SIZE = 64;
+        // Размер одной плитки (тайла) для пошагового рендеринга.
+        private const int TILE_SIZE = 32;
 
-        /// <summary>
-        /// Объект для блокировки доступа к битмапам во время рендеринга.
-        /// </summary>
+        // Объект для блокировки доступа к битмапам во время рендеринга, чтобы избежать состояний гонки.
         private readonly object _bitmapLock = new object();
 
-        /// <summary>
-        /// Битмап, содержащий отрисованное изображение для предпросмотра.
-        /// </summary>
         private Bitmap _previewBitmap;
-
-        /// <summary>
-        /// Битмап, в который текущий момент происходит рендеринг плиток.
-        /// </summary>
         private Bitmap _currentRenderingBitmap;
-
-        /// <summary>
-        /// Токен отмены для операций рендеринга предпросмотра.
-        /// </summary>
         private CancellationTokenSource _previewRenderCts;
 
-        /// <summary>
-        /// Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении.
-        /// </summary>
+        // Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении.
         private volatile bool _isHighResRendering = false;
 
-        /// <summary>
-        /// Флаг, указывающий, выполняется ли сейчас рендеринг предпросмотра.
-        /// </summary>
+        // Флаг, указывающий, выполняется ли сейчас рендеринг предпросмотра.
         private volatile bool _isRenderingPreview = false;
 
-        /// <summary>
-        /// Текущий коэффициент масштабирования фрактала.
-        /// </summary>
         private double _zoom = 1.0;
-
-        /// <summary>
-        /// Текущая координата X центра видимой области фрактала.
-        /// </summary>
         private double _centerX = 0.0;
-
-        /// <summary>
-        /// Текущая координата Y центра видимой области фрактала.
-        /// </summary>
         private double _centerY = 0.0;
 
-        /// <summary>
-        /// Координата X центра, по которой был отрисован _previewBitmap.
-        /// Используется для интерполяции при панорамировании/масштабировании.
-        /// </summary>
+        // Координаты и масштаб, по которым был отрисован _previewBitmap, для корректной интерполяции.
         private double _renderedCenterX;
-
-        /// <summary>
-        /// Координата Y центра, по которой был отрисован _previewBitmap.
-        /// Используется для интерполяции при панорамировании/масштабировании.
-        /// </summary>
         private double _renderedCenterY;
-
-        /// <summary>
-        /// Коэффициент масштабирования, по которому был отрисован _previewBitmap.
-        /// Используется для интерполяции при панорамировании/масштабировании.
-        /// </summary>
         private double _renderedZoom;
 
-        /// <summary>
-        /// Начальная позиция курсора мыши при панорамировании.
-        /// </summary>
         private Point _panStart;
-
-        /// <summary>
-        /// Флаг, указывающий, находится ли пользователь в режиме панорамирования.
-        /// </summary>
         private bool _panning = false;
 
         /// <summary>
@@ -198,7 +127,6 @@ namespace FractalExplorer
         {
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
 
-            // Инициализация визуализатора рендеринга
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
 
@@ -221,7 +149,6 @@ namespace FractalExplorer
 
             btnConfigurePalette.Click += btnConfigurePalette_Click;
 
-            // Подписка на события изменения параметров
             nudIterations.ValueChanged += (s, e) => ScheduleRender();
             cbThreads.SelectedIndexChanged += (s, e) => ScheduleRender();
             nudZoom.ValueChanged += (s, e) => { _zoom = (double)nudZoom.Value; ScheduleRender(); };
@@ -230,7 +157,6 @@ namespace FractalExplorer
             btnRender.Click += (s, e) => ScheduleRender();
             btnSave.Click += btnSave_Click;
 
-            // Подписка на события взаимодействия с канвасом
             fractal_bitmap.MouseWheel += Canvas_MouseWheel;
             fractal_bitmap.MouseDown += Canvas_MouseDown;
             fractal_bitmap.MouseMove += Canvas_MouseMove;
@@ -244,7 +170,7 @@ namespace FractalExplorer
                 }
             };
 
-            // Инициализация отображаемых параметров для корректной интерполяции
+            // Инициализация отображаемых параметров для корректной интерполяции при первом рендеринге.
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
@@ -266,6 +192,7 @@ namespace FractalExplorer
         private void btnConfigurePalette_Click(object sender, EventArgs e)
         {
             // Сначала пытаемся установить формулу, чтобы получить количество корней.
+            // Это необходимо для корректного отображения количества цветов в форме настройки палитры.
             if (!_engine.SetFormula(richTextInput.Text, out string _))
             {
                 MessageBox.Show("Сначала введите корректную формулу, чтобы определить количество корней.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -296,9 +223,10 @@ namespace FractalExplorer
                 return;
             }
 
+            // Если в палитре нет заданных цветов для корней, генерируем гармонические цвета по умолчанию.
+            // Это обеспечивает базовое отображение, даже если пользователь не настроил цвета.
             if (palette.RootColors == null || palette.RootColors.Count == 0)
             {
-                // Если в палитре нет цветов для корней, генерируем гармонические цвета по умолчанию.
                 _engine.RootColors = ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(_engine.Roots.Count).ToArray();
             }
             else
@@ -319,6 +247,8 @@ namespace FractalExplorer
         /// </summary>
         private void OnVisualizerNeedsRedraw()
         {
+            // Используем BeginInvoke, чтобы перерисовка происходила в UI-потоке,
+            // поскольку этот метод может быть вызван из фонового потока.
             if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
             {
                 fractal_bitmap.BeginInvoke((Action)(() => fractal_bitmap.Invalidate()));
@@ -331,13 +261,15 @@ namespace FractalExplorer
         /// </summary>
         private void ScheduleRender()
         {
+            // Не планируем рендеринг, если идет высококачественный рендеринг или форма свернута,
+            // чтобы избежать лишних вычислений и мерцания.
             if (_isHighResRendering || WindowState == FormWindowState.Minimized)
             {
                 return;
             }
             if (_isRenderingPreview)
             {
-                _previewRenderCts?.Cancel(); // Отменяем текущий предпросмотр, если он активен
+                _previewRenderCts?.Cancel(); // Отменяем текущий предпросмотр, если он активен, в пользу нового.
             }
             _renderDebounceTimer.Stop();
             _renderDebounceTimer.Start();
@@ -352,9 +284,10 @@ namespace FractalExplorer
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
+            // Если уже что-то рендерится, откладываем новый рендеринг, чтобы избежать конфликтов.
             if (_isHighResRendering || _isRenderingPreview)
             {
-                ScheduleRender(); // Если уже что-то рендерится, откладываем еще раз
+                ScheduleRender();
                 return;
             }
             await StartPreviewRender();
@@ -367,22 +300,24 @@ namespace FractalExplorer
         /// <returns>Задача, представляющая асинхронную операцию рендеринга.</returns>
         private async Task StartPreviewRender()
         {
+            // Не рендерим, если область для рисования некорректна.
             if (fractal_bitmap.Width <= 0 || fractal_bitmap.Height <= 0)
             {
                 return;
             }
 
             _isRenderingPreview = true;
-            _previewRenderCts?.Cancel(); // Отменяем предыдущий рендеринг, если он еще активен
+            _previewRenderCts?.Cancel(); // Отменяем предыдущий рендеринг, если он еще активен, чтобы начать новый.
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
 
-            _renderVisualizer?.NotifyRenderSessionStart(); // Уведомляем визуализатор о начале сессии
+            _renderVisualizer?.NotifyRenderSessionStart(); // Уведомляем визуализатор о начале сессии рендеринга.
 
-            // Устанавливаем формулу и проверяем на ошибки парсинга
+            // Устанавливаем формулу и проверяем на ошибки парсинга.
+            // Если формула некорректна, отображаем отладочную информацию и сбрасываем битмап.
             if (!_engine.SetFormula(richTextInput.Text, out string debugInfo))
             {
-                richTextDebugOutput.Text = debugInfo; // Отображаем ошибку парсинга
+                richTextDebugOutput.Text = debugInfo;
                 lock (_bitmapLock)
                 {
                     _previewBitmap?.Dispose();
@@ -392,7 +327,7 @@ namespace FractalExplorer
                 }
                 if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
                 {
-                    fractal_bitmap.Invalidate(); // Очищаем канвас
+                    fractal_bitmap.Invalidate(); // Очищаем канвас, если формула некорректна.
                 }
                 _isRenderingPreview = false;
                 _renderVisualizer?.NotifyRenderSessionComplete();
@@ -400,26 +335,28 @@ namespace FractalExplorer
             }
             richTextDebugOutput.Text = debugInfo;
 
-            // Создаем новый битмап для текущего рендеринга
+            // Создаем новый битмап для текущего рендеринга, чтобы избежать модификации уже отображаемого.
             var newRenderingBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
-                _currentRenderingBitmap?.Dispose(); // Освобождаем старый текущий битмап
+                _currentRenderingBitmap?.Dispose(); // Освобождаем старый текущий битмап перед заменой.
                 _currentRenderingBitmap = newRenderingBitmap;
             }
 
-            UpdateEngineParameters(); // Обновляем параметры движка перед рендерингом
+            UpdateEngineParameters(); // Обновляем параметры движка перед рендерингом, используя значения из UI.
 
-            // Сохраняем текущие параметры вида, чтобы знать, для какой области рендерился битмап
+            // Сохраняем текущие параметры вида, чтобы знать, для какой области рендерился битмап.
+            // Это необходимо для корректной интерполяции при перерисовке канваса.
             double currentRenderedCenterX = _centerX;
             double currentRenderedCenterY = _centerY;
             double currentRenderedZoom = _zoom;
 
-            // Генерируем плитки для рендеринга, сортируя их от центра к краям
+            // Генерируем плитки для рендеринга, сортируя их от центра к краям.
+            // Это улучшает визуальное восприятие прогресса, так как центр, как правило, наиболее важен.
             var tiles = GenerateTiles(fractal_bitmap.Width, fractal_bitmap.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
 
-            // Инициализируем прогресс-бар
+            // Инициализируем прогресс-бар на UI потоке.
             if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
             {
                 progressBar.Invoke((Action)(() =>
@@ -432,27 +369,27 @@ namespace FractalExplorer
 
             try
             {
-                // Запускаем асинхронный рендеринг плиток
+                // Запускаем асинхронный рендеринг плиток, позволяя отменять операцию.
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
-                    ct.ThrowIfCancellationRequested(); // Проверка отмены
+                    ct.ThrowIfCancellationRequested(); // Проверка на отмену в начале обработки плитки.
 
-                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds); // Уведомляем визуализатор о начале рендеринга плитки
+                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds); // Уведомляем визуализатор о начале рендеринга плитки.
 
-                    // Рендерим одну плитку
                     var tileBuffer = _engine.RenderSingleTile(tile, fractal_bitmap.Width, fractal_bitmap.Height, out int bytesPerPixel);
 
-                    ct.ThrowIfCancellationRequested(); // Проверка отмены после рендеринга плитки
+                    ct.ThrowIfCancellationRequested(); // Проверка на отмену после рендеринга плитки, перед записью.
 
                     lock (_bitmapLock)
                     {
-                        // Если рендеринг был отменен или запущен новый, не записываем в старый битмап
+                        // Если рендеринг был отменен или запущен новый (т.е. _currentRenderingBitmap уже другой),
+                        // не записываем данные в устаревший битмап.
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap)
                         {
                             return;
                         }
 
-                        // Записываем данные плитки в основной битмап
+                        // Записываем данные плитки в основной битмап, используя LockBits для прямого доступа к пикселям.
                         BitmapData bitmapData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
 
@@ -465,9 +402,9 @@ namespace FractalExplorer
                         _currentRenderingBitmap.UnlockBits(bitmapData);
                     }
 
-                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds); // Уведомляем визуализатор о завершении рендеринга плитки
+                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds); // Уведомляем визуализатор о завершении рендеринга плитки.
 
-                    // Обновляем прогресс-бар на UI потоке
+                    // Обновляем прогресс-бар на UI потоке.
                     if (ct.IsCancellationRequested || !fractal_bitmap.IsHandleCreated || fractal_bitmap.IsDisposed)
                     {
                         return;
@@ -479,31 +416,31 @@ namespace FractalExplorer
                             progressBar.Value = Math.Min(progressBar.Maximum, Interlocked.Increment(ref progress));
                         }
                     }));
-                    await Task.Yield(); // Освобождаем поток для UI
+                    await Task.Yield(); // Освобождаем поток для UI-ответов.
                 }, token);
 
-                token.ThrowIfCancellationRequested(); // Финальная проверка на отмену
+                token.ThrowIfCancellationRequested(); // Финальная проверка на отмену после завершения всех плиток.
 
-                // По завершении рендеринга, заменяем предпросмотр текущим битмапом
+                // По завершении рендеринга, заменяем предпросмотр текущим битмапом.
                 lock (_bitmapLock)
                 {
                     if (_currentRenderingBitmap == newRenderingBitmap)
                     {
                         _previewBitmap?.Dispose();
-                        _previewBitmap = new Bitmap(_currentRenderingBitmap); // Создаем копию для _previewBitmap
+                        _previewBitmap = new Bitmap(_currentRenderingBitmap); // Создаем копию для _previewBitmap.
                         _currentRenderingBitmap.Dispose();
                         _currentRenderingBitmap = null;
-                        // Сохраняем параметры, по которым был отрисован _previewBitmap
+                        // Сохраняем параметры, по которым был отрисован _previewBitmap, для корректной интерполяции.
                         _renderedCenterX = currentRenderedCenterX;
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
                     }
                     else
                     {
-                        newRenderingBitmap?.Dispose(); // Если битмап был заменен, освобождаем текущий
+                        newRenderingBitmap?.Dispose(); // Если битмап был заменен другим рендерингом, освобождаем наш.
                     }
                 }
-                // Запрашиваем финальную перерисовку канваса
+                // Запрашиваем финальную перерисовку канваса для отображения полностью отрендеренного изображения.
                 if (fractal_bitmap.IsHandleCreated && !fractal_bitmap.IsDisposed)
                 {
                     fractal_bitmap.Invalidate();
@@ -511,7 +448,7 @@ namespace FractalExplorer
             }
             catch (OperationCanceledException)
             {
-                // Если операция отменена, освобождаем текущий битмап
+                // Если операция отменена, освобождаем ресурсы текущего рендеринга.
                 lock (_bitmapLock)
                 {
                     if (_currentRenderingBitmap == newRenderingBitmap)
@@ -533,8 +470,8 @@ namespace FractalExplorer
             finally
             {
                 _isRenderingPreview = false;
-                _renderVisualizer?.NotifyRenderSessionComplete(); // Уведомляем визуализатор о завершении сессии
-                // Сбрасываем прогресс-бар
+                _renderVisualizer?.NotifyRenderSessionComplete(); // Уведомляем визуализатор о завершении сессии.
+                // Сбрасываем прогресс-бар.
                 if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                 {
                     progressBar.Invoke((Action)(() => progressBar.Value = 0));
@@ -544,7 +481,7 @@ namespace FractalExplorer
 
         /// <summary>
         /// Генерирует список плиток для рендеринга. Плитки сортируются по удаленности от центра,
-        /// чтобы обеспечить более быстрый рендеринг центральной части.
+        /// чтобы обеспечить более быстрый рендеринг центральной части и улучшить визуальное восприятие прогресса.
         /// </summary>
         /// <param name="width">Общая ширина области рендеринга.</param>
         /// <param name="height">Общая высота области рендеринга.</param>
@@ -563,7 +500,7 @@ namespace FractalExplorer
                     tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
                 }
             }
-            // Сортируем плитки, чтобы сначала рендерились те, что ближе к центру
+            // Сортируем плитки, чтобы сначала рендерились те, что ближе к центру.
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 
@@ -579,8 +516,8 @@ namespace FractalExplorer
         /// <param name="e">Аргументы события рисования.</param>
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.Clear(Color.Black); // Очищаем фон канваса
-            e.Graphics.InterpolationMode = InterpolationMode.Bilinear; // Устанавливаем режим интерполяции для масштабирования
+            e.Graphics.Clear(Color.Black); // Очищаем фон канваса.
+            e.Graphics.InterpolationMode = InterpolationMode.Bilinear; // Используем билинейную интерполяцию для плавного масштабирования.
 
             lock (_bitmapLock)
             {
@@ -588,7 +525,9 @@ namespace FractalExplorer
                 {
                     try
                     {
-                        // Вычисляем параметры масштабирования и смещения для интерполяции
+                        // Вычисляем параметры масштабирования и смещения для интерполяции.
+                        // Это позволяет отображать старый, частично отрендеренный битмап,
+                        // корректно масштабируя его под текущий зум и панорамирование.
                         double renderedScale = BASE_SCALE / _renderedZoom;
                         double currentScale = BASE_SCALE / _zoom;
                         float drawScaleRatio = (float)(renderedScale / currentScale);
@@ -599,11 +538,11 @@ namespace FractalExplorer
                         double deltaReal = _renderedCenterX - _centerX;
                         double deltaImaginary = _renderedCenterY - _centerY;
 
-                        // Вычисляем смещение в пикселях
+                        // Вычисляем смещение в пикселях, чтобы точка обзора оставалась на месте.
                         float offsetX = (float)(deltaReal / currentScale * fractal_bitmap.Width);
                         float offsetY = (float)(deltaImaginary / currentScale * fractal_bitmap.Width);
 
-                        // Вычисляем позицию отрисовки
+                        // Вычисляем позицию отрисовки.
                         float drawX = (fractal_bitmap.Width - newWidth) / 2.0f + offsetX;
                         float drawY = (fractal_bitmap.Height - newHeight) / 2.0f + offsetY;
 
@@ -612,15 +551,17 @@ namespace FractalExplorer
                     }
                     catch (Exception)
                     {
-                        // Игнорируем ошибки при интерполяции, просто не будет показана интерполированная картинка.
+                        // Игнорируем ошибки при интерполяции, так как это не критично для функциональности,
+                        // и просто предотвращает отображение интерполированной картинки.
                     }
                 }
-                // Если идет текущий рендеринг (плитками), рисуем его поверх предпросмотра
+                // Если идет текущий рендеринг (плитками), рисуем его поверх предпросмотра,
+                // чтобы отображать прогресс в реальном времени.
                 if (_currentRenderingBitmap != null)
                 {
                     e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
-                // Рисуем визуализатор процесса рендеринга (сетка плиток и т.д.)
+                // Рисуем визуализатор процесса рендеринга (сетка плиток и т.д.).
                 if (_renderVisualizer != null && _isRenderingPreview)
                 {
                     _renderVisualizer.DrawVisualization(e.Graphics);
@@ -641,32 +582,37 @@ namespace FractalExplorer
                 return;
             }
 
-            CommitAndBakePreview(); // Сохраняем текущий прогресс рендеринга в _previewBitmap
+            // Сохраняем текущий прогресс рендеринга в _previewBitmap.
+            // Это позволяет плавно масштабировать уже отрендеренную часть.
+            CommitAndBakePreview();
 
             double zoomFactor = e.Delta > 0 ? 1.5 : 1.0 / 1.5;
-            double scaleBefore = BASE_SCALE / _zoom / fractal_bitmap.Width; // Масштаб на пиксель до зума
+            // Вычисляем масштаб на пиксель до зума, чтобы корректно преобразовать экранные координаты в мировые.
+            double scaleBefore = BASE_SCALE / _zoom / fractal_bitmap.Width;
 
-            // Вычисляем мировые координаты точки под курсором до изменения масштаба
+            // Вычисляем мировые координаты точки под курсором до изменения масштаба.
             double mouseReal = _centerX + (e.X - fractal_bitmap.Width / 2.0) * scaleBefore;
             double mouseImaginary = _centerY + (e.Y - fractal_bitmap.Height / 2.0) * scaleBefore;
 
             _zoom = Math.Max((double)nudZoom.Minimum, Math.Min((double)nudZoom.Maximum, _zoom * zoomFactor));
 
-            double scaleAfter = BASE_SCALE / _zoom / fractal_bitmap.Width; // Масштаб на пиксель после зума
-            // Пересчитываем новый центр так, чтобы точка под курсором осталась на месте
+            // Вычисляем масштаб на пиксель после зума.
+            double scaleAfter = BASE_SCALE / _zoom / fractal_bitmap.Width;
+            // Пересчитываем новый центр так, чтобы точка под курсором осталась на месте после масштабирования.
             _centerX = mouseReal - (e.X - fractal_bitmap.Width / 2.0) * scaleAfter;
             _centerY = mouseImaginary - (e.Y - fractal_bitmap.Height / 2.0) * scaleAfter;
 
-            fractal_bitmap.Invalidate(); // Запрашиваем перерисовку для немедленного отображения зума
+            fractal_bitmap.Invalidate(); // Запрашиваем немедленную перерисовку для плавного отображения зума.
 
-            // Обновляем NumericUpDown, но только если значение действительно изменилось, чтобы избежать зацикливания
+            // Обновляем NumericUpDown, но только если значение действительно изменилось, чтобы избежать зацикливания.
             if (nudZoom.Value != (decimal)_zoom)
             {
                 nudZoom.Value = (decimal)_zoom;
             }
             else
             {
-                // Если nudZoom.Value уже _zoom (например, из-за ограничения Max/Min), все равно планируем рендеринг
+                // Если nudZoom.Value уже _zoom (например, из-за ограничения Max/Min), все равно планируем рендеринг,
+                // так как центр изменился.
                 ScheduleRender();
             }
         }
@@ -703,15 +649,18 @@ namespace FractalExplorer
                 return;
             }
 
-            CommitAndBakePreview(); // Сохраняем текущий прогресс рендеринга в _previewBitmap
+            // Сохраняем текущий прогресс рендеринга в _previewBitmap.
+            // Это позволяет плавно панорамировать уже отрендеренную часть изображения.
+            CommitAndBakePreview();
 
-            double scale = BASE_SCALE / _zoom / fractal_bitmap.Width; // Масштаб на пиксель
+            // Вычисляем масштаб на пиксель, чтобы преобразовать движение мыши в мировые координаты.
+            double scale = BASE_SCALE / _zoom / fractal_bitmap.Width;
             _centerX -= (e.X - _panStart.X) * scale;
             _centerY -= (e.Y - _panStart.Y) * scale;
-            _panStart = e.Location; // Обновляем начальную точку панорамирования
+            _panStart = e.Location; // Обновляем начальную точку панорамирования для следующего шага.
 
-            fractal_bitmap.Invalidate(); // Запрашиваем перерисовку для плавного панорамирования
-            ScheduleRender(); // Планируем новый рендеринг для высокой четкости после завершения панорамирования
+            fractal_bitmap.Invalidate(); // Запрашиваем немедленную перерисовку для плавного панорамирования.
+            ScheduleRender(); // Планируем новый рендеринг для высокой четкости после завершения панорамирования.
         }
 
         /// <summary>
@@ -734,6 +683,7 @@ namespace FractalExplorer
 
         /// <summary>
         /// Обработчик события изменения выбранного элемента в выпадающем списке формул.
+        /// Обновляет текстовое поле ввода формулы выбранной формулой.
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
@@ -752,6 +702,7 @@ namespace FractalExplorer
         /// <summary>
         /// Объединяет текущий рендеринг предпросмотра с существующим основным битмапом.
         /// Используется во время интерактивных операций (зум, панорамирование) для сохранения промежуточного результата.
+        /// Это предотвращает мерцание и потерю уже отрендеренных частей изображения при изменении масштаба/положения.
         /// </summary>
         private void CommitAndBakePreview()
         {
@@ -763,7 +714,8 @@ namespace FractalExplorer
                 }
             }
 
-            _previewRenderCts?.Cancel(); // Отменяем текущий процесс рендеринга плиток
+            // Отменяем текущий процесс рендеринга плиток, так как мы создаем "снимок" того, что уже есть.
+            _previewRenderCts?.Cancel();
 
             lock (_bitmapLock)
             {
@@ -772,21 +724,23 @@ namespace FractalExplorer
                     return;
                 }
 
-                // Создаем новый битмап для сохранения объединенного изображения
+                // Создаем новый битмап для сохранения объединенного изображения.
+                // Перерисовываем содержимое канваса (который включает _previewBitmap и _currentRenderingBitmap)
+                // в этот новый "запеченный" битмап.
                 var bakedBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format24bppRgb);
                 using (var graphics = Graphics.FromImage(bakedBitmap))
                 {
                     var currentRectangle = fractal_bitmap.ClientRectangle;
                     var paintEventArgs = new PaintEventArgs(graphics, currentRectangle);
-                    Canvas_Paint(this, paintEventArgs); // Повторно используем логику Canvas_Paint для отрисовки
+                    Canvas_Paint(this, paintEventArgs); // Повторно используем логику Canvas_Paint для отрисовки.
                 }
 
                 _previewBitmap?.Dispose();
-                _previewBitmap = bakedBitmap; // Новый объединенный битмап становится предпросмотром
+                _previewBitmap = bakedBitmap; // Новый объединенный битмап становится предпросмотром.
                 _currentRenderingBitmap.Dispose();
-                _currentRenderingBitmap = null; // Текущий битмап очищается
+                _currentRenderingBitmap = null; // Текущий битмап очищается, так как его содержимое теперь в _previewBitmap.
 
-                // Обновляем параметры, по которым был отрисован _previewBitmap
+                // Обновляем параметры, по которым был отрисован _previewBitmap, для будущей интерполяции.
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;
@@ -802,11 +756,12 @@ namespace FractalExplorer
             _engine.CenterX = _centerX;
             _engine.CenterY = _centerY;
             _engine.Scale = BASE_SCALE / _zoom;
-            ApplyActivePalette(); // Убеждаемся, что палитра тоже обновлена
+            ApplyActivePalette(); // Убеждаемся, что палитра тоже обновлена и применена к движку.
         }
 
         /// <summary>
-        /// Определяет количество потоков для использования в параллельных вычислениях.
+        /// Определяет количество потоков для использования в параллельных вычислениях на основе выбора пользователя.
+        /// Если выбрано "Auto", возвращает количество логических процессоров системы.
         /// </summary>
         /// <returns>Количество потоков.</returns>
         private int GetThreadCount()
@@ -816,7 +771,7 @@ namespace FractalExplorer
 
         /// <summary>
         /// Обработчик события клика по кнопке "Save".
-        /// Рендерит фрактал в высоком разрешении и сохраняет его в файл.
+        /// Рендерит фрактал в высоком разрешении и сохраняет его в файл PNG.
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
@@ -839,7 +794,8 @@ namespace FractalExplorer
                     progressBar.Value = 0;
                     progressBar.Visible = true;
 
-                    // Создаем отдельный движок для сохранения, чтобы не изменять параметры текущего движка
+                    // Создаем отдельный движок для сохранения, чтобы не изменять параметры текущего движка,
+                    // который может быть занят рендерингом предпросмотра.
                     var saveEngine = new FractalNewtonEngine();
                     if (!saveEngine.SetFormula(richTextInput.Text, out _))
                     {
@@ -850,14 +806,15 @@ namespace FractalExplorer
 
                     int threadCount = GetThreadCount();
 
-                    // Копируем параметры из текущего движка в движок для сохранения
+                    // Копируем параметры из текущего движка в движок для сохранения,
+                    // чтобы изображение было отрендерено с актуальными настройками.
                     saveEngine.MaxIterations = (int)nudIterations.Value;
                     saveEngine.CenterX = _centerX;
                     saveEngine.CenterY = _centerY;
                     saveEngine.Scale = BASE_SCALE / _zoom;
 
-                    // Палитра и цвета
-                    ApplyActivePalette(); // Убеждаемся, что _engine.RootColors и другие параметры актуальны
+                    // Копируем параметры палитры.
+                    ApplyActivePalette(); // Убеждаемся, что _engine.RootColors и другие параметры актуальны.
                     saveEngine.RootColors = _engine.RootColors;
                     saveEngine.BackgroundColor = _engine.BackgroundColor;
                     saveEngine.UseGradient = _engine.UseGradient;
@@ -869,7 +826,7 @@ namespace FractalExplorer
                             threadCount,
                             progress =>
                             {
-                                // Обновляем прогресс-бар на UI потоке
+                                // Обновляем прогресс-бар на UI потоке, так как это UI-операция.
                                 if (progressPNG.IsHandleCreated && !progressPNG.IsDisposed)
                                 {
                                     progressPNG.Invoke((Action)(() => progressPNG.Value = Math.Min(100, progress)));
@@ -887,11 +844,12 @@ namespace FractalExplorer
                     }
                 }
             }
-            FinalizeSave(); // Завершаем процесс сохранения независимо от результата диалога
+            FinalizeSave(); // Завершаем процесс сохранения независимо от результата диалога.
         }
 
         /// <summary>
-        /// Выполняет финальные действия после завершения сохранения изображения.
+        /// Выполняет финальные действия после завершения сохранения изображения,
+        /// такие как сброс флагов состояния и скрытие прогресс-бара.
         /// </summary>
         private void FinalizeSave()
         {
@@ -905,14 +863,15 @@ namespace FractalExplorer
 
         /// <summary>
         /// Включает или отключает основные элементы управления формы.
+        /// Используется для предотвращения изменения параметров во время рендеринга в высоком разрешении.
         /// </summary>
         /// <param name="enabled">True для включения, False для отключения.</param>
         private void SetMainControlsEnabled(bool enabled)
         {
             Action action = () =>
             {
-                panel1.Enabled = enabled; // Предполагаем, что panel1 содержит основные элементы управления
-                btnSave.Enabled = enabled; // Кнопка сохранения управляется отдельно
+                panel1.Enabled = enabled; // Предполагаем, что panel1 содержит основные элементы управления.
+                btnSave.Enabled = enabled; // Кнопка сохранения управляется отдельно.
             };
             if (InvokeRequired)
             {
@@ -930,21 +889,21 @@ namespace FractalExplorer
 
         /// <summary>
         /// Обработчик события закрытия формы.
-        /// Освобождает ресурсы и отменяет любые активные операции.
+        /// Освобождает ресурсы и отменяет любые активные операции рендеринга для предотвращения утечек памяти.
         /// </summary>
         /// <param name="e">Аргументы события.</param>
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            base.OnFormClosed(e); // Вызов базового метода
+            base.OnFormClosed(e); // Вызов базового метода для стандартной обработки закрытия формы.
             _renderDebounceTimer?.Stop();
             _previewRenderCts?.Cancel();
             _previewRenderCts?.Dispose();
             _renderDebounceTimer?.Dispose();
-            _colorSettingsForm?.Close(); // Закрываем форму настроек цвета, если она открыта
+            _colorSettingsForm?.Close(); // Закрываем форму настроек цвета, если она открыта.
             _colorSettingsForm?.Dispose();
             if (_renderVisualizer != null)
             {
-                _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw; // Отписываемся от события
+                _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw; // Отписываемся от события во избежание утечек.
                 _renderVisualizer.Dispose();
             }
         }
@@ -953,41 +912,80 @@ namespace FractalExplorer
 
         #region ISaveLoadCapableFractal Implementation
 
+        /// <summary>
+        /// Получает строковый идентификатор типа фрактала.
+        /// </summary>
+        /// <value>Идентификатор типа фрактала, используемый для сохранения/загрузки.</value>
         public string FractalTypeIdentifier => "NewtonPools";
 
+        /// <summary>
+        /// Получает конкретный тип состояния сохранения для данного фрактала.
+        /// </summary>
+        /// <value>Тип состояния сохранения, который должен использоваться для сериализации/десериализации.</value>
         public Type ConcreteSaveStateType => typeof(NewtonSaveState);
 
-        // Вспомогательный класс для параметров превью Ньютона
+        /// <summary>
+        /// Вспомогательный класс для параметров превью фрактала Ньютона.
+        /// Используется для сериализации и десериализации параметров, необходимых для быстрого рендеринга миниатюр.
+        /// </summary>
         public class NewtonPreviewParams
         {
+            /// <summary>
+            /// Получает или задает формулу фрактала.
+            /// </summary>
             public string Formula { get; set; }
+
+            /// <summary>
+            /// Получает или задает координату X центра фрактала.
+            /// </summary>
             public decimal CenterX { get; set; }
+
+            /// <summary>
+            /// Получает или задает координату Y центра фрактала.
+            /// </summary>
             public decimal CenterY { get; set; }
+
+            /// <summary>
+            /// Получает или задает коэффициент масштабирования фрактала.
+            /// </summary>
             public decimal Zoom { get; set; }
-            public int Iterations { get; set; } // Уменьшенные итерации для превью
+
+            /// <summary>
+            /// Получает или задает количество итераций для рендеринга.
+            /// Уменьшенные итерации используются для ускорения генерации превью.
+            /// </summary>
+            public int Iterations { get; set; }
+
+            /// <summary>
+            /// Получает или задает снимок палитры, используемой для рендеринга.
+            /// </summary>
             public NewtonColorPalette PaletteSnapshot { get; set; }
         }
 
+        /// <summary>
+        /// Получает текущее состояние фрактала для сохранения.
+        /// </summary>
+        /// <param name="saveName">Имя, присвоенное сохраняемому состоянию.</param>
+        /// <returns>Объект <see cref="FractalSaveStateBase"/>, содержащий текущие параметры фрактала.</returns>
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             // Важно: Убедимся, что текущая активная палитра в менеджере синхронизирована
-            // с цветами, отображаемыми на UI.
+            // с цветами, отображаемыми на UI. Это гарантирует, что при сохранении будет записана
+            // актуальная палитра, даже если пользователь изменил цвета без сохранения в менеджере палитр.
             _paletteManager.ActivePalette.BackgroundColor = _engine.BackgroundColor;
             _paletteManager.ActivePalette.IsGradient = _engine.UseGradient;
             _paletteManager.ActivePalette.RootColors = new List<Color>(_engine.RootColors);
-
-            
 
             var state = new NewtonSaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
                 Timestamp = DateTime.Now,
                 Formula = richTextInput.Text,
-                CenterX = (decimal)_centerX, // Приводим double к decimal
+                CenterX = (decimal)_centerX, // Приводим double к decimal для сохранения.
                 CenterY = (decimal)_centerY,
                 Zoom = (decimal)_zoom,
                 Iterations = (int)nudIterations.Value,
-                // Сохраняем "снимок" текущей активной палитры
+                // Сохраняем "снимок" текущей активной палитры, чтобы ее можно было восстановить при загрузке.
                 PaletteSnapshot = _paletteManager.ActivePalette
             };
 
@@ -997,7 +995,8 @@ namespace FractalExplorer
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = Math.Min(state.Iterations, 50), // Уменьшаем итерации для превью
+                // Уменьшаем количество итераций для превью, чтобы ускорить его генерацию.
+                Iterations = Math.Min(state.Iterations, 50),
                 PaletteSnapshot = state.PaletteSnapshot
             };
 
@@ -1008,6 +1007,11 @@ namespace FractalExplorer
             return state;
         }
 
+        /// <summary>
+        /// Загружает состояние фрактала из предоставленного объекта состояния.
+        /// Обновляет параметры UI и запускает новый рендеринг.
+        /// </summary>
+        /// <param name="stateBase">Базовый объект состояния фрактала для загрузки.</param>
         public void LoadState(FractalSaveStateBase stateBase)
         {
             if (stateBase is NewtonSaveState state)
@@ -1016,25 +1020,25 @@ namespace FractalExplorer
                 _previewRenderCts?.Cancel();
                 _renderDebounceTimer.Stop();
 
-                // Устанавливаем параметры
+                // Устанавливаем параметры фрактала из загруженного состояния.
                 _centerX = (double)state.CenterX;
                 _centerY = (double)state.CenterY;
                 _zoom = (double)state.Zoom;
 
-                // Обновляем UI
+                // Обновляем элементы UI для отображения загруженных параметров.
                 richTextInput.Text = state.Formula;
                 nudZoom.Value = (decimal)_zoom;
                 nudIterations.Value = state.Iterations;
 
-                // Загружаем палитру. Так как палитра сохранена целиком,
-                // мы можем просто установить ее как активную в менеджере.
-                // Можно добавить логику для проверки, есть ли уже палитра с таким именем.
+                // Загружаем палитру. Поскольку палитра сохранена целиком как снимок,
+                // мы можем просто установить ее как активную в менеджере палитр.
                 _paletteManager.ActivePalette = state.PaletteSnapshot;
 
-                // Применяем параметры к движку (UpdateEngineParameters сделает это)
+                // Применяем параметры к движку (UpdateEngineParameters сделает это),
+                // включая обновленную палитру.
                 UpdateEngineParameters();
 
-                // Сбрасываем рендеринг
+                // Сбрасываем текущие битмапы рендеринга, чтобы новый рендеринг начался с чистого листа.
                 lock (_bitmapLock)
                 {
                     _previewBitmap?.Dispose();
@@ -1042,11 +1046,12 @@ namespace FractalExplorer
                     _currentRenderingBitmap?.Dispose();
                     _currentRenderingBitmap = null;
                 }
+                // Обновляем параметры, по которым будет отображаться предпросмотр, для корректной интерполяции.
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;
 
-                ScheduleRender();
+                ScheduleRender(); // Запускаем рендеринг нового состояния.
             }
             else
             {
@@ -1054,10 +1059,21 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Асинхронно рендерит плитку для предварительного просмотра.
+        /// Этот метод используется системой сохранения/загрузки для отображения миниатюр состояний.
+        /// </summary>
+        /// <param name="state">Состояние фрактала для рендеринга.</param>
+        /// <param name="tile">Информация о запрашиваемой плитке.</param>
+        /// <param name="totalWidth">Общая ширина изображения предварительного просмотра.</param>
+        /// <param name="totalHeight">Общая высота изображения предварительного просмотра.</param>
+        /// <param name="tileSize">Размер одной плитки (для вывода).</param>
+        /// <returns>Массив байтов, представляющий данные пикселей для запрошенной плитки.</returns>
         public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return await Task.Run(() =>
             {
+                // Если параметры предпросмотра отсутствуют, возвращаем пустой буфер.
                 if (string.IsNullOrEmpty(state.PreviewParametersJson))
                 {
                     return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
@@ -1066,13 +1082,19 @@ namespace FractalExplorer
                 NewtonPreviewParams previewParams;
                 try
                 {
+                    // Десериализуем параметры предпросмотра из JSON.
                     var jsonOptions = new JsonSerializerOptions();
                     jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
                     previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
                 }
-                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+                catch
+                {
+                    // В случае ошибки десериализации, возвращаем пустой буфер, чтобы не прерывать процесс.
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
 
                 var previewEngine = new FractalNewtonEngine();
+                // Если формула невалидна, возвращаем пустой буфер.
                 if (!previewEngine.SetFormula(previewParams.Formula, out _))
                 {
                     return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
@@ -1080,20 +1102,30 @@ namespace FractalExplorer
 
                 previewEngine.CenterX = (double)previewParams.CenterX;
                 previewEngine.CenterY = (double)previewParams.CenterY;
-                previewEngine.Scale = 3.0 / (double)previewParams.Zoom; // BaseScale = 3.0
-                previewEngine.MaxIterations = 150; // Повышенные итерации для превью
+                previewEngine.Scale = 3.0 / (double)previewParams.Zoom; // BaseScale = 3.0 для Ньютона.
+                previewEngine.MaxIterations = 150; // Используем повышенное количество итераций для более качественного превью.
 
+                // Настраиваем палитру движка из снимка, сохраненного в параметрах превью.
                 var palette = previewParams.PaletteSnapshot;
                 previewEngine.BackgroundColor = palette.BackgroundColor;
                 previewEngine.UseGradient = palette.IsGradient;
+                // Если в снимке нет цветов для корней, генерируем их на основе найденных корней.
                 previewEngine.RootColors = (palette.RootColors != null && palette.RootColors.Any()) ? palette.RootColors.ToArray() : ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(previewEngine.Roots.Count).ToArray();
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
 
+        /// <summary>
+        /// Рендерит полное изображение предварительного просмотра фрактала на основе заданного состояния.
+        /// </summary>
+        /// <param name="state">Состояние фрактала, содержащее параметры для рендеринга.</param>
+        /// <param name="previewWidth">Желаемая ширина изображения предварительного просмотра.</param>
+        /// <param name="previewHeight">Желаемая высота изображения предварительного просмотра.</param>
+        /// <returns>Объект <see cref="Bitmap"/>, содержащий отрендеренное изображение предварительного просмотра.</returns>
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
+            // Если параметры предпросмотра отсутствуют, возвращаем изображение с сообщением об ошибке.
             if (string.IsNullOrEmpty(state.PreviewParametersJson))
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
@@ -1104,21 +1136,23 @@ namespace FractalExplorer
             NewtonPreviewParams previewParams;
             try
             {
+                // Десериализуем параметры предпросмотра из JSON.
                 var jsonOptions = new JsonSerializerOptions();
                 jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
                 previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
             }
             catch (Exception)
             {
+                // В случае ошибки десериализации, возвращаем изображение с сообщением об ошибке.
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
                 return bmpError;
             }
 
             var previewEngine = new FractalNewtonEngine();
+            // Если формула невалидна в сохраненном состоянии, возвращаем изображение с сообщением об ошибке.
             if (!previewEngine.SetFormula(previewParams.Formula, out _))
             {
-                // Если формула невалидна в сохраненном состоянии
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка формулы", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
                 return bmpError;
@@ -1126,11 +1160,12 @@ namespace FractalExplorer
 
             previewEngine.CenterX = (double)previewParams.CenterX;
             previewEngine.CenterY = (double)previewParams.CenterY;
+            // Предотвращаем деление на ноль, если зум оказался равен 0.
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
-            previewEngine.Scale = 3.0 / (double)previewParams.Zoom; // Для Ньютона BaseScale = 3.0
+            previewEngine.Scale = 3.0 / (double)previewParams.Zoom; // Для Ньютона BaseScale = 3.0.
             previewEngine.MaxIterations = previewParams.Iterations;
 
-            // Настраиваем палитру движка из снимка
+            // Настраиваем палитру движка из снимка, сохраненного в параметрах.
             var palette = previewParams.PaletteSnapshot;
             previewEngine.BackgroundColor = palette.BackgroundColor;
             previewEngine.UseGradient = palette.IsGradient;
@@ -1140,30 +1175,46 @@ namespace FractalExplorer
             }
             else
             {
-                // Если в снимке нет цветов, генерируем их на основе найденных корней
+                // Если в снимке нет цветов, генерируем их на основе найденных корней фрактала.
                 previewEngine.RootColors = ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(previewEngine.Roots.Count).ToArray();
             }
 
-            // Рендерим с 1 потоком для превью
+            // Рендерим изображение предварительного просмотра с использованием одного потока для эффективности.
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
 
+        /// <summary>
+        /// Загружает все сохраненные состояния фрактала, специфичные для данного типа.
+        /// </summary>
+        /// <returns>Список базовых объектов состояний фрактала.</returns>
         public List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             var specificSaves = SaveFileManager.LoadSaves<NewtonSaveState>(this.FractalTypeIdentifier);
+            // Приводим список к базовому типу FractalSaveStateBase для соответствия интерфейсу.
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <summary>
+        /// Сохраняет список состояний фрактала, специфичных для данного типа.
+        /// </summary>
+        /// <param name="saves">Список базовых объектов состояний фрактала для сохранения.</param>
         public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<NewtonSaveState>().ToList();
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
+        /// <summary>
+        /// Обработчик события клика по кнопке "Менеджер состояний".
+        /// Открывает диалоговое окно для сохранения и загрузки состояний фрактала.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-            // 'this' здесь - это экземпляр NewtonPools, реализующий ISaveLoadCapableFractal
-            using (var dialog = new Forms.SaveLoadDialogForm(this)) // Укажи полный namespace, если нужно
+            // 'this' здесь - это экземпляр NewtonPools, реализующий ISaveLoadCapableFractal,
+            // что позволяет диалогу взаимодействовать с текущей формой для сохранения/загрузки.
+            using (var dialog = new Forms.SaveLoadDialogForm(this))
             {
                 dialog.ShowDialog(this);
             }
