@@ -4,13 +4,8 @@ using FractalExplorer.Forms.SelectorsForms.Selector;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using System;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Projects
 {
@@ -105,7 +100,8 @@ namespace FractalExplorer.Projects
             lblIm.Visible = true;
             nudIm.Visible = true;
 
-            // Устанавливаем начальные значения для 'c' по умолчанию для примера "Пылающего корабля" Жюлиа
+            // Устанавливаем начальные значения для 'c' по умолчанию для примера фрактала "Пылающий корабль" Жюлиа.
+            // Эти значения подобраны для демонстрации интересного вида фрактала.
             nudRe.Value = -1.7551867961883m;
             nudIm.Value = 0.01068m;
 
@@ -114,7 +110,9 @@ namespace FractalExplorer.Projects
             {
                 previewCanvas.Click += mandelbrotCanvas_Click;
                 previewCanvas.Paint += mandelbrotCanvas_Paint;
-                Task.Run(() => RenderAndDisplayBurningShipSet()); // Запускаем рендеринг предпросмотра асинхронно
+                // Запускаем рендеринг предпросмотра асинхронно, чтобы не блокировать основной поток UI
+                // и обеспечить отзывчивость формы во время загрузки изображения.
+                Task.Run(() => RenderAndDisplayBurningShipSet());
             }
         }
 
@@ -128,7 +126,9 @@ namespace FractalExplorer.Projects
             var previewCanvas = Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault();
             if (previewCanvas != null && previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
-                previewCanvas.Invalidate(); // Запрашиваем перерисовку маркера на предпросмотре
+                // Запрашиваем перерисовку маркера на предпросмотре, так как значение 'C' изменилось,
+                // чтобы указать новое выбранное положение.
+                previewCanvas.Invalidate();
             }
         }
 
@@ -139,6 +139,8 @@ namespace FractalExplorer.Projects
         /// <returns>Строка, содержащая информацию о фрактале для имени файла.</returns>
         protected override string GetSaveFileNameDetails()
         {
+            // Форматируем значения действительной и мнимой частей с высокой точностью (15 знаков после запятой)
+            // и заменяем десятичную точку на подчеркивание, чтобы избежать проблем с именами файлов.
             string reString = nudRe.Value.ToString("F15", CultureInfo.InvariantCulture).Replace(".", "_");
             string imString = nudIm.Value.ToString("F15", CultureInfo.InvariantCulture).Replace(".", "_");
             return $"burningship_julia_re{reString}_im{imString}";
@@ -159,21 +161,26 @@ namespace FractalExplorer.Projects
                 return;
             }
 
-            // Рендерим изображение "Пылающий корабль"
+            // Рендерим изображение множества "Пылающий корабль".
             Bitmap burningShipImage = RenderBurningShipSetInternal(previewCanvas.Width, previewCanvas.Height, BURNING_SHIP_PREVIEW_ITERATIONS);
 
-            // Обновляем изображение на UI-потоке
+            // Обновляем изображение на UI-потоке, используя Invoke, чтобы безопасно взаимодействовать с элементами UI
+            // из фонового потока.
             if (previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
                 previewCanvas.Invoke(() =>
                 {
-                    previewCanvas.Image?.Dispose(); // Освобождаем старое изображение
+                    // Освобождаем старое изображение, чтобы предотвратить утечки памяти,
+                    // прежде чем присваивать новое.
+                    previewCanvas.Image?.Dispose();
                     previewCanvas.Image = burningShipImage;
                 });
             }
             else
             {
-                burningShipImage?.Dispose(); // Если канвас уже недействителен, просто освобождаем битмап
+                // Если канвас уже недействителен (например, форма закрывается), просто освобождаем битмап,
+                // чтобы избежать утечек ресурсов.
+                burningShipImage?.Dispose();
             }
         }
 
@@ -188,30 +195,31 @@ namespace FractalExplorer.Projects
         {
             Bitmap bitmap = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
 
-            // Создаем временный движок "Пылающий корабль" Мандельброта с фиксированными параметрами для предпросмотра
+            // Создаем временный движок "Пылающий корабль" Мандельброта с фиксированными параметрами для предпросмотра.
+            // Это позволяет рендерить базовое множество независимо от текущих настроек основного движка Жюлиа.
             var engine = new MandelbrotBurningShipEngine
             {
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
-                Palette = GetPaletteMandelbrotClassicColor, // Используем специальную палитру для предпросмотра
+                Palette = GetPaletteMandelbrotClassicColor, // Используем специальную палитру для предпросмотра.
                 Scale = BURNING_SHIP_MAX_REAL - BURNING_SHIP_MIN_REAL,
                 CenterX = (BURNING_SHIP_MAX_REAL + BURNING_SHIP_MIN_REAL) / 2,
                 CenterY = (BURNING_SHIP_MAX_IMAGINARY + BURNING_SHIP_MIN_IMAGINARY) / 2
             };
 
-            // Блокируем биты для прямого доступа к буферу
+            // Блокируем биты изображения для прямого и быстрого доступа к буферу пикселей.
             BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bitmap.PixelFormat);
             int bufferSize = Math.Abs(bitmapData.Stride) * canvasHeight;
             byte[] pixelBuffer = new byte[bufferSize];
             int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 
-            // Создаем одну плитку на весь канвас для рендеринга
+            // Создаем одну плитку, охватывающую весь канвас, для рендеринга всего предпросмотра за один вызов.
             var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
 
-            // Рендерим множество в буфер
+            // Рендерим множество в буфер пикселей.
             engine.RenderTile(pixelBuffer, bitmapData.Stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
 
-            // Копируем данные из буфера в битмап и разблокируем биты
+            // Копируем данные из буфера в битмап и разблокируем биты.
             System.Runtime.InteropServices.Marshal.Copy(pixelBuffer, 0, bitmapData.Scan0, bufferSize);
             bitmap.UnlockBits(bitmapData);
             return bitmap;
@@ -236,16 +244,20 @@ namespace FractalExplorer.Projects
             decimal currentCReal = nudRe.Value;
             decimal currentCImaginary = nudIm.Value;
 
-            // Если диапазон допустим и текущие значения 'C' находятся в пределах предпросмотра
+            // Рисуем маркер только если диапазон действителен и текущие значения 'C' находятся в пределах
+            // отображаемой области предпросмотра, чтобы маркер не выходил за границы.
             if (realRange > 0 && imaginaryRange > 0 && currentCReal >= BURNING_SHIP_MIN_REAL && currentCReal <= BURNING_SHIP_MAX_REAL &&
                 currentCImaginary >= BURNING_SHIP_MIN_IMAGINARY && currentCImaginary <= BURNING_SHIP_MAX_IMAGINARY)
             {
-                // Преобразуем координаты 'C' в пиксельные координаты на канвасе предпросмотра
+                // Преобразуем координаты 'C' (действительная часть на оси X, мнимая на оси Y) в пиксельные координаты на канвасе предпросмотра.
+                // Для Y-координаты учитывается, что в GDI+ Y растет вниз, а в комплексной плоскости мнимая часть растет вверх.
                 int markerX = (int)((currentCReal - BURNING_SHIP_MIN_REAL) / realRange * previewCanvas.Width);
                 int markerY = (int)((BURNING_SHIP_MAX_IMAGINARY - currentCImaginary) / imaginaryRange * previewCanvas.Height);
 
                 using (Pen markerPen = new Pen(Color.FromArgb(200, Color.LimeGreen), 1.5f))
                 {
+                    // Рисуем горизонтальную и вертикальную линии, образующие крест, чтобы визуально указать
+                    // на текущую выбранную точку 'C' на предпросмотре.
                     e.Graphics.DrawLine(markerPen, 0, markerY, previewCanvas.Width, markerY);
                     e.Graphics.DrawLine(markerPen, markerX, 0, markerX, previewCanvas.Height);
                 }
@@ -263,20 +275,28 @@ namespace FractalExplorer.Projects
             double initialReal = (double)nudRe.Value;
             double initialImaginary = (double)nudIm.Value;
 
+            // Создаем или активируем окно выбора константы 'C'.
+            // Это предотвращает создание нескольких экземпляров окна, если оно уже открыто.
             if (_burningShipCSelectorWindow == null || _burningShipCSelectorWindow.IsDisposed)
             {
                 _burningShipCSelectorWindow = new BurningShipCSelectorForm(this, initialReal, initialImaginary);
+                // Подписываемся на событие выбора координат, чтобы обновить NumericUpDown контролы
+                // на текущей форме, когда пользователь выбирает новую точку 'C'.
                 _burningShipCSelectorWindow.CoordinatesSelected += (re, im) =>
                 {
                     nudRe.Value = (decimal)re;
                     nudIm.Value = (decimal)im;
                 };
+                // Устанавливаем _burningShipCSelectorWindow в null после закрытия формы,
+                // чтобы она могла быть открыта снова при следующем клике.
                 _burningShipCSelectorWindow.FormClosed += (s, args) => { _burningShipCSelectorWindow = null; };
                 _burningShipCSelectorWindow.Show(this);
             }
             else
             {
-                _burningShipCSelectorWindow.Activate();
+                _burningShipCSelectorWindow.Activate(); // Активируем существующее окно.
+                // Обновляем в нем выбранные координаты, чтобы оно отражало текущие значения 'C'
+                // основной формы при повторной активации.
                 _burningShipCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true);
             }
         }
@@ -287,7 +307,8 @@ namespace FractalExplorer.Projects
 
         /// <summary>
         /// Локальная функция палитры для рендеринга предпросмотра множества Мандельброта (или "Пылающего корабля").
-        /// Генерирует классическую цветовую схему.
+        /// Генерирует классическую цветовую схему, где цвета зависят от количества итераций
+        /// до выхода из множества, создавая градиентный эффект.
         /// </summary>
         /// <param name="iter">Количество итераций до выхода за порог.</param>
         /// <param name="maxIter">Максимально допустимое количество итераций.</param>
@@ -297,13 +318,16 @@ namespace FractalExplorer.Projects
         {
             if (iter == maxIter)
             {
-                return Color.Black; // Внутренность множества
+                return Color.Black; // Точки, принадлежащие множеству (не вышедшие за порог), окрашиваются в черный.
             }
 
+            // Нормализуем количество итераций к диапазону [0, 1] для использования в цветовой функции.
             double tClassic = (double)iter / maxIter;
             byte r, g, b;
 
-            // Классическая цветовая схема (пример)
+            // Пример классической цветовой схемы с градиентами.
+            // Цвета выбираются таким образом, чтобы создать плавный переход и визуально выделить
+            // границы множества.
             if (tClassic < 0.5)
             {
                 double t = tClassic * 2;
@@ -325,16 +349,30 @@ namespace FractalExplorer.Projects
 
         #region ISaveLoadCapableFractal Overrides
 
+        /// <summary>
+        /// Получает строковый идентификатор типа фрактала.
+        /// </summary>
         public override string FractalTypeIdentifier => "JuliaBurningShip";
 
+        /// <summary>
+        /// Получает конкретный тип состояния сохранения, используемый для фрактала "Пылающий корабль" Жюлиа.
+        /// </summary>
         public override Type ConcreteSaveStateType => typeof(JuliaFamilySaveState);
 
+        /// <summary>
+        /// Загружает все сохраненные состояния фрактала для данного типа.
+        /// </summary>
+        /// <returns>Список базовых объектов состояний фрактала.</returns>
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             var specificSaves = SaveFileManager.LoadSaves<JuliaFamilySaveState>(this.FractalTypeIdentifier);
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <summary>
+        /// Сохраняет предоставленный список состояний фрактала для данного типа.
+        /// </summary>
+        /// <param name="saves">Список базовых объектов состояний фрактала для сохранения.</param>
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<JuliaFamilySaveState>().ToList();
