@@ -9,7 +9,6 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using FractalExplorer.Utilities.JsonConverters; // Добавлен, так как он используется в Serpinsky. Возможно, здесь тоже пригодится или был пропущен.
 
 namespace FractalDraving
 {
@@ -41,7 +40,7 @@ namespace FractalDraving
         /// Размер одной плитки (тайла) в пикселях для пошагового рендеринга.
         /// Использование плиток позволяет отображать прогресс и быстрее реагировать на отмену.
         /// </summary>
-        private const int TILE_SIZE = 32;
+        private const int TILE_SIZE = 16;
 
         /// <summary>
         /// Объект для блокировки доступа к битмапам во время операций рендеринга,
