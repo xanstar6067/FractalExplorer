@@ -803,14 +803,44 @@ namespace FractalExplorer
                 }
 
                 // Создаем новый битмап для сохранения объединенного изображения.
-                // Перерисовываем содержимое канваса (который включает _previewBitmap и _currentRenderingBitmap)
-                // в этот новый "запеченный" битмап.
                 var bakedBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format24bppRgb);
                 using (var graphics = Graphics.FromImage(bakedBitmap))
                 {
-                    var currentRectangle = fractal_bitmap.ClientRectangle;
-                    var paintEventArgs = new PaintEventArgs(graphics, currentRectangle);
-                    Canvas_Paint(this, paintEventArgs); // Повторно используем логику Canvas_Paint для отрисовки.
+                    graphics.Clear(Color.Black);
+                    graphics.InterpolationMode = InterpolationMode.Bilinear;
+
+                    // 1. Рисуем старый _previewBitmap (если есть), интерполируя его.
+                    if (_previewBitmap != null)
+                    {
+                        try
+                        {
+                            double renderedScale = BASE_SCALE / _renderedZoom;
+                            double currentScale = BASE_SCALE / _zoom;
+                            float drawScaleRatio = (float)(renderedScale / currentScale);
+
+                            float newWidth = fractal_bitmap.Width * drawScaleRatio;
+                            float newHeight = fractal_bitmap.Height * drawScaleRatio;
+
+                            double deltaReal = _renderedCenterX - _centerX;
+                            double deltaImaginary = _renderedCenterY - _centerY;
+
+                            float offsetX = (float)(deltaReal / currentScale * fractal_bitmap.Width);
+                            float offsetY = (float)(deltaImaginary / currentScale * fractal_bitmap.Width);
+
+                            float drawX = (fractal_bitmap.Width - newWidth) / 2.0f + offsetX;
+                            float drawY = (fractal_bitmap.Height - newHeight) / 2.0f + offsetY;
+
+                            var destinationRectangle = new RectangleF(drawX, drawY, newWidth, newHeight);
+                            graphics.DrawImage(_previewBitmap, destinationRectangle);
+                        }
+                        catch (Exception) { /* Игнорируем ошибки интерполяции */ }
+                    }
+
+                    // 2. Рисуем новые, уже отрисованные тайлы поверх.
+                    if (_currentRenderingBitmap != null)
+                    {
+                        graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                    }
                 }
 
                 _previewBitmap?.Dispose();
