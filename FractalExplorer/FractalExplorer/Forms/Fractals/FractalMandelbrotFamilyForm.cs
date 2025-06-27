@@ -9,6 +9,7 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
+using System.Diagnostics;
 
 namespace FractalDraving
 {
@@ -133,6 +134,8 @@ namespace FractalDraving
         /// и запускать рендеринг только после небольшой паузы, снижая нагрузку на CPU.
         /// </summary>
         private System.Windows.Forms.Timer _renderDebounceTimer;
+
+        private string _baseTitle;
 
         #endregion
 
@@ -338,6 +341,7 @@ namespace FractalDraving
         /// <param name="e">Аргументы события.</param>
         private void FormBase_Load(object sender, EventArgs e)
         {
+            _baseTitle = this.Text;
             _paletteManager = new ColorPaletteMandelbrotFamily();
             _fractalEngine = CreateEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
@@ -742,6 +746,7 @@ namespace FractalDraving
 
                         // Запускаем рендеринг в высоком разрешении в фоновом потоке,
                         // чтобы не блокировать основной поток UI.
+                        var stopwatch = Stopwatch.StartNew();
                         Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
                             saveWidth, saveHeight, threadCount,
                             progress =>
@@ -756,10 +761,12 @@ namespace FractalDraving
                                 }
                             }
                         ));
+                        stopwatch.Stop();
 
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png); // Сохраняем отрендеренное изображение.
                         highResBitmap.Dispose(); // Освобождаем ресурсы битмапа.
-                        MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                        MessageBox.Show($"Изображение успешно сохранено!\nВремя рендеринга: {elapsedSeconds:F3} сек.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
@@ -801,6 +808,7 @@ namespace FractalDraving
                 return;
             }
 
+            var stopwatch = Stopwatch.StartNew();
             _isRenderingPreview = true; // Устанавливаем флаг, что рендеринг предпросмотра активен.
             _previewRenderCts?.Cancel(); // Отменяем предыдущий рендеринг, если он еще активен.
             _previewRenderCts = new CancellationTokenSource(); // Создаем новый источник токена отмены.
@@ -917,6 +925,10 @@ namespace FractalDraving
                 }, token);
 
                 token.ThrowIfCancellationRequested(); // Финальная проверка на отмену после завершения всех плиток.
+
+                stopwatch.Stop();
+                double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                this.Text = $"{_baseTitle} - Время последнего рендера: {elapsedSeconds:F3} сек.";
 
                 // По завершении рендеринга, заменяем основной битмап предпросмотра текущим.
                 lock (_bitmapLock)
