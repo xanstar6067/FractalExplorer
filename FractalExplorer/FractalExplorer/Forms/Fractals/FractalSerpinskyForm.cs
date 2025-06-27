@@ -542,25 +542,64 @@ namespace FractalExplorer
 
         public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
-            // ЗАГЛУШКА: Для Серпинского рендерим сразу весь битмап и вырезаем из него кусок.
-            // Это неэффективно, но позволяет использовать единый интерфейс.
-            // Поскольку этот метод будет вызван для каждой плитки, мы рендерим полный битмап только один раз.
+            // Заглушка: всегда рендерим полное изображение и возвращаем его целиком.
+            // Диспетчер вызовет это для всех плиток, но результат будет одинаковым.
+            // Чтобы избежать многократного рендера, нужен кеш.
 
-            // Используем статическое поле, чтобы хранить уже отрендеренный битмап для текущего превью.
-            // Это грязноватый трюк, но он работает для данной задачи.
-            if (_previewBitmapForTiledRender == null || _previewStateIdentifier != state.SaveName)
+            string currentStateIdentifier = $"{state.SaveName}_{state.Timestamp}";
+
+            lock (_previewCacheLock)
             {
-                _previewBitmapForTiledRender?.Dispose();
-                _previewBitmapForTiledRender = await Task.Run(() => RenderPreview(state, totalWidth, totalHeight));
-                _previewStateIdentifier = state.SaveName;
+                // Если для этого пресета уже есть отрендеренный битмап, мы его не трогаем.
+                if (_cachedPreviewBitmap != null && _cachedPreviewStateIdentifier == currentStateIdentifier)
+                {
+                    // Битмап уже есть, ничего не делаем.
+                }
+                else
+                {
+                    // Битмапа нет, нужно его создать.
+                    // Но мы не можем делать await внутри lock.
+                    // Поэтому просто сбрасываем кеш. Рендер произойдет ниже.
+                    _cachedPreviewBitmap?.Dispose();
+                    _cachedPreviewBitmap = null;
+                }
             }
 
-            var tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-            if (_previewBitmapForTiledRender == null) return tileBuffer;
-
-            // Копируем нужный кусок из полного битмапа в буфер плитки.
-            using (var tileBmp = _previewBitmapForTiledRender.Clone(tile.Bounds, _previewBitmapForTiledRender.PixelFormat))
+            // Если битмапа не было, рендерим его. Этот код может выполниться несколько раз параллельно,
+            // но только первый результат попадет в кеш благодаря блокировке ниже.
+            if (_cachedPreviewBitmap == null)
             {
+                var newBitmap = await Task.Run(() => RenderPreview(state, totalWidth, totalHeight));
+                lock (_previewCacheLock)
+                {
+                    // Еще раз проверяем, вдруг кто-то уже создал битмап, пока мы рендерили.
+                    if (_cachedPreviewBitmap == null)
+                    {
+                        _cachedPreviewBitmap = newBitmap;
+                        _cachedPreviewStateIdentifier = currentStateIdentifier;
+                    }
+                    else
+                    {
+                        newBitmap?.Dispose(); // Наш рендер был лишним.
+                    }
+                }
+            }
+
+            // Теперь, когда у нас точно есть кешированный битмап, вырезаем из него плитку.
+            var tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+            using (var tileBmp = new Bitmap(tile.Bounds.Width, tile.Bounds.Height, PixelFormat.Format32bppArgb))
+            {
+                using (var g = Graphics.FromImage(tileBmp))
+                {
+                    lock (_previewCacheLock) // Блокируем доступ к битмапу на время чтения
+                    {
+                        if (_cachedPreviewBitmap != null)
+                        {
+                            g.DrawImage(_cachedPreviewBitmap, new Rectangle(0, 0, tile.Bounds.Width, tile.Bounds.Height), tile.Bounds, GraphicsUnit.Pixel);
+                        }
+                    }
+                }
+
                 var bmpData = tileBmp.LockBits(new Rectangle(0, 0, tileBmp.Width, tileBmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
                 Marshal.Copy(bmpData.Scan0, tileBuffer, 0, tileBuffer.Length);
                 tileBmp.UnlockBits(bmpData);
@@ -569,9 +608,10 @@ namespace FractalExplorer
             return tileBuffer;
         }
 
-        // Поля для поддержки заглушки
-        private static Bitmap _previewBitmapForTiledRender;
-        private static string _previewStateIdentifier;
+        // Добавьте эти поля в класс FractalSerpinskyForm
+        private static Bitmap _cachedPreviewBitmap;
+        private static string _cachedPreviewStateIdentifier;
+        private static readonly object _previewCacheLock = new object();
 
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
