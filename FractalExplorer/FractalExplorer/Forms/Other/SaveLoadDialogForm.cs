@@ -143,13 +143,28 @@ namespace FractalExplorer.Forms
 
                     ct.ThrowIfCancellationRequested();
 
+                    // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
-                        BitmapData bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-                        Marshal.Copy(tileBuffer, 0, bmpData.Scan0, tileBuffer.Length);
+
+                        Rectangle tileBounds = tile.Bounds;
+                        int bytesPerPixel = 4; // Format32bppArgb
+                        int tileRowWidthInBytes = tileBounds.Width * bytesPerPixel;
+
+                        BitmapData bmpData = _currentRenderingBitmap.LockBits(tileBounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
+                        IntPtr destPtr = bmpData.Scan0;
+
+                        for (int y = 0; y < tileBounds.Height; y++)
+                        {
+                            int sourceOffset = y * tileRowWidthInBytes;
+                            Marshal.Copy(tileBuffer, sourceOffset, destPtr, tileRowWidthInBytes);
+                            destPtr = IntPtr.Add(destPtr, bmpData.Stride);
+                        }
+
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
+                    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
                     _renderVisualizer.NotifyTileRenderComplete(tile.Bounds);
 
