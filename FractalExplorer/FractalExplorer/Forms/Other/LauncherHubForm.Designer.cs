@@ -275,7 +275,6 @@
             MaximizeBox = false;
             Name = "LauncherHubForm";
             Text = "Менеджер фракталов";
-            Load += MainFractalForm_Load_1;
             tabPageJulia.ResumeLayout(false);
             tabPageMandelbrot.ResumeLayout(false);
             tabControlFractals.ResumeLayout(false);

@@ -21,17 +21,6 @@ namespace FractalExplorer
         #region Event Handlers
 
         /// <summary>
-        /// Обработчик события загрузки формы.
-        /// Устанавливает версию приложения в заголовок окна.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
-        private void MainFractalForm_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        /// <summary>
         /// Отображает версию приложения в заголовке окна.
         /// </summary>
         private void DisplayAppVersionInTitle()
@@ -76,18 +65,6 @@ namespace FractalExplorer
             }
 
             return "неизвестно"; // Если ничего не найдено
-        }
-
-
-        /// <summary>
-        /// Обработчик события загрузки формы, сгенерированный дизайнером.
-        /// (Функция-заглушка, не удалять).
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
-        private void MainFractalForm_Load_1(object sender, EventArgs e)
-        {
-
         }
 
         /// <summary>
