@@ -227,6 +227,26 @@ namespace FractalExplorer.Resources
             return new ComplexDecimal(real, imaginary);
         }
 
+        /// <summary>
+        /// Ограничивает десятичное значение заданным минимальным и максимальным диапазоном.
+        /// </summary>
+        /// <param name="value">Десятичное значение для ограничения.</param>
+        /// <param name="min">Минимально допустимое значение.</param>
+        /// <param name="max">Максимально допустимое значение.</param>
+        /// <returns>Ограниченное десятичное значение.</returns>
+        private decimal ClampDecimal(decimal value, decimal min, decimal max)
+        {
+            if (value < min)
+            {
+                return min;
+            }
+            if (value > max)
+            {
+                return max;
+            }
+            return value;
+        }
+
         #endregion
 
         #region Overrides
