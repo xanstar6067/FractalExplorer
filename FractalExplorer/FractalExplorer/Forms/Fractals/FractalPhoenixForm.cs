@@ -9,6 +9,7 @@ using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
+using System.Diagnostics; // Добавлено для Stopwatch
 
 namespace FractalExplorer.Forms
 {
@@ -59,6 +60,7 @@ namespace FractalExplorer.Forms
         private bool _panning = false;
 
         private System.Windows.Forms.Timer _renderDebounceTimer;
+        private string _baseTitle; // Поле для хранения базового заголовка окна
         // Базовый масштаб, от которого вычисляется текущий масштаб рендеринга.
         private const decimal BASE_SCALE = 4.0m;
         #endregion
@@ -170,6 +172,7 @@ namespace FractalExplorer.Forms
         /// <param name="e">Данные события.</param>
         private void FractalPhoenixForm_Load(object sender, EventArgs e)
         {
+            _baseTitle = this.Text; // Сохраняем исходный заголовок
             _paletteManager = new ColorPaletteMandelbrotFamily();
             _fractalEngine = new PhoenixEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
@@ -520,6 +523,7 @@ namespace FractalExplorer.Forms
                 return;
             }
 
+            var stopwatch = Stopwatch.StartNew(); // Запуск секундомера
             _isRenderingPreview = true;
             _previewRenderCts?.Cancel(); // Отменяем предыдущую задачу рендеринга, если таковая имеется.
             _previewRenderCts = new CancellationTokenSource();
@@ -620,6 +624,10 @@ namespace FractalExplorer.Forms
 
                 token.ThrowIfCancellationRequested(); // Окончательная проверка токена отмены.
 
+                stopwatch.Stop(); // Остановка секундомера после успешного рендеринга
+                double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                this.Text = $"{_baseTitle} - Время последнего рендера: {elapsedSeconds:F3} сек."; // Обновление заголовка
+
                 lock (_bitmapLock) // Блокируем для безопасного обмена битмапами.
                 {
                     // Если текущий рендеринг успешно завершен и не был заменен новым.
@@ -645,6 +653,7 @@ namespace FractalExplorer.Forms
             }
             catch (OperationCanceledException)
             {
+                // Если операция была отменена, не обновляем заголовок с временем
                 lock (_bitmapLock)
                 {
                     // Освобождаем ресурсы текущего битмапа, если рендеринг был отменен.
@@ -863,6 +872,7 @@ namespace FractalExplorer.Forms
 
                         int threadCount = GetThreadCount();
 
+                        var stopwatch = Stopwatch.StartNew(); // Запуск секундомера
                         Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
                             saveWidth, saveHeight, threadCount,
                             progress =>
@@ -874,10 +884,12 @@ namespace FractalExplorer.Forms
                                 }
                             }
                         ));
+                        stopwatch.Stop(); // Остановка секундомера
 
                         highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
                         highResBitmap.Dispose();
-                        MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                        MessageBox.Show($"Изображение успешно сохранено!\nВремя рендеринга: {elapsedSeconds:F3} сек.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
