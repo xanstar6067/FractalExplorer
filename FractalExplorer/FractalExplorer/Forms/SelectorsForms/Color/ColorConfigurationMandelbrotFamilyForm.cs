@@ -1,10 +1,5 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities
 {

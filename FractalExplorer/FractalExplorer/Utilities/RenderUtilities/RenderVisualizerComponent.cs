@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Threading;
+﻿using System.Collections.Concurrent;
 
 /// <summary>
 /// Компонент для визуализации процесса рендеринга фракталов плитка за плиткой.

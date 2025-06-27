@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace FractalExplorer.Resources
+﻿namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Представляет комплексное число, используя тип decimal для высокой точности.

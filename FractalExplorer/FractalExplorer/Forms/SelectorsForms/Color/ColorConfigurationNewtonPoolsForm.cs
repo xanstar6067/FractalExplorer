@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
-using FractalExplorer.Utilities.SaveIO.ColorPalettes;
+﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using Microsoft.VisualBasic; // Для Interaction.InputBox
 
 namespace FractalExplorer

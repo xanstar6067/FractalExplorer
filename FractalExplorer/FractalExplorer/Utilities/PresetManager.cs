@@ -19,7 +19,7 @@ namespace FractalExplorer.Utilities
         // Ограничения на количество итераций для предварительного просмотра.
         // Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
         // в окне сохранения/загрузки, не нагружая систему слишком сильно.
-        private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1275;
+        private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1000;
         private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;

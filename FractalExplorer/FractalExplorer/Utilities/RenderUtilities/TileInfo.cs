@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-
-namespace FractalExplorer.Resources
+﻿namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Представляет одну плитку (тайл) для мозаичного рендеринга.

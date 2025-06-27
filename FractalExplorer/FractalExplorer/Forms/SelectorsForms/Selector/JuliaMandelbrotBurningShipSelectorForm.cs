@@ -1,12 +1,7 @@
-﻿using FractalExplorer.Engines; // Предполагается, что здесь есть ComplexDecimal
-using FractalExplorer.Resources; // Предполагается, что здесь есть TileInfo
-using System;
-using System.Drawing;
+﻿using FractalExplorer.Resources;
 using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Windows.Forms; // Явное добавление для Form, PictureBox, etc.
 
 namespace FractalExplorer.Forms.SelectorsForms.Selector
 {

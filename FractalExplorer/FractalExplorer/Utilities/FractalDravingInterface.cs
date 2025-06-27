@@ -1,6 +1,4 @@
-﻿using System; // Для EventHandler
-
-namespace FractalExplorer.Resources
+﻿namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Определяет общий контракт для форм фракталов,

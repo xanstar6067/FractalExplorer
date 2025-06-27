@@ -1,4 +1,4 @@
-using System.Reflection; // Для доступа к атрибутам сборки
+using System.Reflection;
 using FractalExplorer.Forms;
 using FractalExplorer.Projects; 
 

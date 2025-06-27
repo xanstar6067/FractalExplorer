@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 
-
 namespace FractalExplorer.Utilities.SaveIO
 {
     /// <summary>
