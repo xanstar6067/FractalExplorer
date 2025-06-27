@@ -1,20 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text.Json;
-using FractalDraving;
-using FractalExplorer;
-using FractalExplorer.Engines;
-using FractalExplorer.Forms;
+﻿using FractalDraving;
+using FractalExplorer.Engines; 
+using FractalExplorer.Forms; 
+using FractalExplorer.Utilities.JsonConverters;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes; 
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System.Text.Json;
 
 namespace FractalExplorer.Utilities
 {
+    /// <summary>
+    /// Предоставляет коллекцию предустановленных состояний (пресетов) для различных типов фракталов.
+    /// Эти пресеты могут быть загружены для быстрого отображения интересных точек или конфигураций фракталов.
+    /// </summary>
     public static class PresetManager
     {
         #region Constants
 
+        // Ограничения на количество итераций для предварительного просмотра.
+        // Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
+        // в окне сохранения/загрузки, не нагружая систему слишком сильно.
         private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1275;
         private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
@@ -29,7 +33,7 @@ namespace FractalExplorer.Utilities
         /// Возвращает список предустановленных точек интереса (пресетов) для указанного типа фрактала.
         /// </summary>
         /// <param name="fractalTypeIdentifier">Идентификатор типа фрактала (например, "Mandelbrot", "Julia").</param>
-        /// <returns>Список пресетов или пустой список, если для данного типа пресетов нет.</returns>
+        /// <returns>Список объектов <see cref="FractalSaveStateBase"/>, представляющих пресеты, или пустой список, если для данного типа пресетов нет.</returns>
         public static List<FractalSaveStateBase> GetPresetsFor(string fractalTypeIdentifier)
         {
             switch (fractalTypeIdentifier)
@@ -57,11 +61,17 @@ namespace FractalExplorer.Utilities
 
         #region Mandelbrot-Julia Family Presets
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала Мандельброта.
+        /// </summary>
+        /// <returns>Список пресетов Мандельброта.</returns>
         private static List<FractalSaveStateBase> GetMandelbrotPresets()
         {
             var presets = new List<FractalSaveStateBase>();
 
             // Пресет 1: Долина Морских Коньков
+            // Этот пресет демонстрирует известную область фрактала Мандельброта с высокой детализацией,
+            // где часто можно увидеть характерные "морские коньки".
             var preset1 = new MandelbrotFamilySaveState("Mandelbrot")
             {
                 SaveName = "Долина Морских Коньков",
@@ -71,13 +81,14 @@ namespace FractalExplorer.Utilities
                 Iterations = 1000,
                 Threshold = 2.0m,
                 PaletteName = "Лёд",
-                Timestamp = DateTime.MinValue
+                Timestamp = DateTime.MinValue // Используется минимальное значение, так как это встроенный пресет.
             };
             var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
@@ -87,6 +98,8 @@ namespace FractalExplorer.Utilities
             presets.Add(preset1);
 
             // Пресет 2: Шип Миниброта
+            // Этот пресет фокусируется на характерном шипе на левой стороне основного кардиоида фрактала Мандельброта,
+            // где часто проявляются миниатюрные копии фрактала.
             var preset2 = new MandelbrotFamilySaveState("Mandelbrot")
             {
                 SaveName = "Шип Миниброта",
@@ -111,7 +124,8 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
             presets.Add(preset2);
 
-            // NEW PRESET: Электрическая Розетка
+            // Пресет 3: Электрическая Розетка
+            // Уникальный узор, напоминающий электрическую розетку, найденный в сложной области фрактала Мандельброта.
             var preset3 = new MandelbrotFamilySaveState("Mandelbrot")
             {
                 SaveName = "Электрическая Розетка",
@@ -136,7 +150,8 @@ namespace FractalExplorer.Utilities
             preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3);
             presets.Add(preset3);
 
-            // NEW PRESET: Спиральная Галактика
+            // Пресет 4: Спиральная Галактика
+            // Область фрактала, напоминающая галактическую спираль с множеством завитков.
             var preset4 = new MandelbrotFamilySaveState("Mandelbrot")
             {
                 SaveName = "Спиральная Галактика",
@@ -164,10 +179,16 @@ namespace FractalExplorer.Utilities
             return presets;
         }
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала Жюлиа.
+        /// </summary>
+        /// <returns>Список пресетов Жюлиа.</returns>
         private static List<FractalSaveStateBase> GetJuliaPresets()
         {
             var presets = new List<FractalSaveStateBase>();
 
+            // Пресет 1: Классическая Спираль
+            // Широко известный фрактал Жюлиа с характерной спиральной структурой.
             var preset1 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Классическая Спираль",
@@ -196,6 +217,8 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1J);
             presets.Add(preset1);
 
+            // Пресет 2: Дендрит
+            // Разветвленная, древовидная структура фрактала Жюлиа, часто ассоциируемая с формой корней или нейронов.
             var preset2 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Дендрит",
@@ -224,6 +247,8 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2J);
             presets.Add(preset2);
 
+            // Пресет 3: Снежинка
+            // Фрактал Жюлиа, напоминающий узор снежинки или кристалла льда.
             var preset3 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Снежинка",
@@ -252,6 +277,8 @@ namespace FractalExplorer.Utilities
             preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3J);
             presets.Add(preset3);
 
+            // Пресет 4: Огненный Вихрь
+            // Фрактал Жюлиа с яркими, динамичными цветами и закрученной формой, создающей эффект вихря.
             var preset4 = new JuliaFamilySaveState("Julia")
             {
                 SaveName = "Огненный Вихрь",
@@ -283,9 +310,16 @@ namespace FractalExplorer.Utilities
             return presets;
         }
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала "Горящий Корабль" (Мандельброта).
+        /// </summary>
+        /// <returns>Список пресетов "Горящий Корабль" (Мандельброта).</returns>
         private static List<FractalSaveStateBase> GetMandelbrotBurningShipPresets()
         {
             var presets = new List<FractalSaveStateBase>();
+
+            // Пресет 1: Центральный Корабль
+            // Основная, узнаваемая форма фрактала "Горящий Корабль", расположенная в центре изображения.
             var preset1 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Центральный Корабль",
@@ -310,6 +344,8 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1BS);
             presets.Add(preset1);
 
+            // Пресет 2: Глубоководный Корабль
+            // Увеличено на область с тонкими деталями и сложными структурами, напоминающими подводные формы.
             var preset2 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Глубоководный Корабль",
@@ -334,6 +370,8 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2BS);
             presets.Add(preset2);
 
+            // Пресет 3: Призрачные Паруса
+            // Область, напоминающая развевающиеся на ветру паруса корабля-призрака, с бледными оттенками.
             var preset3 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Призрачные Паруса",
@@ -361,9 +399,16 @@ namespace FractalExplorer.Utilities
             return presets;
         }
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала "Горящий Корабль" (Жюлиа).
+        /// </summary>
+        /// <returns>Список пресетов "Горящий Корабль" (Жюлиа).</returns>
         private static List<FractalSaveStateBase> GetJuliaBurningShipPresets()
         {
             var presets = new List<FractalSaveStateBase>();
+
+            // Пресет 1: Космический Цветок
+            // Форма фрактала Жюлиа "Горящий Корабль", напоминающая цветок или сложную космическую структуру.
             var preset1 = new JuliaFamilySaveState("JuliaBurningShip")
             {
                 SaveName = "Космический Цветок",
@@ -392,6 +437,8 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1JBS);
             presets.Add(preset1);
 
+            // Пресет 2: Огненный Дракон
+            // Динамичная форма, напоминающая голову или тело дракона, пылающего яркими, огненными цветами.
             var preset2 = new JuliaFamilySaveState("JuliaBurningShip")
             {
                 SaveName = "Огненный Дракон",
@@ -420,6 +467,8 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2JBS);
             presets.Add(preset2);
 
+            // Пресет 3: Туманность Андромеды (стил.)
+            // Абстрактная форма, напоминающая галактическую туманность с плавными переходами цветов.
             var preset3 = new JuliaFamilySaveState("JuliaBurningShip")
             {
                 SaveName = "Туманность Андромеды (стил.)",
@@ -455,10 +504,16 @@ namespace FractalExplorer.Utilities
 
         #region Phoenix Family Presets
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала Феникса.
+        /// </summary>
+        /// <returns>Список пресетов Феникса.</returns>
         private static List<FractalSaveStateBase> GetPhoenixPresets()
         {
             var presets = new List<FractalSaveStateBase>();
 
+            // Пресет 1: Стандартный Феникс
+            // Классический вид фрактала Феникса с характерными "глазами" и симметричной структурой.
             var preset1 = new PhoenixSaveState("Phoenix")
             {
                 SaveName = "Стандартный Феникс",
@@ -479,6 +534,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
@@ -490,6 +546,8 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1Ph);
             presets.Add(preset1);
 
+            // Пресет 2: Вихрь Феникса
+            // Более сложная структура с закрученными вихрями и динамичными цветовыми переходами.
             var preset2 = new PhoenixSaveState("Phoenix")
             {
                 SaveName = "Вихрь Феникса",
@@ -521,6 +579,8 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2Ph);
             presets.Add(preset2);
 
+            // Пресет 3: Хвост Павлина
+            // Замысловатая форма, напоминающая распущенный хвост павлина, с множеством деталей и узоров.
             var preset3 = new PhoenixSaveState("Phoenix")
             {
                 SaveName = "Хвост Павлина",
@@ -559,12 +619,19 @@ namespace FractalExplorer.Utilities
 
         #region Serpinsky Fractal Presets
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала Серпинского.
+        /// </summary>
+        /// <returns>Список пресетов Серпинского.</returns>
         private static List<FractalSaveStateBase> GetSerpinskyPresets()
         {
             var presets = new List<FractalSaveStateBase>();
+            // Используем пользовательский конвертер для корректной сериализации объектов Color в JSON.
             var jsonOptions = new JsonSerializerOptions();
-            jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter()); // Для сериализации Color
+            jsonOptions.Converters.Add(new JsonColorConverter());
 
+            // Пресет 1: Классическая Геометрия
+            // Треугольник Серпинского, построенный геометрическим методом, демонстрирующий его базовую структуру.
             var preset1 = new SerpinskySaveState("Serpinsky")
             {
                 SaveName = "Классическая Геометрия",
@@ -580,6 +647,7 @@ namespace FractalExplorer.Utilities
             var previewParams1S = new FractalSerpinsky.SerpinskyPreviewParams
             {
                 RenderMode = preset1.RenderMode,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC),
                 Zoom = preset1.Zoom,
                 CenterX = preset1.CenterX,
@@ -590,6 +658,9 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1S, jsonOptions);
             presets.Add(preset1);
 
+            // Пресет 2: Ночной Хаос
+            // Треугольник Серпинского, построенный методом случайных итераций, с контрастными цветами,
+            // создающими эффект ночного неба.
             var preset2 = new SerpinskySaveState("Serpinsky")
             {
                 SaveName = "Ночной Хаос",
@@ -605,6 +676,7 @@ namespace FractalExplorer.Utilities
             var previewParams2S = new FractalSerpinsky.SerpinskyPreviewParams
             {
                 RenderMode = preset2.RenderMode,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
                 Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS),
                 Zoom = preset2.Zoom,
                 CenterX = preset2.CenterX,
@@ -622,14 +694,20 @@ namespace FractalExplorer.Utilities
 
         #region Newton Pool Presets
 
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала "Бассейны Ньютона".
+        /// </summary>
+        /// <returns>Список пресетов "Бассейны Ньютона".</returns>
         private static List<FractalSaveStateBase> GetNewtonPoolsPresets()
         {
             var presets = new List<FractalSaveStateBase>();
+            // Используем пользовательский конвертер для корректной сериализации объектов Color внутри PaletteSnapshot.
             var jsonOptions = new JsonSerializerOptions();
-            jsonOptions.Converters.Add(new JsonConverters.JsonColorConverter()); // Для сериализации Color внутри PaletteSnapshot
+            jsonOptions.Converters.Add(new JsonColorConverter());
 
             // --- Пресет 1: Классический z^3 - 1 ---
-            var palette1 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            // Стандартное отображение бассейнов притяжения для функции z^3 - 1, демонстрирующее три области притяжения.
+            var palette1 = new NewtonColorPalette
             {
                 Name = "NewtonPreset1_Classic",
                 RootColors = new List<Color> { Color.FromArgb(255, 100, 100), Color.FromArgb(100, 255, 100), Color.FromArgb(100, 100, 255) },
@@ -653,6 +731,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
                 PaletteSnapshot = preset1.PaletteSnapshot
             };
@@ -660,7 +739,9 @@ namespace FractalExplorer.Utilities
             presets.Add(preset1);
 
             // --- Пресет 2: z^4 - 1 с градиентом ---
-            var palette2 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            // Отображение бассейнов притяжения для функции z^4 - 1 с градиентным раскрашиванием,
+            // подчеркивающим границы между областями.
+            var palette2 = new NewtonColorPalette
             {
                 Name = "NewtonPreset2_Gradient",
                 RootColors = new List<Color> { Color.Cyan, Color.Magenta, Color.Yellow, Color.Lime },
@@ -691,7 +772,9 @@ namespace FractalExplorer.Utilities
             presets.Add(preset2);
 
             // --- Пресет 3: Более сложная функция z^5 - z^2 + 1 ---
-            var palette3 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            // Демонстрация бассейнов притяжения для более комплексной полиномиальной функции,
+            // приводящей к более сложным и интересным фрактальным границам.
+            var palette3 = new NewtonColorPalette
             {
                 Name = "NewtonPreset3_Complex",
                 RootColors = new List<Color> { Color.Orange, Color.Purple, Color.GreenYellow, Color.SkyBlue, Color.HotPink },
@@ -722,7 +805,9 @@ namespace FractalExplorer.Utilities
             presets.Add(preset3);
 
             // --- Пресет 4: z^3 - 2*z + 2 (из вашего списка) с градиентом и другим центром ---
-            var palette4 = new Utilities.SaveIO.ColorPalettes.NewtonColorPalette
+            // Бассейны притяжения для функции z^3 - 2z + 2, с измененным центром и градиентной палитрой,
+            // демонстрирующие смещенные структуры.
+            var palette4 = new NewtonColorPalette
             {
                 Name = "NewtonPreset4_Shifted",
                 RootColors = new List<Color> { Color.Teal, Color.Gold, Color.Crimson },
