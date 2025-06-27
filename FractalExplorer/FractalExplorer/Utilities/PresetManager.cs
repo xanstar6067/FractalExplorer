@@ -15,8 +15,8 @@ namespace FractalExplorer.Utilities
     {
         #region Constants
 
-        private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 175;
-        private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 175;
+        private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1275;
+        private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
