@@ -1,12 +1,5 @@
-﻿using FractalExplorer.Utilities;
-using FractalExplorer.Utilities.JsonConverters;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
+﻿using FractalExplorer.Utilities.JsonConverters;
 using System.Text.Json;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities.SaveIO.ColorPalettes 
 {
