@@ -971,6 +971,46 @@ namespace FractalExplorer.Forms
             }
         }
 
+        public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return await Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(state.PreviewParametersJson))
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
+
+                PhoenixPreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+
+                var previewEngine = new PhoenixEngine();
+                previewEngine.CenterX = previewParams.CenterX;
+                previewEngine.CenterY = previewParams.CenterY;
+                previewEngine.Scale = 4.0m / previewParams.Zoom; // BaseScale = 4.0
+                previewEngine.MaxIterations = 250; // Повышенные итерации
+                previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+                previewEngine.C1 = new ComplexDecimal(previewParams.C1Re, previewParams.C1Im);
+                previewEngine.C2 = new ComplexDecimal(previewParams.C2Re, previewParams.C2Im);
+
+                var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
+                previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+                if (paletteForPreview.Name == "Стандартный серый" || paletteForPreview.IsGradient)
+                {
+                    previewEngine.MaxColorIterations = Math.Max(1, previewEngine.MaxIterations);
+                }
+                else
+                {
+                    previewEngine.MaxColorIterations = Math.Max(1, paletteForPreview.Colors.Count);
+                }
+
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
+
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
             if (string.IsNullOrEmpty(state.PreviewParametersJson))

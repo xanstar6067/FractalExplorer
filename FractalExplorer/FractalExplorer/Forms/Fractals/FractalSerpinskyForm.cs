@@ -1,18 +1,19 @@
 ﻿using FractalExplorer.Engines;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
-using System;
-using System.Windows.Forms;
-using System.Text.Json;
-using System.Linq;
+using FractalExplorer.Resources;
 using FractalExplorer.SelectorsForms;
-using System.Collections.Generic;
-using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes; // Добавлено для List<>
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace FractalExplorer
 {
@@ -538,6 +539,39 @@ namespace FractalExplorer
                 MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            // ЗАГЛУШКА: Для Серпинского рендерим сразу весь битмап и вырезаем из него кусок.
+            // Это неэффективно, но позволяет использовать единый интерфейс.
+            // Поскольку этот метод будет вызван для каждой плитки, мы рендерим полный битмап только один раз.
+
+            // Используем статическое поле, чтобы хранить уже отрендеренный битмап для текущего превью.
+            // Это грязноватый трюк, но он работает для данной задачи.
+            if (_previewBitmapForTiledRender == null || _previewStateIdentifier != state.SaveName)
+            {
+                _previewBitmapForTiledRender?.Dispose();
+                _previewBitmapForTiledRender = await Task.Run(() => RenderPreview(state, totalWidth, totalHeight));
+                _previewStateIdentifier = state.SaveName;
+            }
+
+            var tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+            if (_previewBitmapForTiledRender == null) return tileBuffer;
+
+            // Копируем нужный кусок из полного битмапа в буфер плитки.
+            using (var tileBmp = _previewBitmapForTiledRender.Clone(tile.Bounds, _previewBitmapForTiledRender.PixelFormat))
+            {
+                var bmpData = tileBmp.LockBits(new Rectangle(0, 0, tileBmp.Width, tileBmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                Marshal.Copy(bmpData.Scan0, tileBuffer, 0, tileBuffer.Length);
+                tileBmp.UnlockBits(bmpData);
+            }
+
+            return tileBuffer;
+        }
+
+        // Поля для поддержки заглушки
+        private static Bitmap _previewBitmapForTiledRender;
+        private static string _previewStateIdentifier;
 
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {

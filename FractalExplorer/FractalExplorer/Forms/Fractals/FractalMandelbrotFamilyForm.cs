@@ -1307,7 +1307,63 @@ namespace FractalDraving
             return Math.Max(min, Math.Min(max, value));
         }
 
+        public virtual async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return await Task.Run(() =>
+            {
+                // Десериализуем параметры превью
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; // Возвращаем пустую (черную) плитку
+                }
 
+                PreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+
+                // Создаем и настраиваем движок, как в старом методе RenderPreview
+                FractalMandelbrotFamilyEngine previewEngine = null;
+                switch (previewParams.PreviewEngineType)
+                {
+                    case "Mandelbrot": previewEngine = new MandelbrotEngine(); break;
+                    case "Julia":
+                        previewEngine = new JuliaEngine();
+                        ((JuliaEngine)previewEngine).C = new ComplexDecimal(previewParams.CRe, previewParams.CIm);
+                        break;
+                    case "MandelbrotBurningShip": previewEngine = new MandelbrotBurningShipEngine(); break;
+                    case "JuliaBurningShip":
+                        previewEngine = new JuliaBurningShipEngine();
+                        ((JuliaBurningShipEngine)previewEngine).C = new ComplexDecimal(previewParams.CRe, previewParams.CIm);
+                        break;
+                    default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
+
+                // Устанавливаем повышенные итерации для превью
+                previewEngine.MaxIterations = 400;
+                previewEngine.CenterX = previewParams.CenterX;
+                previewEngine.CenterY = previewParams.CenterY;
+                decimal previewBaseScale = this.BaseScale;
+                previewEngine.Scale = previewBaseScale / previewParams.Zoom;
+                previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+
+                var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
+                previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+                if (paletteForPreview.Name == "Стандартный серый" || paletteForPreview.IsGradient)
+                {
+                    previewEngine.MaxColorIterations = Math.Max(1, previewEngine.MaxIterations);
+                }
+                else
+                {
+                    previewEngine.MaxColorIterations = Math.Max(1, paletteForPreview.Colors.Count);
+                }
+
+                // Вызываем метод рендера ОДНОЙ плитки из движка
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
         public virtual Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
             if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))

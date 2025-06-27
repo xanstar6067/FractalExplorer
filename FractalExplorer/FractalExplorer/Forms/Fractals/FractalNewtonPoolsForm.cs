@@ -1054,6 +1054,44 @@ namespace FractalExplorer
             }
         }
 
+        public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return await Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(state.PreviewParametersJson))
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
+
+                NewtonPreviewParams previewParams;
+                try
+                {
+                    var jsonOptions = new JsonSerializerOptions();
+                    jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
+                    previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+
+                var previewEngine = new FractalNewtonEngine();
+                if (!previewEngine.SetFormula(previewParams.Formula, out _))
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
+
+                previewEngine.CenterX = (double)previewParams.CenterX;
+                previewEngine.CenterY = (double)previewParams.CenterY;
+                previewEngine.Scale = 3.0 / (double)previewParams.Zoom; // BaseScale = 3.0
+                previewEngine.MaxIterations = 150; // Повышенные итерации для превью
+
+                var palette = previewParams.PaletteSnapshot;
+                previewEngine.BackgroundColor = palette.BackgroundColor;
+                previewEngine.UseGradient = palette.IsGradient;
+                previewEngine.RootColors = (palette.RootColors != null && palette.RootColors.Any()) ? palette.RootColors.ToArray() : ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(previewEngine.Roots.Count).ToArray();
+
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
+
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
             if (string.IsNullOrEmpty(state.PreviewParametersJson))
