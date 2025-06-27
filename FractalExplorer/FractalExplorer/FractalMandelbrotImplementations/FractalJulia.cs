@@ -4,13 +4,8 @@ using FractalExplorer.Forms.SelectorsForms.Selector;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using System;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Projects
 {
@@ -110,7 +105,8 @@ namespace FractalExplorer.Projects
             {
                 previewCanvas.Click += mandelbrotCanvas_Click;
                 previewCanvas.Paint += mandelbrotCanvas_Paint;
-                Task.Run(() => RenderAndDisplayMandelbrotSet()); // Запускаем рендеринг предпросмотра асинхронно
+                // Запускаем рендеринг предпросмотра асинхронно, чтобы не блокировать UI.
+                Task.Run(() => RenderAndDisplayMandelbrotSet());
             }
         }
 
@@ -125,7 +121,8 @@ namespace FractalExplorer.Projects
             var previewCanvas = Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault();
             if (previewCanvas != null && previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
-                previewCanvas.Invalidate(); // Запрашиваем перерисовку маркера на предпросмотре
+                // Запрашиваем перерисовку маркера на предпросмотре, так как значение 'C' изменилось.
+                previewCanvas.Invalidate();
             }
         }
 
@@ -136,6 +133,8 @@ namespace FractalExplorer.Projects
         /// <returns>Строка, содержащая информацию о фрактале для имени файла.</returns>
         protected override string GetSaveFileNameDetails()
         {
+            // Форматируем значения Re и Im для включения в имя файла,
+            // заменяя десятичные разделители на подчеркивания, чтобы избежать проблем с именами файлов.
             string reString = nudRe.Value.ToString("F15", CultureInfo.InvariantCulture).Replace(".", "_");
             string imString = nudIm.Value.ToString("F15", CultureInfo.InvariantCulture).Replace(".", "_");
             return $"julia_re{reString}_im{imString}";
@@ -156,21 +155,23 @@ namespace FractalExplorer.Projects
                 return;
             }
 
-            // Рендерим изображение Мандельброта
+            // Рендерим изображение Мандельброта.
             Bitmap mandelbrotImage = RenderMandelbrotSetInternal(previewCanvas.Width, previewCanvas.Height, MANDELBROT_PREVIEW_ITERATIONS);
 
-            // Обновляем изображение на UI-потоке
+            // Обновляем изображение на UI-потоке, используя Invoke, чтобы избежать ошибок кросс-поточной операции.
             if (previewCanvas.IsHandleCreated && !previewCanvas.IsDisposed)
             {
                 previewCanvas.Invoke(() =>
                 {
-                    previewCanvas.Image?.Dispose(); // Освобождаем старое изображение
+                    // Освобождаем старое изображение, чтобы избежать утечек памяти.
+                    previewCanvas.Image?.Dispose();
                     previewCanvas.Image = mandelbrotImage;
                 });
             }
             else
             {
-                mandelbrotImage?.Dispose(); // Если канвас уже недействителен, просто освобождаем битмап
+                // Если канвас уже недействителен (например, форма закрывается), просто освобождаем битмап.
+                mandelbrotImage?.Dispose();
             }
         }
 
@@ -185,30 +186,31 @@ namespace FractalExplorer.Projects
         {
             Bitmap bitmap = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
 
-            // Создаем временный движок Мандельброта с фиксированными параметрами для предпросмотра
+            // Создаем временный движок Мандельброта с фиксированными параметрами для предпросмотра,
+            // чтобы его рендер не влиял на основные параметры фрактала Жюлиа.
             var engine = new MandelbrotEngine
             {
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
-                Palette = GetPaletteMandelbrotClassicColor, // Используем специальную палитру для предпросмотра
-                Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE,
-                CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2,
+                Palette = GetPaletteMandelbrotClassicColor, // Используем специальную палитру для предпросмотра.
+                Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE, // Масштаб определяется диапазоном.
+                CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2, // Центр Мандельброта.
                 CenterY = (MANDELBROT_MAX_IM + MANDELBROT_MIN_IM) / 2
             };
 
-            // Блокируем биты для прямого доступа к буферу
+            // Блокируем биты для прямого доступа к буферу пикселей для эффективной записи.
             BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bitmap.PixelFormat);
             int bufferSize = Math.Abs(bitmapData.Stride) * canvasHeight;
             byte[] pixelBuffer = new byte[bufferSize];
             int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
 
-            // Создаем одну плитку на весь канвас для рендеринга
+            // Создаем одну плитку на весь канвас для рендеринга, так как это предпросмотр.
             var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
 
-            // Рендерим множество Мандельброта в буфер
+            // Рендерим множество Мандельброта в буфер.
             engine.RenderTile(pixelBuffer, bitmapData.Stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
 
-            // Копируем данные из буфера в битмап и разблокируем биты
+            // Копируем данные из буфера в битмап и разблокируем биты.
             System.Runtime.InteropServices.Marshal.Copy(pixelBuffer, 0, bitmapData.Scan0, bufferSize);
             bitmap.UnlockBits(bitmapData);
             return bitmap;
@@ -216,7 +218,7 @@ namespace FractalExplorer.Projects
 
         /// <summary>
         /// Обработчик события отрисовки канваса предпросмотра Мандельброта.
-        /// Рисует маркер, указывающий текущие значения Re/Im константы 'C'.
+        /// Рисует маркер, указывающий текущие значения Re/Im константы 'C', используемые для фрактала Жюлиа.
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события рисования.</param>
@@ -233,16 +235,18 @@ namespace FractalExplorer.Projects
             decimal currentCReal = nudRe.Value;
             decimal currentCImaginary = nudIm.Value;
 
-            // Если диапазон допустим и текущие значения 'C' находятся в пределах предпросмотра
+            // Рисуем маркер только если диапазон допустим и текущие значения 'C' находятся в пределах предпросмотра.
             if (reRange > 0 && imRange > 0 && currentCReal >= MANDELBROT_MIN_RE && currentCReal <= MANDELBROT_MAX_RE &&
                 currentCImaginary >= MANDELBROT_MIN_IM && currentCImaginary <= MANDELBROT_MAX_IM)
             {
-                // Преобразуем координаты 'C' в пиксельные координаты на канвасе предпросмотра
+                // Преобразуем координаты 'C' (действительная часть на X, мнимая на Y) в пиксельные координаты на канвасе предпросмотра.
+                // Для Y-координаты учитывается, что в GDI+ Y растет вниз, а в комплексной плоскости мнимая часть растет вверх.
                 int markerX = (int)((currentCReal - MANDELBROT_MIN_RE) / reRange * previewCanvas.Width);
                 int markerY = (int)((MANDELBROT_MAX_IM - currentCImaginary) / imRange * previewCanvas.Height);
 
                 using (Pen markerPen = new Pen(Color.FromArgb(200, Color.LimeGreen), 1.5f))
                 {
+                    // Рисуем горизонтальную и вертикальную линии, образующие крест, чтобы указать на выбранную точку 'C'.
                     e.Graphics.DrawLine(markerPen, 0, markerY, previewCanvas.Width, markerY);
                     e.Graphics.DrawLine(markerPen, markerX, 0, markerX, previewCanvas.Height);
                 }
@@ -260,21 +264,24 @@ namespace FractalExplorer.Projects
             double initialReal = (double)nudRe.Value;
             double initialImaginary = (double)nudIm.Value;
 
+            // Создаем или активируем окно выбора константы 'C'.
             if (_mandelbrotCSelectorWindow == null || _mandelbrotCSelectorWindow.IsDisposed)
             {
                 _mandelbrotCSelectorWindow = new JuliaMandelbrotSelectorForm(this, initialReal, initialImaginary);
+                // Подписываемся на событие выбора координат, чтобы обновить NumericUpDown контролы.
                 _mandelbrotCSelectorWindow.CoordinatesSelected += (re, im) =>
                 {
                     nudRe.Value = (decimal)re;
                     nudIm.Value = (decimal)im;
                 };
+                // Устанавливаем _mandelbrotCSelectorWindow в null после закрытия формы, чтобы ее можно было открыть снова.
                 _mandelbrotCSelectorWindow.FormClosed += (s, args) => { _mandelbrotCSelectorWindow = null; };
                 _mandelbrotCSelectorWindow.Show(this);
             }
             else
             {
-                _mandelbrotCSelectorWindow.Activate();
-                _mandelbrotCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true);
+                _mandelbrotCSelectorWindow.Activate(); // Активируем существующее окно.
+                _mandelbrotCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true); // Обновляем в нем выбранные координаты.
             }
         }
 
@@ -284,7 +291,8 @@ namespace FractalExplorer.Projects
 
         /// <summary>
         /// Локальная функция палитры для рендеринга предпросмотра Мандельброта.
-        /// Генерирует классическую цветовую схему для множества Мандельброта.
+        /// Генерирует классическую цветовую схему для множества Мандельброта,
+        /// где цвета зависят от количества итераций до выхода из множества.
         /// </summary>
         /// <param name="iter">Количество итераций до выхода за порог.</param>
         /// <param name="maxIter">Максимально допустимое количество итераций.</param>
@@ -294,13 +302,15 @@ namespace FractalExplorer.Projects
         {
             if (iter == maxIter)
             {
-                return Color.Black; // Внутренность множества
+                return Color.Black; // Точки, принадлежащие множеству, окрашиваются в черный.
             }
 
+            // Нормализуем количество итераций к диапазону [0, 1].
             double tClassic = (double)iter / maxIter;
             byte r, g, b;
 
-            // Классическая цветовая схема (пример)
+            // Классическая цветовая схема с градиентами, изменяющимися в зависимости от tClassic.
+            // Это создает характерные "радужные" или "пламенные" узоры вокруг множества.
             if (tClassic < 0.5)
             {
                 double t = tClassic * 2;
@@ -321,21 +331,56 @@ namespace FractalExplorer.Projects
         #endregion
 
         #region ISaveLoadCapableFractal Overrides
+
+        /// <summary>
+        /// Получает строковый идентификатор типа фрактала.
+        /// </summary>
         public override string FractalTypeIdentifier => "Julia";
 
+        /// <summary>
+        /// Получает конкретный тип состояния сохранения, используемый для фрактала Жюлиа.
+        /// </summary>
         public override Type ConcreteSaveStateType => typeof(JuliaFamilySaveState);
 
+        /// <summary>
+        /// Загружает все сохраненные состояния фрактала для данного типа.
+        /// </summary>
+        /// <returns>Список базовых объектов состояний фрактала.</returns>
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             var specificSaves = SaveFileManager.LoadSaves<JuliaFamilySaveState>(this.FractalTypeIdentifier);
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <summary>
+        /// Сохраняет предоставленный список состояний фрактала для данного типа.
+        /// </summary>
+        /// <param name="saves">Список базовых объектов состояний фрактала для сохранения.</param>
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<JuliaFamilySaveState>().ToList();
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
         #endregion
+
+        /// <summary>
+        /// Ограничивает десятичное значение заданным минимальным и максимальным диапазоном.
+        /// </summary>
+        /// <param name="value">Десятичное значение для ограничения.</param>
+        /// <param name="min">Минимально допустимое значение.</param>
+        /// <param name="max">Максимально допустимое значение.</param>
+        /// <returns>Ограниченное десятичное значение.</returns>
+        private decimal ClampDecimal(decimal value, decimal min, decimal max)
+        {
+            if (value < min)
+            {
+                return min;
+            }
+            if (value > max)
+            {
+                return max;
+            }
+            return value;
+        }
     }
 }
