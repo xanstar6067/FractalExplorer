@@ -464,7 +464,7 @@ namespace FractalExplorer
             PointF worldBefore = ScreenToWorld(panStart, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
             PointF worldAfter = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
             centerX += worldBefore.X - worldAfter.X;
-            centerY += worldBefore.Y - newWorldPosition.Y;
+            centerY += worldBefore.Y - worldAfter.Y;
             panStart = e.Location; // Обновляем начальную точку панорамирования для следующего шага.
             canvasSerpinsky.Invalidate(); // Запрашиваем перерисовку для визуального обновления.
             ScheduleRender(); // Планируем новый рендеринг с учетом нового центра.
