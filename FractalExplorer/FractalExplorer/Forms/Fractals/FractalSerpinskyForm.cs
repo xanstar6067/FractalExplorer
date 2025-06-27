@@ -4,6 +4,7 @@ using FractalExplorer.SelectorsForms;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System.Diagnostics; // Добавлено для Stopwatch
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -33,6 +34,7 @@ namespace FractalExplorer
         private Point panStart;
         private bool panning = false;
 
+        private string _baseTitle; // Поле для хранения базового заголовка окна
         private SerpinskyPaletteManager _paletteManager;
         private ColorConfigurationSerpinskyForm _colorConfigForm;
         #endregion
@@ -74,6 +76,7 @@ namespace FractalExplorer
             // Подписываемся на события формы и элементов управления.
             Load += (s, e) =>
             {
+                _baseTitle = this.Text; // Сохраняем исходный заголовок
                 renderedCenterX = centerX;
                 renderedCenterY = centerY;
                 renderedZoom = currentZoom;
@@ -278,6 +281,8 @@ namespace FractalExplorer
                 return;
             }
 
+            var stopwatch = Stopwatch.StartNew(); // Запуск секундомера
+
             isRenderingPreview = true;
             SetMainControlsEnabled(false);
             UpdateAbortButtonState();
@@ -325,10 +330,15 @@ namespace FractalExplorer
                 renderedCenterY = centerY;
                 canvasSerpinsky.Invalidate(); // Запрашиваем перерисовку элемента управления.
                 oldImage?.Dispose(); // Освобождаем ресурсы старого битмапа.
+
+                stopwatch.Stop(); // Остановка секундомера после успешного рендеринга
+                double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                this.Text = $"{_baseTitle} - Время последнего рендера: {elapsedSeconds:F3} сек."; // Обновление заголовка
             }
             catch (OperationCanceledException)
             {
                 // Игнорируем исключение отмены, так как это ожидаемое поведение при отмене рендеринга.
+                // Не обновляем заголовок, если рендеринг был отменен.
             }
             catch (Exception ex)
             {
@@ -454,7 +464,7 @@ namespace FractalExplorer
             PointF worldBefore = ScreenToWorld(panStart, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
             PointF worldAfter = ScreenToWorld(e.Location, canvasSerpinsky.Width, canvasSerpinsky.Height, currentZoom, centerX, centerY);
             centerX += worldBefore.X - worldAfter.X;
-            centerY += worldBefore.Y - worldAfter.Y;
+            centerY += worldBefore.Y - newWorldPosition.Y;
             panStart = e.Location; // Обновляем начальную точку панорамирования для следующего шага.
             canvasSerpinsky.Invalidate(); // Запрашиваем перерисовку для визуального обновления.
             ScheduleRender(); // Планируем новый рендеринг с учетом нового центра.
@@ -582,6 +592,7 @@ namespace FractalExplorer
 
                 try
                 {
+                    var stopwatch = Stopwatch.StartNew(); // Запуск секундомера
                     Bitmap highResBitmap = await Task.Run(() =>
                     {
                         var bitmap = new Bitmap(outputWidth, outputHeight, PixelFormat.Format32bppArgb);
@@ -595,9 +606,11 @@ namespace FractalExplorer
                         bitmap.UnlockBits(bmpData);
                         return bitmap;
                     }, token);
+                    stopwatch.Stop(); // Остановка секундомера
 
                     highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                    MessageBox.Show("Изображение сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                    MessageBox.Show($"Изображение сохранено!\nВремя рендеринга: {elapsedSeconds:F3} сек.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     highResBitmap.Dispose();
                 }
                 catch (OperationCanceledException)
