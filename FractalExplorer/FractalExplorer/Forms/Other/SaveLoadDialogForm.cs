@@ -284,14 +284,12 @@ namespace FractalExplorer.Forms
         /// <returns>Массив байтов, представляющий данные пикселей для запрошенной плитки.</returns>
         private async Task<byte[]> GetOrRenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
-            // Уникальный идентификатор состояния для кэширования. Используем Ticks для максимальной точности.
             string currentStateIdentifier = $"{state.FractalType}_{state.SaveName}_{state.Timestamp.Ticks}";
             var tileCoord = new Point(tile.Bounds.X, tile.Bounds.Y);
 
             // Шаг 1: Проверка и инициализация кеша
             lock (_previewCacheLock)
             {
-                // Если идентификатор состояния изменился, сбрасываем кеш
                 if (_cachedPreviewStateIdentifier != currentStateIdentifier)
                 {
                     _cachedFullPreviewBitmap?.Dispose();
@@ -304,7 +302,6 @@ namespace FractalExplorer.Forms
             bool needsRender;
             lock (_previewCacheLock)
             {
-                // Проверяем, была ли эта плитка уже отрендерена и сохранена в кеш
                 needsRender = !_renderedTilesCache.Contains(tileCoord);
             }
 
@@ -313,22 +310,27 @@ namespace FractalExplorer.Forms
             // Шаг 2: Рендеринг (если нужно) и обновление кеша
             if (needsRender)
             {
-                // Рендерим плитку, так как ее нет в кеше. Эта операция происходит вне блокировки.
                 tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize);
 
-                // Повторно блокируем, чтобы безопасно обновить общий кеш
                 lock (_previewCacheLock)
                 {
-                    // Проверяем еще раз, на случай если другой поток успел отрендерить эту плитку, пока мы были заняты
                     if (!_renderedTilesCache.Contains(tileCoord))
                     {
-                        // Копируем свежеотрендеренные данные плитки в общий кешированный битмап
-                        var bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
-                        Marshal.Copy(tileBuffer, 0, bmpData.Scan0, tileBuffer.Length);
-                        _cachedFullPreviewBitmap.UnlockBits(bmpData);
+                        // --- НАЧАЛО ИСПРАВЛЕНИЯ: Корректное построчное копирование в кеш ---
+                        BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
+                        int bytesPerPixel = 4;
+                        int tileRowBytes = tile.Bounds.Width * bytesPerPixel;
 
-                        // Помечаем плитку как отрендеренную
+                        for (int y = 0; y < tile.Bounds.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            int sourceOffset = y * tileRowBytes;
+                            Marshal.Copy(tileBuffer, sourceOffset, destPtr, tileRowBytes);
+                        }
+
+                        _cachedFullPreviewBitmap.UnlockBits(bmpData);
                         _renderedTilesCache.Add(tileCoord);
+                        // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
                     }
                 }
             }
@@ -338,10 +340,20 @@ namespace FractalExplorer.Forms
                 tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 lock (_previewCacheLock)
                 {
-                    // Плитка уже есть в кеше, просто копируем ее данные из _cachedFullPreviewBitmap
-                    var bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.ReadOnly, _cachedFullPreviewBitmap.PixelFormat);
-                    Marshal.Copy(bmpData.Scan0, tileBuffer, 0, tileBuffer.Length);
+                    // --- НАЧАЛО ИСПРАВЛЕНИЯ: Корректное построчное чтение из кеша ---
+                    BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.ReadOnly, _cachedFullPreviewBitmap.PixelFormat);
+                    int bytesPerPixel = 4;
+                    int tileRowBytes = tile.Bounds.Width * bytesPerPixel;
+
+                    for (int y = 0; y < tile.Bounds.Height; y++)
+                    {
+                        IntPtr sourcePtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                        int destOffset = y * tileRowBytes;
+                        Marshal.Copy(sourcePtr, tileBuffer, destOffset, tileRowBytes);
+                    }
+
                     _cachedFullPreviewBitmap.UnlockBits(bmpData);
+                    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
                 }
             }
 
