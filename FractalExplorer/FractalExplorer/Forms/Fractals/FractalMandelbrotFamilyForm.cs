@@ -1755,6 +1755,16 @@ namespace FractalDraving
         /// <param name="totalHeight">Общая высота всего превью.</param>
         /// <param name="tileSize">Размер одной плитки (ширина и высота).</param>
         /// <returns>Массив байтов, представляющий данные пикселей отрендеренной плитки.</returns>
+        /// <summary>
+        /// Асинхронно рендерит плитку превью для заданного состояния фрактала.
+        /// Этот метод используется для генерации миниатюр в диалоге сохранения/загрузки.
+        /// </summary>
+        /// <param name="stateBase">Базовый объект состояния фрактала, содержащий параметры для рендеринга.</param>
+        /// <param name="tile">Информация о плитке для рендеринга.</param>
+        /// <param name="totalWidth">Общая ширина всего превью.</param>
+        /// <param name="totalHeight">Общая высота всего превью.</param>
+        /// <param name="tileSize">Размер одной плитки (ширина и высота).</param>
+        /// <returns>Массив байтов, представляющий данные пикселей отрендеренной плитки.</returns>
         public virtual async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return await Task.Run(() =>
@@ -1820,19 +1830,10 @@ namespace FractalDraving
                     previewEngine.MaxColorIterations = Math.Max(1, paletteForPreview.Colors.Count);
                 }
 
-                // Получаем фактор SSAA из UI для рендеринга превью
-                int ssaaFactor = GetSelectedSsaaFactor();
-
-                if (ssaaFactor > 1)
-                {
-                    // Если включен SSAA, рендерим плитку с суперсэмплингом
-                    return previewEngine.RenderSingleTileSSAA(tile, totalWidth, totalHeight, ssaaFactor, out _);
-                }
-                else
-                {
-                    // Иначе используем стандартный рендеринг
-                    return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
-                }
+                // --- ИСПРАВЛЕНИЕ ---
+                // Для рендеринга миниатюр всегда используем стандартный метод без SSAA.
+                // Это обеспечивает высокую скорость генерации и устраняет зависимость от UI.
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
 
