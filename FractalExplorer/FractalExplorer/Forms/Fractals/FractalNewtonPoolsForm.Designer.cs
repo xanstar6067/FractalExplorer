@@ -117,25 +117,25 @@
             panel2.Controls.Add(richTextDebugOutput);
             panel2.Controls.Add(label1);
             panel2.Dock = DockStyle.Bottom;
-            panel2.Location = new Point(0, 427);
+            panel2.Location = new Point(0, 377);
             panel2.Name = "panel2";
-            panel2.Size = new Size(231, 209);
+            panel2.Size = new Size(231, 259);
             panel2.TabIndex = 40;
             // 
             // panel5
             // 
             panel5.Controls.Add(cbSelector);
             panel5.Dock = DockStyle.Bottom;
-            panel5.Location = new Point(0, 21);
+            panel5.Location = new Point(0, 24);
             panel5.Name = "panel5";
-            panel5.Size = new Size(231, 24);
+            panel5.Size = new Size(231, 26);
             panel5.TabIndex = 41;
             // 
             // cbSelector
             // 
             cbSelector.Dock = DockStyle.Bottom;
             cbSelector.FormattingEnabled = true;
-            cbSelector.Location = new Point(0, 1);
+            cbSelector.Location = new Point(0, 3);
             cbSelector.Name = "cbSelector";
             cbSelector.Size = new Size(231, 23);
             cbSelector.TabIndex = 34;
@@ -144,9 +144,9 @@
             // 
             panel4.Controls.Add(richTextInput);
             panel4.Dock = DockStyle.Bottom;
-            panel4.Location = new Point(0, 45);
+            panel4.Location = new Point(0, 50);
             panel4.Name = "panel4";
-            panel4.Size = new Size(231, 64);
+            panel4.Size = new Size(231, 109);
             panel4.TabIndex = 41;
             // 
             // richTextInput
@@ -154,7 +154,7 @@
             richTextInput.Dock = DockStyle.Fill;
             richTextInput.Location = new Point(0, 0);
             richTextInput.Name = "richTextInput";
-            richTextInput.Size = new Size(231, 64);
+            richTextInput.Size = new Size(231, 109);
             richTextInput.TabIndex = 33;
             richTextInput.Text = "";
             // 
@@ -162,7 +162,7 @@
             // 
             panel3.Controls.Add(label2);
             panel3.Dock = DockStyle.Bottom;
-            panel3.Location = new Point(0, 109);
+            panel3.Location = new Point(0, 159);
             panel3.Name = "panel3";
             panel3.Size = new Size(231, 23);
             panel3.TabIndex = 37;
@@ -179,7 +179,7 @@
             // richTextDebugOutput
             // 
             richTextDebugOutput.Dock = DockStyle.Bottom;
-            richTextDebugOutput.Location = new Point(0, 132);
+            richTextDebugOutput.Location = new Point(0, 182);
             richTextDebugOutput.Name = "richTextDebugOutput";
             richTextDebugOutput.ReadOnly = true;
             richTextDebugOutput.Size = new Size(231, 77);
