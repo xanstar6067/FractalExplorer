@@ -48,6 +48,7 @@
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
             canvas = new PictureBox();
+            cbSSAA = new ComboBox();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
@@ -64,6 +65,7 @@
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(cbSSAA);
             pnlControls.Controls.Add(btnStateManager);
             pnlControls.Controls.Add(color_configurations);
             pnlControls.Controls.Add(mandelbrotPreviewPanel);
@@ -223,9 +225,9 @@
             // 
             // btnSaveHighRes
             // 
-            btnSaveHighRes.Location = new Point(28, 216);
+            btnSaveHighRes.Location = new Point(11, 216);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(164, 23);
+            btnSaveHighRes.Size = new Size(106, 23);
             btnSaveHighRes.TabIndex = 11;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
@@ -314,7 +316,7 @@
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(0, 216);
+            nudBaseScale.Location = new Point(195, 46);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
             nudBaseScale.Size = new Size(26, 23);
@@ -330,6 +332,14 @@
             canvas.Size = new Size(853, 636);
             canvas.TabIndex = 1;
             canvas.TabStop = false;
+            // 
+            // cbSSAA
+            // 
+            cbSSAA.FormattingEnabled = true;
+            cbSSAA.Location = new Point(123, 216);
+            cbSSAA.Name = "cbSSAA";
+            cbSSAA.Size = new Size(95, 23);
+            cbSSAA.TabIndex = 35;
             // 
             // FractalMandelbrotFamilyForm
             // 
@@ -386,5 +396,6 @@
         // Этот контрол нужен для IFractalForm, но он невидимый.
         protected System.Windows.Forms.NumericUpDown nudBaseScale;
         private Button btnStateManager;
+        private ComboBox cbSSAA;
     }
 }

@@ -166,8 +166,220 @@ namespace FractalExplorer.Engines
             return buffer;
         }
 
+        #region Supersampling (SSAA) Implementation
+
         /// <summary>
-        /// Рендерит фрактал в новый объект Bitmap, используя параллельные вычисления.
+        /// Отрисовывает одну плитку (тайл) с использованием суперсэмплинга (SSAA) для сглаживания.
+        /// </summary>
+        /// <param name="tile">Информация о плитке (ее финальные координаты и размер).</param>
+        /// <param name="canvasWidth">Общая финальная ширина холста.</param>
+        /// <param name="canvasHeight">Общая финальная высота холста.</param>
+        /// <param name="supersamplingFactor">Фактор суперсэмплинга (например, 2 для 2x2 SSAA).</param>
+        /// <param name="bytesPerPixel">Выходной параметр, возвращающий количество байтов на пиксель (всегда 4).</param>
+        /// <returns>Массив байт с усредненными данными пикселей для плитки.</returns>
+        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
+        {
+            bytesPerPixel = 4; // Используем 4 байта на пиксель для поддержки формата 32bppArgb (B, G, R, A)
+
+            // Если суперсэмплинг не требуется, вызываем обычный, более быстрый метод.
+            if (supersamplingFactor <= 1)
+            {
+                return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
+            }
+
+            // --- 1. Первый проход: рендеринг в высоком разрешении ---
+
+            // Размеры плитки в высоком разрешении
+            int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
+            int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
+
+            // Временный буфер для хранения цветов каждого субпикселя этой плитки
+            Color[,] highResColorBuffer = new Color[highResTileWidth, highResTileHeight];
+
+            // Размеры всего холста в высоком разрешении
+            long highResCanvasWidth = (long)canvasWidth * supersamplingFactor;
+            long highResCanvasHeight = (long)canvasHeight * supersamplingFactor;
+
+            // Единицы комплексной плоскости на один субпиксель
+            decimal unitsPerSubPixel = Scale / highResCanvasWidth;
+
+            // Половина размеров холста в субпикселях для центрирования
+            decimal highResHalfWidthPixels = highResCanvasWidth / 2.0m;
+            decimal highResHalfHeightPixels = highResCanvasHeight / 2.0m;
+
+            // Параллельный рендеринг субпикселей внутри плитки
+            Parallel.For(0, highResTileHeight, y =>
+            {
+                for (int x = 0; x < highResTileWidth; x++)
+                {
+                    // Вычисляем глобальные координаты субпикселя на всем холсте высокого разрешения
+                    long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
+                    long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
+
+                    // Преобразуем глобальные координаты субпикселя в комплексные координаты
+                    decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                    decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel; // Y инвертирован
+
+                    int iterVal = GetIterationsForPoint(re, im);
+                    highResColorBuffer[x, y] = Palette(iterVal, MaxIterations, MaxColorIterations);
+                }
+            });
+
+            // --- 2. Второй проход: усреднение (Downsampling) ---
+
+            // Финальный буфер для усредненных пикселей плитки
+            byte[] finalTileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
+            int sampleCount = supersamplingFactor * supersamplingFactor;
+
+            for (int finalY = 0; finalY < tile.Bounds.Height; finalY++)
+            {
+                for (int finalX = 0; finalX < tile.Bounds.Width; finalX++)
+                {
+                    // Используем long для сумм, чтобы избежать переполнения при больших факторах SSAA
+                    long totalR = 0, totalG = 0, totalB = 0;
+
+                    int startSubX = finalX * supersamplingFactor;
+                    int startSubY = finalY * supersamplingFactor;
+
+                    // Собираем цвета всех субпикселей для текущего финального пикселя
+                    for (int subY = 0; subY < supersamplingFactor; subY++)
+                    {
+                        for (int subX = 0; subX < supersamplingFactor; subX++)
+                        {
+                            Color pixelColor = highResColorBuffer[startSubX + subX, startSubY + subY];
+                            totalR += pixelColor.R;
+                            totalG += pixelColor.G;
+                            totalB += pixelColor.B;
+                        }
+                    }
+
+                    // Усредняем и записываем в финальный буфер
+                    int bufferIndex = (finalY * tile.Bounds.Width + finalX) * bytesPerPixel;
+                    finalTileBuffer[bufferIndex] = (byte)(totalB / sampleCount);
+                    finalTileBuffer[bufferIndex + 1] = (byte)(totalG / sampleCount);
+                    finalTileBuffer[bufferIndex + 2] = (byte)(totalR / sampleCount);
+                    finalTileBuffer[bufferIndex + 3] = 255; // Alpha-канал
+                }
+            }
+
+            return finalTileBuffer;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Рендерит фрактал в новый объект Bitmap, используя суперсэмплинг для улучшения качества.
+        /// </summary>
+        /// <param name="finalWidth">Финальная ширина генерируемого изображения в пикселях.</param>
+        /// <param name="finalHeight">Финальная высота генерируемого изображения в пикселях.</param>
+        /// <param name="numThreads">Количество потоков для использования в параллельных вычислениях.</param>
+        /// <param name="reportProgressCallback">Callback-функция для отчета о прогрессе рендеринга (значение от 0 до 100).</param>
+        /// <param name="supersamplingFactor">Фактор суперсэмплинга (1 = выкл, 2 = 4 сэмпла/пиксель, 3 = 9 сэмплов/пиксель).</param>
+        /// <returns>Объект Bitmap, содержащий отрисованный фрактал с анти-алиасингом.</returns>
+        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor)
+        {
+            if (finalWidth <= 0 || finalHeight <= 0)
+            {
+                return new Bitmap(1, 1);
+            }
+
+            // Если суперсэмплинг не требуется, вызываем обычный, более быстрый метод.
+            if (supersamplingFactor <= 1)
+            {
+                return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback);
+            }
+
+            // --- 1. Первый проход: рендеринг в высоком разрешении ---
+            int highResWidth = finalWidth * supersamplingFactor;
+            int highResHeight = finalHeight * supersamplingFactor;
+
+            // Временный буфер для хранения цветов каждого субпикселя
+            Color[,] tempColorBuffer = new Color[highResWidth, highResHeight];
+
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+            long doneLines = 0;
+
+            // Единицы комплексной плоскости на пиксель рассчитываются относительно ФИНАЛЬНОЙ ширины
+            decimal unitsPerPixel = Scale / finalWidth;
+
+            Parallel.For(0, highResHeight, po, y =>
+            {
+                for (int x = 0; x < highResWidth; x++)
+                {
+                    // Вычисляем координаты для каждого субпикселя
+                    decimal re = CenterX + (x - highResWidth / 2.0m) * (unitsPerPixel / supersamplingFactor);
+                    decimal im = CenterY - (y - highResHeight / 2.0m) * (unitsPerPixel / supersamplingFactor);
+
+                    int iterVal = GetIterationsForPoint(re, im);
+                    tempColorBuffer[x, y] = Palette(iterVal, MaxIterations, MaxColorIterations);
+                }
+
+                long currentDone = Interlocked.Increment(ref doneLines);
+                // Прогресс-бар обновляется на основе рендера в высоком разрешении (это занимает основное время)
+                if (highResHeight > 0)
+                {
+                    // Делим прогресс на 2, так как будет еще второй проход (усреднение)
+                    reportProgressCallback((int)(50.0 * currentDone / highResHeight));
+                }
+            });
+
+            // --- 2. Второй проход: усреднение (Downsampling) ---
+            Bitmap bmp = new Bitmap(finalWidth, finalHeight, PixelFormat.Format24bppRgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, finalWidth, finalHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            int stride = bmpData.Stride;
+            byte[] finalBuffer = new byte[Math.Abs(stride) * finalHeight];
+            int sampleCount = supersamplingFactor * supersamplingFactor;
+
+            doneLines = 0;
+
+            Parallel.For(0, finalHeight, po, finalY =>
+            {
+                int rowOffset = finalY * stride;
+                for (int finalX = 0; finalX < finalWidth; finalX++)
+                {
+                    // Используем long для сумм, чтобы избежать переполнения на больших факторах SSAA
+                    long totalR = 0, totalG = 0, totalB = 0;
+
+                    int startX = finalX * supersamplingFactor;
+                    int startY = finalY * supersamplingFactor;
+
+                    // Собираем цвета всех субпикселей для текущего финального пикселя
+                    for (int subY = 0; subY < supersamplingFactor; subY++)
+                    {
+                        for (int subX = 0; subX < supersamplingFactor; subX++)
+                        {
+                            Color pixelColor = tempColorBuffer[startX + subX, startY + subY];
+                            totalR += pixelColor.R;
+                            totalG += pixelColor.G;
+                            totalB += pixelColor.B;
+                        }
+                    }
+
+                    // Усредняем и записываем в финальный буфер
+                    int index = rowOffset + finalX * 3;
+                    finalBuffer[index] = (byte)(totalB / sampleCount);
+                    finalBuffer[index + 1] = (byte)(totalG / sampleCount);
+                    finalBuffer[index + 2] = (byte)(totalR / sampleCount);
+                }
+
+                long currentDone = Interlocked.Increment(ref doneLines);
+                if (finalHeight > 0)
+                {
+                    // Вторая половина прогресса
+                    reportProgressCallback(50 + (int)(50.0 * currentDone / finalHeight));
+                }
+            });
+
+            Marshal.Copy(finalBuffer, 0, bmpData.Scan0, finalBuffer.Length);
+            bmp.UnlockBits(bmpData);
+
+            return bmp;
+        }
+
+        
+
+        /// <summary>
+        /// Рендерит фрактал в новый объект Bitmap, используя параллельные вычисления (без суперсэмплинга).
         /// </summary>
         /// <param name="renderWidth">Ширина генерируемого изображения в пикселях.</param>
         /// <param name="renderHeight">Высота генерируемого изображения в пикселях.</param>
