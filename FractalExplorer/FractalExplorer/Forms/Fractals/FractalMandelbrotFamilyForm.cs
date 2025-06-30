@@ -1,6 +1,4 @@
-﻿// --- НАЧАЛО ФАЙЛА FractalMandelbrotFamilyForm.cs ---
-
-using FractalExplorer.Engines;
+﻿using FractalExplorer.Engines;
 using FractalExplorer.Forms;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
@@ -25,32 +23,129 @@ namespace FractalDraving
     {
         #region Fields
 
+        /// <summary>
+        /// Компонент для визуализации процесса рендеринга плиток.
+        /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
+
+        /// <summary>
+        /// Менеджер палитр, используемый этой формой для управления цветовыми схемами.
+        /// </summary>
         private ColorPaletteMandelbrotFamily _paletteManager;
+
+        /// <summary>
+        /// Форма конфигурации палитр, связанная с этой формой, для настройки цветов.
+        /// </summary>
         private ColorConfigurationMandelbrotFamilyForm _colorConfigForm;
+
+        /// <summary>
+        /// Размер одной плитки (тайла) в пикселях для пошагового рендеринга.
+        /// Использование плиток позволяет отображать прогресс и быстрее реагировать на отмену.
+        /// </summary>
         private const int TILE_SIZE = 32;
+
+        /// <summary>
+        /// Объект для блокировки доступа к битмапам во время операций рендеринга,
+        /// чтобы предотвратить состояния гонки при модификации пикселей из разных потоков.
+        /// </summary>
         private readonly object _bitmapLock = new object();
+
+        /// <summary>
+        /// Битмап, содержащий отрисованное изображение для предпросмотра фрактала.
+        /// Это изображение может быть интерполировано при изменении масштаба или панорамирования до полного рендеринга.
+        /// </summary>
         private Bitmap _previewBitmap;
+
+        /// <summary>
+        /// Битмап, в который в текущий момент происходит рендеринг плиток.
+        /// Он отображается поверх <see cref="_previewBitmap"/> по мере готовности плиток.
+        /// </summary>
         private Bitmap _currentRenderingBitmap;
+
+        /// <summary>
+        /// Токен отмены для операций рендеринга предпросмотра.
+        /// Позволяет досрочно завершить рендеринг, например, при изменении параметров.
+        /// </summary>
         private CancellationTokenSource _previewRenderCts;
+
+        /// <summary>
+        /// Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении для сохранения в файл.
+        /// Этот режим блокирует интерактивные действия, чтобы обеспечить стабильность рендеринга.
+        /// </summary>
         private volatile bool _isHighResRendering = false;
+
+        /// <summary>
+        /// Флаг, указывающий, выполняется ли сейчас рендеринг предпросмотра.
+        /// Используется для предотвращения одновременного запуска нескольких операций рендеринга превью.
+        /// </summary>
         private volatile bool _isRenderingPreview = false;
+
+        /// <summary>
+        /// Экземпляр движка для рендеринга фрактала, содержащий основную логику вычислений.
+        /// </summary>
         protected FractalMandelbrotFamilyEngine _fractalEngine;
+
+        /// <summary>
+        /// Текущий коэффициент масштабирования фрактала.
+        /// Меньшее значение соответствует большему увеличению.
+        /// </summary>
         protected decimal _zoom = 1.0m;
+
+        /// <summary>
+        /// Текущая координата X (реальная часть) центра видимой области фрактала.
+        /// </summary>
         protected decimal _centerX = 0.0m;
+
+        /// <summary>
+        /// Текущая координата Y (мнимая часть) центра видимой области фрактала.
+        /// </summary>
         protected decimal _centerY = 0.0m;
+
+        /// <summary>
+        /// Координата X центра, по которой был отрисован текущий <see cref="_previewBitmap"/>.
+        /// Используется для корректной интерполяции изображения при панорамировании/масштабировании.
+        /// </summary>
         private decimal _renderedCenterX;
+
+        /// <summary>
+        /// Координата Y центра, по которой был отрисован текущий <see cref="_previewBitmap"/>.
+        /// Используется для корректной интерполяции изображения при панорамировании/масштабировании.
+        /// </summary>
         private decimal _renderedCenterY;
+
+        /// <summary>
+        /// Коэффициент масштабирования, по которому был отрисован текущий <see cref="_previewBitmap"/>.
+        /// Используется для корректной интерполяции изображения при панорамировании/масштабировании.
+        /// </summary>
         private decimal _renderedZoom;
+
+        /// <summary>
+        /// Начальная позиция курсора мыши при инициировании панорамирования.
+        /// </summary>
         private Point _panStart;
+
+        /// <summary>
+        /// Флаг, указывающий, находится ли пользователь в режиме панорамирования.
+        /// </summary>
         private bool _panning = false;
+
+        /// <summary>
+        /// Таймер для отложенного запуска рендеринга.
+        /// Это позволяет агрегировать быстрые изменения параметров (например, ввод с ползунка)
+        /// и запускать рендеринг только после небольшой паузы, снижая нагрузку на CPU.
+        /// </summary>
         private System.Windows.Forms.Timer _renderDebounceTimer;
+
         private string _baseTitle;
 
         #endregion
 
         #region Constructor
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="FractalMandelbrotFamilyForm"/>.
+        /// Устанавливает начальные координаты центра фрактала.
+        /// </summary>
         protected FractalMandelbrotFamilyForm()
         {
             InitializeComponent();
@@ -62,18 +157,55 @@ namespace FractalDraving
 
         #region Protected Abstract/Virtual Methods
 
+        /// <summary>
+        /// Абстрактный метод, который должен быть реализован в производных классах
+        /// для создания конкретного экземпляра движка фрактала, специфичного для данного фрактала.
+        /// </summary>
+        /// <returns>Экземпляр <see cref="FractalMandelbrotFamilyEngine"/>.</returns>
         protected abstract FractalMandelbrotFamilyEngine CreateEngine();
+
+        /// <summary>
+        /// Получает базовый масштаб для фрактала. Этот параметр определяет "размер" фрактала по умолчанию в комплексной плоскости.
+        /// </summary>
         protected virtual decimal BaseScale => 3.0m;
+
+        /// <summary>
+        /// Получает начальную координату X (реальную часть) центра фрактала.
+        /// </summary>
         protected virtual decimal InitialCenterX => -0.5m;
+
+        /// <summary>
+        /// Получает начальную координату Y (мнимая часть) центра фрактала.
+        /// </summary>
         protected virtual decimal InitialCenterY => 0.0m;
+
+        /// <summary>
+        /// Виртуальный метод, который может быть переопределен в производных классах
+        /// для обновления специфических параметров движка фрактала, которые не являются общими для всего семейства.
+        /// </summary>
         protected virtual void UpdateEngineSpecificParameters() { }
+
+        /// <summary>
+        /// Виртуальный метод, вызываемый после завершения инициализации формы и всех ее компонентов.
+        /// Может быть переопределен для дополнительной настройки UI или логики.
+        /// </summary>
         protected virtual void OnPostInitialize() { }
+
+        /// <summary>
+        /// Виртуальный метод для получения дополнительных деталей для имени файла сохранения.
+        /// Может быть переопределен в дочерних классах для включения специфичных для фрактала параметров в имя файла.
+        /// </summary>
+        /// <returns>Строка с деталями фрактала.</returns>
         protected virtual string GetSaveFileNameDetails() => "fractal";
 
         #endregion
 
         #region UI Initialization
 
+        /// <summary>
+        /// Инициализирует элементы управления формы, устанавливая их начальные значения и диапазоны.
+        /// Настраивает количество доступных потоков для рендеринга, диапазоны итераций и порогов.
+        /// </summary>
         private void InitializeControls()
         {
             int cores = Environment.ProcessorCount;
@@ -116,8 +248,13 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Инициализирует обработчики событий для различных элементов управления формы.
+        /// Включает обработку изменений параметров, действий мыши на холсте, кнопок и закрытия формы.
+        /// </summary>
         private void InitializeEventHandlers()
         {
+            // Обработчики изменений параметров, которые должны вызвать перерисовку.
             nudIterations.ValueChanged += ParamControl_Changed;
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
@@ -131,15 +268,18 @@ namespace FractalDraving
                 nudIm.ValueChanged += ParamControl_Changed;
             }
 
+            // Обработчики нажатий кнопок.
             btnRender.Click += (s, e) => ScheduleRender();
             btnSaveHighRes.Click += btnSave_Click;
 
+            // Динамический поиск кнопки конфигурации цвета для более гибкой архитектуры.
             var configButton = Controls.Find("color_configurations", true).FirstOrDefault();
             if (configButton != null)
             {
                 configButton.Click += color_configurations_Click;
             }
 
+            // Обработчики событий мыши и изменения размера для канваса фрактала.
             canvas.MouseWheel += Canvas_MouseWheel;
             canvas.MouseDown += Canvas_MouseDown;
             canvas.MouseMove += Canvas_MouseMove;
@@ -147,17 +287,21 @@ namespace FractalDraving
             canvas.Paint += Canvas_Paint;
             canvas.Resize += (s, e) =>
             {
+                // Запускаем рендеринг при изменении размера окна, если оно не свернуто,
+                // чтобы изображение соответствовало новым размерам.
                 if (WindowState != FormWindowState.Minimized)
                 {
                     ScheduleRender();
                 }
             };
 
+            // Обработчик события закрытия формы для освобождения ресурсов.
             FormClosed += (s, e) =>
             {
                 _renderDebounceTimer?.Stop();
                 _renderDebounceTimer?.Dispose();
 
+                // Отменяем активные операции рендеринга и даем им немного времени на завершение.
                 if (_previewRenderCts != null)
                 {
                     _previewRenderCts.Cancel();
@@ -165,6 +309,7 @@ namespace FractalDraving
                     _previewRenderCts.Dispose();
                 }
 
+                // Освобождаем ресурсы битмапов.
                 lock (_bitmapLock)
                 {
                     _previewBitmap?.Dispose();
@@ -173,6 +318,7 @@ namespace FractalDraving
                     _currentRenderingBitmap = null;
                 }
 
+                // Отписываемся от событий визуализатора и освобождаем его ресурсы.
                 if (_renderVisualizer != null)
                 {
                     _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
@@ -185,6 +331,13 @@ namespace FractalDraving
 
         #region Event Handlers
 
+        /// <summary>
+        /// Обработчик события загрузки формы.
+        /// Инициализирует менеджеры, движки, таймеры и элементы UI,
+        /// а также запускает первый рендеринг фрактала.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void FormBase_Load(object sender, EventArgs e)
         {
             _baseTitle = this.Text;
@@ -198,68 +351,113 @@ namespace FractalDraving
             InitializeControls();
             InitializeEventHandlers();
 
-            // Инициализация ComboBox для выбора качества SSAA
+            // Инициализация ComboBox для выбора качества SSAA.
+            // Ищем контрол по имени, чтобы код был независим от его точного расположения на форме.
             var cbSSAA = this.Controls.Find("cbSSAA", true).FirstOrDefault() as ComboBox;
             if (cbSSAA != null)
             {
+                // Добавляем понятные для пользователя пункты.
                 cbSSAA.Items.Add("Выкл (1x)");
                 cbSSAA.Items.Add("Низкое (2x)");
                 cbSSAA.Items.Add("Высокое (4x)");
+
+                // Устанавливаем значение по умолчанию.
                 cbSSAA.SelectedItem = "Выкл (1x)";
+
+                // Подписываемся на событие изменения выбора, чтобы запустить новый рендеринг.
                 cbSSAA.SelectedIndexChanged += (s, ev) => ScheduleRender();
             }
 
+            // Инициализация отображаемых параметров для корректной интерполяции
+            // на канвасе до выполнения первого рендеринга.
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
-            OnPostInitialize();
+            OnPostInitialize(); // Вызов виртуального метода для дочерних классов.
 
-            ApplyActivePalette();
-            ScheduleRender();
+            ApplyActivePalette(); // Применение активной палитры к движку.
+            ScheduleRender(); // Планирование первого рендеринга.
         }
 
+        /// <summary>
+        /// Обработчик события, когда визуализатор рендеринга запрашивает перерисовку канваса.
+        /// Используется для обновления визуализации плиток.
+        /// </summary>
         private void OnVisualizerNeedsRedraw()
         {
+            // Безопасно вызываем Invalidate() на UI потоке,
+            // чтобы перерисовать канвас и обновить визуализацию плиток.
             if (canvas.IsHandleCreated && !canvas.IsDisposed)
             {
                 canvas.BeginInvoke((Action)(() => canvas.Invalidate()));
             }
         }
 
+        /// <summary>
+        /// Обработчик события клика по кнопке конфигурации цвета.
+        /// Открывает или активирует форму настройки палитры для фрактала.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void color_configurations_Click(object sender, EventArgs e)
         {
+            // Создаем новую форму, если она еще не открыта или была закрыта.
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
                 _colorConfigForm = new ColorConfigurationMandelbrotFamilyForm(_paletteManager);
-                _colorConfigForm.PaletteApplied += OnPaletteApplied;
-                _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
+                _colorConfigForm.PaletteApplied += OnPaletteApplied; // Подписываемся на событие применения палитры.
+                _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null; // Обнуляем ссылку при закрытии формы.
                 _colorConfigForm.Show(this);
             }
             else
             {
-                _colorConfigForm.Activate();
+                _colorConfigForm.Activate(); // Если форма уже открыта, просто активируем ее.
             }
         }
 
+        /// <summary>
+        /// Обработчик события применения новой палитры.
+        /// Обновляет палитру движка фрактала и планирует новый рендеринг для отображения изменений.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void OnPaletteApplied(object sender, EventArgs e)
         {
-            ApplyActivePalette();
-            ScheduleRender();
+            ApplyActivePalette(); // Применяем выбранную палитру к движку.
+            ScheduleRender(); // Запускаем рендеринг с новой палитрой.
         }
 
+        /// <summary>
+        /// Обработчик события изменения любого параметра фрактала на панели управления.
+        /// Планирует новый рендеринг предпросмотра после небольшой задержки.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void ParamControl_Changed(object sender, EventArgs e)
         {
+            // Игнорируем изменения, если в данный момент выполняется рендеринг в высоком разрешении,
+            // чтобы избежать конфликтов и нестабильного поведения.
             if (_isHighResRendering)
             {
                 return;
             }
+
+            // Обновляем внутреннее значение зума, если оно изменилось через NumericUpDown.
+            // Это необходимо, чтобы избежать рекурсивного вызова при программном изменении nudZoom.Value.
             if (sender == nudZoom && nudZoom.Value != _zoom)
             {
                 _zoom = nudZoom.Value;
             }
-            ScheduleRender();
+            ScheduleRender(); // Планируем рендеринг, чтобы изменения вступили в силу.
         }
 
+        /// <summary>
+        /// Обработчик события прокрутки колеса мыши над канвасом.
+        /// Изменяет масштаб фрактала и обновляет центр таким образом,
+        /// чтобы точка под курсором оставалась на своем месте.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события колеса мыши.</param>
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
@@ -283,6 +481,12 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Обработчик события нажатия кнопки мыши над канвасом.
+        /// Инициирует режим панорамирования при нажатии левой кнопки мыши.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события мыши.</param>
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
@@ -294,6 +498,12 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Обработчик события перемещения мыши над канвасом.
+        /// Выполняет панорамирование фрактала, перемещая центр в соответствии с движением мыши.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события мыши.</param>
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning) return;
@@ -306,6 +516,12 @@ namespace FractalDraving
             ScheduleRender();
         }
 
+        /// <summary>
+        /// Обработчик события отпускания кнопки мыши над канвасом.
+        /// Завершает режим панорамирования при отпускании левой кнопки мыши.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события мыши.</param>
         private void Canvas_MouseUp(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
@@ -316,6 +532,13 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Обработчик события отрисовки канваса.
+        /// Отображает текущий предпросмотр фрактала и, при необходимости,
+        /// обновляющиеся плитки рендеринга поверх него.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события рисования.</param>
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
@@ -369,6 +592,13 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Обработчик события тика таймера задержки рендеринга.
+        /// Запускает рендеринг предпросмотра, выбирая метод (с SSAA или без)
+        /// на основе выбора пользователя в ComboBox.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
@@ -379,20 +609,29 @@ namespace FractalDraving
                 return;
             }
 
-            // ИСПРАВЛЕННАЯ ЛОГИКА: Вызываем GetSelectedSsaaFactor() для определения режима
+            // Получаем выбранный фактор SSAA
             int ssaaFactor = GetSelectedSsaaFactor();
-            this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x"; // Отладочный вывод в заголовок
+            // Обновляем заголовок для отладки, чтобы видеть, какой режим активен
+            this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x";
 
             if (ssaaFactor > 1)
             {
+                // Если выбран SSAA, вызываем соответствующий метод рендеринга
                 await StartPreviewRenderSSAA(ssaaFactor);
             }
             else
             {
+                // Иначе вызываем стандартный рендеринг
                 await StartPreviewRender();
             }
         }
 
+        /// <summary>
+        /// Обработчик события клика по кнопке сохранения изображения в высоком разрешении.
+        /// Запускает асинхронный процесс рендеринга и сохранения фрактала в PNG файл.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private async void btnSave_Click(object sender, EventArgs e)
         {
             if (_isHighResRendering)
@@ -431,7 +670,7 @@ namespace FractalDraving
                         renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
                         int threadCount = GetThreadCount();
 
-                        // ИСПРАВЛЕННАЯ ЛОГИКА: Используем GetSelectedSsaaFactor()
+                        // Получаем фактор SSAA из ComboBox для сохранения файла
                         int ssaaFactor = GetSelectedSsaaFactor();
 
                         var stopwatch = Stopwatch.StartNew();
@@ -472,6 +711,10 @@ namespace FractalDraving
 
         #region Rendering Logic
 
+        /// <summary>
+        /// Запускает процесс рендеринга предпросмотра с суперсэмплингом (SSAA).
+        /// </summary>
+        /// <param name="ssaaFactor">Фактор суперсэмплинга (2 для 2x, 4 для 4x).</param>
         private async Task StartPreviewRenderSSAA(int ssaaFactor)
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -608,6 +851,11 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Запускает процесс рендеринга предпросмотра фрактала в фоновом потоке.
+        /// Рендеринг выполняется по плиткам с отображением прогресса и возможностью отмены.
+        /// </summary>
+        /// <returns>Задача, представляющая асинхронную операцию рендеринга.</returns>
         private async Task StartPreviewRender()
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -743,6 +991,14 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Генерирует список плиток для рендеринга.
+        /// Плитки сортируются по удаленности от центра,
+        /// чтобы обеспечить более быстрый рендеринг центральной части.
+        /// </summary>
+        /// <param name="width">Общая ширина области рендеринга.</param>
+        /// <param name="height">Общая высота области рендеринга.</param>
+        /// <returns>Список объектов <see cref="TileInfo"/>.</returns>
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
@@ -754,9 +1010,16 @@ namespace FractalDraving
                     tiles.Add(new TileInfo(x, y, TILE_SIZE, TILE_SIZE));
                 }
             }
+            // Сортируем плитки, чтобы сначала рендерились те, что ближе к центру.
+            // Это улучшает визуальное восприятие прогресса рендеринга.
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 
+        /// <summary>
+        /// Планирует рендеринг предпросмотра, используя таймер задержки.
+        /// Это предотвращает избыточные рендеринги при частых изменениях параметров
+        /// (например, при перетаскивании ползунка), агрегируя запросы на рендеринг.
+        /// </summary>
         private void ScheduleRender()
         {
             if (_isHighResRendering || WindowState == FormWindowState.Minimized) return;
@@ -765,6 +1028,12 @@ namespace FractalDraving
             _renderDebounceTimer.Start();
         }
 
+        /// <summary>
+        /// Объединяет текущий рендеринг предпросмотра (<see cref="_currentRenderingBitmap"/>)
+        /// с существующим основным битмапом предпросмотра (<see cref="_previewBitmap"/>).
+        /// Эта операция "запекает" прогресс в основной битмап, что позволяет
+        /// плавно интерактивно перемещаться/масштабировать уже отрисованные части.
+        /// </summary>
         private void CommitAndBakePreview()
         {
             lock (_bitmapLock)
@@ -821,6 +1090,10 @@ namespace FractalDraving
             }
         }
 
+        /// <summary>
+        /// Обновляет параметры движка фрактала на основе текущих значений элементов управления.
+        /// Это гарантирует, что следующий рендеринг будет использовать актуальные настройки.
+        /// </summary>
         private void UpdateEngineParameters()
         {
             _fractalEngine.MaxIterations = (int)nudIterations.Value;
@@ -836,6 +1109,13 @@ namespace FractalDraving
 
         #region Palette Management
 
+        /// <summary>
+        /// Генерирует функцию палитры на основе выбранной палитры из менеджера.
+        /// Эта функция преобразует количество итераций точки в ее цвет.
+        /// </summary>
+        /// <param name="palette">Объект палитры, содержащий настройки цвета.</param>
+        /// <returns>Функция <c>Func<int, int, int, Color></c>, преобразующая количество итераций,
+        /// максимальное количество итераций и максимальное количество цветовых итераций в цвет.</returns>
         private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
         {
             if (palette.Name == "Стандартный серый")
@@ -873,6 +1153,13 @@ namespace FractalDraving
             };
         }
 
+        /// <summary>
+        /// Выполняет линейную интерполяцию между двумя цветами на основе коэффициента.
+        /// </summary>
+        /// <param name="a">Начальный цвет.</param>
+        /// <param name="b">Конечный цвет.</param>
+        /// <param name="t">Коэффициент интерполяции (от 0 до 1), где 0 - цвет A, 1 - цвет B.</param>
+        /// <returns>Интерполированный цвет.</returns>
         private Color LerpColor(Color a, Color b, double t)
         {
             t = Math.Max(0, Math.Min(1, t));
@@ -883,6 +1170,9 @@ namespace FractalDraving
                 (int)(a.B + (b.B - a.B) * t));
         }
 
+        /// <summary>
+        /// Применяет текущую активную палитру из менеджера палитр к движку фрактала.
+        /// </summary>
         private void ApplyActivePalette()
         {
             if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
@@ -1117,7 +1407,6 @@ namespace FractalDraving
                     previewEngine.MaxColorIterations = Math.Max(1, paletteForPreview.Colors.Count);
                 }
 
-                // Используем новый метод для рендера плитки с SSAA, если нужно
                 int ssaaFactor = GetSelectedSsaaFactor();
                 if (ssaaFactor > 1)
                 {
