@@ -1434,16 +1434,45 @@ namespace FractalDraving
         /// <returns>Целочисленный фактор SSAA (1, 2, 4 и т.д.).</returns>
         private int GetSelectedSsaaFactor()
         {
+            // Сначала найдем контрол. Этот вызов сам по себе обычно безопасен.
             var cbSSAA = this.Controls.Find("cbSSAA", true).FirstOrDefault() as ComboBox;
-            if (cbSSAA == null || cbSSAA.SelectedItem == null)
+            if (cbSSAA == null)
             {
-                return 1;
+                return 1; // Контрол не найден
             }
-            switch (cbSSAA.SelectedItem.ToString())
+
+            // Проверяем, находимся ли мы в потоке UI
+            if (cbSSAA.InvokeRequired)
             {
-                case "Низкое (2x)": return 2;
-                case "Высокое (4x)": return 4;
-                default: return 1;
+                // Мы в фоновом потоке. Нужно "попросить" основной поток выполнить код за нас.
+                // Invoke выполнит делегат в потоке UI и вернет результат.
+                return (int)cbSSAA.Invoke(new Func<int>(() =>
+                {
+                    if (cbSSAA.SelectedItem == null)
+                    {
+                        return 1;
+                    }
+                    switch (cbSSAA.SelectedItem.ToString())
+                    {
+                        case "Низкое (2x)": return 2;
+                        case "Высокое (4x)": return 4;
+                        default: return 1;
+                    }
+                }));
+            }
+            else
+            {
+                // Мы уже в потоке UI, можно безопасно обращаться к контролу.
+                if (cbSSAA.SelectedItem == null)
+                {
+                    return 1;
+                }
+                switch (cbSSAA.SelectedItem.ToString())
+                {
+                    case "Низкое (2x)": return 2;
+                    case "Высокое (4x)": return 4;
+                    default: return 1;
+                }
             }
         }
 
