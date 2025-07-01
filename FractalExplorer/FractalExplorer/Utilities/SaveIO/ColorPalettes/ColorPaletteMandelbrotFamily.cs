@@ -61,17 +61,30 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             File.WriteAllText(CUSTOM_PALETTES_FILE, json);
         }
 
+        /// <summary>
+        /// Создает коллекцию встроенных (предопределенных) цветовых палитр.
+        /// </summary>
+        /// <returns>Коллекция встроенных палитр.</returns>
         private IEnumerable<PaletteManagerMandelbrotFamily> CreateBuiltInPalettes()
         {
-            // ИЗМЕНЕНО: Добавлены параметры maxColorIterations и gamma
+            // ИЗМЕНЕНО: Возвращены отдельные палитры "Огонь" и "Лёд"
             return new List<PaletteManagerMandelbrotFamily>
             {
-                new("Стандартный серый", new List<Color>(), true, true, 800, 1.0),
-                new("Ультрафиолет", new List<Color> { Color.Black, Color.DarkViolet, Color.Violet, Color.White }, true, true, 1000, 1.2),
-                new("Огонь и лед", new List<Color> { Color.Black, Color.DarkBlue, Color.Cyan, Color.White, Color.Yellow, Color.Red, Color.DarkRed }, true, true, 400, 0.9),
-                new("Психоделика", new List<Color> { Color.Red, Color.Yellow, Color.Lime, Color.Cyan, Color.Blue, Color.Magenta }, false, true, 6, 1.0),
-                new("Черно-белый", new List<Color> { Color.Black, Color.White }, false, true, 2, 1.0),
-                new("Сепия", new List<Color> { Color.FromArgb(20, 10, 0), Color.FromArgb(255, 240, 192) }, true, true, 500, 1.0)
+                new("Стандартный серый", new List<Color>(), true, true, 800, 1.0, false),
+                new("Ультрафиолет", new List<Color> { Color.Black, Color.DarkViolet, Color.Violet, Color.White }, true, true, 1000, 1.2, false),
+                
+                // НОВОЕ: Возвращена палитра "Огонь"
+                new("Огонь", new List<Color> { Color.Black, Color.DarkRed, Color.Red, Color.Orange, Color.Yellow, Color.White }, true, true, 400, 0.9, false),
+                
+                // НОВОЕ: Возвращена палитра "Лёд"
+                new("Лёд", new List<Color> { Color.Black, Color.DarkBlue, Color.Blue, Color.Cyan, Color.White }, true, true, 500, 1.2, false),
+
+                // Наша новая комбинированная палитра
+                new("Огонь и лед", new List<Color> { Color.Black, Color.DarkBlue, Color.Cyan, Color.White, Color.Yellow, Color.Red, Color.DarkRed }, true, true, 700, 1.0, false),
+
+                new("Психоделика", new List<Color> { Color.Red, Color.Yellow, Color.Lime, Color.Cyan, Color.Blue, Color.Magenta }, false, true, 6, 1.0, false),
+                new("Черно-белый", new List<Color> { Color.Black, Color.White }, false, true, 2, 1.0, false),
+                new("Сепия", new List<Color> { Color.FromArgb(20, 10, 0), Color.FromArgb(255, 240, 192) }, true, true, 500, 1.0, false)
             };
         }
     }
