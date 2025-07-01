@@ -271,7 +271,7 @@ namespace FractalDraving
 
             // Обработчики нажатий кнопок.
             btnRender.Click += (s, e) => ScheduleRender();
-            btnSaveHighRes.Click += btnSave_Click;
+            btnSaveHighRes.Click += btnSaveHighRes_Click; // Изменено на вызов соответствующего метода
 
             // Динамический поиск кнопки конфигурации цвета для более гибкой архитектуры.
             var configButton = Controls.Find("color_configurations", true).FirstOrDefault();
@@ -295,6 +295,9 @@ namespace FractalDraving
                     ScheduleRender();
                 }
             };
+
+            // Обработчик события закрытия формы для освобождения ресурсов.
+            FormClosed += FractalMandelbrotFamilyForm_FormClosed; // Вызов именованного метода
         }
 
         #endregion
@@ -367,142 +370,10 @@ namespace FractalDraving
             ScheduleRender(); // Планируем рендеринг, чтобы изменения вступили в силу.
         }
 
-        /// <summary>
-        /// Обработчик события тика таймера задержки рендеринга.
-        /// Запускает рендеринг предпросмотра, выбирая метод (с SSAA или без)
-        /// на основе выбора пользователя в ComboBox.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
-        {
-            _renderDebounceTimer.Stop(); // Останавливаем таймер, так как его задача выполнена.
-
-            // Если уже идет рендеринг в высоком разрешении или предпросмотр,
-            // откладываем выполнение еще раз, чтобы избежать конфликтов.
-            if (_isHighResRendering || _isRenderingPreview)
-            {
-                ScheduleRender();
-                return;
-            }
-
-            // Получаем выбранный фактор SSAA
-            int ssaaFactor = GetSelectedSsaaFactor();
-            // Обновляем заголовок для отладки, чтобы видеть, какой режим активен
-            this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x";
-
-            if (ssaaFactor > 1)
-            {
-                // Если выбран SSAA, вызываем соответствующий метод рендеринга
-                await StartPreviewRenderSSAA(ssaaFactor);
-            }
-            else
-            {
-                // Иначе вызываем стандартный рендеринг
-                await StartPreviewRender();
-            }
-        }
-
-        /// <summary>
-        /// Обработчик события, когда визуализатор рендеринга запрашивает перерисовку канваса.
-        /// Используется для обновления визуализации плиток.
-        /// </summary>
-        private void OnVisualizerNeedsRedraw()
-        {
-            // Безопасно вызываем Invalidate() на UI потоке,
-            // чтобы перерисовать канвас и обновить визуализацию плиток.
-            if (canvas.IsHandleCreated && !canvas.IsDisposed)
-            {
-                canvas.BeginInvoke((Action)(() => canvas.Invalidate()));
-            }
-        }
-
-        /// <summary>
-        /// Обработчик события сохранения изображения в высоком разрешении.
-        /// Запускает рендеринг и сохранение изображения в отдельном потоке.
-        /// </summary>
-        private async void btnSave_Click(object sender, EventArgs e)
-        {
-            if (_isHighResRendering)
-            {
-                MessageBox.Show("Процесс сохранения уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            int saveWidth = (int)nudSaveWidth.Value;
-            int saveHeight = (int)nudSaveHeight.Value;
-            string fractalDetails = GetSaveFileNameDetails();
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string suggestedFileName = $"{fractalDetails}_{timestamp}.png";
-            using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить фрактал (Высокое разрешение)", FileName = suggestedFileName })
-            {
-                if (saveDialog.ShowDialog() == DialogResult.OK)
-                {
-                    if (_isRenderingPreview)
-                    {
-                        _previewRenderCts?.Cancel();
-                    }
-                    _isHighResRendering = true;
-                    pnlControls.Enabled = false;
-                    pbHighResProgress.Value = 0;
-                    pbHighResProgress.Visible = true;
-                    try
-                    {
-                        FractalMandelbrotFamilyEngine renderEngine = CreateEngine();
-                        UpdateEngineParameters();
-                        renderEngine.MaxIterations = _fractalEngine.MaxIterations;
-                        renderEngine.ThresholdSquared = _fractalEngine.ThresholdSquared;
-                        renderEngine.CenterX = _fractalEngine.CenterX;
-                        renderEngine.CenterY = _fractalEngine.CenterY;
-                        renderEngine.Scale = _fractalEngine.Scale;
-                        renderEngine.C = this is FractalJulia || this is FractalJuliaBurningShip ? new ComplexDecimal(nudRe.Value, nudIm.Value) : _fractalEngine.C;
-                        renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
-                        renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
-                        int threadCount = GetThreadCount();
-                        int ssaaFactor = GetSelectedSsaaFactor();
-                        var stopwatch = Stopwatch.StartNew();
-                        Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmapSSAA(
-                            saveWidth, saveHeight, threadCount,
-                            progress =>
-                            {
-                                if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
-                                {
-                                    pbHighResProgress.Invoke((Action)(() =>
-                                    {
-                                        pbHighResProgress.Value = Math.Min(pbHighResProgress.Maximum, progress);
-                                    }));
-                                }
-                            }, ssaaFactor));
-                        stopwatch.Stop();
-                        highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                        highResBitmap.Dispose();
-                        double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-                        MessageBox.Show($"Изображение успешно сохранено!\nВремя рендеринга: {elapsedSeconds:F3} сек.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    finally
-                    {
-                        _isHighResRendering = false;
-                        pnlControls.Enabled = true;
-                        if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
-                        {
-                            pbHighResProgress.Invoke((Action)(() =>
-                            {
-                                pbHighResProgress.Visible = false;
-                                pbHighResProgress.Value = 0;
-                            }));
-                        }
-                        ScheduleRender();
-                    }
-                }
-            }
-        }
-
         #endregion
 
         #region Canvas Interaction
+
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
@@ -863,6 +734,59 @@ namespace FractalDraving
                 }
             }
         }
+        /// <summary>
+        /// Обработчик события тика таймера задержки рендеринга.
+        /// Запускает рендеринг предпросмотра, выбирая метод (с SSAA или без)
+        /// на основе выбора пользователя в ComboBox.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
+        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            _renderDebounceTimer.Stop(); // Останавливаем таймер, так как его задача выполнена.
+
+            // Если уже идет рендеринг в высоком разрешении или предпросмотр,
+            // откладываем выполнение еще раз, чтобы избежать конфликтов.
+            if (_isHighResRendering || _isRenderingPreview)
+            {
+                ScheduleRender();
+                return;
+            }
+
+            // Получаем выбранный фактор SSAA
+            int ssaaFactor = GetSelectedSsaaFactor();
+            // Обновляем заголовок для отладки, чтобы видеть, какой режим активен
+            this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x";
+
+            if (ssaaFactor > 1)
+            {
+                // Если выбран SSAA, вызываем соответствующий метод рендеринга
+                await StartPreviewRenderSSAA(ssaaFactor);
+            }
+            else
+            {
+                // Иначе вызываем стандартный рендеринг
+                await StartPreviewRender();
+            }
+        }
+        /// <summary>
+        /// Обработчик события, когда визуализатор рендеринга запрашивает перерисовку канваса.
+        /// Используется для обновления визуализации плиток.
+        /// </summary>
+        private void OnVisualizerNeedsRedraw()
+        {
+            // Безопасно вызываем Invalidate() на UI потоке,
+            // чтобы перерисовать канвас и обновить визуализацию плиток.
+            if (canvas.IsHandleCreated && !canvas.IsDisposed)
+            {
+                canvas.BeginInvoke((Action)(() => canvas.Invalidate()));
+            }
+        }
+
+        #endregion
+
+        #region Utility Methods
+
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
@@ -941,10 +865,84 @@ namespace FractalDraving
                 _renderedZoom = _zoom;
             }
         }
-        #endregion
-
-        #region Utility Methods
-
+        private async void btnSaveHighRes_Click(object sender, EventArgs e)
+        {
+            if (_isHighResRendering)
+            {
+                MessageBox.Show("Процесс сохранения уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            int saveWidth = (int)nudSaveWidth.Value;
+            int saveHeight = (int)nudSaveHeight.Value;
+            string fractalDetails = GetSaveFileNameDetails();
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string suggestedFileName = $"{fractalDetails}_{timestamp}.png";
+            using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", Title = "Сохранить фрактал (Высокое разрешение)", FileName = suggestedFileName })
+            {
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    if (_isRenderingPreview)
+                    {
+                        _previewRenderCts?.Cancel();
+                    }
+                    _isHighResRendering = true;
+                    pnlControls.Enabled = false;
+                    pbHighResProgress.Value = 0;
+                    pbHighResProgress.Visible = true;
+                    try
+                    {
+                        FractalMandelbrotFamilyEngine renderEngine = CreateEngine();
+                        UpdateEngineParameters();
+                        renderEngine.MaxIterations = _fractalEngine.MaxIterations;
+                        renderEngine.ThresholdSquared = _fractalEngine.ThresholdSquared;
+                        renderEngine.CenterX = _fractalEngine.CenterX;
+                        renderEngine.CenterY = _fractalEngine.CenterY;
+                        renderEngine.Scale = _fractalEngine.Scale;
+                        renderEngine.C = this is FractalJulia || this is FractalJuliaBurningShip ? new ComplexDecimal(nudRe.Value, nudIm.Value) : _fractalEngine.C;
+                        renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
+                        renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
+                        int threadCount = GetThreadCount();
+                        int ssaaFactor = GetSelectedSsaaFactor();
+                        var stopwatch = Stopwatch.StartNew();
+                        Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmapSSAA(
+                            saveWidth, saveHeight, threadCount,
+                            progress =>
+                            {
+                                if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
+                                {
+                                    pbHighResProgress.Invoke((Action)(() =>
+                                    {
+                                        pbHighResProgress.Value = Math.Min(pbHighResProgress.Maximum, progress);
+                                    }));
+                                }
+                            }, ssaaFactor));
+                        stopwatch.Stop();
+                        highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
+                        highResBitmap.Dispose();
+                        double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+                        MessageBox.Show($"Изображение успешно сохранено!\nВремя рендеринга: {elapsedSeconds:F3} сек.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        _isHighResRendering = false;
+                        pnlControls.Enabled = true;
+                        if (pbHighResProgress.IsHandleCreated && !pbHighResProgress.IsDisposed)
+                        {
+                            pbHighResProgress.Invoke((Action)(() =>
+                            {
+                                pbHighResProgress.Visible = false;
+                                pbHighResProgress.Value = 0;
+                            }));
+                        }
+                        ScheduleRender();
+                    }
+                }
+            }
+        }
         /// <summary>
         /// Обновляет параметры движка фрактала на основе текущих значений элементов управления.
         /// Это гарантирует, что следующий рендеринг будет использовать актуальные настройки.
@@ -961,6 +959,48 @@ namespace FractalDraving
             // Убеждаемся, что палитра и ее параметры (MaxColorIterations, Gamma) применены к движку.
             ApplyActivePalette();
         }
+        private int GetSelectedSsaaFactor()
+        {
+            var cbSSAA = this.Controls.Find("cbSSAA", true).FirstOrDefault() as ComboBox;
+            if (cbSSAA == null) return 1;
+            if (cbSSAA.InvokeRequired)
+            {
+                return (int)cbSSAA.Invoke(new Func<int>(() =>
+                {
+                    if (cbSSAA.SelectedItem == null) return 1;
+                    switch (cbSSAA.SelectedItem.ToString())
+                    {
+                        case "Низкое (2x)": return 2;
+                        case "Высокое (4x)": return 4;
+                        default: return 1;
+                    }
+                }));
+            }
+            else
+            {
+                if (cbSSAA.SelectedItem == null) return 1;
+                switch (cbSSAA.SelectedItem.ToString())
+                {
+                    case "Низкое (2x)": return 2;
+                    case "Высокое (4x)": return 4;
+                    default: return 1;
+                }
+            }
+        }
+        private int GetThreadCount()
+        {
+            return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+        }
+        private decimal ClampDecimal(decimal value, decimal min, decimal max)
+        {
+            return Math.Max(min, Math.Min(max, value));
+        }
+        private int ClampInt(int value, int min, int max)
+        {
+            return Math.Max(min, Math.Min(max, value));
+        }
+        public double LoupeZoom => nudBaseScale != null ? (double)nudBaseScale.Value : 4.0;
+        public event EventHandler LoupeZoomChanged;
 
         #endregion
 
@@ -1089,6 +1129,7 @@ namespace FractalDraving
         #endregion
 
         #region Form Lifecycle
+
         /// <summary>
         /// Обработчик события загрузки формы.
         /// Инициализирует менеджеры, движки, таймеры и элементы UI,
@@ -1138,9 +1179,9 @@ namespace FractalDraving
         }
 
         /// <summary>
-        /// Обработчик события закрытия формы для освобождения ресурсов.
+        /// Обрабатывает событие закрытия формы для освобождения ресурсов.
         /// </summary>
-        private void FormBase_FormClosed(object sender, FormClosedEventArgs e)
+        private void FractalMandelbrotFamilyForm_FormClosed(object sender, FormClosedEventArgs e)
         {
             _renderDebounceTimer?.Stop();
             _renderDebounceTimer?.Dispose();
@@ -1169,51 +1210,7 @@ namespace FractalDraving
                 _renderVisualizer.Dispose();
             }
         }
-        #endregion
 
-        #region Helper Methods and Other Interfaces
-        private int GetSelectedSsaaFactor()
-        {
-            var cbSSAA = this.Controls.Find("cbSSAA", true).FirstOrDefault() as ComboBox;
-            if (cbSSAA == null) return 1;
-            if (cbSSAA.InvokeRequired)
-            {
-                return (int)cbSSAA.Invoke(new Func<int>(() =>
-                {
-                    if (cbSSAA.SelectedItem == null) return 1;
-                    switch (cbSSAA.SelectedItem.ToString())
-                    {
-                        case "Низкое (2x)": return 2;
-                        case "Высокое (4x)": return 4;
-                        default: return 1;
-                    }
-                }));
-            }
-            else
-            {
-                if (cbSSAA.SelectedItem == null) return 1;
-                switch (cbSSAA.SelectedItem.ToString())
-                {
-                    case "Низкое (2x)": return 2;
-                    case "Высокое (4x)": return 4;
-                    default: return 1;
-                }
-            }
-        }
-        private int GetThreadCount()
-        {
-            return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
-        }
-        private decimal ClampDecimal(decimal value, decimal min, decimal max)
-        {
-            return Math.Max(min, Math.Min(max, value));
-        }
-        private int ClampInt(int value, int min, int max)
-        {
-            return Math.Max(min, Math.Min(max, value));
-        }
-        public double LoupeZoom => nudBaseScale != null ? (double)nudBaseScale.Value : 4.0;
-        public event EventHandler LoupeZoomChanged;
         #endregion
 
         #region ISaveLoadCapableFractal Implementation
