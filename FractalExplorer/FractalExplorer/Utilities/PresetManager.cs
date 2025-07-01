@@ -1,8 +1,8 @@
 ﻿using FractalDraving;
-using FractalExplorer.Engines; 
-using FractalExplorer.Forms; 
+using FractalExplorer.Engines;
+using FractalExplorer.Forms;
 using FractalExplorer.Utilities.JsonConverters;
-using FractalExplorer.Utilities.SaveIO.ColorPalettes; 
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Text.Json;
 
@@ -16,13 +16,31 @@ namespace FractalExplorer.Utilities
     {
         #region Constants
 
-        // Ограничения на количество итераций для предварительного просмотра.
-        // Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
-        // в окне сохранения/загрузки, не нагружая систему слишком сильно.
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов семейства Мандельброта.
+        /// Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
+        /// в окне сохранения/загрузки, не нагружая систему слишком сильно.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1000;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Феникс.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Бассейны Ньютона.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра геометрического фрактала Серпинского.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра хаотического фрактала Серпинского.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
 
         #endregion
@@ -32,8 +50,9 @@ namespace FractalExplorer.Utilities
         /// <summary>
         /// Возвращает список предустановленных точек интереса (пресетов) для указанного типа фрактала.
         /// </summary>
-        /// <param name="fractalTypeIdentifier">Идентификатор типа фрактала (например, "Mandelbrot", "Julia").</param>
-        /// <returns>Список объектов <see cref="FractalSaveStateBase"/>, представляющих пресеты, или пустой список, если для данного типа пресетов нет.</returns>
+        /// <param name="fractalTypeIdentifier">Идентификатор типа фрактала (например, "Mandelbrot", "Julia", "Phoenix").</param>
+        /// <returns>Список объектов <see cref="FractalSaveStateBase"/>, представляющих пресеты,
+        /// или пустой список, если для данного типа пресетов нет.</returns>
         public static List<FractalSaveStateBase> GetPresetsFor(string fractalTypeIdentifier)
         {
             switch (fractalTypeIdentifier)
@@ -80,8 +99,8 @@ namespace FractalExplorer.Utilities
                 Zoom = 11500m,
                 Iterations = 1000,
                 Threshold = 2.0m,
-                PaletteName = "Лёд",
-                Timestamp = DateTime.MinValue // Используется минимальное значение, так как это встроенный пресет.
+                PaletteName = "Лёд", // Обновлено: теперь соответствует новой встроенной палитре
+                Timestamp = DateTime.MinValue
             };
             var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
             {
@@ -108,7 +127,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 4000m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Огонь",
+                PaletteName = "Огонь", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2 = new FractalMandelbrotFamilyForm.PreviewParams
@@ -134,7 +153,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 6500.0m,
                 Iterations = 800,
                 Threshold = 2.0m,
-                PaletteName = "Радуга",
+                PaletteName = "Психоделика", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3 = new FractalMandelbrotFamilyForm.PreviewParams
@@ -160,7 +179,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 3000.0m,
                 Iterations = 600,
                 Threshold = 2.0m,
-                PaletteName = "Глубина",
+                PaletteName = "Ультрафиолет", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams4 = new FractalMandelbrotFamilyForm.PreviewParams
@@ -229,7 +248,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 300,
                 Threshold = 2.0m,
-                PaletteName = "Классика",
+                PaletteName = "Стандартный серый", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2J = new FractalMandelbrotFamilyForm.PreviewParams
@@ -259,7 +278,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 400,
                 Threshold = 2.0m,
-                PaletteName = "Лёд",
+                PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3J = new FractalMandelbrotFamilyForm.PreviewParams
@@ -289,7 +308,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 350,
                 Threshold = 2.0m,
-                PaletteName = "Огонь",
+                PaletteName = "Огонь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams4J = new FractalMandelbrotFamilyForm.PreviewParams
@@ -328,7 +347,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 0.8m,
                 Iterations = 300,
                 Threshold = 2.0m,
-                PaletteName = "Огонь",
+                PaletteName = "Огонь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams1BS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -354,7 +373,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1000.0m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Глубина",
+                PaletteName = "Ультрафиолет", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2BS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -380,7 +399,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 70.0m,
                 Iterations = 400,
                 Threshold = 2.0m,
-                PaletteName = "Лёд",
+                PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3BS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -419,7 +438,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Лёд",
+                PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams1JBS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -449,7 +468,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 350,
                 Threshold = 2.0m,
-                PaletteName = "Огонь",
+                PaletteName = "Огонь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2JBS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -479,7 +498,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 400,
                 Threshold = 2.0m,
-                PaletteName = "Глубина",
+                PaletteName = "Ультрафиолет", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3JBS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -526,7 +545,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1m,
                 Iterations = 200,
                 Threshold = 4.0m,
-                PaletteName = "Радуга",
+                PaletteName = "Психоделика", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams1Ph = new FractalPhoenixForm.PhoenixPreviewParams
@@ -534,7 +553,6 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
                 Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
@@ -560,7 +578,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.2m,
                 Iterations = 250,
                 Threshold = 4.0m,
-                PaletteName = "Психоделика",
+                PaletteName = "Психоделика", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2Ph = new FractalPhoenixForm.PhoenixPreviewParams
@@ -593,7 +611,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 0.8m,
                 Iterations = 300,
                 Threshold = 4.0m,
-                PaletteName = "Лёд",
+                PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3Ph = new FractalPhoenixForm.PhoenixPreviewParams
@@ -617,10 +635,11 @@ namespace FractalExplorer.Utilities
 
         #endregion
 
-        #region Serpinsky Fractal Presets
+        #region Serpinsky & Newton Presets
 
         /// <summary>
         /// Создает и возвращает список предустановленных состояний для фрактала Серпинского.
+        /// Палитры здесь не используются, вместо них - прямые цвета.
         /// </summary>
         /// <returns>Список пресетов Серпинского.</returns>
         private static List<FractalSaveStateBase> GetSerpinskyPresets()
@@ -689,10 +708,6 @@ namespace FractalExplorer.Utilities
 
             return presets;
         }
-
-        #endregion
-
-        #region Newton Pool Presets
 
         /// <summary>
         /// Создает и возвращает список предустановленных состояний для фрактала "Бассейны Ньютона".
