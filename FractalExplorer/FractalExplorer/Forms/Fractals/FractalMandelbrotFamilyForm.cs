@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 
 namespace FractalDraving
@@ -33,21 +34,17 @@ namespace FractalDraving
         /// </summary>
         private ColorPaletteMandelbrotFamily _paletteManager;
 
-        // *** ИЗМЕНЕНИЕ: Начало блока кэширования палитры ***
-
         /// <summary>
-        /// Кэш цветов палитры, предварительно рассчитанный с гамма-коррекцией.
+        /// Кэш для цветов палитры с уже примененной гамма-коррекцией.
         /// Индекс массива соответствует номеру итерации.
         /// </summary>
-        private Color[] _paletteCache;
+        private Color[] _gammaCorrectedPaletteCache;
 
         /// <summary>
-        /// "Сигнатура" палитры, для которой был создан кэш. Используется для "умного" обновления.
-        /// Содержит: (Имя палитры, значение гаммы, максимальное количество итераций цвета).
+        /// "Подпись" палитры, для которой был сгенерирован кэш. 
+        /// Используется для определения необходимости обновления кэша.
         /// </summary>
-        private (string name, double gamma, int maxColorIterations) _cachedPaletteSignature;
-
-        // *** ИЗМЕНЕНИЕ: Конец блока кэширования палитры ***
+        private string _paletteCacheSignature;
 
         /// <summary>
         /// Форма конфигурации палитр, связанная с этой формой, для настройки цветов.
@@ -191,7 +188,7 @@ namespace FractalDraving
         protected virtual decimal InitialCenterX => -0.5m;
 
         /// <summary>
-        /// Получает начальную координату Y (мнимую часть) центра фрактала.
+        /// Получает начальную координату Y (мнимая часть) центра фрактала.
         /// </summary>
         protected virtual decimal InitialCenterY => 0.0m;
 
@@ -350,13 +347,9 @@ namespace FractalDraving
         /// <param name="e">Аргументы события.</param>
         private void OnPaletteApplied(object sender, EventArgs e)
         {
-            // ИСПРАВЛЕНИЕ: Перед применением логики палитры, принудительно обновляем
-            // значение итераций в движке из элемента управления на форме.
-            // Это гарантирует, что режим "AlignWithRenderIterations" получит актуальное значение.
-            _fractalEngine.MaxIterations = (int)nudIterations.Value;
-
-            // Теперь применяем палитру, которая будет использовать уже обновленное значение MaxIterations.
-            ApplyActivePalette();
+            // Перед применением палитры обновляем параметры движка,
+            // чтобы AlignWithRenderIterations использовало актуальное значение.
+            UpdateEngineParameters();
 
             // Запускаем рендеринг с новой палитрой.
             ScheduleRender();
@@ -915,7 +908,9 @@ namespace FractalDraving
                         renderEngine.CenterY = _fractalEngine.CenterY;
                         renderEngine.Scale = _fractalEngine.Scale;
                         renderEngine.C = this is FractalJulia || this is FractalJuliaBurningShip ? new ComplexDecimal(nudRe.Value, nudIm.Value) : _fractalEngine.C;
-                        renderEngine.Palette = _fractalEngine.Palette; // *** ИЗМЕНЕНИЕ: Используем уже готовый, кэшированный делегат палитры ***
+                        // Для высококачественного рендера палитра генерируется "на лету",
+                        // так как параметры могут отличаться от предпросмотра.
+                        renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
                         renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
                         int threadCount = GetThreadCount();
                         int ssaaFactor = GetSelectedSsaaFactor();
@@ -972,7 +967,7 @@ namespace FractalDraving
             _fractalEngine.Scale = BaseScale / _zoom;
             UpdateEngineSpecificParameters();
 
-            // Убеждаемся, что палитра и ее параметры (MaxColorIterations, Gamma) применены к движку.
+            // Убеждаемся, что палитра (и ее кэш) применены к движку.
             ApplyActivePalette();
         }
         private int GetSelectedSsaaFactor()
@@ -1022,7 +1017,102 @@ namespace FractalDraving
 
         #region Palette Management
 
-        // *** ИЗМЕНЕНИЕ: Старый метод GeneratePaletteFunction удален. Его логика перенесена в UpdateAndApplyPaletteCache. ***
+        /// <summary>
+        /// Генерирует "подпись" для текущей палитры и ее настроек.
+        /// Используется для определения необходимости обновления кэша.
+        /// </summary>
+        /// <param name="palette">Активная палитра.</param>
+        /// <param name="maxIterationsForAlignment">Максимальное количество итераций рендера (используется в режиме AlignWithRenderIterations).</param>
+        /// <returns>Уникальная строка, представляющая состояние палитры.</returns>
+        private string GeneratePaletteSignature(PaletteManagerMandelbrotFamily palette, int maxIterationsForAlignment)
+        {
+            var sb = new StringBuilder();
+            sb.Append(palette.Name);
+            sb.Append(':');
+            foreach (var color in palette.Colors)
+            {
+                sb.Append(color.ToArgb().ToString("X8"));
+            }
+            sb.Append(':');
+            sb.Append(palette.IsGradient);
+            sb.Append(':');
+            sb.Append(palette.Gamma.ToString("F2"));
+            sb.Append(':');
+
+            int effectiveMaxColorIterations = palette.AlignWithRenderIterations
+                ? maxIterationsForAlignment
+                : palette.MaxColorIterations;
+            sb.Append(effectiveMaxColorIterations);
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Генерирует функцию палитры на основе выбранной палитры из менеджера.
+        /// Эта функция преобразует количество итераций точки в ее цвет.
+        /// Используется для первоначального заполнения кэша.
+        /// </summary>
+        /// <param name="palette">Объект палитры, содержащий настройки цвета.</param>
+        /// <returns>Функция <c>Func<int, int, int, Color></c>, преобразующая количество итераций,
+        /// максимальное количество итераций и максимальное количество цветовых итераций в цвет.</returns>
+        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
+        {
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            bool isGradient = palette.IsGradient;
+            int colorCount = colors.Count;
+
+            if (palette.Name == "Стандартный серый")
+            {
+                return (iter, maxIter, maxColorIter) =>
+                {
+                    if (iter == maxIter) return Color.Black;
+                    double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / Math.Log(maxColorIter + 1);
+                    int cVal = (int)(255.0 * (1 - tLog));
+                    Color baseColor = Color.FromArgb(cVal, cVal, cVal);
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
+            }
+
+            if (colorCount == 0) return (i, m, mc) => Color.Black;
+            if (colorCount == 1)
+            {
+                return (iter, max, clrMax) =>
+                {
+                    Color baseColor = (iter == max) ? Color.Black : colors[0];
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
+            }
+
+            return (iter, maxIter, maxColorIter) =>
+            {
+                if (iter == maxIter) return Color.Black;
+
+                double normalizedIter = maxColorIter > 0 ? (double)Math.Min(iter, maxColorIter) / maxColorIter : 0;
+
+                Color baseColor;
+
+                if (isGradient)
+                {
+                    double scaledT = normalizedIter * (colorCount - 1);
+                    int index1 = (int)Math.Floor(scaledT);
+                    int index2 = Math.Min(index1 + 1, colorCount - 1);
+                    double localT = scaledT - index1;
+                    baseColor = LerpColor(colors[index1], colors[index2], localT);
+                }
+                else
+                {
+                    int colorIndex = (int)(normalizedIter * colorCount);
+                    if (colorIndex >= colorCount)
+                    {
+                        colorIndex = colorCount - 1;
+                    }
+                    baseColor = colors[colorIndex];
+                }
+
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
+        }
 
         /// <summary>
         /// Выполняет линейную интерполяцию между двумя цветами на основе коэффициента.
@@ -1039,7 +1129,8 @@ namespace FractalDraving
         }
 
         /// <summary>
-        /// Применяет текущую активную палитру из менеджера палитр к движку фрактала.
+        /// Применяет текущую активную палитру к движку фрактала, используя кэширование.
+        /// Если параметры палитры изменились, кэш пересчитывается.
         /// </summary>
         private void ApplyActivePalette()
         {
@@ -1050,108 +1141,43 @@ namespace FractalDraving
 
             var activePalette = _paletteManager.ActivePalette;
 
-            // Определяем, сколько итераций будет использоваться для раскраски
-            if (activePalette.AlignWithRenderIterations)
+            // Определяем эффективное количество итераций для цвета
+            int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations
+                ? _fractalEngine.MaxIterations
+                : activePalette.MaxColorIterations;
+
+            // Генерируем новую подпись для текущего состояния палитры
+            string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
+
+            // Если подпись изменилась или кэш не создан, обновляем кэш
+            if (_gammaCorrectedPaletteCache == null || newSignature != _paletteCacheSignature)
             {
-                _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
-            }
-            else
-            {
-                _fractalEngine.MaxColorIterations = activePalette.MaxColorIterations;
-            }
+                _paletteCacheSignature = newSignature; // Сохраняем новую подпись
 
-            // *** ИЗМЕНЕНИЕ: Вызываем новый метод для "умного" кэширования палитры
-            UpdateAndApplyPaletteCache();
-        }
+                // Создаем временную "фабрику" цветов на основе текущих настроек палитры
+                var paletteGeneratorFunc = GeneratePaletteFunction(activePalette);
 
-        /// <summary>
-        /// *** НОВЫЙ МЕТОД ***
-        /// Проверяет, нужно ли обновлять кэш палитры, и если да, пересчитывает его.
-        /// Затем применяет к движку быстрый делегат, использующий этот кэш.
-        /// </summary>
-        private void UpdateAndApplyPaletteCache()
-        {
-            var activePalette = _paletteManager.ActivePalette;
-            int maxColorIter = _fractalEngine.MaxColorIterations;
+                // Инициализируем или пересоздаем массив кэша
+                _gammaCorrectedPaletteCache = new Color[effectiveMaxColorIterations + 1];
 
-            // 1. Создаем "сигнатуру" текущей палитры
-            var currentSignature = (activePalette.Name, activePalette.Gamma, maxColorIter);
-
-            // 2. Проверяем, совпадает ли она с сигнатурой кэшированной палитры.
-            //    Если совпадает и кэш существует, ничего не делаем. Кэш актуален.
-            if (_paletteCache != null && _paletteCache.Length == maxColorIter + 1 && currentSignature.Equals(_cachedPaletteSignature))
-            {
-                return; // Кэш валиден, выходим.
-            }
-
-            // 3. Если мы здесь, значит кэш нужно перестроить.
-            var colors = new List<Color>(activePalette.Colors);
-            bool isGradient = activePalette.IsGradient;
-            double gamma = activePalette.Gamma;
-            int colorCount = colors.Count;
-
-            // Создаем новый кэш. Размер +1, чтобы вместить цвет для итерации maxColorIter.
-            var newCache = new Color[maxColorIter + 1];
-
-            if (colorCount > 0)
-            {
-                // Заполняем кэш от 0 до maxColorIter
-                for (int iter = 0; iter <= maxColorIter; iter++)
+                // Заполняем кэш, заранее вычисляя все цвета с гамма-коррекцией
+                for (int i = 0; i <= effectiveMaxColorIterations; i++)
                 {
-                    Color baseColor;
-                    double normalizedIter = (double)iter / maxColorIter;
-
-                    if (isGradient)
-                    {
-                        if (colorCount == 1)
-                        {
-                            baseColor = colors[0];
-                        }
-                        else
-                        {
-                            double scaledT = normalizedIter * (colorCount - 1);
-                            int index1 = (int)Math.Floor(scaledT);
-                            int index2 = Math.Min(index1 + 1, colorCount - 1);
-                            double localT = scaledT - index1;
-                            baseColor = LerpColor(colors[index1], colors[index2], localT);
-                        }
-                    }
-                    else // Дискретная палитра
-                    {
-                        int colorIndex = (int)(normalizedIter * colorCount);
-                        if (colorIndex >= colorCount)
-                        {
-                            colorIndex = colorCount - 1; // Защита от выхода за пределы массива
-                        }
-                        baseColor = colors[colorIndex];
-                    }
-
-                    // Сразу применяем гамма-коррекцию и сохраняем готовый цвет в кэш
-                    newCache[iter] = ColorCorrection.ApplyGamma(baseColor, gamma);
-                }
-            }
-            else // Если в палитре нет цветов
-            {
-                for (int i = 0; i < newCache.Length; i++)
-                {
-                    newCache[i] = Color.Black;
+                    _gammaCorrectedPaletteCache[i] = paletteGeneratorFunc(i, _fractalEngine.MaxIterations, effectiveMaxColorIterations);
                 }
             }
 
+            // Устанавливаем параметры итераций в движке
+            _fractalEngine.MaxColorIterations = effectiveMaxColorIterations;
 
-            // 4. Обновляем поля класса
-            _paletteCache = newCache;
-            _cachedPaletteSignature = currentSignature;
-
-            // 5. Применяем к движку новый, очень быстрый делегат, который просто берет цвет из кэша.
-            _fractalEngine.Palette = (iter, maxIter, clrMax) =>
+            // Присваиваем движку очень быструю функцию-палитру, которая просто берет цвет из кэша
+            _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter) return Color.Black; // Точка внутри множества
+                if (iter == maxIter) return Color.Black;
 
-                // Защита от выхода за пределы массива, если iter > clrMax
-                int cacheIndex = Math.Min(iter, clrMax);
-
-                return _paletteCache[cacheIndex];
+                // Безопасный доступ к кэшу, чтобы избежать выхода за пределы массива
+                int index = Math.Min(iter, _gammaCorrectedPaletteCache.Length - 1);
+                return _gammaCorrectedPaletteCache[index];
             };
         }
 
@@ -1179,31 +1205,24 @@ namespace FractalDraving
             InitializeControls();
             InitializeEventHandlers();
 
-            // Инициализация ComboBox для выбора качества SSAA.
-            // Ищем контрол по имени, чтобы код был независим от его точного расположения на форме.
             var cbSSAA = this.Controls.Find("cbSSAA", true).FirstOrDefault() as ComboBox;
             if (cbSSAA != null)
             {
-                // Добавляем понятные для пользователя пункты.
                 cbSSAA.Items.Add("Выкл (1x)");
                 cbSSAA.Items.Add("Низкое (2x)");
                 cbSSAA.Items.Add("Высокое (4x)");
-
-                // Устанавливаем значение по умолчанию.
                 cbSSAA.SelectedItem = "Выкл (1x)";
-
-                // Подписываемся на событие изменения выбора, чтобы запустить новый рендеринг.
                 cbSSAA.SelectedIndexChanged += (s, ev) => ScheduleRender();
             }
 
-            // Инициализация отображаемых параметров для корректной интерполяции
-            // на канвасе до выполнения первого рендеринга.
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
-            OnPostInitialize(); // Вызов виртуального метода для дочерних классов.
+            OnPostInitialize();
 
-            ApplyActivePalette(); // Применение активной палитры к движку.
+            // Обновляем параметры и создаем ПЕРВЫЙ кэш палитры ПЕРЕД первым рендером
+            UpdateEngineParameters();
+
             ScheduleRender(); // Планирование первого рендеринга.
         }
 
@@ -1215,7 +1234,6 @@ namespace FractalDraving
             _renderDebounceTimer?.Stop();
             _renderDebounceTimer?.Dispose();
 
-            // Отменяем активные операции рендеринга и даем им немного времени на завершение.
             if (_previewRenderCts != null)
             {
                 _previewRenderCts.Cancel();
@@ -1223,7 +1241,6 @@ namespace FractalDraving
                 _previewRenderCts.Dispose();
             }
 
-            // Освобождаем ресурсы битмапов.
             lock (_bitmapLock)
             {
                 _previewBitmap?.Dispose();
@@ -1232,7 +1249,6 @@ namespace FractalDraving
                 _currentRenderingBitmap = null;
             }
 
-            // Отписываемся от событий визуализатора и освобождаем его ресурсы.
             if (_renderVisualizer != null)
             {
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
@@ -1261,82 +1277,29 @@ namespace FractalDraving
         /// </summary>
         public class PreviewParams
         {
-            /// <summary>
-            /// Получает или устанавливает X-координату центра фрактала для превью.
-            /// </summary>
             public decimal CenterX { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает Y-координату центра фрактала для превью.
-            /// </summary>
             public decimal CenterY { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает уровень масштабирования для превью.
-            /// </summary>
             public decimal Zoom { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает количество итераций для рендеринга превью.
-            /// Обычно меньше, чем для полного рендеринга, для ускорения генерации.
-            /// </summary>
             public int Iterations { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает имя палитры, используемой для превью.
-            /// </summary>
             public string PaletteName { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает пороговое значение для превью.
-            /// </summary>
             public decimal Threshold { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает реальную часть константы C (для фракталов Жюлиа).
-            /// </summary>
             public decimal CRe { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает мнимую часть константы C (для фракталов Жюлиа).
-            /// </summary>
             public decimal CIm { get; set; }
-
-            /// <summary>
-            /// Получает или устанавливает тип движка, используемого для рендеринга превью (например, "Mandelbrot", "Julia").
-            /// </summary>
             public string PreviewEngineType { get; set; }
         }
 
-        /// <summary>
-        /// Обработчик события клика по кнопке "Менеджер состояний".
-        /// Открывает диалог для сохранения и загрузки состояний фрактала.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-            // 'this' здесь - это экземпляр конкретной формы фрактала (Mandelbrot, Julia и т.д.),
-            // которая реализует интерфейс ISaveLoadCapableFractal.
             using (var dialog = new SaveLoadDialogForm(this))
             {
                 dialog.ShowDialog(this);
             }
         }
 
-        /// <summary>
-        /// Получает текущее состояние фрактала для сохранения.
-        /// Этот метод может быть переопределен в наследниках (например, для фракталов Жюлиа)
-        /// для добавления специфичных параметров в сохраняемое состояние.
-        /// </summary>
-        /// <param name="saveName">Имя, под которым будет сохранено состояние.</param>
-        /// <returns>Объект <see cref="FractalSaveStateBase"/>, содержащий текущие параметры фрактала.</returns>
         public virtual FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             MandelbrotFamilySaveState state;
 
-            // Определяем тип сохраняемого состояния в зависимости от текущего типа фрактала.
-            // Это позволяет корректно сохранять специфичные параметры, такие как константа C для Жюлиа.
             if (this is FractalJulia || this is FractalJuliaBurningShip)
             {
                 state = new JuliaFamilySaveState(this.FractalTypeIdentifier);
@@ -1349,7 +1312,6 @@ namespace FractalDraving
             state.SaveName = saveName;
             state.Timestamp = DateTime.Now;
 
-            // Заполняем общие параметры фрактала.
             state.CenterX = _centerX;
             state.CenterY = _centerY;
             state.Zoom = _zoom;
@@ -1358,8 +1320,6 @@ namespace FractalDraving
             state.PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый";
             state.PreviewEngineType = this.FractalTypeIdentifier;
 
-            // Заполняем параметры для генерации превью.
-            // Количество итераций для превью обычно уменьшается для ускорения.
             var previewParams = new PreviewParams
             {
                 CenterX = _centerX,
@@ -1371,9 +1331,6 @@ namespace FractalDraving
                 PreviewEngineType = state.PreviewEngineType
             };
 
-            // Если это фрактал Жюлиа, добавляем параметры C.
-            // Важно проверять не только тип состояния, но и наличие/видимость UI элементов,
-            // так как не все формы могут иметь эти контролы.
             if (state is JuliaFamilySaveState juliaState)
             {
                 if (nudRe != null && nudIm != null && nudRe.Visible)
@@ -1391,45 +1348,32 @@ namespace FractalDraving
             return state;
         }
 
-        /// <summary>
-        /// Загружает состояние фрактала из предоставленного объекта состояния.
-        /// Обновляет параметры UI и запускает новый рендеринг.
-        /// </summary>
-        /// <param name="stateBase">Базовый объект состояния фрактала.</param>
         public virtual void LoadState(FractalSaveStateBase stateBase)
         {
-            // Убеждаемся, что тип состояния соответствует ожидаемому для этой формы или ее наследников.
             if (!(stateBase is MandelbrotFamilySaveState state))
             {
                 MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // Отменяем все текущие операции рендеринга и останавливаем таймер.
             _isRenderingPreview = false;
             _previewRenderCts?.Cancel();
             _renderDebounceTimer.Stop();
 
-            // Применяем загруженные параметры к внутренним полям формы.
             _centerX = state.CenterX;
             _centerY = state.CenterY;
             _zoom = state.Zoom;
 
-            // Обновляем значения UI контролов, ограничивая их допустимыми диапазонами,
-            // чтобы избежать ошибок или некорректного отображения.
             nudZoom.Value = ClampDecimal(_zoom, nudZoom.Minimum, nudZoom.Maximum);
             nudThreshold.Value = ClampDecimal(state.Threshold, nudThreshold.Minimum, nudThreshold.Maximum);
             nudIterations.Value = ClampInt(state.Iterations, (int)nudIterations.Minimum, (int)nudIterations.Maximum);
 
-            // Загружаем и применяем сохраненную палитру.
             var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
             if (paletteToLoad != null)
             {
                 _paletteManager.ActivePalette = paletteToLoad;
-                ApplyActivePalette();
             }
 
-            // Если это фрактал Жюлиа и состояние содержит параметры C, применяем их к UI.
             if (state is JuliaFamilySaveState juliaState)
             {
                 if (nudRe != null && nudIm != null && nudRe.Visible)
@@ -1439,8 +1383,6 @@ namespace FractalDraving
                 }
             }
 
-            // Очищаем существующие битмапы предпросмотра и рендеринга,
-            // чтобы новый рендеринг начался с чистого листа.
             lock (_bitmapLock)
             {
                 _previewBitmap?.Dispose();
@@ -1449,74 +1391,14 @@ namespace FractalDraving
                 _currentRenderingBitmap = null;
             }
 
-            // Устанавливаем параметры, по которым будет отрисовано новое превью.
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
 
-            UpdateEngineParameters(); // Важно обновить параметры движка перед рендерингом.
-            ScheduleRender(); // Запускаем новый рендеринг фрактала с загруженным состоянием.
+            UpdateEngineParameters();
+            ScheduleRender();
         }
 
-        // Вспомогательный метод для создания палитры для превью (избегаем дублирования кода)
-        private Func<int, int, int, Color> GeneratePreviewPaletteFunction(PaletteManagerMandelbrotFamily palette)
-        {
-            // Этот метод может использовать упрощенную логику или быть полным дубликатом
-            // старого GeneratePaletteFunction, если требуется точное соответствие.
-            // Для простоты и консистентности, используем ту же логику, что и в UpdateAndApplyPaletteCache,
-            // но без сохранения в кэш.
-            double gamma = palette.Gamma;
-            var colors = new List<Color>(palette.Colors);
-            bool isGradient = palette.IsGradient;
-            int colorCount = colors.Count;
-
-            if (colorCount == 0) return (i, m, mc) => Color.Black;
-            if (colorCount == 1)
-            {
-                return (iter, max, clrMax) =>
-                {
-                    Color baseColor = (iter == max) ? Color.Black : colors[0];
-                    return ColorCorrection.ApplyGamma(baseColor, gamma);
-                };
-            }
-
-            return (iter, maxIter, maxColorIter) =>
-            {
-                if (iter == maxIter) return Color.Black;
-
-                double normalizedIter = (double)Math.Min(iter, maxColorIter) / maxColorIter;
-                Color baseColor;
-
-                if (isGradient)
-                {
-                    double scaledT = normalizedIter * (colorCount - 1);
-                    int index1 = (int)Math.Floor(scaledT);
-                    int index2 = Math.Min(index1 + 1, colorCount - 1);
-                    double localT = scaledT - index1;
-                    baseColor = LerpColor(colors[index1], colors[index2], localT);
-                }
-                else
-                {
-                    int colorIndex = (int)(normalizedIter * colorCount);
-                    if (colorIndex >= colorCount) colorIndex = colorCount - 1;
-                    baseColor = colors[colorIndex];
-                }
-
-                return ColorCorrection.ApplyGamma(baseColor, gamma);
-            };
-        }
-
-
-        /// <summary>
-        /// Асинхронно рендерит плитку превью для заданного состояния фрактала.
-        /// Этот метод используется для генерации миниатюр в диалоге сохранения/загрузки.
-        /// </summary>
-        /// <param name="stateBase">Базовый объект состояния фрактала, содержащий параметры для рендеринга.</param>
-        /// <param name="tile">Информация о плитке для рендеринга.</param>
-        /// <param name="totalWidth">Общая ширина всего превью.</param>
-        /// <param name="totalHeight">Общая высота всего превью.</param>
-        /// <param name="tileSize">Размер одной плитки (ширина и высота).</param>
-        /// <returns>Массив байтов, представляющий данные пикселей отрендеренной плитки.</returns>
         public virtual async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return await Task.Run(() =>
@@ -1561,7 +1443,6 @@ namespace FractalDraving
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
 
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
-                previewEngine.Palette = GeneratePreviewPaletteFunction(paletteForPreview);
 
                 if (paletteForPreview.AlignWithRenderIterations)
                 {
@@ -1572,19 +1453,12 @@ namespace FractalDraving
                     previewEngine.MaxColorIterations = paletteForPreview.MaxColorIterations;
                 }
 
+                previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
 
-        /// <summary>
-        /// Рендерит полное изображение превью для заданного состояния фрактала.
-        /// Этот метод может быть использован для генерации целых миниатюр,
-        /// когда не требуется пошаговый рендеринг плиток.
-        /// </summary>
-        /// <param name="stateBase">Объект состояния фрактала, содержащий параметры для рендеринга.</param>
-        /// <param name="previewWidth">Желаемая ширина превью.</param>
-        /// <param name="previewHeight">Желаемая высота превью.</param>
-        /// <returns>Объект <see cref="Bitmap"/> с отрендеренным изображением превью.</returns>
         public virtual Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
             if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
@@ -1636,7 +1510,6 @@ namespace FractalDraving
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
 
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
-            previewEngine.Palette = GeneratePreviewPaletteFunction(paletteForPreview);
 
             if (paletteForPreview.AlignWithRenderIterations)
             {
@@ -1647,28 +1520,16 @@ namespace FractalDraving
                 previewEngine.MaxColorIterations = paletteForPreview.MaxColorIterations;
             }
 
+            previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
 
-        /// <summary>
-        /// Загружает все сохраненные состояния, относящиеся к данному типу фрактала.
-        /// Этот метод должен быть переопределен в конкретных классах фракталов,
-        /// чтобы корректно загружать состояния соответствующего типа.
-        /// </summary>
-        /// <returns>Список базовых объектов состояний фрактала.</returns>
-        /// <exception cref="NotImplementedException">Вызывается, если метод не был переопределен в дочернем классе.</exception>
         public virtual List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             throw new NotImplementedException($"Метод LoadAllSavesForThisType должен быть переопределен в классе {this.GetType().Name}, чтобы загружать состояния типа {this.ConcreteSaveStateType.Name}.");
         }
 
-        /// <summary>
-        /// Сохраняет список состояний для данного типа фрактала.
-        /// Этот метод должен быть переопределен в конкретных классах фракталов,
-        /// чтобы корректно сохранять состояния соответствующего типа.
-        /// </summary>
-        /// <param name="saves">Список базовых объектов состояний фрактала для сохранения.</param>
-        /// <exception cref="NotImplementedException">Вызывается, если метод не был переопределен в дочернем классе.</exception>
         public virtual void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             throw new NotImplementedException($"Метод SaveAllSavesForThisType должен быть переопределен в классе {this.GetType().Name}, чтобы сохранять состояния типа {this.ConcreteSaveStateType.Name}.");
