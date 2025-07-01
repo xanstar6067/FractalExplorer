@@ -563,7 +563,7 @@ namespace FractalExplorer.Forms
 
         #endregion
 
-        #region Palette Management (НОВАЯ, ИСПРАВЛЕННАЯ ЛОГИКА)
+        #region Palette Management
 
         /// <summary>
         /// Применяет активную палитру цветов из менеджера палитр к движку рендеринга.
@@ -579,9 +579,6 @@ namespace FractalExplorer.Forms
             var activePalette = _paletteManager.ActivePalette;
 
             // Логика выбора количества итераций для цвета.
-            // Если в палитре стоит галочка "AlignWithRenderIterations", то для раскраски
-            // используется общее количество итераций рендера.
-            // В противном случае используется значение, заданное в самой палитре.
             if (activePalette.AlignWithRenderIterations)
             {
                 _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
@@ -639,12 +636,12 @@ namespace FractalExplorer.Forms
             {
                 if (iter == maxIter) return Color.Black;
 
-                int colorDomainIter = Math.Min(iter, maxColorIter);
-
                 Color baseColor;
                 if (isGradient)
                 {
-                    double t = (double)colorDomainIter / maxColorIter;
+                    // Для градиента используем линейную интерполяцию.
+                    int colorDomainIter = Math.Min(iter, maxColorIter);
+                    double t = maxColorIter > 1 ? (double)colorDomainIter / (maxColorIter - 1) : 0;
                     double scaledT = t * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
@@ -653,7 +650,13 @@ namespace FractalExplorer.Forms
                 }
                 else
                 {
-                    int index = iter % colorCount;
+                    // ИСПРАВЛЕНИЕ: Новая логика для дискретных (не-градиентных) цветов.
+                    // Теперь ширина цветовых полос зависит от MaxColorIterations
+                    int iterInCycle = iter % maxColorIter;
+                    double t = (double)iterInCycle / maxColorIter;
+                    int index = (int)(t * colorCount);
+                    index = Math.Min(index, colorCount - 1); // Гарантируем, что индекс в пределах массива
+
                     baseColor = colors[index];
                 }
 
@@ -677,7 +680,6 @@ namespace FractalExplorer.Forms
         }
         #endregion
 
-        // ... (Остальной код формы: Save High-Res, Phoenix Specific UI, Form Closing, ISaveLoadCapableFractal Implementation - без изменений)
         #region Unchanged Code Sections (Save, UI, Closing, Interfaces)
         private async void btnSaveHighRes_Click(object sender, EventArgs e)
         {

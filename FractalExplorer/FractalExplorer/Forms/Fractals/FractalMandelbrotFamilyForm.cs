@@ -1093,14 +1093,12 @@ namespace FractalDraving
             {
                 if (iter == maxIter) return Color.Black; // Точки внутри множества всегда черные
 
-                // Используем maxColorIter (длину цикла) для всех вычислений
-                int colorDomainIter = Math.Min(iter, maxColorIter);
-
                 Color baseColor;
                 if (isGradient)
                 {
-                    // Градиентная интерполяция
-                    double t = (double)colorDomainIter / maxColorIter;
+                    // Для градиента используем линейную интерполяцию
+                    int colorDomainIter = Math.Min(iter, maxColorIter);
+                    double t = maxColorIter > 1 ? (double)colorDomainIter / (maxColorIter - 1) : 0;
                     double scaledT = t * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
@@ -1109,8 +1107,13 @@ namespace FractalDraving
                 }
                 else
                 {
-                    // Дискретные (циклические) цвета
-                    int index = iter % colorCount;
+                    // ИСПРАВЛЕНИЕ: Новая логика для дискретных (не-градиентных) цветов
+                    // Теперь ширина цветовых полос зависит от MaxColorIterations
+                    int iterInCycle = iter % maxColorIter;
+                    double t = (double)iterInCycle / maxColorIter;
+                    int index = (int)(t * colorCount);
+                    index = Math.Min(index, colorCount - 1); // Гарантируем, что индекс в пределах массива
+
                     baseColor = colors[index];
                 }
 
@@ -1128,7 +1131,7 @@ namespace FractalDraving
         /// <returns>Интерполированный цвет.</returns>
         private Color LerpColor(Color a, Color b, double t)
         {
-            t = Math.Max(0, Math.Min(1, t)); // Ограничиваем t в пределах [0, 1] для корректной интерполяции.
+            t = Math.Max(0, Math.Min(1, t));
             return Color.FromArgb(
                 (int)(a.A + (b.A - a.A) * t),
                 (int)(a.R + (b.R - a.R) * t),
@@ -1142,26 +1145,24 @@ namespace FractalDraving
         /// </summary>
         private void ApplyActivePalette()
         {
-            // Пропускаем, если движок фрактала или активная палитра не инициализированы.
             if (_fractalEngine == null || _paletteManager.ActivePalette == null)
             {
                 return;
             }
 
+            var activePalette = _paletteManager.ActivePalette;
+
             // Логика выбора количества итераций для цвета.
-            // Если в палитре стоит галочка "AlignWithRenderIterations", то для раскраски
-            // используется общее количество итераций рендера, которое уже установлено в движке.
-            // В противном случае используется значение, заданное в самой палитре.
-            if (_paletteManager.ActivePalette.AlignWithRenderIterations)
+            if (activePalette.AlignWithRenderIterations)
             {
                 _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
             }
             else
             {
-                _fractalEngine.MaxColorIterations = _paletteManager.ActivePalette.MaxColorIterations;
+                _fractalEngine.MaxColorIterations = activePalette.MaxColorIterations;
             }
 
-            _fractalEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
+            _fractalEngine.Palette = GeneratePaletteFunction(activePalette);
         }
 
         #endregion
