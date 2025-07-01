@@ -751,23 +751,15 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Выполняет линейную интерполяцию между двумя цветами на основе коэффициента.
         /// </summary>
-        private Color LerpColor(Color color1, Color color2, double t)
+        private Color LerpColor(Color a, Color b, double t)
         {
-            // Ограничиваем t значениями от 0 до 1
-            t = Math.Max(0.0, Math.Min(1.0, t));
-
-            int r = (int)(color1.R + (color2.R - color1.R) * t);
-            int g = (int)(color1.G + (color2.G - color1.G) * t);
-            int b = (int)(color1.B + (color2.B - color1.B) * t);
-            int a = (int)(color1.A + (color2.A - color1.A) * t);
-
-            // Обеспечиваем, что значения находятся в допустимом диапазоне
-            r = Math.Max(0, Math.Min(255, r));
-            g = Math.Max(0, Math.Min(255, g));
-            b = Math.Max(0, Math.Min(255, b));
-            a = Math.Max(0, Math.Min(255, a));
-
-            return Color.FromArgb(a, r, g, b);
+            t = Math.Max(0, Math.Min(1, t));
+            return Color.FromArgb(
+                (int)(a.A + (b.A - a.A) * t),
+                (int)(a.R + (b.R - a.R) * t),
+                (int)(a.G + (b.G - a.G) * t),
+                (int)(a.B + (b.B - a.B) * t)
+            );
         }
 
         /// <summary>
