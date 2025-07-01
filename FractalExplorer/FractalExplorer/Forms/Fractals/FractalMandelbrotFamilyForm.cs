@@ -1167,7 +1167,6 @@ namespace FractalDraving
 
         #endregion
 
-        // ... (Код Helper Methods, IFractalForm Implementation, ISaveLoadCapableFractal Implementation остается без изменений) ...
         #region Unchanged Code Sections (Helpers, Interfaces)
         private int GetSelectedSsaaFactor()
         {
