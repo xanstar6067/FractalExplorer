@@ -113,11 +113,10 @@ namespace FractalExplorer.Utilities
 
             txtName.Text = _selectedPalette.Name;
             checkIsGradient.Checked = _selectedPalette.IsGradient;
-            checkAlignSteps.Checked = _selectedPalette.AlignWithRenderIterations; // НОВОЕ
+            checkAlignSteps.Checked = _selectedPalette.AlignWithRenderIterations;
             nudMaxColorIterations.Value = Math.Max(nudMaxColorIterations.Minimum, Math.Min(nudMaxColorIterations.Maximum, _selectedPalette.MaxColorIterations));
             nudGamma.Value = (decimal)Math.Max((double)nudGamma.Minimum, Math.Min((double)nudGamma.Maximum, _selectedPalette.Gamma));
 
-            // НОВОЕ: Отключаем поле "Длина цикла", если включена синхронизация со старым режимом
             nudMaxColorIterations.Enabled = !_selectedPalette.AlignWithRenderIterations && !_selectedPalette.IsBuiltIn;
 
             lbColorStops.Items.Clear();
@@ -146,7 +145,7 @@ namespace FractalExplorer.Utilities
 
             txtName.Enabled = isCustom;
             checkIsGradient.Enabled = isCustom;
-            checkAlignSteps.Enabled = isCustom; // НОВОЕ
+            checkAlignSteps.Enabled = isCustom;
             lbColorStops.Enabled = isCustom;
             btnAddColor.Enabled = isCustom;
             btnEditColor.Enabled = isCustom;
@@ -154,11 +153,10 @@ namespace FractalExplorer.Utilities
             btnDelete.Enabled = isCustom;
             nudGamma.Enabled = isCustom;
 
-            // НОВОЕ: Поле "Длина цикла" доступно, только если палитра пользовательская И не включена синхронизация
             nudMaxColorIterations.Enabled = isCustom && !_selectedPalette.AlignWithRenderIterations;
 
-            // НОВОЕ: Кнопка "Копировать" активна только для встроенных палитр
-            btnCopy.Enabled = !isCustom;
+            // ИЗМЕНЕНО: Кнопка "Копировать" теперь активна для любой выбранной палитры.
+            btnCopy.Enabled = _selectedPalette != null;
         }
 
         /// <summary>
@@ -191,7 +189,6 @@ namespace FractalExplorer.Utilities
             using (var linearGradientBrush = new LinearGradientBrush(panelPreview.ClientRectangle, Color.Black, Color.Black, 0f))
             {
                 var colorBlend = new ColorBlend(_selectedPalette.Colors.Count);
-                // Применяем гамму к каждому цвету в палитре для предпросмотра
                 colorBlend.Colors = _selectedPalette.Colors.Select(c => ColorCorrection.ApplyGamma(c, _selectedPalette.Gamma)).ToArray();
                 colorBlend.Positions = Enumerable.Range(0, _selectedPalette.Colors.Count)
                                                  .Select(i => (float)i / (_selectedPalette.Colors.Count - 1))
@@ -283,7 +280,6 @@ namespace FractalExplorer.Utilities
             {
                 newName = $"Новая палитра {++counter}";
             }
-            // Создаем палитру со всеми параметрами по умолчанию
             var newPalette = new PaletteManagerMandelbrotFamily(newName, new List<Color> { Color.Black, Color.White }, true, false, 500, 1.0, false);
             _paletteManager.Palettes.Add(newPalette);
             PopulatePaletteList();
@@ -292,13 +288,14 @@ namespace FractalExplorer.Utilities
 
         /// <summary>
         /// Обработчик события клика по кнопке "Копировать".
-        /// Создает редактируемую копию выбранной встроенной палитры.
+        /// Создает редактируемую копию выбранной палитры.
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
         private void btnCopy_Click(object sender, EventArgs e)
         {
-            if (_selectedPalette == null || !_selectedPalette.IsBuiltIn)
+            // ИЗМЕНЕНО: Убрана проверка на IsBuiltIn, теперь можно копировать любую палитру.
+            if (_selectedPalette == null)
             {
                 return;
             }
@@ -317,7 +314,7 @@ namespace FractalExplorer.Utilities
                 name: newName,
                 colors: new List<Color>(_selectedPalette.Colors), // Важно создать новый список!
                 isGradient: _selectedPalette.IsGradient,
-                isBuiltIn: false, // Главное отличие!
+                isBuiltIn: false, // Копия всегда является пользовательской палитрой.
                 maxColorIterations: _selectedPalette.MaxColorIterations,
                 gamma: _selectedPalette.Gamma,
                 alignWithRenderIterations: _selectedPalette.AlignWithRenderIterations
