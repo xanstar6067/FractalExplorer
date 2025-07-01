@@ -2,7 +2,7 @@
 using FractalExplorer.Forms;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
-using FractalExplorer.Utilities;
+using FractalExplorer.Utilities; // НОВОЕ: для доступа к ColorCorrection
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
@@ -1319,7 +1319,9 @@ namespace FractalDraving
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BaseScale / _zoom;
             UpdateEngineSpecificParameters(); // Вызов виртуального метода для специфичных параметров фрактала.
-            ApplyActivePalette(); // Убеждаемся, что палитра также обновлена и применена к движку.
+
+            // ИЗМЕНЕНО: Убеждаемся, что палитра и ее параметры (MaxColorIterations, Gamma) применены к движку.
+            ApplyActivePalette();
         }
 
         #endregion
@@ -1335,61 +1337,68 @@ namespace FractalDraving
         /// максимальное количество итераций и максимальное количество цветовых итераций в цвет.</returns>
         private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
         {
-            // Специальная обработка для стандартной серой палитры с логарифмическим сглаживанием.
-            if (palette.Name == "Стандартный серый")
-            {
-                return (iter, maxIter, maxColorIterations) =>
-                {
-                    if (iter == maxIter)
-                    {
-                        return Color.Black; // Точки, входящие в множество, черные.
-                    }
-                    // Логарифмическое сглаживание для более плавного перехода цветов,
-                    // особенно при большом количестве итераций.
-                    double tLog = Math.Log(Math.Min(iter, maxColorIterations) + 1) / Math.Log(maxColorIterations + 1);
-                    int cVal = (int)(255.0 * (1 - tLog));
-                    return Color.FromArgb(cVal, cVal, cVal);
-                };
-            }
-
+            // Получаем параметры из объекта палитры
+            double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
 
-            // Обработка крайних случаев: пустая палитра или палитра с одним цветом.
-            if (colorCount == 0)
+            // Специальная обработка для встроенной серой палитры для сохранения логарифмического сглаживания
+            if (palette.Name == "Стандартный серый")
             {
-                return (iter, max, clrMax) => Color.Black;
+                return (iter, maxIter, maxColorIter) =>
+                {
+                    if (iter == maxIter) return Color.Black;
+
+                    // Используем maxColorIter для нормализации
+                    double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / Math.Log(maxColorIter + 1);
+                    int cVal = (int)(255.0 * (1 - tLog));
+
+                    Color baseColor = Color.FromArgb(cVal, cVal, cVal);
+                    // Применяем гамму
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
             }
+
+            // Обработка крайних случаев
+            if (colorCount == 0) return (i, m, mc) => Color.Black;
             if (colorCount == 1)
             {
-                return (iter, max, clrMax) => (iter == max) ? Color.Black : colors[0];
+                return (iter, max, clrMax) =>
+                {
+                    Color baseColor = (iter == max) ? Color.Black : colors[0];
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
             }
 
-            // Основная логика генерации функции палитры.
-            return (iter, maxIter, maxColorIterations) =>
+            // Основная логика генерации функции
+            return (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter)
-                {
-                    return Color.Black; // Точки, входящие в множество, черные.
-                }
+                if (iter == maxIter) return Color.Black; // Точки внутри множества всегда черные
 
+                // Используем maxColorIter (длину цикла) для всех вычислений
+                int colorDomainIter = Math.Min(iter, maxColorIter);
+
+                Color baseColor;
                 if (isGradient)
                 {
-                    // Линейная интерполяция между цветами палитры для плавных переходов.
-                    double t = (double)Math.Min(iter, maxColorIterations) / maxColorIterations;
+                    // Градиентная интерполяция
+                    double t = (double)colorDomainIter / maxColorIter;
                     double scaledT = t * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
-                    double localT = scaledT - index1; // Локальный коэффициент интерполяции между двумя цветами.
-                    return LerpColor(colors[index1], colors[index2], localT);
+                    double localT = scaledT - index1;
+                    baseColor = LerpColor(colors[index1], colors[index2], localT);
                 }
                 else
                 {
-                    // Циклическое использование цветов палитры для повторяющегося узора.
-                    int index = Math.Min(iter, maxColorIterations) % colorCount;
-                    return colors[index];
+                    // Дискретные (циклические) цвета
+                    int index = iter % colorCount;
+                    baseColor = colors[index];
                 }
+
+                // Применяем гамма-коррекцию в самом конце
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
         }
 
@@ -1421,6 +1430,8 @@ namespace FractalDraving
             {
                 return;
             }
+            // НОВОЕ: Передаем MaxColorIterations из палитры в движок
+            _fractalEngine.MaxColorIterations = _paletteManager.ActivePalette.MaxColorIterations;
             _fractalEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
         }
 
@@ -1745,16 +1756,6 @@ namespace FractalDraving
             ScheduleRender(); // Запускаем новый рендеринг фрактала с загруженным состоянием.
         }
 
-        /// <summary>
-        /// Асинхронно рендерит плитку превью для заданного состояния фрактала.
-        /// Этот метод используется для генерации миниатюр в диалоге сохранения/загрузки.
-        /// </summary>
-        /// <param name="stateBase">Базовый объект состояния фрактала, содержащий параметры для рендеринга.</param>
-        /// <param name="tile">Информация о плитке для рендеринга.</param>
-        /// <param name="totalWidth">Общая ширина всего превью.</param>
-        /// <param name="totalHeight">Общая высота всего превью.</param>
-        /// <param name="tileSize">Размер одной плитки (ширина и высота).</param>
-        /// <returns>Массив байтов, представляющий данные пикселей отрендеренной плитки.</returns>
         /// <summary>
         /// Асинхронно рендерит плитку превью для заданного состояния фрактала.
         /// Этот метод используется для генерации миниатюр в диалоге сохранения/загрузки.
