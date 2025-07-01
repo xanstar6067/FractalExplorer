@@ -682,20 +682,17 @@ namespace FractalExplorer.Forms
             // Специальная обработка для встроенной серой палитры
             if (palette.Name == "Стандартный серый")
             {
+                // ИСПОЛЬЗУЕМ ОРИГИНАЛЬНУЮ, ПРОВЕРЕННУЮ ЛОГИКУ ДЛЯ СЕРОГО
                 return (iter, maxIter, maxColorIter) =>
                 {
                     if (iter == maxIter) return Color.Black;
 
-                    // Ограничиваем итерации для избежания артефактов
-                    double clampedIter = Math.Min(iter, maxColorIter);
-
-                    // Логарифмическое сглаживание с правильной нормализацией
-                    double tLog = Math.Log(clampedIter + 1) / Math.Log(maxColorIter + 1);
-
-                    // Инвертируем значение (0 -> белый, 1 -> черный) и масштабируем
-                    int cVal = Math.Max(0, Math.Min(255, (int)(255.0 * (1 - tLog))));
+                    // Логарифмическое сглаживание для плавного перехода
+                    double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / Math.Log(maxColorIter + 1);
+                    int cVal = (int)(255.0 * (1 - tLog));
 
                     Color baseColor = Color.FromArgb(cVal, cVal, cVal);
+                    // Применяем гамму в конце
                     return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
             }
@@ -716,31 +713,32 @@ namespace FractalExplorer.Forms
             {
                 if (iter == maxIter) return Color.Black; // Точки внутри множества всегда черные
 
-                // Безопасная нормализация - ограничиваем iter значением maxColorIter
-                double normalizedIter = Math.Min((double)iter, maxColorIter) / maxColorIter;
+                // ФИНАЛЬНЫЙ ФИКС: Безопасная нормализация. Значение плавно идет от 0 до 1, а затем остается на 1.
+                // Это убирает все "галлюцинации" и "разводы".
+                double normalizedIter = (double)Math.Min(iter, maxColorIter) / maxColorIter;
 
                 Color baseColor;
 
                 if (isGradient)
                 {
                     // Для градиентов используем плавную интерполяцию
-                    // Масштабируем нормализованное значение на количество цветовых сегментов
                     double scaledT = normalizedIter * (colorCount - 1);
-                    int index1 = Math.Max(0, Math.Min((int)Math.Floor(scaledT), colorCount - 2));
+                    int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
                     double localT = scaledT - index1;
-
-                    // Дополнительная проверка для избежания выхода за границы
-                    localT = Math.Max(0.0, Math.Min(1.0, localT));
 
                     baseColor = LerpColor(colors[index1], colors[index2], localT);
                 }
                 else
                 {
-                    // Для дискретных цветов - равномерное распределение
+                    // ФИНАЛЬНЫЙ ФИКС для дискретных цветов
                     int colorIndex = (int)(normalizedIter * colorCount);
-                    // Гарантируем, что индекс в пределах массива
-                    colorIndex = Math.Max(0, Math.Min(colorIndex, colorCount - 1));
+                    // Важнейший фикс: если normalizedIter равен 1.0, индекс будет равен colorCount, что вызовет ошибку.
+                    // Поэтому мы его ограничиваем. Это исправляет проблему с Ч/Б и другими дискретными палитрами.
+                    if (colorIndex >= colorCount)
+                    {
+                        colorIndex = colorCount - 1;
+                    }
 
                     baseColor = colors[colorIndex];
                 }
@@ -750,7 +748,9 @@ namespace FractalExplorer.Forms
             };
         }
 
-        // Вспомогательная функция для интерполяции цветов (если её нет)
+        /// <summary>
+        /// Выполняет линейную интерполяцию между двумя цветами на основе коэффициента.
+        /// </summary>
         private Color LerpColor(Color color1, Color color2, double t)
         {
             // Ограничиваем t значениями от 0 до 1
