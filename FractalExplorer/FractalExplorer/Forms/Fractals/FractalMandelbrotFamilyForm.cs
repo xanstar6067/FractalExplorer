@@ -33,6 +33,22 @@ namespace FractalDraving
         /// </summary>
         private ColorPaletteMandelbrotFamily _paletteManager;
 
+        // *** ИЗМЕНЕНИЕ: Начало блока кэширования палитры ***
+
+        /// <summary>
+        /// Кэш цветов палитры, предварительно рассчитанный с гамма-коррекцией.
+        /// Индекс массива соответствует номеру итерации.
+        /// </summary>
+        private Color[] _paletteCache;
+
+        /// <summary>
+        /// "Сигнатура" палитры, для которой был создан кэш. Используется для "умного" обновления.
+        /// Содержит: (Имя палитры, значение гаммы, максимальное количество итераций цвета).
+        /// </summary>
+        private (string name, double gamma, int maxColorIterations) _cachedPaletteSignature;
+
+        // *** ИЗМЕНЕНИЕ: Конец блока кэширования палитры ***
+
         /// <summary>
         /// Форма конфигурации палитр, связанная с этой формой, для настройки цветов.
         /// </summary>
@@ -899,7 +915,7 @@ namespace FractalDraving
                         renderEngine.CenterY = _fractalEngine.CenterY;
                         renderEngine.Scale = _fractalEngine.Scale;
                         renderEngine.C = this is FractalJulia || this is FractalJuliaBurningShip ? new ComplexDecimal(nudRe.Value, nudIm.Value) : _fractalEngine.C;
-                        renderEngine.Palette = GeneratePaletteFunction(_paletteManager.ActivePalette);
+                        renderEngine.Palette = _fractalEngine.Palette; // *** ИЗМЕНЕНИЕ: Используем уже готовый, кэшированный делегат палитры ***
                         renderEngine.MaxColorIterations = _fractalEngine.MaxColorIterations;
                         int threadCount = GetThreadCount();
                         int ssaaFactor = GetSelectedSsaaFactor();
@@ -1006,89 +1022,7 @@ namespace FractalDraving
 
         #region Palette Management
 
-        /// <summary>
-        /// Генерирует функцию палитры на основе выбранной палитры из менеджера.
-        /// Эта функция преобразует количество итераций точки в ее цвет.
-        /// </summary>
-        /// <param name="palette">Объект палитры, содержащий настройки цвета.</param>
-        /// <returns>Функция <c>Func<int, int, int, Color></c>, преобразующая количество итераций,
-        /// максимальное количество итераций и максимальное количество цветовых итераций в цвет.</returns>
-        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
-        {
-            // Получаем параметры из объекта палитры
-            double gamma = palette.Gamma;
-            var colors = new List<Color>(palette.Colors);
-            bool isGradient = palette.IsGradient;
-            int colorCount = colors.Count;
-
-            // Специальная обработка для встроенной серой палитры
-            if (palette.Name == "Стандартный серый")
-            {
-                // ИСПОЛЬЗУЕМ ОРИГИНАЛЬНУЮ, ПРОВЕРЕННУЮ ЛОГИКУ ДЛЯ СЕРОГО
-                return (iter, maxIter, maxColorIter) =>
-                {
-                    if (iter == maxIter) return Color.Black;
-
-                    // Логарифмическое сглаживание для плавного перехода
-                    double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / Math.Log(maxColorIter + 1);
-                    int cVal = (int)(255.0 * (1 - tLog));
-
-                    Color baseColor = Color.FromArgb(cVal, cVal, cVal);
-                    // Применяем гамму в конце
-                    return ColorCorrection.ApplyGamma(baseColor, gamma);
-                };
-            }
-
-            // Обработка крайних случаев
-            if (colorCount == 0) return (i, m, mc) => Color.Black;
-            if (colorCount == 1)
-            {
-                return (iter, max, clrMax) =>
-                {
-                    Color baseColor = (iter == max) ? Color.Black : colors[0];
-                    return ColorCorrection.ApplyGamma(baseColor, gamma);
-                };
-            }
-
-            // Основная логика генерации функции
-            return (iter, maxIter, maxColorIter) =>
-            {
-                if (iter == maxIter) return Color.Black; // Точки внутри множества всегда черные
-
-                // ФИНАЛЬНЫЙ ФИКС: Безопасная нормализация. Значение плавно идет от 0 до 1, а затем остается на 1.
-                // Это убирает все "галлюцинации" и "разводы".
-                double normalizedIter = (double)Math.Min(iter, maxColorIter) / maxColorIter;
-
-                Color baseColor;
-
-                if (isGradient)
-                {
-                    // Для градиентов используем плавную интерполяцию
-                    double scaledT = normalizedIter * (colorCount - 1);
-                    int index1 = (int)Math.Floor(scaledT);
-                    int index2 = Math.Min(index1 + 1, colorCount - 1);
-                    double localT = scaledT - index1;
-
-                    baseColor = LerpColor(colors[index1], colors[index2], localT);
-                }
-                else
-                {
-                    // ФИНАЛЬНЫЙ ФИКС для дискретных цветов
-                    int colorIndex = (int)(normalizedIter * colorCount);
-                    // Важнейший фикс: если normalizedIter равен 1.0, индекс будет равен colorCount, что вызовет ошибку.
-                    // Поэтому мы его ограничиваем. Это исправляет проблему с Ч/Б и другими дискретными палитрами.
-                    if (colorIndex >= colorCount)
-                    {
-                        colorIndex = colorCount - 1;
-                    }
-
-                    baseColor = colors[colorIndex];
-                }
-
-                // Применяем гамма-коррекцию
-                return ColorCorrection.ApplyGamma(baseColor, gamma);
-            };
-        }
+        // *** ИЗМЕНЕНИЕ: Старый метод GeneratePaletteFunction удален. Его логика перенесена в UpdateAndApplyPaletteCache. ***
 
         /// <summary>
         /// Выполняет линейную интерполяцию между двумя цветами на основе коэффициента.
@@ -1116,6 +1050,7 @@ namespace FractalDraving
 
             var activePalette = _paletteManager.ActivePalette;
 
+            // Определяем, сколько итераций будет использоваться для раскраски
             if (activePalette.AlignWithRenderIterations)
             {
                 _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
@@ -1125,7 +1060,99 @@ namespace FractalDraving
                 _fractalEngine.MaxColorIterations = activePalette.MaxColorIterations;
             }
 
-            _fractalEngine.Palette = GeneratePaletteFunction(activePalette);
+            // *** ИЗМЕНЕНИЕ: Вызываем новый метод для "умного" кэширования палитры
+            UpdateAndApplyPaletteCache();
+        }
+
+        /// <summary>
+        /// *** НОВЫЙ МЕТОД ***
+        /// Проверяет, нужно ли обновлять кэш палитры, и если да, пересчитывает его.
+        /// Затем применяет к движку быстрый делегат, использующий этот кэш.
+        /// </summary>
+        private void UpdateAndApplyPaletteCache()
+        {
+            var activePalette = _paletteManager.ActivePalette;
+            int maxColorIter = _fractalEngine.MaxColorIterations;
+
+            // 1. Создаем "сигнатуру" текущей палитры
+            var currentSignature = (activePalette.Name, activePalette.Gamma, maxColorIter);
+
+            // 2. Проверяем, совпадает ли она с сигнатурой кэшированной палитры.
+            //    Если совпадает и кэш существует, ничего не делаем. Кэш актуален.
+            if (_paletteCache != null && _paletteCache.Length == maxColorIter + 1 && currentSignature.Equals(_cachedPaletteSignature))
+            {
+                return; // Кэш валиден, выходим.
+            }
+
+            // 3. Если мы здесь, значит кэш нужно перестроить.
+            var colors = new List<Color>(activePalette.Colors);
+            bool isGradient = activePalette.IsGradient;
+            double gamma = activePalette.Gamma;
+            int colorCount = colors.Count;
+
+            // Создаем новый кэш. Размер +1, чтобы вместить цвет для итерации maxColorIter.
+            var newCache = new Color[maxColorIter + 1];
+
+            if (colorCount > 0)
+            {
+                // Заполняем кэш от 0 до maxColorIter
+                for (int iter = 0; iter <= maxColorIter; iter++)
+                {
+                    Color baseColor;
+                    double normalizedIter = (double)iter / maxColorIter;
+
+                    if (isGradient)
+                    {
+                        if (colorCount == 1)
+                        {
+                            baseColor = colors[0];
+                        }
+                        else
+                        {
+                            double scaledT = normalizedIter * (colorCount - 1);
+                            int index1 = (int)Math.Floor(scaledT);
+                            int index2 = Math.Min(index1 + 1, colorCount - 1);
+                            double localT = scaledT - index1;
+                            baseColor = LerpColor(colors[index1], colors[index2], localT);
+                        }
+                    }
+                    else // Дискретная палитра
+                    {
+                        int colorIndex = (int)(normalizedIter * colorCount);
+                        if (colorIndex >= colorCount)
+                        {
+                            colorIndex = colorCount - 1; // Защита от выхода за пределы массива
+                        }
+                        baseColor = colors[colorIndex];
+                    }
+
+                    // Сразу применяем гамма-коррекцию и сохраняем готовый цвет в кэш
+                    newCache[iter] = ColorCorrection.ApplyGamma(baseColor, gamma);
+                }
+            }
+            else // Если в палитре нет цветов
+            {
+                for (int i = 0; i < newCache.Length; i++)
+                {
+                    newCache[i] = Color.Black;
+                }
+            }
+
+
+            // 4. Обновляем поля класса
+            _paletteCache = newCache;
+            _cachedPaletteSignature = currentSignature;
+
+            // 5. Применяем к движку новый, очень быстрый делегат, который просто берет цвет из кэша.
+            _fractalEngine.Palette = (iter, maxIter, clrMax) =>
+            {
+                if (iter == maxIter) return Color.Black; // Точка внутри множества
+
+                // Защита от выхода за пределы массива, если iter > clrMax
+                int cacheIndex = Math.Min(iter, clrMax);
+
+                return _paletteCache[cacheIndex];
+            };
         }
 
         #endregion
@@ -1431,6 +1458,55 @@ namespace FractalDraving
             ScheduleRender(); // Запускаем новый рендеринг фрактала с загруженным состоянием.
         }
 
+        // Вспомогательный метод для создания палитры для превью (избегаем дублирования кода)
+        private Func<int, int, int, Color> GeneratePreviewPaletteFunction(PaletteManagerMandelbrotFamily palette)
+        {
+            // Этот метод может использовать упрощенную логику или быть полным дубликатом
+            // старого GeneratePaletteFunction, если требуется точное соответствие.
+            // Для простоты и консистентности, используем ту же логику, что и в UpdateAndApplyPaletteCache,
+            // но без сохранения в кэш.
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            bool isGradient = palette.IsGradient;
+            int colorCount = colors.Count;
+
+            if (colorCount == 0) return (i, m, mc) => Color.Black;
+            if (colorCount == 1)
+            {
+                return (iter, max, clrMax) =>
+                {
+                    Color baseColor = (iter == max) ? Color.Black : colors[0];
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
+            }
+
+            return (iter, maxIter, maxColorIter) =>
+            {
+                if (iter == maxIter) return Color.Black;
+
+                double normalizedIter = (double)Math.Min(iter, maxColorIter) / maxColorIter;
+                Color baseColor;
+
+                if (isGradient)
+                {
+                    double scaledT = normalizedIter * (colorCount - 1);
+                    int index1 = (int)Math.Floor(scaledT);
+                    int index2 = Math.Min(index1 + 1, colorCount - 1);
+                    double localT = scaledT - index1;
+                    baseColor = LerpColor(colors[index1], colors[index2], localT);
+                }
+                else
+                {
+                    int colorIndex = (int)(normalizedIter * colorCount);
+                    if (colorIndex >= colorCount) colorIndex = colorCount - 1;
+                    baseColor = colors[colorIndex];
+                }
+
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
+        }
+
+
         /// <summary>
         /// Асинхронно рендерит плитку превью для заданного состояния фрактала.
         /// Этот метод используется для генерации миниатюр в диалоге сохранения/загрузки.
@@ -1485,9 +1561,8 @@ namespace FractalDraving
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
 
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
-                previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+                previewEngine.Palette = GeneratePreviewPaletteFunction(paletteForPreview);
 
-                // ИСПРАВЛЕНИЕ: Применяем ту же логику настройки палитры, что и в основном рендере.
                 if (paletteForPreview.AlignWithRenderIterations)
                 {
                     previewEngine.MaxColorIterations = previewEngine.MaxIterations;
@@ -1561,9 +1636,8 @@ namespace FractalDraving
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
 
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
-            previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+            previewEngine.Palette = GeneratePreviewPaletteFunction(paletteForPreview);
 
-            // ИСПРАВЛЕНИЕ: Применяем ту же логику настройки палитры, что и в основном рендере.
             if (paletteForPreview.AlignWithRenderIterations)
             {
                 previewEngine.MaxColorIterations = previewEngine.MaxIterations;
