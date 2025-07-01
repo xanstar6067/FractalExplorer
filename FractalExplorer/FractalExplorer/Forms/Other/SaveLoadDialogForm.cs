@@ -22,7 +22,7 @@ namespace FractalExplorer.Forms
         private Bitmap _previewBitmap;
         private Bitmap _currentRenderingBitmap;
         private readonly object _bitmapLock = new object();
-        private const int TILE_SIZE = 32;
+        private const int TILE_SIZE = 16;
         private bool _isRenderingPreview = false;
 
         // --- Поля для прогрессивного кэширования превью ---
