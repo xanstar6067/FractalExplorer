@@ -16,334 +16,325 @@
         #region Windows Form Designer generated code
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            this.lbPalettes = new System.Windows.Forms.ListBox();
-            this.panelPreview = new System.Windows.Forms.Panel();
-            this.lbColorStops = new System.Windows.Forms.ListBox();
-            this.btnAddColor = new System.Windows.Forms.Button();
-            this.btnRemoveColor = new System.Windows.Forms.Button();
-            this.btnEditColor = new System.Windows.Forms.Button();
-            this.txtName = new System.Windows.Forms.TextBox();
-            this.checkIsGradient = new System.Windows.Forms.CheckBox();
-            this.btnNew = new System.Windows.Forms.Button();
-            this.btnCopy = new System.Windows.Forms.Button();
-            this.btnDelete = new System.Windows.Forms.Button();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.btnApply = new System.Windows.Forms.Button();
-            this.btnClose = new System.Windows.Forms.Button();
-            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.checkAlignSteps = new System.Windows.Forms.CheckBox(); // НОВОЕ
-            this.nudGamma = new System.Windows.Forms.NumericUpDown();
-            this.labelGamma = new System.Windows.Forms.Label();
-            this.nudMaxColorIterations = new System.Windows.Forms.NumericUpDown();
-            this.labelMaxColorIter = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudGamma)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudMaxColorIterations)).BeginInit();
-            this.SuspendLayout();
+            lbPalettes = new ListBox();
+            panelPreview = new Panel();
+            lbColorStops = new ListBox();
+            btnAddColor = new Button();
+            btnRemoveColor = new Button();
+            btnEditColor = new Button();
+            txtName = new TextBox();
+            checkIsGradient = new CheckBox();
+            btnNew = new Button();
+            btnCopy = new Button();
+            btnDelete = new Button();
+            btnSave = new Button();
+            btnApply = new Button();
+            btnClose = new Button();
+            colorDialog1 = new ColorDialog();
+            groupBox1 = new GroupBox();
+            groupBox2 = new GroupBox();
+            checkAlignSteps = new CheckBox();
+            nudGamma = new NumericUpDown();
+            labelGamma = new Label();
+            nudMaxColorIterations = new NumericUpDown();
+            labelMaxColorIter = new Label();
+            label2 = new Label();
+            label1 = new Label();
+            groupBox1.SuspendLayout();
+            groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)nudGamma).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudMaxColorIterations).BeginInit();
+            SuspendLayout();
             // 
             // lbPalettes
             // 
-            this.lbPalettes.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.lbPalettes.FormattingEnabled = true;
-            this.lbPalettes.ItemHeight = 16;
-            this.lbPalettes.Location = new System.Drawing.Point(8, 23);
-            this.lbPalettes.Name = "lbPalettes";
-            this.lbPalettes.Size = new System.Drawing.Size(220, 388);
-            this.lbPalettes.TabIndex = 0;
-            this.lbPalettes.SelectedIndexChanged += new System.EventHandler(this.lbPalettes_SelectedIndexChanged);
+            lbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            lbPalettes.FormattingEnabled = true;
+            lbPalettes.ItemHeight = 15;
+            lbPalettes.Location = new Point(7, 22);
+            lbPalettes.Name = "lbPalettes";
+            lbPalettes.Size = new Size(193, 364);
+            lbPalettes.TabIndex = 0;
+            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
             // 
             // panelPreview
             // 
-            this.panelPreview.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.panelPreview.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelPreview.Location = new System.Drawing.Point(9, 79);
-            this.panelPreview.Name = "panelPreview";
-            this.panelPreview.Size = new System.Drawing.Size(469, 40);
-            this.panelPreview.TabIndex = 1;
-            this.panelPreview.Paint += new System.Windows.Forms.PaintEventHandler(this.panelPreview_Paint);
+            panelPreview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panelPreview.BorderStyle = BorderStyle.FixedSingle;
+            panelPreview.Location = new Point(8, 74);
+            panelPreview.Name = "panelPreview";
+            panelPreview.Size = new Size(411, 38);
+            panelPreview.TabIndex = 1;
+            panelPreview.Paint += panelPreview_Paint;
             // 
             // lbColorStops
             // 
-            this.lbColorStops.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.lbColorStops.FormattingEnabled = true;
-            this.lbColorStops.ItemHeight = 16;
-            this.lbColorStops.Location = new System.Drawing.Point(9, 238);
-            this.lbColorStops.Name = "lbColorStops";
-            this.lbColorStops.Size = new System.Drawing.Size(341, 180);
-            this.lbColorStops.TabIndex = 2;
+            lbColorStops.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lbColorStops.FormattingEnabled = true;
+            lbColorStops.ItemHeight = 15;
+            lbColorStops.Location = new Point(8, 223);
+            lbColorStops.Name = "lbColorStops";
+            lbColorStops.Size = new Size(299, 169);
+            lbColorStops.TabIndex = 2;
             // 
             // btnAddColor
             // 
-            this.btnAddColor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnAddColor.Location = new System.Drawing.Point(356, 238);
-            this.btnAddColor.Name = "btnAddColor";
-            this.btnAddColor.Size = new System.Drawing.Size(122, 30);
-            this.btnAddColor.TabIndex = 3;
-            this.btnAddColor.Text = "Добавить...";
-            this.btnAddColor.UseVisualStyleBackColor = true;
-            this.btnAddColor.Click += new System.EventHandler(this.btnAddColor_Click);
+            btnAddColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnAddColor.Location = new Point(312, 223);
+            btnAddColor.Name = "btnAddColor";
+            btnAddColor.Size = new Size(107, 28);
+            btnAddColor.TabIndex = 3;
+            btnAddColor.Text = "Добавить...";
+            btnAddColor.UseVisualStyleBackColor = true;
+            btnAddColor.Click += btnAddColor_Click;
             // 
             // btnRemoveColor
             // 
-            this.btnRemoveColor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRemoveColor.Location = new System.Drawing.Point(356, 310);
-            this.btnRemoveColor.Name = "btnRemoveColor";
-            this.btnRemoveColor.Size = new System.Drawing.Size(122, 30);
-            this.btnRemoveColor.TabIndex = 5;
-            this.btnRemoveColor.Text = "Удалить цвет";
-            this.btnRemoveColor.UseVisualStyleBackColor = true;
-            this.btnRemoveColor.Click += new System.EventHandler(this.btnRemoveColor_Click);
+            btnRemoveColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnRemoveColor.Location = new Point(312, 291);
+            btnRemoveColor.Name = "btnRemoveColor";
+            btnRemoveColor.Size = new Size(107, 28);
+            btnRemoveColor.TabIndex = 5;
+            btnRemoveColor.Text = "Удалить цвет";
+            btnRemoveColor.UseVisualStyleBackColor = true;
+            btnRemoveColor.Click += btnRemoveColor_Click;
             // 
             // btnEditColor
             // 
-            this.btnEditColor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnEditColor.Location = new System.Drawing.Point(356, 274);
-            this.btnEditColor.Name = "btnEditColor";
-            this.btnEditColor.Size = new System.Drawing.Size(122, 30);
-            this.btnEditColor.TabIndex = 4;
-            this.btnEditColor.Text = "Изменить...";
-            this.btnEditColor.UseVisualStyleBackColor = true;
-            this.btnEditColor.Click += new System.EventHandler(this.btnEditColor_Click);
+            btnEditColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnEditColor.Location = new Point(312, 257);
+            btnEditColor.Name = "btnEditColor";
+            btnEditColor.Size = new Size(107, 28);
+            btnEditColor.TabIndex = 4;
+            btnEditColor.Text = "Изменить...";
+            btnEditColor.UseVisualStyleBackColor = true;
+            btnEditColor.Click += btnEditColor_Click;
             // 
             // txtName
             // 
-            this.txtName.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtName.Location = new System.Drawing.Point(9, 41);
-            this.txtName.Name = "txtName";
-            this.txtName.Size = new System.Drawing.Size(341, 22);
-            this.txtName.TabIndex = 6;
-            this.txtName.TextChanged += new System.EventHandler(this.txtName_TextChanged);
+            txtName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtName.Location = new Point(8, 38);
+            txtName.Name = "txtName";
+            txtName.Size = new Size(299, 23);
+            txtName.TabIndex = 6;
+            txtName.TextChanged += txtName_TextChanged;
             // 
             // checkIsGradient
             // 
-            this.checkIsGradient.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.checkIsGradient.AutoSize = true;
-            this.checkIsGradient.Location = new System.Drawing.Point(356, 43);
-            this.checkIsGradient.Name = "checkIsGradient";
-            this.checkIsGradient.Size = new System.Drawing.Size(91, 20);
-            this.checkIsGradient.TabIndex = 7;
-            this.checkIsGradient.Text = "Градиент";
-            this.checkIsGradient.UseVisualStyleBackColor = true;
-            this.checkIsGradient.CheckedChanged += new System.EventHandler(this.checkIsGradient_CheckedChanged);
+            checkIsGradient.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            checkIsGradient.AutoSize = true;
+            checkIsGradient.Location = new Point(315, 40);
+            checkIsGradient.Name = "checkIsGradient";
+            checkIsGradient.Size = new Size(76, 19);
+            checkIsGradient.TabIndex = 7;
+            checkIsGradient.Text = "Градиент";
+            checkIsGradient.UseVisualStyleBackColor = true;
+            checkIsGradient.CheckedChanged += checkIsGradient_CheckedChanged;
             // 
             // btnNew
             // 
-            this.btnNew.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnNew.Location = new System.Drawing.Point(8, 417);
-            this.btnNew.Name = "btnNew";
-            this.btnNew.Size = new System.Drawing.Size(70, 30);
-            this.btnNew.TabIndex = 8;
-            this.btnNew.Text = "Новая";
-            this.btnNew.UseVisualStyleBackColor = true;
-            this.btnNew.Click += new System.EventHandler(this.btnNew_Click);
+            btnNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnNew.Location = new Point(7, 391);
+            btnNew.Name = "btnNew";
+            btnNew.Size = new Size(61, 28);
+            btnNew.TabIndex = 8;
+            btnNew.Text = "Новая";
+            btnNew.UseVisualStyleBackColor = true;
+            btnNew.Click += btnNew_Click;
             // 
             // btnCopy
             // 
-            this.btnCopy.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnCopy.Location = new System.Drawing.Point(84, 417);
-            this.btnCopy.Name = "btnCopy";
-            this.btnCopy.Size = new System.Drawing.Size(100, 30);
-            this.btnCopy.TabIndex = 15;
-            this.btnCopy.Text = "Копировать";
-            this.btnCopy.UseVisualStyleBackColor = true;
-            this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
+            btnCopy.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnCopy.Location = new Point(74, 391);
+            btnCopy.Name = "btnCopy";
+            btnCopy.Size = new Size(88, 28);
+            btnCopy.TabIndex = 15;
+            btnCopy.Text = "Копировать";
+            btnCopy.UseVisualStyleBackColor = true;
+            btnCopy.Click += btnCopy_Click;
             // 
             // btnDelete
             // 
-            this.btnDelete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnDelete.Location = new System.Drawing.Point(190, 417);
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(38, 30);
-            this.btnDelete.TabIndex = 9;
-            this.btnDelete.Text = "X";
-            this.btnDelete.UseVisualStyleBackColor = true;
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnDelete.Location = new Point(166, 391);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(33, 28);
+            btnDelete.TabIndex = 9;
+            btnDelete.Text = "X";
+            btnDelete.UseVisualStyleBackColor = true;
+            btnDelete.Click += btnDelete_Click;
             // 
             // btnSave
             // 
-            this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnSave.Location = new System.Drawing.Point(12, 484);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(170, 30);
-            this.btnSave.TabIndex = 10;
-            this.btnSave.Text = "Сохранить палитры";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnSave.Location = new Point(10, 454);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(149, 28);
+            btnSave.TabIndex = 10;
+            btnSave.Text = "Сохранить палитры";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnSave_Click;
             // 
             // btnApply
             // 
-            this.btnApply.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnApply.Location = new System.Drawing.Point(500, 484);
-            this.btnApply.Name = "btnApply";
-            this.btnApply.Size = new System.Drawing.Size(120, 30);
-            this.btnApply.TabIndex = 11;
-            this.btnApply.Text = "Применить";
-            this.btnApply.UseVisualStyleBackColor = true;
-            this.btnApply.Click += new System.EventHandler(this.btnApply_Click);
+            btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnApply.Location = new Point(438, 454);
+            btnApply.Name = "btnApply";
+            btnApply.Size = new Size(105, 28);
+            btnApply.TabIndex = 11;
+            btnApply.Text = "Применить";
+            btnApply.UseVisualStyleBackColor = true;
+            btnApply.Click += btnApply_Click;
             // 
             // btnClose
             // 
-            this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClose.Location = new System.Drawing.Point(626, 484);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(120, 30);
-            this.btnClose.TabIndex = 12;
-            this.btnClose.Text = "Закрыть";
-            this.btnClose.UseVisualStyleBackColor = true;
-            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
+            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnClose.Location = new Point(548, 454);
+            btnClose.Name = "btnClose";
+            btnClose.Size = new Size(105, 28);
+            btnClose.TabIndex = 12;
+            btnClose.Text = "Закрыть";
+            btnClose.UseVisualStyleBackColor = true;
+            btnClose.Click += btnClose_Click;
             // 
             // colorDialog1
             // 
-            this.colorDialog1.AnyColor = true;
-            this.colorDialog1.FullOpen = true;
+            colorDialog1.AnyColor = true;
+            colorDialog1.FullOpen = true;
             // 
             // groupBox1
             // 
-            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.groupBox1.Controls.Add(this.lbPalettes);
-            this.groupBox1.Controls.Add(this.btnNew);
-            this.groupBox1.Controls.Add(this.btnCopy);
-            this.groupBox1.Controls.Add(this.btnDelete);
-            this.groupBox1.Location = new System.Drawing.Point(12, 12);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(236, 457);
-            this.groupBox1.TabIndex = 13;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Список палитр";
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            groupBox1.Controls.Add(lbPalettes);
+            groupBox1.Controls.Add(btnNew);
+            groupBox1.Controls.Add(btnCopy);
+            groupBox1.Controls.Add(btnDelete);
+            groupBox1.Location = new Point(10, 11);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(206, 428);
+            groupBox1.TabIndex = 13;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Список палитр";
             // 
             // groupBox2
             // 
-            this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox2.Controls.Add(this.checkAlignSteps);
-            this.groupBox2.Controls.Add(this.nudGamma);
-            this.groupBox2.Controls.Add(this.labelGamma);
-            this.groupBox2.Controls.Add(this.nudMaxColorIterations);
-            this.groupBox2.Controls.Add(this.labelMaxColorIter);
-            this.groupBox2.Controls.Add(this.label2);
-            this.groupBox2.Controls.Add(this.label1);
-            this.groupBox2.Controls.Add(this.txtName);
-            this.groupBox2.Controls.Add(this.panelPreview);
-            this.groupBox2.Controls.Add(this.lbColorStops);
-            this.groupBox2.Controls.Add(this.btnAddColor);
-            this.groupBox2.Controls.Add(this.checkIsGradient);
-            this.groupBox2.Controls.Add(this.btnEditColor);
-            this.groupBox2.Controls.Add(this.btnRemoveColor);
-            this.groupBox2.Location = new System.Drawing.Point(267, 12);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(484, 457);
-            this.groupBox2.TabIndex = 14;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Редактор палитры";
+            groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Controls.Add(checkAlignSteps);
+            groupBox2.Controls.Add(nudGamma);
+            groupBox2.Controls.Add(labelGamma);
+            groupBox2.Controls.Add(nudMaxColorIterations);
+            groupBox2.Controls.Add(labelMaxColorIter);
+            groupBox2.Controls.Add(label2);
+            groupBox2.Controls.Add(label1);
+            groupBox2.Controls.Add(txtName);
+            groupBox2.Controls.Add(panelPreview);
+            groupBox2.Controls.Add(lbColorStops);
+            groupBox2.Controls.Add(btnAddColor);
+            groupBox2.Controls.Add(checkIsGradient);
+            groupBox2.Controls.Add(btnEditColor);
+            groupBox2.Controls.Add(btnRemoveColor);
+            groupBox2.Location = new Point(234, 11);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Size = new Size(424, 428);
+            groupBox2.TabIndex = 14;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Редактор палитры";
             // 
             // checkAlignSteps
             // 
-            this.checkAlignSteps.AutoSize = true;
-            this.checkAlignSteps.Location = new System.Drawing.Point(135, 135);
-            this.checkAlignSteps.Name = "checkAlignSteps";
-            this.checkAlignSteps.Size = new System.Drawing.Size(188, 20);
-            this.checkAlignSteps.TabIndex = 14;
-            this.checkAlignSteps.Text = "Как в старые добрые";
-            this.checkAlignSteps.UseVisualStyleBackColor = true;
-            this.checkAlignSteps.CheckedChanged += new System.EventHandler(this.checkAlignSteps_CheckedChanged);
+            checkAlignSteps.AutoSize = true;
+            checkAlignSteps.Location = new Point(118, 134);
+            checkAlignSteps.Name = "checkAlignSteps";
+            checkAlignSteps.Size = new Size(141, 19);
+            checkAlignSteps.TabIndex = 14;
+            checkAlignSteps.Text = "Как в старые добрые";
+            checkAlignSteps.UseVisualStyleBackColor = true;
+            checkAlignSteps.CheckedChanged += checkAlignSteps_CheckedChanged;
             // 
             // nudGamma
             // 
-            this.nudGamma.DecimalPlaces = 2;
-            this.nudGamma.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.nudGamma.Location = new System.Drawing.Point(9, 183);
-            this.nudGamma.Maximum = new decimal(new int[] { 5, 0, 0, 0 });
-            this.nudGamma.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.nudGamma.Name = "nudGamma";
-            this.nudGamma.Size = new System.Drawing.Size(120, 22);
-            this.nudGamma.TabIndex = 13;
-            this.nudGamma.Value = new decimal(new int[] { 1, 0, 0, 0 });
-            this.nudGamma.ValueChanged += new System.EventHandler(this.nudGamma_ValueChanged);
+            nudGamma.DecimalPlaces = 2;
+            nudGamma.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
+            nudGamma.Location = new Point(8, 179);
+            nudGamma.Maximum = new decimal(new int[] { 5, 0, 0, 0 });
+            nudGamma.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
+            nudGamma.Name = "nudGamma";
+            nudGamma.Size = new Size(105, 23);
+            nudGamma.TabIndex = 13;
+            nudGamma.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            nudGamma.ValueChanged += nudGamma_ValueChanged;
             // 
             // labelGamma
             // 
-            this.labelGamma.AutoSize = true;
-            this.labelGamma.Location = new System.Drawing.Point(6, 164);
-            this.labelGamma.Name = "labelGamma";
-            this.labelGamma.Size = new System.Drawing.Size(125, 16);
-            this.labelGamma.TabIndex = 12;
-            this.labelGamma.Text = "Гамма-коррекция:";
+            labelGamma.AutoSize = true;
+            labelGamma.Location = new Point(5, 161);
+            labelGamma.Name = "labelGamma";
+            labelGamma.Size = new Size(110, 15);
+            labelGamma.TabIndex = 12;
+            labelGamma.Text = "Гамма-коррекция:";
             // 
             // nudMaxColorIterations
             // 
-            this.nudMaxColorIterations.Location = new System.Drawing.Point(9, 134);
-            this.nudMaxColorIterations.Maximum = 100000;
-            this.nudMaxColorIterations.Minimum = 2;
-            this.nudMaxColorIterations.Name = "nudMaxColorIterations";
-            this.nudMaxColorIterations.Size = new System.Drawing.Size(120, 22);
-            this.nudMaxColorIterations.TabIndex = 11;
-            this.nudMaxColorIterations.Value = 500;
-            this.nudMaxColorIterations.ValueChanged += new System.EventHandler(this.nudMaxColorIterations_ValueChanged);
+            nudMaxColorIterations.Location = new Point(8, 133);
+            nudMaxColorIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
+            nudMaxColorIterations.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
+            nudMaxColorIterations.Name = "nudMaxColorIterations";
+            nudMaxColorIterations.Size = new Size(105, 23);
+            nudMaxColorIterations.TabIndex = 11;
+            nudMaxColorIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
+            nudMaxColorIterations.ValueChanged += nudMaxColorIterations_ValueChanged;
             // 
             // labelMaxColorIter
             // 
-            this.labelMaxColorIter.AutoSize = true;
-            this.labelMaxColorIter.Location = new System.Drawing.Point(6, 115);
-            this.labelMaxColorIter.Name = "labelMaxColorIter";
-            this.labelMaxColorIter.Size = new System.Drawing.Size(139, 16);
-            this.labelMaxColorIter.TabIndex = 10;
-            this.labelMaxColorIter.Text = "Длина цикла цвета:";
+            labelMaxColorIter.AutoSize = true;
+            labelMaxColorIter.Location = new Point(5, 115);
+            labelMaxColorIter.Name = "labelMaxColorIter";
+            labelMaxColorIter.Size = new Size(114, 15);
+            labelMaxColorIter.TabIndex = 10;
+            labelMaxColorIter.Text = "Длина цикла цвета:";
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 219);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(115, 16);
-            this.label2.TabIndex = 9;
-            this.label2.Text = "Ключевые цвета:";
+            label2.AutoSize = true;
+            label2.Location = new Point(5, 205);
+            label2.Name = "label2";
+            label2.Size = new Size(101, 15);
+            label2.TabIndex = 9;
+            label2.Text = "Ключевые цвета:";
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 22);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(129, 16);
-            this.label1.TabIndex = 8;
-            this.label1.Text = "Название палитры:";
+            label1.AutoSize = true;
+            label1.Location = new Point(5, 21);
+            label1.Name = "label1";
+            label1.Size = new Size(113, 15);
+            label1.TabIndex = 8;
+            label1.Text = "Название палитры:";
             // 
             // ColorConfigurationMandelbrotFamilyForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(763, 526);
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.btnClose);
-            this.Controls.Add(this.btnApply);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(781, 573);
-            this.Name = "ColorConfigurationMandelbrotFamilyForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Настройка цветовых палитр";
-            this.Load += new System.EventHandler(this.ColorConfigurationForm_Load);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudGamma)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudMaxColorIterations)).EndInit();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(669, 501);
+            Controls.Add(groupBox2);
+            Controls.Add(groupBox1);
+            Controls.Add(btnSave);
+            Controls.Add(btnClose);
+            Controls.Add(btnApply);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            MinimumSize = new Size(685, 540);
+            Name = "ColorConfigurationMandelbrotFamilyForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Настройка цветовых палитр";
+            Load += ColorConfigurationForm_Load;
+            groupBox1.ResumeLayout(false);
+            groupBox2.ResumeLayout(false);
+            groupBox2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)nudGamma).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudMaxColorIterations).EndInit();
+            ResumeLayout(false);
         }
         #endregion
 
