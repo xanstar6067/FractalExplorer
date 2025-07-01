@@ -679,22 +679,28 @@ namespace FractalExplorer.Forms
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
 
-            // Специальная обработка для встроенной серой палитры для сохранения логарифмического сглаживания
+            // Специальная обработка для встроенной серой палитры
             if (palette.Name == "Стандартный серый")
             {
                 return (iter, maxIter, maxColorIter) =>
                 {
                     if (iter == maxIter) return Color.Black;
 
-                    double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / Math.Log(maxColorIter + 1);
-                    int cVal = (int)(255.0 * (1 - tLog));
+                    // Ограничиваем итерации для избежания артефактов
+                    double clampedIter = Math.Min(iter, maxColorIter);
+
+                    // Логарифмическое сглаживание с правильной нормализацией
+                    double tLog = Math.Log(clampedIter + 1) / Math.Log(maxColorIter + 1);
+
+                    // Инвертируем значение (0 -> белый, 1 -> черный) и масштабируем
+                    int cVal = Math.Max(0, Math.Min(255, (int)(255.0 * (1 - tLog))));
 
                     Color baseColor = Color.FromArgb(cVal, cVal, cVal);
                     return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
             }
 
-            // Обработка крайних случаев: пустая палитра или палитра с одним цветом.
+            // Обработка крайних случаев
             if (colorCount == 0) return (i, m, mc) => Color.Black;
             if (colorCount == 1)
             {
@@ -710,60 +716,58 @@ namespace FractalExplorer.Forms
             {
                 if (iter == maxIter) return Color.Black; // Точки внутри множества всегда черные
 
+                // Безопасная нормализация - ограничиваем iter значением maxColorIter
+                double normalizedIter = Math.Min((double)iter, maxColorIter) / maxColorIter;
+
                 Color baseColor;
 
                 if (isGradient)
                 {
-                    // ИСПРАВЛЕНИЕ: Пинг-понг логика для градиентов, чтобы убрать швы.
-                    // 1. Определяем номер цикла и позицию внутри него.
-                    int cycle = iter / maxColorIter;
-                    int positionInCycle = iter % maxColorIter;
-
-                    // 2. Нормализуем позицию в диапазон [0, 1].
-                    double t = maxColorIter > 1 ? (double)positionInCycle / (maxColorIter - 1) : 0;
-
-                    // 3. Для нечетных циклов инвертируем направление градиента.
-                    if (cycle % 2 != 0)
-                    {
-                        t = 1.0 - t; // Пинг-понг эффект
-                    }
-
-                    // 4. Вычисляем цвет через интерполяцию.
-                    double scaledT = t * (colorCount - 1);
-                    int index1 = (int)Math.Floor(scaledT);
+                    // Для градиентов используем плавную интерполяцию
+                    // Масштабируем нормализованное значение на количество цветовых сегментов
+                    double scaledT = normalizedIter * (colorCount - 1);
+                    int index1 = Math.Max(0, Math.Min((int)Math.Floor(scaledT), colorCount - 2));
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
                     double localT = scaledT - index1;
+
+                    // Дополнительная проверка для избежания выхода за границы
+                    localT = Math.Max(0.0, Math.Min(1.0, localT));
+
                     baseColor = LerpColor(colors[index1], colors[index2], localT);
                 }
                 else
                 {
-                    // ИСПРАВЛЕНИЕ: Простая и надежная логика для дискретных цветов.
-                    // 1. Определяем, какой по счету "блок" итераций мы рендерим.
-                    int blockIndex = iter / maxColorIter;
-
-                    // 2. Выбираем цвет, зацикливая его по количеству цветов в палитре.
-                    int colorIndex = blockIndex % colorCount;
+                    // Для дискретных цветов - равномерное распределение
+                    int colorIndex = (int)(normalizedIter * colorCount);
+                    // Гарантируем, что индекс в пределах массива
+                    colorIndex = Math.Max(0, Math.Min(colorIndex, colorCount - 1));
 
                     baseColor = colors[colorIndex];
                 }
 
-                // Применяем гамма-коррекцию в самом конце.
+                // Применяем гамма-коррекцию
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
         }
 
-        /// <summary>
-        /// Выполняет линейную интерполяцию между двумя цветами.
-        /// </summary>
-        private Color LerpColor(Color a, Color b, double t)
+        // Вспомогательная функция для интерполяции цветов (если её нет)
+        private Color LerpColor(Color color1, Color color2, double t)
         {
-            t = Math.Max(0, Math.Min(1, t));
-            return Color.FromArgb(
-                (int)(a.A + (b.A - a.A) * t),
-                (int)(a.R + (b.R - a.R) * t),
-                (int)(a.G + (b.G - a.G) * t),
-                (int)(a.B + (b.B - a.B) * t)
-            );
+            // Ограничиваем t значениями от 0 до 1
+            t = Math.Max(0.0, Math.Min(1.0, t));
+
+            int r = (int)(color1.R + (color2.R - color1.R) * t);
+            int g = (int)(color1.G + (color2.G - color1.G) * t);
+            int b = (int)(color1.B + (color2.B - color1.B) * t);
+            int a = (int)(color1.A + (color2.A - color1.A) * t);
+
+            // Обеспечиваем, что значения находятся в допустимом диапазоне
+            r = Math.Max(0, Math.Min(255, r));
+            g = Math.Max(0, Math.Min(255, g));
+            b = Math.Max(0, Math.Min(255, b));
+            a = Math.Max(0, Math.Min(255, a));
+
+            return Color.FromArgb(a, r, g, b);
         }
 
         /// <summary>
