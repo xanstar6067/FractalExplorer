@@ -26,7 +26,7 @@
             this.txtName = new System.Windows.Forms.TextBox();
             this.checkIsGradient = new System.Windows.Forms.CheckBox();
             this.btnNew = new System.Windows.Forms.Button();
-            this.btnCopy = new System.Windows.Forms.Button(); // НОВОЕ
+            this.btnCopy = new System.Windows.Forms.Button();
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnApply = new System.Windows.Forms.Button();
@@ -34,6 +34,7 @@
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.checkAlignSteps = new System.Windows.Forms.CheckBox(); // НОВОЕ
             this.nudGamma = new System.Windows.Forms.NumericUpDown();
             this.labelGamma = new System.Windows.Forms.Label();
             this.nudMaxColorIterations = new System.Windows.Forms.NumericUpDown();
@@ -76,15 +77,15 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.lbColorStops.FormattingEnabled = true;
             this.lbColorStops.ItemHeight = 16;
-            this.lbColorStops.Location = new System.Drawing.Point(9, 212);
+            this.lbColorStops.Location = new System.Drawing.Point(9, 238);
             this.lbColorStops.Name = "lbColorStops";
-            this.lbColorStops.Size = new System.Drawing.Size(341, 196);
+            this.lbColorStops.Size = new System.Drawing.Size(341, 180);
             this.lbColorStops.TabIndex = 2;
             // 
             // btnAddColor
             // 
             this.btnAddColor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnAddColor.Location = new System.Drawing.Point(356, 212);
+            this.btnAddColor.Location = new System.Drawing.Point(356, 238);
             this.btnAddColor.Name = "btnAddColor";
             this.btnAddColor.Size = new System.Drawing.Size(122, 30);
             this.btnAddColor.TabIndex = 3;
@@ -95,7 +96,7 @@
             // btnRemoveColor
             // 
             this.btnRemoveColor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRemoveColor.Location = new System.Drawing.Point(356, 284);
+            this.btnRemoveColor.Location = new System.Drawing.Point(356, 310);
             this.btnRemoveColor.Name = "btnRemoveColor";
             this.btnRemoveColor.Size = new System.Drawing.Size(122, 30);
             this.btnRemoveColor.TabIndex = 5;
@@ -106,7 +107,7 @@
             // btnEditColor
             // 
             this.btnEditColor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnEditColor.Location = new System.Drawing.Point(356, 248);
+            this.btnEditColor.Location = new System.Drawing.Point(356, 274);
             this.btnEditColor.Name = "btnEditColor";
             this.btnEditColor.Size = new System.Drawing.Size(122, 30);
             this.btnEditColor.TabIndex = 4;
@@ -165,7 +166,7 @@
             this.btnDelete.Name = "btnDelete";
             this.btnDelete.Size = new System.Drawing.Size(38, 30);
             this.btnDelete.TabIndex = 9;
-            this.btnDelete.Text = "Удалить";
+            this.btnDelete.Text = "X";
             this.btnDelete.UseVisualStyleBackColor = true;
             this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
             // 
@@ -227,6 +228,7 @@
             this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox2.Controls.Add(this.checkAlignSteps);
             this.groupBox2.Controls.Add(this.nudGamma);
             this.groupBox2.Controls.Add(this.labelGamma);
             this.groupBox2.Controls.Add(this.nudMaxColorIterations);
@@ -247,11 +249,22 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Редактор палитры";
             // 
+            // checkAlignSteps
+            // 
+            this.checkAlignSteps.AutoSize = true;
+            this.checkAlignSteps.Location = new System.Drawing.Point(135, 135);
+            this.checkAlignSteps.Name = "checkAlignSteps";
+            this.checkAlignSteps.Size = new System.Drawing.Size(188, 20);
+            this.checkAlignSteps.TabIndex = 14;
+            this.checkAlignSteps.Text = "Как в старые добрые";
+            this.checkAlignSteps.UseVisualStyleBackColor = true;
+            this.checkAlignSteps.CheckedChanged += new System.EventHandler(this.checkAlignSteps_CheckedChanged);
+            // 
             // nudGamma
             // 
             this.nudGamma.DecimalPlaces = 2;
             this.nudGamma.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            this.nudGamma.Location = new System.Drawing.Point(230, 155);
+            this.nudGamma.Location = new System.Drawing.Point(9, 183);
             this.nudGamma.Maximum = new decimal(new int[] { 5, 0, 0, 0 });
             this.nudGamma.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             this.nudGamma.Name = "nudGamma";
@@ -263,7 +276,7 @@
             // labelGamma
             // 
             this.labelGamma.AutoSize = true;
-            this.labelGamma.Location = new System.Drawing.Point(227, 136);
+            this.labelGamma.Location = new System.Drawing.Point(6, 164);
             this.labelGamma.Name = "labelGamma";
             this.labelGamma.Size = new System.Drawing.Size(125, 16);
             this.labelGamma.TabIndex = 12;
@@ -271,7 +284,7 @@
             // 
             // nudMaxColorIterations
             // 
-            this.nudMaxColorIterations.Location = new System.Drawing.Point(9, 155);
+            this.nudMaxColorIterations.Location = new System.Drawing.Point(9, 134);
             this.nudMaxColorIterations.Maximum = 100000;
             this.nudMaxColorIterations.Minimum = 2;
             this.nudMaxColorIterations.Name = "nudMaxColorIterations";
@@ -283,7 +296,7 @@
             // labelMaxColorIter
             // 
             this.labelMaxColorIter.AutoSize = true;
-            this.labelMaxColorIter.Location = new System.Drawing.Point(6, 136);
+            this.labelMaxColorIter.Location = new System.Drawing.Point(6, 115);
             this.labelMaxColorIter.Name = "labelMaxColorIter";
             this.labelMaxColorIter.Size = new System.Drawing.Size(139, 16);
             this.labelMaxColorIter.TabIndex = 10;
@@ -292,7 +305,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 193);
+            this.label2.Location = new System.Drawing.Point(6, 219);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(115, 16);
             this.label2.TabIndex = 9;
@@ -343,7 +356,7 @@
         private System.Windows.Forms.TextBox txtName;
         private System.Windows.Forms.CheckBox checkIsGradient;
         private System.Windows.Forms.Button btnNew;
-        private System.Windows.Forms.Button btnCopy; // НОВОЕ
+        private System.Windows.Forms.Button btnCopy;
         private System.Windows.Forms.Button btnDelete;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnApply;
@@ -351,6 +364,7 @@
         private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.CheckBox checkAlignSteps; // НОВОЕ
         private System.Windows.Forms.NumericUpDown nudGamma;
         private System.Windows.Forms.Label labelGamma;
         private System.Windows.Forms.NumericUpDown nudMaxColorIterations;
