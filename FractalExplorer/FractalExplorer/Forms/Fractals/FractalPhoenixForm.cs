@@ -10,11 +10,6 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using System.Diagnostics;
-using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Linq; // Добавлено для FirstOrDefault
 
 namespace FractalExplorer.Forms
 {
