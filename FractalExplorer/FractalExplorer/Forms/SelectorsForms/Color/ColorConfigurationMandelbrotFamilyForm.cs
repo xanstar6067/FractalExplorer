@@ -19,12 +19,12 @@ namespace FractalExplorer.Utilities
         {
             InitializeComponent();
             _paletteManager = paletteManager;
-            // ИЗМЕНЕНО: Настройка NumericUpDown для Gamma
+
             nudGamma.Minimum = 0.1m;
             nudGamma.Maximum = 5.0m;
             nudGamma.DecimalPlaces = 2;
             nudGamma.Increment = 0.1m;
-            // ИЗМЕНЕНО: Настройка NumericUpDown для MaxColorIterations
+
             nudMaxColorIterations.Minimum = 2;
             nudMaxColorIterations.Maximum = 100000;
             nudMaxColorIterations.Increment = 10;
@@ -68,7 +68,6 @@ namespace FractalExplorer.Utilities
 
         private void DisplayPaletteDetails()
         {
-            // Временно отписываемся, чтобы избежать рекурсивных вызовов
             txtName.TextChanged -= txtName_TextChanged;
             nudMaxColorIterations.ValueChanged -= nudMaxColorIterations_ValueChanged;
             nudGamma.ValueChanged -= nudGamma_ValueChanged;
@@ -85,16 +84,18 @@ namespace FractalExplorer.Utilities
             }
             panelPreview.Invalidate();
 
-            // Подписываемся обратно
             txtName.TextChanged += txtName_TextChanged;
             nudMaxColorIterations.ValueChanged += nudMaxColorIterations_ValueChanged;
             nudGamma.ValueChanged += nudGamma_ValueChanged;
         }
 
+        // ИЗМЕНЕНО: Обновлено управление состоянием кнопок
         private void UpdateControlsState()
         {
             if (_selectedPalette == null) return;
+
             bool isCustom = !_selectedPalette.IsBuiltIn;
+
             txtName.Enabled = isCustom;
             checkIsGradient.Enabled = isCustom;
             lbColorStops.Enabled = isCustom;
@@ -102,11 +103,13 @@ namespace FractalExplorer.Utilities
             btnEditColor.Enabled = isCustom;
             btnRemoveColor.Enabled = isCustom;
             btnDelete.Enabled = isCustom;
-            nudMaxColorIterations.Enabled = isCustom; // НОВОЕ
-            nudGamma.Enabled = isCustom;             // НОВОЕ
+            nudMaxColorIterations.Enabled = isCustom;
+            nudGamma.Enabled = isCustom;
+
+            // НОВОЕ: Кнопка "Копировать" активна только для встроенных палитр
+            btnCopy.Enabled = !isCustom;
         }
 
-        // ИЗМЕНЕНО: Предпросмотр теперь учитывает гамму
         private void panelPreview_Paint(object sender, PaintEventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.Colors.Count == 0)
@@ -131,10 +134,7 @@ namespace FractalExplorer.Utilities
             using (var linearGradientBrush = new LinearGradientBrush(panelPreview.ClientRectangle, Color.Black, Color.Black, 0f))
             {
                 var colorBlend = new ColorBlend(_selectedPalette.Colors.Count);
-
-                // Применяем гамму к каждому цвету в палитре для предпросмотра
                 colorBlend.Colors = _selectedPalette.Colors.Select(c => ColorCorrection.ApplyGamma(c, _selectedPalette.Gamma)).ToArray();
-
                 colorBlend.Positions = Enumerable.Range(0, _selectedPalette.Colors.Count)
                                                  .Select(i => (float)i / (_selectedPalette.Colors.Count - 1))
                                                  .ToArray();
@@ -201,6 +201,38 @@ namespace FractalExplorer.Utilities
             lbPalettes.SelectedItem = newPalette.Name;
         }
 
+        // НОВОЕ: Обработчик кнопки "Копировать"
+        private void btnCopy_Click(object sender, EventArgs e)
+        {
+            if (_selectedPalette == null || !_selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            // Генерируем уникальное имя для копии
+            string baseName = $"{_selectedPalette.Name} (копия)";
+            string newName = baseName;
+            int counter = 2;
+            while (_paletteManager.Palettes.Any(p => p.Name == newName))
+            {
+                newName = $"{baseName} {counter++}";
+            }
+
+            // Создаем новую палитру как полную копию, но с флагом IsBuiltIn = false
+            var newPalette = new PaletteManagerMandelbrotFamily(
+                name: newName,
+                colors: new List<Color>(_selectedPalette.Colors), // Важно создать новый список!
+                isGradient: _selectedPalette.IsGradient,
+                isBuiltIn: false, // Главное отличие!
+                maxColorIterations: _selectedPalette.MaxColorIterations,
+                gamma: _selectedPalette.Gamma
+            );
+
+            _paletteManager.Palettes.Add(newPalette);
+            PopulatePaletteList(); // Обновляем UI
+            lbPalettes.SelectedItem = newPalette.Name; // Выбираем новую палитру
+        }
+
         private void btnDelete_Click(object sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
@@ -220,10 +252,10 @@ namespace FractalExplorer.Utilities
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.IsGradient = checkIsGradient.Checked;
+                panelPreview.Invalidate();
             }
         }
 
-        // НОВЫЕ обработчики
         private void nudMaxColorIterations_ValueChanged(object sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
@@ -237,7 +269,7 @@ namespace FractalExplorer.Utilities
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.Gamma = (double)nudGamma.Value;
-                panelPreview.Invalidate(); // Обновляем предпросмотр при изменении гаммы
+                panelPreview.Invalidate();
             }
         }
 
@@ -265,4 +297,3 @@ namespace FractalExplorer.Utilities
         #endregion
     }
 }
-// --- END OF FILE ColorConfigurationMandelbrotFamilyForm.cs ---

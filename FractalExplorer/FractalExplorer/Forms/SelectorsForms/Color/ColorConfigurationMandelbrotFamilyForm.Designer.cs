@@ -26,6 +26,7 @@
             this.txtName = new System.Windows.Forms.TextBox();
             this.checkIsGradient = new System.Windows.Forms.CheckBox();
             this.btnNew = new System.Windows.Forms.Button();
+            this.btnCopy = new System.Windows.Forms.Button(); // НОВОЕ
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnApply = new System.Windows.Forms.Button();
@@ -33,16 +34,16 @@
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.nudGamma = new System.Windows.Forms.NumericUpDown();
+            this.labelGamma = new System.Windows.Forms.Label();
+            this.nudMaxColorIterations = new System.Windows.Forms.NumericUpDown();
+            this.labelMaxColorIter = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
-            this.nudGamma = new System.Windows.Forms.NumericUpDown(); // НОВОЕ
-            this.labelGamma = new System.Windows.Forms.Label(); // НОВОЕ
-            this.nudMaxColorIterations = new System.Windows.Forms.NumericUpDown(); // НОВОЕ
-            this.labelMaxColorIter = new System.Windows.Forms.Label(); // НОВОЕ
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudGamma)).BeginInit(); // НОВОЕ
-            ((System.ComponentModel.ISupportInitialize)(this.nudMaxColorIterations)).BeginInit(); // НОВОЕ
+            ((System.ComponentModel.ISupportInitialize)(this.nudGamma)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudMaxColorIterations)).BeginInit();
             this.SuspendLayout();
             // 
             // lbPalettes
@@ -140,18 +141,29 @@
             this.btnNew.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnNew.Location = new System.Drawing.Point(8, 417);
             this.btnNew.Name = "btnNew";
-            this.btnNew.Size = new System.Drawing.Size(109, 30);
+            this.btnNew.Size = new System.Drawing.Size(70, 30);
             this.btnNew.TabIndex = 8;
             this.btnNew.Text = "Новая";
             this.btnNew.UseVisualStyleBackColor = true;
             this.btnNew.Click += new System.EventHandler(this.btnNew_Click);
             // 
+            // btnCopy
+            // 
+            this.btnCopy.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnCopy.Location = new System.Drawing.Point(84, 417);
+            this.btnCopy.Name = "btnCopy";
+            this.btnCopy.Size = new System.Drawing.Size(100, 30);
+            this.btnCopy.TabIndex = 15;
+            this.btnCopy.Text = "Копировать";
+            this.btnCopy.UseVisualStyleBackColor = true;
+            this.btnCopy.Click += new System.EventHandler(this.btnCopy_Click);
+            // 
             // btnDelete
             // 
             this.btnDelete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnDelete.Location = new System.Drawing.Point(123, 417);
+            this.btnDelete.Location = new System.Drawing.Point(190, 417);
             this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(105, 30);
+            this.btnDelete.Size = new System.Drawing.Size(38, 30);
             this.btnDelete.TabIndex = 9;
             this.btnDelete.Text = "Удалить";
             this.btnDelete.UseVisualStyleBackColor = true;
@@ -201,6 +213,7 @@
             | System.Windows.Forms.AnchorStyles.Left)));
             this.groupBox1.Controls.Add(this.lbPalettes);
             this.groupBox1.Controls.Add(this.btnNew);
+            this.groupBox1.Controls.Add(this.btnCopy);
             this.groupBox1.Controls.Add(this.btnDelete);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
@@ -233,24 +246,6 @@
             this.groupBox2.TabIndex = 14;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Редактор палитры";
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 193);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(115, 16);
-            this.label2.TabIndex = 9;
-            this.label2.Text = "Ключевые цвета:";
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(6, 22);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(129, 16);
-            this.label1.TabIndex = 8;
-            this.label1.Text = "Название палитры:";
             // 
             // nudGamma
             // 
@@ -294,6 +289,24 @@
             this.labelMaxColorIter.TabIndex = 10;
             this.labelMaxColorIter.Text = "Длина цикла цвета:";
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(6, 193);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(115, 16);
+            this.label2.TabIndex = 9;
+            this.label2.Text = "Ключевые цвета:";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(6, 22);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(129, 16);
+            this.label1.TabIndex = 8;
+            this.label1.Text = "Название палитры:";
+            // 
             // ColorConfigurationMandelbrotFamilyForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
@@ -321,27 +334,28 @@
         }
         #endregion
 
-        private ListBox lbPalettes;
-        private Panel panelPreview;
-        private ListBox lbColorStops;
-        private Button btnAddColor;
-        private Button btnRemoveColor;
-        private Button btnEditColor;
-        private TextBox txtName;
-        private CheckBox checkIsGradient;
-        private Button btnNew;
-        private Button btnDelete;
-        private Button btnSave;
-        private Button btnApply;
-        private Button btnClose;
-        private ColorDialog colorDialog1;
-        private GroupBox groupBox1;
-        private GroupBox groupBox2;
-        private Label label2;
-        private Label label1;
-        private NumericUpDown nudGamma; // НОВОЕ
-        private Label labelGamma; // НОВОЕ
-        private NumericUpDown nudMaxColorIterations; // НОВОЕ
-        private Label labelMaxColorIter; // НОВОЕ
+        private System.Windows.Forms.ListBox lbPalettes;
+        private System.Windows.Forms.Panel panelPreview;
+        private System.Windows.Forms.ListBox lbColorStops;
+        private System.Windows.Forms.Button btnAddColor;
+        private System.Windows.Forms.Button btnRemoveColor;
+        private System.Windows.Forms.Button btnEditColor;
+        private System.Windows.Forms.TextBox txtName;
+        private System.Windows.Forms.CheckBox checkIsGradient;
+        private System.Windows.Forms.Button btnNew;
+        private System.Windows.Forms.Button btnCopy; // НОВОЕ
+        private System.Windows.Forms.Button btnDelete;
+        private System.Windows.Forms.Button btnSave;
+        private System.Windows.Forms.Button btnApply;
+        private System.Windows.Forms.Button btnClose;
+        private System.Windows.Forms.ColorDialog colorDialog1;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.NumericUpDown nudGamma;
+        private System.Windows.Forms.Label labelGamma;
+        private System.Windows.Forms.NumericUpDown nudMaxColorIterations;
+        private System.Windows.Forms.Label labelMaxColorIter;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label1;
     }
 }
