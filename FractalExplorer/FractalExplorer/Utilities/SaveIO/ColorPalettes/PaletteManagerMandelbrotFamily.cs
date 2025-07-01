@@ -26,6 +26,21 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// </summary>
         public bool IsGradient { get; set; } = true;
 
+        // НОВОЕ: Параметр для гамма-коррекции. 1.0 - без изменений.
+        /// <summary>
+        /// Получает или устанавливает значение гамма-коррекции для палитры.
+        /// Значение 1.0 означает отсутствие коррекции.
+        /// </summary>
+        public double Gamma { get; set; } = 1.0;
+
+        // НОВОЕ: Параметр для определения длины цветового цикла.
+        /// <summary>
+        /// Получает или устанавливает максимальное количество итераций для одного полного цикла палитры.
+        /// Это позволяет отвязать раскраску от общего числа итераций рендеринга.
+        /// </summary>
+        public int MaxColorIterations { get; set; } = 500;
+
+
         /// <summary>
         /// Получает или устанавливает значение, указывающее, является ли палитра встроенной (предопределенной).
         /// Встроенные палитры не могут быть удалены или изменены пользователем через UI.
@@ -51,12 +66,16 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <param name="colors">Список цветов палитры.</param>
         /// <param name="isGradient">Флаг, указывающий, является ли палитра градиентом.</param>
         /// <param name="isBuiltIn">Флаг, указывающий, является ли палитра встроенной.</param>
-        public PaletteManagerMandelbrotFamily(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false)
+        /// <param name="maxColorIterations">Длина цветового цикла.</param> // НОВОЕ
+        /// <param name="gamma">Значение гамма-коррекции.</param> // НОВОЕ
+        public PaletteManagerMandelbrotFamily(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false, int maxColorIterations = 500, double gamma = 1.0)
         {
             Name = name;
             Colors = colors;
             IsGradient = isGradient;
             IsBuiltIn = isBuiltIn;
+            MaxColorIterations = maxColorIterations;
+            Gamma = gamma;
         }
 
         #endregion
