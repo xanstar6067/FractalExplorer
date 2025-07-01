@@ -686,12 +686,10 @@ namespace FractalExplorer.Forms
                 {
                     if (iter == maxIter) return Color.Black;
 
-                    // Используем maxColorIter для нормализации
                     double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / Math.Log(maxColorIter + 1);
                     int cVal = (int)(255.0 * (1 - tLog));
 
                     Color baseColor = Color.FromArgb(cVal, cVal, cVal);
-                    // Применяем гамму
                     return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
             }
@@ -714,15 +712,23 @@ namespace FractalExplorer.Forms
 
                 Color baseColor;
 
-                // Определяем, на каком шаге внутри текущего цветового цикла мы находимся.
-                // maxColorIter здесь - это длина одного полного цикла палитры.
-                int iterInCycle = iter % maxColorIter;
-
                 if (isGradient)
                 {
-                    // Для градиента используем линейную интерполяцию.
-                    // Нормализуем значение от 0 до maxColorIter-1, чтобы получить плавный переход от 0.0 до 1.0.
-                    double t = maxColorIter > 1 ? (double)iterInCycle / (maxColorIter - 1) : 0;
+                    // ИСПРАВЛЕНИЕ: Пинг-понг логика для градиентов, чтобы убрать швы.
+                    // 1. Определяем номер цикла и позицию внутри него.
+                    int cycle = iter / maxColorIter;
+                    int positionInCycle = iter % maxColorIter;
+
+                    // 2. Нормализуем позицию в диапазон [0, 1].
+                    double t = maxColorIter > 1 ? (double)positionInCycle / (maxColorIter - 1) : 0;
+
+                    // 3. Для нечетных циклов инвертируем направление градиента.
+                    if (cycle % 2 != 0)
+                    {
+                        t = 1.0 - t; // Пинг-понг эффект
+                    }
+
+                    // 4. Вычисляем цвет через интерполяцию.
                     double scaledT = t * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
@@ -731,15 +737,14 @@ namespace FractalExplorer.Forms
                 }
                 else
                 {
-                    // ИСПРАВЛЕНИЕ: Финальная, надежная логика для дискретных цветов.
-                    // Мы делим длину цикла на количество цветов, чтобы получить "ширину" одной цветовой полосы.
-                    double bandWidth = (double)maxColorIter / colorCount;
-                    // Определяем, в какую полосу попадает текущая итерация.
-                    int index = (int)(iterInCycle / bandWidth);
-                    // Гарантируем, что индекс не выйдет за пределы массива.
-                    index = Math.Min(index, colorCount - 1);
+                    // ИСПРАВЛЕНИЕ: Простая и надежная логика для дискретных цветов.
+                    // 1. Определяем, какой по счету "блок" итераций мы рендерим.
+                    int blockIndex = iter / maxColorIter;
 
-                    baseColor = colors[index];
+                    // 2. Выбираем цвет, зацикливая его по количеству цветов в палитре.
+                    int colorIndex = blockIndex % colorCount;
+
+                    baseColor = colors[colorIndex];
                 }
 
                 // Применяем гамма-коррекцию в самом конце.
