@@ -1038,7 +1038,7 @@ namespace FractalDraving
                 };
             }
 
-            // Обработка крайних случаев
+            // Обработка крайних случаев: пустая палитра или палитра с одним цветом.
             if (colorCount == 0) return (i, m, mc) => Color.Black;
             if (colorCount == 1)
             {
@@ -1055,11 +1055,16 @@ namespace FractalDraving
                 if (iter == maxIter) return Color.Black; // Точки внутри множества всегда черные
 
                 Color baseColor;
+
+                // Определяем, на каком шаге внутри текущего цветового цикла мы находимся.
+                // maxColorIter здесь - это длина одного полного цикла палитры.
+                int iterInCycle = iter % maxColorIter;
+
                 if (isGradient)
                 {
-                    // Для градиента используем линейную интерполяцию
-                    int colorDomainIter = Math.Min(iter, maxColorIter);
-                    double t = maxColorIter > 1 ? (double)colorDomainIter / (maxColorIter - 1) : 0;
+                    // Для градиента используем линейную интерполяцию.
+                    // Нормализуем значение от 0 до maxColorIter-1, чтобы получить плавный переход от 0.0 до 1.0.
+                    double t = maxColorIter > 1 ? (double)iterInCycle / (maxColorIter - 1) : 0;
                     double scaledT = t * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
                     int index2 = Math.Min(index1 + 1, colorCount - 1);
@@ -1068,17 +1073,18 @@ namespace FractalDraving
                 }
                 else
                 {
-                    // ИСПРАВЛЕНИЕ: Новая логика для дискретных (не-градиентных) цветов
-                    // Теперь ширина цветовых полос зависит от MaxColorIterations
-                    int iterInCycle = iter % maxColorIter;
-                    double t = (double)iterInCycle / maxColorIter;
-                    int index = (int)(t * colorCount);
-                    index = Math.Min(index, colorCount - 1); // Гарантируем, что индекс в пределах массива
+                    // ИСПРАВЛЕНИЕ: Финальная, надежная логика для дискретных цветов.
+                    // Мы делим длину цикла на количество цветов, чтобы получить "ширину" одной цветовой полосы.
+                    double bandWidth = (double)maxColorIter / colorCount;
+                    // Определяем, в какую полосу попадает текущая итерация.
+                    int index = (int)(iterInCycle / bandWidth);
+                    // Гарантируем, что индекс не выйдет за пределы массива.
+                    index = Math.Min(index, colorCount - 1);
 
                     baseColor = colors[index];
                 }
 
-                // Применяем гамма-коррекцию в самом конце
+                // Применяем гамма-коррекцию в самом конце.
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
         }
