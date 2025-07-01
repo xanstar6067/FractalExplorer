@@ -1,5 +1,4 @@
-﻿// --- START OF FILE ColorConfigurationMandelbrotFamilyForm.cs ---
-using FractalExplorer.Utilities.SaveIO.ColorPalettes;
+﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using System.Drawing.Drawing2D;
 
 namespace FractalExplorer.Utilities
@@ -450,4 +449,3 @@ namespace FractalExplorer.Utilities
         #endregion
     }
 }
-// --- END OF FILE ColorConfigurationMandelbrotFamilyForm.cs ---
