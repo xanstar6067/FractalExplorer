@@ -150,9 +150,11 @@ namespace FractalExplorer.Projects
         private void RenderAndDisplayMandelbrotSet()
         {
             var previewCanvas = Controls.Find("mandelbrotPreviewCanvas", true).FirstOrDefault() as PictureBox;
+
+            // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Проверка на нулевые размеры перед рендерингом.
             if (previewCanvas == null || previewCanvas.Width <= 0 || previewCanvas.Height <= 0)
             {
-                return;
+                return; // Прерываем рендеринг, если холст не готов.
             }
 
             // Рендерим изображение Мандельброта.
@@ -186,67 +188,49 @@ namespace FractalExplorer.Projects
         {
             Bitmap bitmap = new Bitmap(canvasWidth, canvasHeight, PixelFormat.Format24bppRgb);
 
-            // Создаем временный движок Мандельброта с фиксированными параметрами для предпросмотра,
-            // чтобы его рендер не влиял на основные параметры фрактала Жюлиа.
+            // Создаем временный движок Мандельброта с фиксированными параметрами для предпросмотра.
             var engine = new MandelbrotEngine
             {
                 MaxIterations = iterationsLimit,
                 ThresholdSquared = 4m,
-                Palette = GetPaletteMandelbrotClassicColor, // Используем специальную палитру для предпросмотра.
-                Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE, // Масштаб определяется диапазоном.
-                CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2, // Центр Мандельброта.
+                Palette = GetPaletteMandelbrotClassicColor,
+                Scale = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE,
+                CenterX = (MANDELBROT_MAX_RE + MANDELBROT_MIN_RE) / 2,
                 CenterY = (MANDELBROT_MAX_IM + MANDELBROT_MIN_IM) / 2
             };
 
-            // Блокируем биты для прямого доступа к буферу пикселей для эффективной записи.
-            BitmapData bitmapData = bitmap.LockBits(new Rectangle(0, 0, canvasWidth, canvasHeight), ImageLockMode.WriteOnly, bitmap.PixelFormat);
-            int bufferSize = Math.Abs(bitmapData.Stride) * canvasHeight;
-            byte[] pixelBuffer = new byte[bufferSize];
-            int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
-
-            // Создаем одну плитку на весь канвас для рендеринга, так как это предпросмотр.
-            var tile = new TileInfo(0, 0, canvasWidth, canvasHeight);
-
-            // Рендерим множество Мандельброта в буфер.
-            engine.RenderTile(pixelBuffer, bitmapData.Stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
-
-            // Копируем данные из буфера в битмап и разблокируем биты.
-            System.Runtime.InteropServices.Marshal.Copy(pixelBuffer, 0, bitmapData.Scan0, bufferSize);
-            bitmap.UnlockBits(bitmapData);
-            return bitmap;
+            // Используем существующий метод RenderToBitmap для простоты и надежности.
+            // Он уже содержит всю логику параллельного рендеринга.
+            return engine.RenderToBitmap(canvasWidth, canvasHeight, Environment.ProcessorCount, _ => { });
         }
 
         /// <summary>
         /// Обработчик события отрисовки канваса предпросмотра Мандельброта.
-        /// Рисует маркер, указывающий текущие значения Re/Im константы 'C', используемые для фрактала Жюлиа.
+        /// Рисует маркер, указывающий текущие значения Re/Im константы 'C'.
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события рисования.</param>
         private void mandelbrotCanvas_Paint(object sender, PaintEventArgs e)
         {
             var previewCanvas = sender as PictureBox;
-            if (previewCanvas?.Image == null)
-            {
-                return;
-            }
+            if (previewCanvas?.Image == null) return;
 
             decimal reRange = MANDELBROT_MAX_RE - MANDELBROT_MIN_RE;
             decimal imRange = MANDELBROT_MAX_IM - MANDELBROT_MIN_IM;
+
+            if (reRange <= 0 || imRange <= 0) return; // Защита от деления на ноль
+
             decimal currentCReal = nudRe.Value;
             decimal currentCImaginary = nudIm.Value;
 
-            // Рисуем маркер только если диапазон допустим и текущие значения 'C' находятся в пределах предпросмотра.
-            if (reRange > 0 && imRange > 0 && currentCReal >= MANDELBROT_MIN_RE && currentCReal <= MANDELBROT_MAX_RE &&
+            if (currentCReal >= MANDELBROT_MIN_RE && currentCReal <= MANDELBROT_MAX_RE &&
                 currentCImaginary >= MANDELBROT_MIN_IM && currentCImaginary <= MANDELBROT_MAX_IM)
             {
-                // Преобразуем координаты 'C' (действительная часть на X, мнимая на Y) в пиксельные координаты на канвасе предпросмотра.
-                // Для Y-координаты учитывается, что в GDI+ Y растет вниз, а в комплексной плоскости мнимая часть растет вверх.
                 int markerX = (int)((currentCReal - MANDELBROT_MIN_RE) / reRange * previewCanvas.Width);
                 int markerY = (int)((MANDELBROT_MAX_IM - currentCImaginary) / imRange * previewCanvas.Height);
 
                 using (Pen markerPen = new Pen(Color.FromArgb(200, Color.LimeGreen), 1.5f))
                 {
-                    // Рисуем горизонтальную и вертикальную линии, образующие крест, чтобы указать на выбранную точку 'C'.
                     e.Graphics.DrawLine(markerPen, 0, markerY, previewCanvas.Width, markerY);
                     e.Graphics.DrawLine(markerPen, markerX, 0, markerX, previewCanvas.Height);
                 }
@@ -255,7 +239,7 @@ namespace FractalExplorer.Projects
 
         /// <summary>
         /// Обработчик события клика по канвасу предпросмотра Мандельброта.
-        /// Открывает окно выбора константы 'C', позволяющее интерактивно выбирать ее значение.
+        /// Открывает окно выбора константы 'C' для интерактивного выбора.
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
@@ -264,24 +248,21 @@ namespace FractalExplorer.Projects
             double initialReal = (double)nudRe.Value;
             double initialImaginary = (double)nudIm.Value;
 
-            // Создаем или активируем окно выбора константы 'C'.
             if (_mandelbrotCSelectorWindow == null || _mandelbrotCSelectorWindow.IsDisposed)
             {
                 _mandelbrotCSelectorWindow = new JuliaMandelbrotSelectorForm(this, initialReal, initialImaginary);
-                // Подписываемся на событие выбора координат, чтобы обновить NumericUpDown контролы.
                 _mandelbrotCSelectorWindow.CoordinatesSelected += (re, im) =>
                 {
                     nudRe.Value = (decimal)re;
                     nudIm.Value = (decimal)im;
                 };
-                // Устанавливаем _mandelbrotCSelectorWindow в null после закрытия формы, чтобы ее можно было открыть снова.
                 _mandelbrotCSelectorWindow.FormClosed += (s, args) => { _mandelbrotCSelectorWindow = null; };
                 _mandelbrotCSelectorWindow.Show(this);
             }
             else
             {
-                _mandelbrotCSelectorWindow.Activate(); // Активируем существующее окно.
-                _mandelbrotCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true); // Обновляем в нем выбранные координаты.
+                _mandelbrotCSelectorWindow.Activate();
+                _mandelbrotCSelectorWindow.SetSelectedCoordinates(initialReal, initialImaginary, true);
             }
         }
 
@@ -291,8 +272,6 @@ namespace FractalExplorer.Projects
 
         /// <summary>
         /// Локальная функция палитры для рендеринга предпросмотра Мандельброта.
-        /// Генерирует классическую цветовую схему для множества Мандельброта,
-        /// где цвета зависят от количества итераций до выхода из множества.
         /// </summary>
         /// <param name="iter">Количество итераций до выхода за порог.</param>
         /// <param name="maxIter">Максимально допустимое количество итераций.</param>
@@ -300,17 +279,11 @@ namespace FractalExplorer.Projects
         /// <returns>Цвет пикселя.</returns>
         private Color GetPaletteMandelbrotClassicColor(int iter, int maxIter, int maxColorIterations)
         {
-            if (iter == maxIter)
-            {
-                return Color.Black; // Точки, принадлежащие множеству, окрашиваются в черный.
-            }
+            if (iter == maxIter) return Color.Black;
 
-            // Нормализуем количество итераций к диапазону [0, 1].
             double tClassic = (double)iter / maxIter;
             byte r, g, b;
 
-            // Классическая цветовая схема с градиентами, изменяющимися в зависимости от tClassic.
-            // Это создает характерные "радужные" или "пламенные" узоры вокруг множества.
             if (tClassic < 0.5)
             {
                 double t = tClassic * 2;
