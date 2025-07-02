@@ -1,8 +1,10 @@
 ﻿using FractalExplorer.Engines;
 using FractalExplorer.Forms;
+using FractalExplorer.Forms.Other;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
@@ -21,7 +23,7 @@ namespace FractalDraving
     /// палитрой, масштабированием, панорамированием и сохранением изображений.
     /// Включает исправления для предотвращения сбоев при сворачивании окна.
     /// </summary>
-    public abstract partial class FractalMandelbrotFamilyForm : Form, IFractalForm, ISaveLoadCapableFractal
+    public abstract partial class FractalMandelbrotFamilyForm : Form, IFractalForm, ISaveLoadCapableFractal, IHighResRenderable
     {
         #region Fields
 
@@ -257,7 +259,7 @@ namespace FractalDraving
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
 
             btnRender.Click += (s, e) => ScheduleRender();
-            btnSaveHighRes.Click += btnSaveHighRes_Click;
+            //btnSaveHighRes.Click += btnSaveHighRes_Click;
 
             var configButton = Controls.Find("color_configurations", true).FirstOrDefault();
             if (configButton != null) configButton.Click += color_configurations_Click;
@@ -810,10 +812,25 @@ namespace FractalDraving
             }
         }
 
+        private void btnOpenSaveManager_Click(object sender, EventArgs e)
+        {
+            if (_isHighResRendering)
+            {
+                MessageBox.Show("Процесс рендеринга уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 'this' реализует IHighResRenderable, поэтому мы можем передать его в конструктор
+            using (var saveManager = new SaveImageManagerForm(this))
+            {
+                saveManager.ShowDialog(this);
+            }
+        }
+
         /// <summary>
         /// Обрабатывает сохранение изображения в высоком разрешении.
         /// </summary>
-        private async void btnSaveHighRes_Click(object sender, EventArgs e)
+        /*private async void btnSaveHighRes_Click(object sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -887,7 +904,7 @@ namespace FractalDraving
                     }
                 }
             }
-        }
+        }*/
 
         /// <summary>
         /// Обновляет параметры движка из UI.
@@ -1326,5 +1343,86 @@ namespace FractalDraving
         }
 
         #endregion
+
+        #region IHighResRenderable Implementation
+
+        public HighResRenderState GetRenderState()
+        {
+            var state = new HighResRenderState
+            {
+                EngineType = this.FractalTypeIdentifier,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                BaseScale = this.BaseScale,
+                Iterations = (int)nudIterations.Value,
+                Threshold = nudThreshold.Value,
+                ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый"
+            };
+
+            if (this is FractalJulia || this is FractalJuliaBurningShip)
+            {
+                state.JuliaC = new ComplexDecimal(nudRe.Value, nudIm.Value);
+            }
+
+            return state;
+        }
+
+        private FractalMandelbrotFamilyEngine CreateEngineFromState(HighResRenderState state)
+        {
+            FractalMandelbrotFamilyEngine engine;
+            switch (state.EngineType)
+            {
+                case "Mandelbrot": engine = new MandelbrotEngine(); break;
+                case "Julia": engine = new JuliaEngine { C = state.JuliaC.Value }; break;
+                case "MandelbrotBurningShip": engine = new MandelbrotBurningShipEngine(); break;
+                case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC.Value }; break;
+                default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
+            }
+
+            engine.MaxIterations = state.Iterations;
+            engine.ThresholdSquared = state.Threshold * state.Threshold;
+            engine.CenterX = state.CenterX;
+            engine.CenterY = state.CenterY;
+            engine.Scale = state.BaseScale / state.Zoom;
+            var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
+            engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
+            engine.Palette = GeneratePaletteFunction(paletteForRender);
+
+            return engine;
+        }
+
+        public async Task<Bitmap> RenderHighResolutionAsync(HighResRenderState state, int width, int height, int ssaaFactor, IProgress<RenderProgress> progress, CancellationToken cancellationToken)
+        {
+            _isHighResRendering = true;
+            try
+            {
+                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state);
+                int threadCount = GetThreadCount();
+
+                Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmapSSAA(
+                    width, height, threadCount,
+                    p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." }),
+                    ssaaFactor,
+                    cancellationToken), cancellationToken);
+
+                return highResBitmap;
+            }
+            finally
+            {
+                _isHighResRendering = false;
+            }
+        }
+
+        public Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight)
+        {
+            var engine = CreateEngineFromState(state);
+            // Используем меньше итераций для быстрого предпросмотра
+            engine.MaxIterations = Math.Min(state.Iterations, 150);
+            return engine.RenderToBitmap(previewWidth, previewHeight, 1, _ => { }, CancellationToken.None);
+        }
+
+        #endregion
+
     }
 }

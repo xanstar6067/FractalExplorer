@@ -239,14 +239,15 @@ namespace FractalExplorer.Engines
         /// <param name="numThreads">Количество потоков для рендеринга.</param>
         /// <param name="reportProgressCallback">Callback для отчета о прогрессе (0-100).</param>
         /// <param name="supersamplingFactor">Фактор суперсэмплинга (1 = выкл).</param>
+        /// <param name="cancellationToken">Токен для отмены операции.</param>
         /// <returns>Объект Bitmap с отрисованным фракталом.</returns>
-        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor)
+        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken = default)
         {
             if (finalWidth <= 0 || finalHeight <= 0) return new Bitmap(1, 1);
 
             if (supersamplingFactor <= 1)
             {
-                return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback);
+                return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback, cancellationToken);
             }
 
             int highResWidth = finalWidth * supersamplingFactor;
@@ -258,6 +259,7 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, highResHeight, po, y =>
             {
+                cancellationToken.ThrowIfCancellationRequested(); // <<< ИЗМЕНЕНИЕ
                 for (int x = 0; x < highResWidth; x++)
                 {
                     decimal re = CenterX + (x - highResWidth / 2.0m) * (unitsPerPixel / supersamplingFactor);
@@ -269,6 +271,8 @@ namespace FractalExplorer.Engines
                 if (highResHeight > 0) reportProgressCallback((int)(50.0 * currentDone / highResHeight));
             });
 
+            cancellationToken.ThrowIfCancellationRequested(); // <<< ИЗМЕНЕНИЕ
+
             Bitmap bmp = new Bitmap(finalWidth, finalHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, finalWidth, finalHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
             byte[] finalBuffer = new byte[Math.Abs(bmpData.Stride) * finalHeight];
@@ -277,6 +281,7 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, finalHeight, po, finalY =>
             {
+                cancellationToken.ThrowIfCancellationRequested(); // <<< ИЗМЕНЕНИЕ
                 int rowOffset = finalY * bmpData.Stride;
                 for (int finalX = 0; finalX < finalWidth; finalX++)
                 {
@@ -314,8 +319,9 @@ namespace FractalExplorer.Engines
         /// <param name="renderHeight">Высота изображения.</param>
         /// <param name="numThreads">Количество потоков.</param>
         /// <param name="reportProgressCallback">Callback для отчета о прогрессе.</param>
+        /// <param name="cancellationToken">Токен для отмены операции.</param>
         /// <returns>Объект Bitmap с отрисованным фракталом.</returns>
-        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback)
+        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
         {
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
 
@@ -330,6 +336,7 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, renderHeight, po, y =>
             {
+                cancellationToken.ThrowIfCancellationRequested(); // <<< ИЗМЕНЕНИЕ
                 int rowOffset = y * bmpData.Stride;
                 for (int x = 0; x < renderWidth; x++)
                 {

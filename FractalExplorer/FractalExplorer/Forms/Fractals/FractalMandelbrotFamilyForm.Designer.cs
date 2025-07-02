@@ -23,13 +23,11 @@
         protected void InitializeComponent()
         {
             pnlControls = new Panel();
+            cbSSAA = new ComboBox();
             btnStateManager = new Button();
             color_configurations = new Button();
             mandelbrotPreviewPanel = new Panel();
             mandelbrotPreviewCanvas = new PictureBox();
-            nudSaveWidth = new NumericUpDown();
-            nudSaveHeight = new NumericUpDown();
-            pbHighResProgress = new ProgressBar();
             lblProgress = new Label();
             lblZoom = new Label();
             nudZoom = new NumericUpDown();
@@ -48,12 +46,9 @@
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
             canvas = new PictureBox();
-            cbSSAA = new ComboBox();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveWidth).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveHeight).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudThreshold).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
@@ -69,9 +64,6 @@
             pnlControls.Controls.Add(btnStateManager);
             pnlControls.Controls.Add(color_configurations);
             pnlControls.Controls.Add(mandelbrotPreviewPanel);
-            pnlControls.Controls.Add(nudSaveWidth);
-            pnlControls.Controls.Add(nudSaveHeight);
-            pnlControls.Controls.Add(pbHighResProgress);
             pnlControls.Controls.Add(lblProgress);
             pnlControls.Controls.Add(lblZoom);
             pnlControls.Controls.Add(nudZoom);
@@ -94,6 +86,14 @@
             pnlControls.Name = "pnlControls";
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
+            // 
+            // cbSSAA
+            // 
+            cbSSAA.FormattingEnabled = true;
+            cbSSAA.Location = new Point(123, 216);
+            cbSSAA.Name = "cbSSAA";
+            cbSSAA.Size = new Size(95, 23);
+            cbSSAA.TabIndex = 35;
             // 
             // btnStateManager
             // 
@@ -131,34 +131,6 @@
             mandelbrotPreviewCanvas.Size = new Size(231, 166);
             mandelbrotPreviewCanvas.TabIndex = 30;
             mandelbrotPreviewCanvas.TabStop = false;
-            // 
-            // nudSaveWidth
-            // 
-            nudSaveWidth.Location = new Point(11, 245);
-            nudSaveWidth.Maximum = new decimal(new int[] { 32768, 0, 0, 0 });
-            nudSaveWidth.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudSaveWidth.Name = "nudSaveWidth";
-            nudSaveWidth.Size = new Size(86, 23);
-            nudSaveWidth.TabIndex = 23;
-            nudSaveWidth.Value = new decimal(new int[] { 1920, 0, 0, 0 });
-            // 
-            // nudSaveHeight
-            // 
-            nudSaveHeight.Location = new Point(124, 245);
-            nudSaveHeight.Maximum = new decimal(new int[] { 32768, 0, 0, 0 });
-            nudSaveHeight.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudSaveHeight.Name = "nudSaveHeight";
-            nudSaveHeight.Size = new Size(83, 23);
-            nudSaveHeight.TabIndex = 22;
-            nudSaveHeight.Value = new decimal(new int[] { 1080, 0, 0, 0 });
-            // 
-            // pbHighResProgress
-            // 
-            pbHighResProgress.Location = new Point(3, 274);
-            pbHighResProgress.Name = "pbHighResProgress";
-            pbHighResProgress.Size = new Size(218, 23);
-            pbHighResProgress.TabIndex = 21;
-            pbHighResProgress.Visible = false;
             // 
             // lblProgress
             // 
@@ -231,6 +203,7 @@
             btnSaveHighRes.TabIndex = 11;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
+            btnSaveHighRes.Click += btnOpenSaveManager_Click;
             // 
             // lblThreshold
             // 
@@ -333,14 +306,6 @@
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
-            // cbSSAA
-            // 
-            cbSSAA.FormattingEnabled = true;
-            cbSSAA.Location = new Point(123, 216);
-            cbSSAA.Name = "cbSSAA";
-            cbSSAA.Size = new Size(95, 23);
-            cbSSAA.TabIndex = 35;
-            // 
             // FractalMandelbrotFamilyForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -356,8 +321,6 @@
             pnlControls.PerformLayout();
             mandelbrotPreviewPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveWidth).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveHeight).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudThreshold).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
@@ -383,9 +346,6 @@
         protected System.Windows.Forms.Label lblZoom;
         protected System.Windows.Forms.NumericUpDown nudZoom;
         protected System.Windows.Forms.Label lblProgress;
-        protected System.Windows.Forms.ProgressBar pbHighResProgress;
-        protected System.Windows.Forms.NumericUpDown nudSaveWidth;
-        protected System.Windows.Forms.NumericUpDown nudSaveHeight;
         protected System.Windows.Forms.Panel mandelbrotPreviewPanel;
         protected System.Windows.Forms.PictureBox mandelbrotPreviewCanvas;
         protected System.Windows.Forms.Label lblIm;
