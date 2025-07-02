@@ -18,8 +18,6 @@
         private void InitializeComponent()
         {
             this.pnlMain = new System.Windows.Forms.Panel();
-            this.grpPreview = new System.Windows.Forms.GroupBox();
-            this.previewPictureBox = new System.Windows.Forms.PictureBox();
             this.grpEffects = new System.Windows.Forms.GroupBox();
             this.grpPostProcessing = new System.Windows.Forms.GroupBox();
             this.lblComingSoon = new System.Windows.Forms.Label();
@@ -43,8 +41,6 @@
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.pnlMain.SuspendLayout();
-            this.grpPreview.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.previewPictureBox)).BeginInit();
             this.grpEffects.SuspendLayout();
             this.grpPostProcessing.SuspendLayout();
             this.grpOutput.SuspendLayout();
@@ -56,7 +52,6 @@
             // 
             // pnlMain
             // 
-            this.pnlMain.Controls.Add(this.grpPreview);
             this.pnlMain.Controls.Add(this.grpEffects);
             this.pnlMain.Controls.Add(this.grpOutput);
             this.pnlMain.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -66,26 +61,6 @@
             this.pnlMain.Size = new System.Drawing.Size(584, 411);
             this.pnlMain.TabIndex = 0;
             // 
-            // grpPreview
-            // 
-            this.grpPreview.Controls.Add(this.previewPictureBox);
-            this.grpPreview.Location = new System.Drawing.Point(283, 209);
-            this.grpPreview.Name = "grpPreview";
-            this.grpPreview.Size = new System.Drawing.Size(288, 189);
-            this.grpPreview.TabIndex = 2;
-            this.grpPreview.TabStop = false;
-            this.grpPreview.Text = "Предпросмотр";
-            // 
-            // previewPictureBox
-            // 
-            this.previewPictureBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.previewPictureBox.Location = new System.Drawing.Point(3, 19);
-            this.previewPictureBox.Name = "previewPictureBox";
-            this.previewPictureBox.Size = new System.Drawing.Size(282, 167);
-            this.previewPictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.previewPictureBox.TabIndex = 0;
-            this.previewPictureBox.TabStop = false;
-            // 
             // grpEffects
             // 
             this.grpEffects.Controls.Add(this.grpPostProcessing);
@@ -93,7 +68,7 @@
             this.grpEffects.Controls.Add(this.cbSSAA);
             this.grpEffects.Location = new System.Drawing.Point(13, 209);
             this.grpEffects.Name = "grpEffects";
-            this.grpEffects.Size = new System.Drawing.Size(264, 189);
+            this.grpEffects.Size = new System.Drawing.Size(558, 189);
             this.grpEffects.TabIndex = 1;
             this.grpEffects.TabStop = false;
             this.grpEffects.Text = "Эффекты и качество";
@@ -104,7 +79,7 @@
             this.grpPostProcessing.Enabled = false;
             this.grpPostProcessing.Location = new System.Drawing.Point(9, 81);
             this.grpPostProcessing.Name = "grpPostProcessing";
-            this.grpPostProcessing.Size = new System.Drawing.Size(249, 102);
+            this.grpPostProcessing.Size = new System.Drawing.Size(543, 102);
             this.grpPostProcessing.TabIndex = 2;
             this.grpPostProcessing.TabStop = false;
             this.grpPostProcessing.Text = "Пост-обработка";
@@ -115,7 +90,7 @@
             this.lblComingSoon.ForeColor = System.Drawing.SystemColors.GrayText;
             this.lblComingSoon.Location = new System.Drawing.Point(3, 19);
             this.lblComingSoon.Name = "lblComingSoon";
-            this.lblComingSoon.Size = new System.Drawing.Size(243, 80);
+            this.lblComingSoon.Size = new System.Drawing.Size(537, 80);
             this.lblComingSoon.TabIndex = 0;
             this.lblComingSoon.Text = "Фильтры будут доступны в будущих версиях";
             this.lblComingSoon.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -371,8 +346,6 @@
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SaveImageManagerForm_FormClosing);
             this.Load += new System.EventHandler(this.SaveImageManagerForm_Load);
             this.pnlMain.ResumeLayout(false);
-            this.grpPreview.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.previewPictureBox)).EndInit();
             this.grpEffects.ResumeLayout(false);
             this.grpEffects.PerformLayout();
             this.grpPostProcessing.ResumeLayout(false);
@@ -397,8 +370,6 @@
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.GroupBox grpEffects;
-        private System.Windows.Forms.GroupBox grpPreview;
-        private System.Windows.Forms.PictureBox previewPictureBox;
         private System.Windows.Forms.Label lblSsaa;
         private System.Windows.Forms.ComboBox cbSSAA;
         private System.Windows.Forms.Label lblFormat;

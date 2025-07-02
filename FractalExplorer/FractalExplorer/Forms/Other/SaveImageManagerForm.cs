@@ -30,16 +30,6 @@ namespace FractalExplorer.Forms.Other
             cbFormat.SelectedIndex = 0; // PNG по умолчанию
             cbSSAA.SelectedIndex = 1;   // Низкое (2x) по умолчанию
             UpdateJpgQualityUI();
-
-            // Загрузка превью
-            try
-            {
-                previewPictureBox.Image = _renderSource.RenderPreview(_renderState, previewPictureBox.Width, previewPictureBox.Height);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Не удалось загрузить предпросмотр: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
         }
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e)
