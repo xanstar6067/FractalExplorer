@@ -107,7 +107,7 @@
             tabPageMandelbrot.Location = new Point(4, 26);
             tabPageMandelbrot.Name = "tabPageMandelbrot";
             tabPageMandelbrot.Padding = new Padding(3);
-            tabPageMandelbrot.Size = new Size(792, 195);
+            tabPageMandelbrot.Size = new Size(792, 271);
             tabPageMandelbrot.TabIndex = 0;
             tabPageMandelbrot.Text = "Множество Мандельброта";
             tabPageMandelbrot.UseVisualStyleBackColor = true;
@@ -131,7 +131,7 @@
             richTextBox1.Location = new Point(184, 3);
             richTextBox1.Name = "richTextBox1";
             richTextBox1.ReadOnly = true;
-            richTextBox1.Size = new Size(605, 189);
+            richTextBox1.Size = new Size(605, 265);
             richTextBox1.TabIndex = 2;
             richTextBox1.Text = resources.GetString("richTextBox1.Text");
             // 
@@ -157,7 +157,7 @@
             tabControlFractals.Location = new Point(0, 0);
             tabControlFractals.Name = "tabControlFractals";
             tabControlFractals.SelectedIndex = 0;
-            tabControlFractals.Size = new Size(800, 225);
+            tabControlFractals.Size = new Size(800, 346);
             tabControlFractals.TabIndex = 0;
             // 
             // tabPageSerpinsky
@@ -237,7 +237,7 @@
             tabPagePhoenix.Location = new Point(4, 26);
             tabPagePhoenix.Name = "tabPagePhoenix";
             tabPagePhoenix.Padding = new Padding(3);
-            tabPagePhoenix.Size = new Size(792, 195);
+            tabPagePhoenix.Size = new Size(792, 316);
             tabPagePhoenix.TabIndex = 4;
             tabPagePhoenix.Text = "Феникс";
             tabPagePhoenix.UseVisualStyleBackColor = true;
@@ -251,9 +251,9 @@
             richTextBox5.Location = new Point(184, 3);
             richTextBox5.Name = "richTextBox5";
             richTextBox5.ReadOnly = true;
-            richTextBox5.Size = new Size(605, 189);
+            richTextBox5.Size = new Size(605, 310);
             richTextBox5.TabIndex = 8;
-            richTextBox5.Text = "Погрузитесь в Phoenix \n\nОсобенности:\n";
+            richTextBox5.Text = resources.GetString("richTextBox5.Text");
             // 
             // btnLaunchPhoenix
             // 
@@ -269,7 +269,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 225);
+            ClientSize = new Size(800, 346);
             Controls.Add(tabControlFractals);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
