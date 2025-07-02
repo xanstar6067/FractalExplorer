@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Utilities.RenderUtilities;
 using System;
+using System.Diagnostics; // Добавлено для Stopwatch
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -17,12 +18,39 @@ namespace FractalExplorer.Forms.Other
         private CancellationTokenSource _cts;
         private bool _isRendering = false;
 
+        // --- НОВЫЕ ПОЛЯ ДЛЯ ТАЙМЕРА ---
+        private readonly Stopwatch _renderStopwatch;
+        private readonly System.Windows.Forms.Timer _uiUpdateTimer;
+        private string _lastStatusMessage;
+        // ---------------------------------
+
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
             InitializeComponent();
             _renderSource = renderSource ?? throw new ArgumentNullException(nameof(renderSource));
             _renderState = _renderSource.GetRenderState();
+
+            // --- ИНИЦИАЛИЗАЦИЯ ТАЙМЕРОВ ---
+            _renderStopwatch = new Stopwatch();
+            _uiUpdateTimer = new System.Windows.Forms.Timer { Interval = 200 };
+            _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
+            // ---------------------------------
         }
+
+        // --- НОВЫЙ МЕТОД: ОБНОВЛЕНИЕ СТАТУСА ПО ТАЙМЕРУ ---
+        private void UiUpdateTimer_Tick(object sender, EventArgs e)
+        {
+            // Используем Invoke для безопасного обновления UI из любого потока
+            this.Invoke((Action)(() =>
+            {
+                if (lblStatus.IsHandleCreated && !lblStatus.IsDisposed)
+                {
+                    // Обновляем статус, добавляя к нему отформатированное время
+                    lblStatus.Text = $"{_lastStatusMessage} [{_renderStopwatch.Elapsed:mm\\:ss\\.f}]";
+                }
+            }));
+        }
+        // ----------------------------------------------------
 
         private void SaveImageManagerForm_Load(object sender, EventArgs e)
         {
@@ -30,6 +58,8 @@ namespace FractalExplorer.Forms.Other
             cbFormat.SelectedIndex = 0; // PNG по умолчанию
             cbSSAA.SelectedIndex = 1;   // Низкое (2x) по умолчанию
             UpdateJpgQualityUI();
+            _lastStatusMessage = "Готово"; // Начальный статус
+            lblStatus.Text = _lastStatusMessage;
         }
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e)
@@ -81,17 +111,22 @@ namespace FractalExplorer.Forms.Other
                 SetUiState(false);
                 _cts = new CancellationTokenSource();
 
+                // --- ЗАПУСК ТАЙМЕРОВ ---
+                _lastStatusMessage = "Подготовка к рендерингу...";
+                _renderStopwatch.Restart();
+                _uiUpdateTimer.Start();
+                // -----------------------
+
+                // --- ИЗМЕНЕНО: Прогресс теперь только обновляет сообщение и ProgressBar ---
                 IProgress<RenderProgress> progress = new Progress<RenderProgress>(p =>
                 {
+                    _lastStatusMessage = p.Status; // Обновляем текст статуса
                     if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                     {
                         progressBar.Invoke((Action)(() => progressBar.Value = p.Percentage));
                     }
-                    if (lblStatus.IsHandleCreated && !lblStatus.IsDisposed)
-                    {
-                        lblStatus.Invoke((Action)(() => lblStatus.Text = p.Status));
-                    }
                 });
+                // --------------------------------------------------------------------------
 
                 try
                 {
@@ -104,24 +139,36 @@ namespace FractalExplorer.Forms.Other
 
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    progress.Report(new RenderProgress { Percentage = 100, Status = "Сохранение файла..." });
+                    // --- ИЗМЕНЕНО: Фиксация времени и вывод результата ---
+                    _renderStopwatch.Stop();
+                    _uiUpdateTimer.Stop();
+                    TimeSpan renderTime = _renderStopwatch.Elapsed;
+
+                    lblStatus.Text = $"Сохранение файла... (Заняло {renderTime:mm\\:ss})";
+                    progressBar.Value = 100;
+
                     await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat), _cts.Token);
                     resultBitmap.Dispose();
 
-                    MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Форматируем строку времени для финального сообщения
+                    string elapsedTimeString;
+                    if (renderTime.TotalMinutes >= 1)
+                        elapsedTimeString = $"{renderTime:m' мин 's' сек'}";
+                    else
+                        elapsedTimeString = $"{renderTime:s\\.fff' сек'}";
+
+                    MessageBox.Show($"Изображение успешно сохранено!\n\nВремя рендеринга: {elapsedTimeString}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.Close();
+                    // --------------------------------------------------------
                 }
-                // ИСПРАВЛЕНИЕ: Ловим AggregateException
                 catch (AggregateException ae)
                 {
-                    // Проверяем, что все внутренние исключения - это исключения отмены.
-                    // Если это так, то считаем это штатной отменой операции.
                     ae.Handle(ex => ex is OperationCanceledException);
+                    lblStatus.Text = "Операция отменена.";
                 }
                 catch (OperationCanceledException)
                 {
-                    // Этот блок по-прежнему нужен для случаев, когда отмена происходит
-                    // не внутри Parallel.For (например, между рендерингом и сохранением).
+                    lblStatus.Text = "Операция отменена.";
                 }
                 catch (Exception ex)
                 {
@@ -129,6 +176,10 @@ namespace FractalExplorer.Forms.Other
                 }
                 finally
                 {
+                    // --- ГАРАНТИРОВАННАЯ ОСТАНОВКА ТАЙМЕРОВ ---
+                    _renderStopwatch.Stop();
+                    _uiUpdateTimer.Stop();
+                    // ------------------------------------------
                     _isRendering = false;
                     SetUiState(true);
                     _cts?.Dispose();
@@ -160,13 +211,10 @@ namespace FractalExplorer.Forms.Other
         {
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
             {
-                // Если идет рендер, просто отменяем его.
-                // async-метод btnSave_Click сам обработает исключение и восстановит UI.
                 _cts.Cancel();
             }
             else
             {
-                // Если рендер не идет, кнопка работает как "Закрыть".
                 this.DialogResult = DialogResult.Cancel;
                 this.Close();
             }
@@ -174,34 +222,32 @@ namespace FractalExplorer.Forms.Other
 
         private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // ИСПРАВЛЕНИЕ: Если рендер еще идет в момент закрытия формы, отменяем его.
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
             {
                 _cts.Cancel();
             }
+            // --- Освобождаем ресурс таймера при закрытии формы ---
+            _uiUpdateTimer?.Dispose();
+            // ----------------------------------------------------
         }
 
-        // ИСПРАВЛЕНИЕ: Самая важная часть. Делаем метод "пуленепробиваемым".
         private void SetUiState(bool enabled)
         {
-            // Проверяем, не уничтожена ли форма, перед доступом к контролам.
             if (this.IsDisposed) return;
 
-            // Invoke нужен на случай, если этот метод будет вызван не из UI потока.
-            // В нашем случае это избыточно, но является хорошей практикой.
             this.Invoke((Action)(() => {
-                if (this.IsDisposed) return; // Повторная проверка на всякий случай
+                if (this.IsDisposed) return;
 
                 pnlMain.Enabled = enabled;
                 btnSave.Enabled = enabled;
 
-                // Кнопка "Отмена" меняет свою функцию
                 btnCancel.Text = enabled ? "Закрыть" : "Отмена";
 
                 if (enabled)
                 {
                     progressBar.Value = 0;
-                    lblStatus.Text = "Готово";
+                    _lastStatusMessage = "Готово";
+                    lblStatus.Text = _lastStatusMessage; // Сброс статуса
                 }
             }));
         }
