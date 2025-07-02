@@ -1355,9 +1355,12 @@ namespace FractalDraving
                 CenterY = _centerY,
                 Zoom = _zoom,
                 BaseScale = this.BaseScale,
-                Iterations = (int)nudIterations.Value,
+                Iterations = (int)nudIterations.Value, // Передаем полное значение
                 Threshold = nudThreshold.Value,
-                ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый"
+                ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+
+                // ИСПРАВЛЕНИЕ: Получаем детали для имени файла
+                FileNameDetails = this.GetSaveFileNameDetails()
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
@@ -1368,7 +1371,7 @@ namespace FractalDraving
             return state;
         }
 
-        private FractalMandelbrotFamilyEngine CreateEngineFromState(HighResRenderState state)
+        private FractalMandelbrotFamilyEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
             FractalMandelbrotFamilyEngine engine;
             switch (state.EngineType)
@@ -1380,7 +1383,18 @@ namespace FractalDraving
                 default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
             }
 
-            engine.MaxIterations = state.Iterations;
+            // ИСПРАВЛЕНИЕ: Устанавливаем итерации в зависимости от цели рендера
+            if (forPreview)
+            {
+                // Для превью используем ограниченное количество итераций
+                engine.MaxIterations = Math.Min(state.Iterations, 150);
+            }
+            else
+            {
+                // Для финального рендера используем полное количество итераций
+                engine.MaxIterations = state.Iterations;
+            }
+
             engine.ThresholdSquared = state.Threshold * state.Threshold;
             engine.CenterX = state.CenterX;
             engine.CenterY = state.CenterY;
@@ -1397,7 +1411,8 @@ namespace FractalDraving
             _isHighResRendering = true;
             try
             {
-                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state);
+                // ИСПРАВЛЕНИЕ: Передаем 'false' для forPreview
+                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
                 int threadCount = GetThreadCount();
 
                 Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmapSSAA(
@@ -1416,9 +1431,8 @@ namespace FractalDraving
 
         public Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight)
         {
-            var engine = CreateEngineFromState(state);
-            // Используем меньше итераций для быстрого предпросмотра
-            engine.MaxIterations = Math.Min(state.Iterations, 150);
+            // ИСПРАВЛЕНИЕ: Передаем 'true' для forPreview
+            var engine = CreateEngineFromState(state, forPreview: true);
             return engine.RenderToBitmap(previewWidth, previewHeight, 1, _ => { }, CancellationToken.None);
         }
 

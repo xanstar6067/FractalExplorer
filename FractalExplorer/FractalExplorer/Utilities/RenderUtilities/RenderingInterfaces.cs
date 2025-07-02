@@ -21,6 +21,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public decimal Threshold { get; set; }
         public string ActivePaletteName { get; set; }
         public ComplexDecimal? JuliaC { get; set; }
+        public string FileNameDetails { get; set; }
     }
 
     /// <summary>
