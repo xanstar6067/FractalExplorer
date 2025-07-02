@@ -15,6 +15,7 @@ namespace FractalExplorer.Forms.Other
         private readonly IHighResRenderable _renderSource;
         private readonly HighResRenderState _renderState;
         private CancellationTokenSource _cts;
+        private bool _isRendering = false;
 
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
@@ -73,30 +74,23 @@ namespace FractalExplorer.Forms.Other
 
         private async void btnSave_Click(object sender, EventArgs e)
         {
-            int width = (int)nudWidth.Value;
-            int height = (int)nudHeight.Value;
             string format = cbFormat.SelectedItem.ToString();
-            int ssaaFactor = GetSsaaFactor();
-
-            ImageFormat imageFormat = GetImageFormat(format);
-
-            // ИСПРАВЛЕНИЕ: Формируем имя файла, используя данные из RenderState
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string suggestedFileName = $"{_renderState.FileNameDetails}_{timestamp}.{format.ToLower()}";
 
             using (var sfd = new SaveFileDialog
             {
                 Filter = $"{format.ToUpper()} Files|*.{format.ToLower()}|All files|*.*",
-                FileName = suggestedFileName, // Используем новое осмысленное имя
+                FileName = suggestedFileName,
                 Title = "Сохранить изображение"
             })
             {
                 if (sfd.ShowDialog(this) != DialogResult.OK) return;
 
-                SetUiState(false); // Блокируем UI
+                _isRendering = true;
+                SetUiState(false);
                 _cts = new CancellationTokenSource();
 
-                // Объявляем переменную как интерфейс и добавляем InvokeRequired для потокобезопасности
                 IProgress<RenderProgress> progress = new Progress<RenderProgress>(p =>
                 {
                     if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
@@ -111,12 +105,15 @@ namespace FractalExplorer.Forms.Other
 
                 try
                 {
-                    // Передаем progress в метод рендеринга
+                    int width = (int)nudWidth.Value;
+                    int height = (int)nudHeight.Value;
+                    int ssaaFactor = GetSsaaFactor();
+                    ImageFormat imageFormat = GetImageFormat(format);
+
                     Bitmap resultBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, width, height, ssaaFactor, progress, _cts.Token);
 
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    // Вызываем Report, чтобы обновить UI уже из этого потока
                     progress.Report(new RenderProgress { Percentage = 100, Status = "Сохранение файла..." });
                     await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat), _cts.Token);
                     resultBitmap.Dispose();
@@ -124,15 +121,17 @@ namespace FractalExplorer.Forms.Other
                     MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.Close();
                 }
+                // ИСПРАВЛЕНИЕ: Ловим AggregateException
+                catch (AggregateException ae)
+                {
+                    // Проверяем, что все внутренние исключения - это исключения отмены.
+                    // Если это так, то считаем это штатной отменой операции.
+                    ae.Handle(ex => ex is OperationCanceledException);
+                }
                 catch (OperationCanceledException)
                 {
-                    if (IsHandleCreated && !IsDisposed)
-                    {
-                        this.Invoke((Action)(() => {
-                            lblStatus.Text = "Операция отменена";
-                            progressBar.Value = 0;
-                        }));
-                    }
+                    // Этот блок по-прежнему нужен для случаев, когда отмена происходит
+                    // не внутри Parallel.For (например, между рендерингом и сохранением).
                 }
                 catch (Exception ex)
                 {
@@ -140,7 +139,8 @@ namespace FractalExplorer.Forms.Other
                 }
                 finally
                 {
-                    SetUiState(true); // Разблокируем UI
+                    _isRendering = false;
+                    SetUiState(true);
                     _cts?.Dispose();
                     _cts = null;
                 }
@@ -168,12 +168,15 @@ namespace FractalExplorer.Forms.Other
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            if (_cts != null && !_cts.IsCancellationRequested)
+            if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
             {
+                // Если идет рендер, просто отменяем его.
+                // async-метод btnSave_Click сам обработает исключение и восстановит UI.
                 _cts.Cancel();
             }
             else
             {
+                // Если рендер не идет, кнопка работает как "Закрыть".
                 this.DialogResult = DialogResult.Cancel;
                 this.Close();
             }
@@ -181,22 +184,36 @@ namespace FractalExplorer.Forms.Other
 
         private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_cts != null && !_cts.IsCancellationRequested)
+            // ИСПРАВЛЕНИЕ: Если рендер еще идет в момент закрытия формы, отменяем его.
+            if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
             {
                 _cts.Cancel();
             }
         }
 
+        // ИСПРАВЛЕНИЕ: Самая важная часть. Делаем метод "пуленепробиваемым".
         private void SetUiState(bool enabled)
         {
-            pnlMain.Enabled = enabled;
-            btnSave.Enabled = enabled;
-            btnCancel.Text = enabled ? "Закрыть" : "Отмена";
-            if (enabled)
-            {
-                progressBar.Value = 0;
-                lblStatus.Text = "Готово";
-            }
+            // Проверяем, не уничтожена ли форма, перед доступом к контролам.
+            if (this.IsDisposed) return;
+
+            // Invoke нужен на случай, если этот метод будет вызван не из UI потока.
+            // В нашем случае это избыточно, но является хорошей практикой.
+            this.Invoke((Action)(() => {
+                if (this.IsDisposed) return; // Повторная проверка на всякий случай
+
+                pnlMain.Enabled = enabled;
+                btnSave.Enabled = enabled;
+
+                // Кнопка "Отмена" меняет свою функцию
+                btnCancel.Text = enabled ? "Закрыть" : "Отмена";
+
+                if (enabled)
+                {
+                    progressBar.Value = 0;
+                    lblStatus.Text = "Готово";
+                }
+            }));
         }
 
         private int GetSsaaFactor()
