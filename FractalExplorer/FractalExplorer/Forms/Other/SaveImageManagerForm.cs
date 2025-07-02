@@ -78,13 +78,16 @@ namespace FractalExplorer.Forms.Other
             string format = cbFormat.SelectedItem.ToString();
             int ssaaFactor = GetSsaaFactor();
 
-            string filter = $"{format} Files|*.{format.ToLower()}|All files|*.*";
             ImageFormat imageFormat = GetImageFormat(format);
+
+            // ИСПРАВЛЕНИЕ: Формируем имя файла, используя данные из RenderState
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string suggestedFileName = $"{_renderState.FileNameDetails}_{timestamp}.{format.ToLower()}";
 
             using (var sfd = new SaveFileDialog
             {
-                Filter = filter,
-                FileName = $"fractal_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}",
+                Filter = $"{format.ToUpper()} Files|*.{format.ToLower()}|All files|*.*",
+                FileName = suggestedFileName, // Используем новое осмысленное имя
                 Title = "Сохранить изображение"
             })
             {
@@ -93,7 +96,7 @@ namespace FractalExplorer.Forms.Other
                 SetUiState(false); // Блокируем UI
                 _cts = new CancellationTokenSource();
 
-                // ИСПРАВЛЕНИЕ: Объявляем переменную как интерфейс и добавляем InvokeRequired
+                // Объявляем переменную как интерфейс и добавляем InvokeRequired для потокобезопасности
                 IProgress<RenderProgress> progress = new Progress<RenderProgress>(p =>
                 {
                     if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
@@ -113,9 +116,9 @@ namespace FractalExplorer.Forms.Other
 
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    // Этот вызов теперь должен работать без ошибок
+                    // Вызываем Report, чтобы обновить UI уже из этого потока
                     progress.Report(new RenderProgress { Percentage = 100, Status = "Сохранение файла..." });
-                    await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat));
+                    await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat), _cts.Token);
                     resultBitmap.Dispose();
 
                     MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -123,12 +126,17 @@ namespace FractalExplorer.Forms.Other
                 }
                 catch (OperationCanceledException)
                 {
-                    lblStatus.Text = "Операция отменена";
-                    progressBar.Value = 0;
+                    if (IsHandleCreated && !IsDisposed)
+                    {
+                        this.Invoke((Action)(() => {
+                            lblStatus.Text = "Операция отменена";
+                            progressBar.Value = 0;
+                        }));
+                    }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Произошла ошибка: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Произошла ошибка при сохранении: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 finally
                 {
