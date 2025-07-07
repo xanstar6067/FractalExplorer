@@ -23,6 +23,7 @@
         protected void InitializeComponent()
         {
             pnlControls = new Panel();
+            lbSSAA = new Label();
             cbSSAA = new ComboBox();
             btnStateManager = new Button();
             color_configurations = new Button();
@@ -60,6 +61,7 @@
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(lbSSAA);
             pnlControls.Controls.Add(cbSSAA);
             pnlControls.Controls.Add(btnStateManager);
             pnlControls.Controls.Add(color_configurations);
@@ -87,6 +89,15 @@
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
             // 
+            // lbSSAA
+            // 
+            lbSSAA.AutoSize = true;
+            lbSSAA.Location = new Point(5, 219);
+            lbSSAA.Name = "lbSSAA";
+            lbSSAA.Size = new Size(112, 15);
+            lbSSAA.TabIndex = 36;
+            lbSSAA.Text = "Сглаживание SSAA";
+            // 
             // cbSSAA
             // 
             cbSSAA.FormattingEnabled = true;
@@ -97,7 +108,7 @@
             // 
             // btnStateManager
             // 
-            btnStateManager.Location = new Point(3, 379);
+            btnStateManager.Location = new Point(6, 359);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(218, 32);
             btnStateManager.TabIndex = 34;
@@ -107,7 +118,7 @@
             // 
             // color_configurations
             // 
-            color_configurations.Location = new Point(3, 303);
+            color_configurations.Location = new Point(6, 283);
             color_configurations.Name = "color_configurations";
             color_configurations.Size = new Size(218, 32);
             color_configurations.TabIndex = 33;
@@ -135,7 +146,7 @@
             // lblProgress
             // 
             lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(80, 414);
+            lblProgress.Location = new Point(83, 394);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(67, 15);
             lblProgress.TabIndex = 20;
@@ -164,7 +175,7 @@
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(3, 341);
+            btnRender.Location = new Point(6, 321);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(218, 32);
             btnRender.TabIndex = 2;
@@ -173,7 +184,7 @@
             // 
             // pbRenderProgress
             // 
-            pbRenderProgress.Location = new Point(3, 432);
+            pbRenderProgress.Location = new Point(6, 412);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(218, 23);
             pbRenderProgress.TabIndex = 14;
@@ -197,9 +208,9 @@
             // 
             // btnSaveHighRes
             // 
-            btnSaveHighRes.Location = new Point(11, 216);
+            btnSaveHighRes.Location = new Point(6, 245);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(106, 23);
+            btnSaveHighRes.Size = new Size(218, 32);
             btnSaveHighRes.TabIndex = 11;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
@@ -357,5 +368,6 @@
         protected System.Windows.Forms.NumericUpDown nudBaseScale;
         private Button btnStateManager;
         private ComboBox cbSSAA;
+        protected Label lbSSAA;
     }
 }
