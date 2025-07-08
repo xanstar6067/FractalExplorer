@@ -290,6 +290,7 @@
             btnSave.TabIndex = 11;
             btnSave.Text = "Сохранить изображение";
             btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnOpenSaveManager_Click;
             // 
             // label3
             // 

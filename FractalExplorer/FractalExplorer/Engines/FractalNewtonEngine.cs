@@ -129,16 +129,12 @@ namespace FractalExplorer.Engines
         /// <returns>Массив байт с данными пикселей плитки.</returns>
         public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
-            bytesPerPixel = 4; // Используем 4 байта на пиксель для поддержки формата 32bppArgb
+            bytesPerPixel = 4;
             byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
 
-            // Если функция не задана или корни не найдены, возвращаем пустой (черный) буфер.
             if (f_ast == null || f_deriv_ast == null || Roots.Count == 0)
             {
-                for (int i = 0; i < buffer.Length; i++)
-                {
-                    buffer[i] = 0;
-                }
+                for (int i = 0; i < buffer.Length; i++) buffer[i] = 0;
                 return buffer;
             }
 
@@ -150,18 +146,12 @@ namespace FractalExplorer.Engines
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
                 int canvasY = tile.Bounds.Y + y;
-                if (canvasY >= canvasHeight)
-                {
-                    continue;
-                }
+                if (canvasY >= canvasHeight) continue;
 
                 for (int x = 0; x < tile.Bounds.Width; x++)
                 {
                     int canvasX = tile.Bounds.X + x;
-                    if (canvasX >= canvasWidth)
-                    {
-                        continue;
-                    }
+                    if (canvasX >= canvasWidth) continue;
 
                     double complexReal = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
                     double complexImaginary = CenterY + (canvasY - halfHeightPixels) * unitsPerPixel;
@@ -172,16 +162,10 @@ namespace FractalExplorer.Engines
                     {
                         variables["z"] = z;
                         Complex fValue = f_ast.Evaluate(variables);
-                        if (fValue.Magnitude < epsilon)
-                        {
-                            break;
-                        }
+                        if (fValue.Magnitude < epsilon) break;
 
                         Complex fDerivValue = f_deriv_ast.Evaluate(variables);
-                        if (fDerivValue == Complex.Zero)
-                        {
-                            break;
-                        }
+                        if (fDerivValue == Complex.Zero) break;
 
                         z -= fValue / fDerivValue;
                         iter++;
@@ -193,7 +177,7 @@ namespace FractalExplorer.Engines
                     buffer[bufferIndex] = pixelColor.B;
                     buffer[bufferIndex + 1] = pixelColor.G;
                     buffer[bufferIndex + 2] = pixelColor.R;
-                    buffer[bufferIndex + 3] = 255; // Alpha-канал, полностью непрозрачный
+                    buffer[bufferIndex + 3] = 255;
                 }
             }
             return buffer;
@@ -206,40 +190,35 @@ namespace FractalExplorer.Engines
         /// <param name="renderHeight">Высота генерируемого изображения в пикселях.</param>
         /// <param name="numThreads">Количество потоков для использования в параллельных вычислениях.</param>
         /// <param name="reportProgressCallback">Callback-функция для отчета о прогрессе рендеринга (значение от 0 до 100).</param>
+        /// <param name="cancellationToken">Токен для отмены операции.</param>
         /// <returns>Объект Bitmap, содержащий отрисованный фрактал.</returns>
-        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback)
+        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
         {
             if (renderWidth <= 0 || renderHeight <= 0 || f_ast == null || f_deriv_ast == null)
             {
                 return new Bitmap(1, 1);
             }
 
-            // Если корни не найдены, возвращаем пустой (залитый фоновым цветом) Bitmap.
             if (Roots.Count == 0)
             {
                 var emptyBmp = new Bitmap(renderWidth, renderHeight);
-                using (var g = Graphics.FromImage(emptyBmp))
-                {
-                    g.Clear(BackgroundColor);
-                }
+                using (var g = Graphics.FromImage(emptyBmp)) g.Clear(BackgroundColor);
                 return emptyBmp;
             }
 
             var bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
-            int stride = bmpData.Stride;
-            IntPtr scan0 = bmpData.Scan0;
-            byte[] buffer = new byte[Math.Abs(stride) * renderHeight];
+            byte[] buffer = new byte[Math.Abs(bmpData.Stride) * renderHeight];
 
-            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
             long done = 0;
-
             double unitsPerPixel = Scale / renderWidth;
 
             Parallel.For(0, renderHeight, po, y =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var variables = new Dictionary<string, Complex>();
-                int rowOffset = y * stride;
+                int rowOffset = y * bmpData.Stride;
                 for (int x = 0; x < renderWidth; x++)
                 {
                     double complexReal = CenterX + (x - renderWidth / 2.0) * unitsPerPixel;
@@ -251,23 +230,17 @@ namespace FractalExplorer.Engines
                     {
                         variables["z"] = z;
                         Complex fValue = f_ast.Evaluate(variables);
-                        if (fValue.Magnitude < epsilon)
-                        {
-                            break;
-                        }
+                        if (fValue.Magnitude < epsilon) break;
 
                         Complex fDerivValue = f_deriv_ast.Evaluate(variables);
-                        if (fDerivValue == Complex.Zero)
-                        {
-                            break;
-                        }
+                        if (fDerivValue == Complex.Zero) break;
 
                         z -= fValue / fDerivValue;
                         iter++;
                     }
 
                     Color pixelColor = GetPixelColor(z, iter);
-                    int index = rowOffset + x * 3; // Предполагаем 3 байта на пиксель (24bpp)
+                    int index = rowOffset + x * 3;
 
                     buffer[index] = pixelColor.B;
                     buffer[index + 1] = pixelColor.G;
@@ -275,15 +248,110 @@ namespace FractalExplorer.Engines
                 }
 
                 long currentDone = Interlocked.Increment(ref done);
-                // Отчет о прогрессе
                 reportProgressCallback((int)(100.0 * currentDone / renderHeight));
             });
 
-            Marshal.Copy(buffer, 0, scan0, buffer.Length);
+            Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
             bmp.UnlockBits(bmpData);
 
             return bmp;
         }
+
+        /// <summary>
+        /// Рендерит фрактал Ньютона с использованием суперсэмплинга (SSAA) для сглаживания.
+        /// </summary>
+        /// <param name="finalWidth">Финальная ширина изображения.</param>
+        /// <param name="finalHeight">Финальная высота изображения.</param>
+        /// <param name="numThreads">Количество потоков для рендеринга.</param>
+        /// <param name="reportProgressCallback">Callback для отчета о прогрессе (0-100).</param>
+        /// <param name="supersamplingFactor">Фактор суперсэмплинга (1 = выкл).</param>
+        /// <param name="cancellationToken">Токен для отмены операции.</param>
+        /// <returns>Объект Bitmap с отрисованным фракталом.</returns>
+        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken = default)
+        {
+            if (finalWidth <= 0 || finalHeight <= 0) return new Bitmap(1, 1);
+            if (supersamplingFactor <= 1)
+            {
+                return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback, cancellationToken);
+            }
+
+            int highResWidth = finalWidth * supersamplingFactor;
+            int highResHeight = finalHeight * supersamplingFactor;
+            Color[,] tempColorBuffer = new Color[highResWidth, highResHeight];
+            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
+            long doneLines = 0;
+            double unitsPerPixel = Scale / finalWidth;
+
+            Parallel.For(0, highResHeight, po, y =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var variables = new Dictionary<string, Complex>();
+                for (int x = 0; x < highResWidth; x++)
+                {
+                    double re = CenterX + (x - highResWidth / 2.0) * (unitsPerPixel / supersamplingFactor);
+                    double im = CenterY + (y - highResHeight / 2.0) * (unitsPerPixel / supersamplingFactor);
+                    Complex z = new Complex(re, im);
+
+                    int iter = 0;
+                    while (iter < MaxIterations)
+                    {
+                        variables["z"] = z;
+                        Complex fValue = f_ast.Evaluate(variables);
+                        if (fValue.Magnitude < epsilon) break;
+
+                        Complex fDerivValue = f_deriv_ast.Evaluate(variables);
+                        if (fDerivValue == Complex.Zero) break;
+
+                        z -= fValue / fDerivValue;
+                        iter++;
+                    }
+                    tempColorBuffer[x, y] = GetPixelColor(z, iter);
+                }
+                long currentDone = Interlocked.Increment(ref doneLines);
+                if (highResHeight > 0) reportProgressCallback((int)(50.0 * currentDone / highResHeight));
+            });
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            Bitmap bmp = new Bitmap(finalWidth, finalHeight, PixelFormat.Format24bppRgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, finalWidth, finalHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            byte[] finalBuffer = new byte[Math.Abs(bmpData.Stride) * finalHeight];
+            int sampleCount = supersamplingFactor * supersamplingFactor;
+            doneLines = 0;
+
+            Parallel.For(0, finalHeight, po, finalY =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int rowOffset = finalY * bmpData.Stride;
+                for (int finalX = 0; finalX < finalWidth; finalX++)
+                {
+                    long totalR = 0, totalG = 0, totalB = 0;
+                    int startX = finalX * supersamplingFactor;
+                    int startY = finalY * supersamplingFactor;
+                    for (int subY = 0; subY < supersamplingFactor; subY++)
+                    {
+                        for (int subX = 0; subX < supersamplingFactor; subX++)
+                        {
+                            Color pixelColor = tempColorBuffer[startX + subX, startY + subY];
+                            totalR += pixelColor.R;
+                            totalG += pixelColor.G;
+                            totalB += pixelColor.B;
+                        }
+                    }
+                    int index = rowOffset + finalX * 3;
+                    finalBuffer[index] = (byte)(totalB / sampleCount);
+                    finalBuffer[index + 1] = (byte)(totalG / sampleCount);
+                    finalBuffer[index + 2] = (byte)(totalR / sampleCount);
+                }
+                long currentDone = Interlocked.Increment(ref doneLines);
+                if (finalHeight > 0) reportProgressCallback(50 + (int)(50.0 * currentDone / finalHeight));
+            });
+
+            Marshal.Copy(finalBuffer, 0, bmpData.Scan0, finalBuffer.Length);
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+
 
         #endregion
 
@@ -297,16 +365,11 @@ namespace FractalExplorer.Engines
         /// <returns>Цвет пикселя.</returns>
         private Color GetPixelColor(Complex z, int iter)
         {
-            // Если нет корней или нет цветов для них, просто возвращаем цвет фона.
-            if (Roots.Count == 0 || RootColors.Length == 0)
-            {
-                return BackgroundColor;
-            }
+            if (Roots.Count == 0 || RootColors.Length == 0) return BackgroundColor;
 
             int rootIndex = -1;
             double minDist = double.MaxValue;
 
-            // Находим ближайший корень
             for (int r = 0; r < Roots.Count; r++)
             {
                 double dist = (z - Roots[r]).Magnitude;
@@ -317,15 +380,13 @@ namespace FractalExplorer.Engines
                 }
             }
 
-            // Если точка сошлась к корню (достаточно близко)
             if (rootIndex != -1 && minDist < epsilon)
             {
                 Color baseColor = RootColors[rootIndex % RootColors.Length];
                 if (UseGradient)
                 {
-                    // Создаем градиент на основе количества итераций
                     double t = Math.Min(1.0, (double)iter / MaxIterations);
-                    t = 1.0 - Math.Pow(1.0 - t, 2); // Нелинейный градиент
+                    t = 1.0 - Math.Pow(1.0 - t, 2);
                     return LerpColor(baseColor, BackgroundColor, t);
                 }
                 else
@@ -334,7 +395,6 @@ namespace FractalExplorer.Engines
                 }
             }
 
-            // Точка не сошлась к корню или слишком далека от любого корня
             return BackgroundColor;
         }
 
@@ -347,7 +407,7 @@ namespace FractalExplorer.Engines
         /// <returns>Интерполированный цвет.</returns>
         private Color LerpColor(Color a, Color b, double t)
         {
-            t = Math.Max(0, Math.Min(1, t)); // Ограничиваем t в пределах [0, 1]
+            t = Math.Max(0, Math.Min(1, t));
             return Color.FromArgb(
                 (int)(a.A + (b.A - a.A) * t),
                 (int)(a.R + (b.R - a.R) * t),
@@ -364,12 +424,8 @@ namespace FractalExplorer.Engines
         private void FindRootsInternal(int maxIter = 100)
         {
             Roots.Clear();
-            if (f_ast == null || f_deriv_ast == null)
-            {
-                return;
-            }
+            if (f_ast == null || f_deriv_ast == null) return;
 
-            // Генерируем набор начальных точек для поиска корней
             var startPoints = new List<Complex>();
             for (double r = 0.1; r < 2.5; r += 0.4)
             {
@@ -379,7 +435,7 @@ namespace FractalExplorer.Engines
                     startPoints.Add(Complex.FromPolarCoordinates(r, angle));
                 }
             }
-            startPoints.Add(Complex.Zero); // Добавляем начало координат
+            startPoints.Add(Complex.Zero);
 
             foreach (var startPoint in startPoints)
             {
@@ -392,22 +448,15 @@ namespace FractalExplorer.Engines
                     Complex fValue = f_ast.Evaluate(variables);
                     Complex fDerivValue = f_deriv_ast.Evaluate(variables);
 
-                    // Избегаем деления на ноль, если производная очень мала
-                    if (fDerivValue.Magnitude < epsilon / 100)
-                    {
-                        break;
-                    }
+                    if (fDerivValue.Magnitude < epsilon / 100) break;
 
                     Complex step = fValue / fDerivValue;
                     z -= step;
 
-                    // Если шаг стал очень мал, считаем, что сошлись
                     if (step.Magnitude < epsilon)
                     {
-                        // Проверяем, не найден ли этот корень ранее
                         if (!Roots.Any(root => (z - root).Magnitude < epsilon))
                         {
-                            // Дополнительная проверка: действительно ли это корень (f(z) близко к нулю)
                             variables["z"] = z;
                             if (f_ast.Evaluate(variables).Magnitude < epsilon * 10)
                             {
@@ -417,15 +466,10 @@ namespace FractalExplorer.Engines
                         break;
                     }
 
-                    // Если точка ушла слишком далеко, считаем, что не сойдется
-                    if (z.Magnitude > 1e4)
-                    {
-                        break;
-                    }
+                    if (z.Magnitude > 1e4) break;
                 }
             }
 
-            // Сортируем и удаляем дубликаты корней
             Roots = Roots.OrderBy(r => r.Real).ThenBy(r => r.Imaginary).ToList();
             if (Roots.Count > 1)
             {
@@ -452,7 +496,7 @@ namespace FractalExplorer.Engines
         {
             int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
             double f = hue / 60 - Math.Floor(hue / 60);
-            value = value * 255; // Переводим значение в диапазон 0-255
+            value = value * 255;
 
             int v = Convert.ToInt32(value);
             int p = Convert.ToInt32(value * (1 - saturation));
