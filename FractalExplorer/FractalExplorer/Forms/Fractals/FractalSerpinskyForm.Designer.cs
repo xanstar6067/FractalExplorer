@@ -266,7 +266,7 @@
             this.btnSavePNG.TabIndex = 11;
             this.btnSavePNG.Text = "Сохранить изображение";
             this.btnSavePNG.UseVisualStyleBackColor = true;
-            this.btnSavePNG.Click += new System.EventHandler(this.btnSavePNG_Click);
+            this.btnSavePNG.Click += new System.EventHandler(this.btnOpenSaveManager_Click);
             // 
             // label3
             // 
