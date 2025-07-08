@@ -40,9 +40,6 @@
             label2 = new Label();
             richTextDebugOutput = new RichTextBox();
             label1 = new Label();
-            nudW = new NumericUpDown();
-            nudH = new NumericUpDown();
-            progressPNG = new ProgressBar();
             label8 = new Label();
             label5 = new Label();
             nudZoom = new NumericUpDown();
@@ -59,8 +56,6 @@
             panel5.SuspendLayout();
             panel4.SuspendLayout();
             panel3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)nudW).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudH).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).BeginInit();
@@ -71,9 +66,6 @@
             panel1.Controls.Add(btnStateManager);
             panel1.Controls.Add(btnConfigurePalette);
             panel1.Controls.Add(panel2);
-            panel1.Controls.Add(nudW);
-            panel1.Controls.Add(nudH);
-            panel1.Controls.Add(progressPNG);
             panel1.Controls.Add(label8);
             panel1.Controls.Add(label5);
             panel1.Controls.Add(nudZoom);
@@ -92,7 +84,7 @@
             // 
             // btnStateManager
             // 
-            btnStateManager.Location = new Point(7, 337);
+            btnStateManager.Location = new Point(7, 290);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(218, 34);
             btnStateManager.TabIndex = 42;
@@ -102,7 +94,7 @@
             // 
             // btnConfigurePalette
             // 
-            btnConfigurePalette.Location = new Point(7, 297);
+            btnConfigurePalette.Location = new Point(7, 250);
             btnConfigurePalette.Name = "btnConfigurePalette";
             btnConfigurePalette.Size = new Size(218, 34);
             btnConfigurePalette.TabIndex = 41;
@@ -195,33 +187,6 @@
             label1.TabIndex = 35;
             label1.Text = "Выбери полином/формулу.";
             // 
-            // nudW
-            // 
-            nudW.Location = new Point(16, 239);
-            nudW.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-            nudW.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudW.Name = "nudW";
-            nudW.Size = new Size(86, 23);
-            nudW.TabIndex = 23;
-            nudW.Value = new decimal(new int[] { 1920, 0, 0, 0 });
-            // 
-            // nudH
-            // 
-            nudH.Location = new Point(128, 239);
-            nudH.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
-            nudH.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudH.Name = "nudH";
-            nudH.Size = new Size(83, 23);
-            nudH.TabIndex = 22;
-            nudH.Value = new decimal(new int[] { 1080, 0, 0, 0 });
-            // 
-            // progressPNG
-            // 
-            progressPNG.Location = new Point(7, 268);
-            progressPNG.Name = "progressPNG";
-            progressPNG.Size = new Size(218, 23);
-            progressPNG.TabIndex = 21;
-            // 
             // label8
             // 
             label8.AutoSize = true;
@@ -284,9 +249,9 @@
             // 
             // btnSave
             // 
-            btnSave.Location = new Point(32, 210);
+            btnSave.Location = new Point(7, 210);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(164, 23);
+            btnSave.Size = new Size(218, 34);
             btnSave.TabIndex = 11;
             btnSave.Text = "Сохранить изображение";
             btnSave.UseVisualStyleBackColor = true;
@@ -338,8 +303,6 @@
             panel4.ResumeLayout(false);
             panel3.ResumeLayout(false);
             panel3.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)nudW).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudH).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).EndInit();
@@ -360,9 +323,6 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.NumericUpDown nudZoom;
         private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.ProgressBar progressPNG;
-        private System.Windows.Forms.NumericUpDown nudW;
-        private System.Windows.Forms.NumericUpDown nudH;
         private System.Windows.Forms.RichTextBox richTextInput;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ComboBox cbSelector;
