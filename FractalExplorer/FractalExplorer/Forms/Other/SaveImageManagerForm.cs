@@ -1,6 +1,6 @@
 ﻿using FractalExplorer.Utilities.RenderUtilities;
 using System;
-using System.Diagnostics; // Добавлено для Stopwatch
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -18,11 +18,9 @@ namespace FractalExplorer.Forms.Other
         private CancellationTokenSource _cts;
         private bool _isRendering = false;
 
-        // --- НОВЫЕ ПОЛЯ ДЛЯ ТАЙМЕРА ---
         private readonly Stopwatch _renderStopwatch;
         private readonly System.Windows.Forms.Timer _uiUpdateTimer;
         private string _lastStatusMessage;
-        // ---------------------------------
 
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
@@ -30,35 +28,28 @@ namespace FractalExplorer.Forms.Other
             _renderSource = renderSource ?? throw new ArgumentNullException(nameof(renderSource));
             _renderState = _renderSource.GetRenderState();
 
-            // --- ИНИЦИАЛИЗАЦИЯ ТАЙМЕРОВ ---
             _renderStopwatch = new Stopwatch();
             _uiUpdateTimer = new System.Windows.Forms.Timer { Interval = 200 };
             _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
-            // ---------------------------------
         }
 
-        // --- НОВЫЙ МЕТОД: ОБНОВЛЕНИЕ СТАТУСА ПО ТАЙМЕРУ ---
         private void UiUpdateTimer_Tick(object sender, EventArgs e)
         {
-            // Используем Invoke для безопасного обновления UI из любого потока
             this.Invoke((Action)(() =>
             {
                 if (lblStatus.IsHandleCreated && !lblStatus.IsDisposed)
                 {
-                    // Обновляем статус, добавляя к нему отформатированное время
                     lblStatus.Text = $"{_lastStatusMessage} [{_renderStopwatch.Elapsed:mm\\:ss\\.f}]";
                 }
             }));
         }
-        // ----------------------------------------------------
 
         private void SaveImageManagerForm_Load(object sender, EventArgs e)
         {
-            // Инициализация UI
-            cbFormat.SelectedIndex = 0; // PNG по умолчанию
-            cbSSAA.SelectedIndex = 1;   // Низкое (2x) по умолчанию
+            cbFormat.SelectedIndex = 0;
+            cbSSAA.SelectedIndex = 1;
             UpdateJpgQualityUI();
-            _lastStatusMessage = "Готово"; // Начальный статус
+            _lastStatusMessage = "Готово";
             lblStatus.Text = _lastStatusMessage;
         }
 
@@ -111,22 +102,18 @@ namespace FractalExplorer.Forms.Other
                 SetUiState(false);
                 _cts = new CancellationTokenSource();
 
-                // --- ЗАПУСК ТАЙМЕРОВ ---
                 _lastStatusMessage = "Подготовка к рендерингу...";
                 _renderStopwatch.Restart();
                 _uiUpdateTimer.Start();
-                // -----------------------
 
-                // --- ИЗМЕНЕНО: Прогресс теперь только обновляет сообщение и ProgressBar ---
                 IProgress<RenderProgress> progress = new Progress<RenderProgress>(p =>
                 {
-                    _lastStatusMessage = p.Status; // Обновляем текст статуса
+                    _lastStatusMessage = p.Status;
                     if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
                     {
                         progressBar.Invoke((Action)(() => progressBar.Value = p.Percentage));
                     }
                 });
-                // --------------------------------------------------------------------------
 
                 try
                 {
@@ -135,11 +122,13 @@ namespace FractalExplorer.Forms.Other
                     int ssaaFactor = GetSsaaFactor();
                     ImageFormat imageFormat = GetImageFormat(format);
 
+                    // <<< ИЗМЕНЕНИЕ: Считываем значение качества JPG здесь, в UI-потоке.
+                    int jpgQuality = trackBarJpgQuality.Value;
+
                     Bitmap resultBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, width, height, ssaaFactor, progress, _cts.Token);
 
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    // --- ИЗМЕНЕНО: Фиксация времени и вывод результата ---
                     _renderStopwatch.Stop();
                     _uiUpdateTimer.Stop();
                     TimeSpan renderTime = _renderStopwatch.Elapsed;
@@ -147,10 +136,10 @@ namespace FractalExplorer.Forms.Other
                     lblStatus.Text = $"Сохранение файла... (Заняло {renderTime:mm\\:ss})";
                     progressBar.Value = 100;
 
-                    await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat), _cts.Token);
+                    // <<< ИЗМЕНЕНИЕ: Передаем значение качества в фоновую задачу.
+                    await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat, jpgQuality), _cts.Token);
                     resultBitmap.Dispose();
 
-                    // Форматируем строку времени для финального сообщения
                     string elapsedTimeString;
                     if (renderTime.TotalMinutes >= 1)
                         elapsedTimeString = $"{renderTime:m' мин 's' сек'}";
@@ -159,7 +148,6 @@ namespace FractalExplorer.Forms.Other
 
                     MessageBox.Show($"Изображение успешно сохранено!\n\nВремя рендеринга: {elapsedTimeString}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     this.Close();
-                    // --------------------------------------------------------
                 }
                 catch (AggregateException ae)
                 {
@@ -176,10 +164,8 @@ namespace FractalExplorer.Forms.Other
                 }
                 finally
                 {
-                    // --- ГАРАНТИРОВАННАЯ ОСТАНОВКА ТАЙМЕРОВ ---
                     _renderStopwatch.Stop();
                     _uiUpdateTimer.Stop();
-                    // ------------------------------------------
                     _isRendering = false;
                     SetUiState(true);
                     _cts?.Dispose();
@@ -188,13 +174,16 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
-        private void SaveBitmap(Bitmap bitmap, string filePath, ImageFormat format)
+        // <<< ИЗМЕНЕНИЕ: Сигнатура метода теперь принимает jpgQuality.
+        private void SaveBitmap(Bitmap bitmap, string filePath, ImageFormat format, int jpgQuality)
         {
             if (format == ImageFormat.Jpeg)
             {
                 var qualityEncoder = Encoder.Quality;
                 var encoderParameters = new EncoderParameters(1);
-                encoderParameters.Param[0] = new EncoderParameter(qualityEncoder, (long)trackBarJpgQuality.Value);
+                // <<< ИЗМЕНЕНИЕ: Используем переданный параметр, а не обращаемся к контролу.
+                encoderParameters.Param[0] = new EncoderParameter(qualityEncoder, (long)jpgQuality);
+
                 ImageCodecInfo jpgEncoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
                 if (jpgEncoder != null)
                 {
@@ -226,9 +215,7 @@ namespace FractalExplorer.Forms.Other
             {
                 _cts.Cancel();
             }
-            // --- Освобождаем ресурс таймера при закрытии формы ---
             _uiUpdateTimer?.Dispose();
-            // ----------------------------------------------------
         }
 
         private void SetUiState(bool enabled)
@@ -247,7 +234,7 @@ namespace FractalExplorer.Forms.Other
                 {
                     progressBar.Value = 0;
                     _lastStatusMessage = "Готово";
-                    lblStatus.Text = _lastStatusMessage; // Сброс статуса
+                    lblStatus.Text = _lastStatusMessage;
                 }
             }));
         }
