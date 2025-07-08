@@ -10,6 +10,8 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using System.Diagnostics;
+using FractalExplorer.Forms.Other;
+using FractalExplorer.Utilities.RenderUtilities;
 
 namespace FractalExplorer.Forms
 {
@@ -17,7 +19,7 @@ namespace FractalExplorer.Forms
     /// Представляет основную форму для отображения и взаимодействия с фракталом Феникс.
     /// Реализует интерфейс <see cref="ISaveLoadCapableFractal"/> для сохранения и загрузки состояний фрактала.
     /// </summary>
-    public partial class FractalPhoenixForm : Form, ISaveLoadCapableFractal
+    public partial class FractalPhoenixForm : Form, ISaveLoadCapableFractal, IHighResRenderable
     {
         #region Fields
         private PhoenixEngine _fractalEngine;
@@ -177,6 +179,26 @@ namespace FractalExplorer.Forms
                 _phoenixCSelectorWindow.Activate();
             }
         }
+
+        /// <summary>
+        /// Открывает менеджер сохранения изображений.
+        /// TODO: Привязать этот обработчик к новой кнопке "Менеджер сохранения" в дизайнере.
+        /// </summary>
+        private void btnOpenSaveManager_Click(object sender, EventArgs e)
+        {
+            if (_isHighResRendering)
+            {
+                MessageBox.Show("Процесс рендеринга уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 'this' реализует IHighResRenderable, поэтому мы можем передать его в конструктор
+            using (var saveManager = new SaveImageManagerForm(this))
+            {
+                saveManager.ShowDialog(this);
+            }
+        }
+
         #endregion
 
         #region Canvas Interaction
@@ -287,7 +309,6 @@ namespace FractalExplorer.Forms
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            // ИСПРАВЛЕНИЕ: Замораживаем размеры в самом начале.
             int currentWidth = canvas.Width;
             int currentHeight = canvas.Height;
 
@@ -321,7 +342,6 @@ namespace FractalExplorer.Forms
                 MaxColorIterations = _fractalEngine.MaxColorIterations
             };
 
-            // ИСПРАВЛЕНИЕ: Используем "замороженные" размеры.
             var tiles = GenerateTiles(currentWidth, currentHeight);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
 
@@ -337,7 +357,6 @@ namespace FractalExplorer.Forms
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    // ИСПРАВЛЕНИЕ: Передаем в движок "замороженные" размеры.
                     var tileBuffer = renderEngineCopy.RenderSingleTile(tile, currentWidth, currentHeight, out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
@@ -511,6 +530,8 @@ namespace FractalExplorer.Forms
             return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
         }
 
+        /*
+        // Старый метод сохранения, заменен на менеджер изображений.
         private async void btnSaveHighRes_Click(object sender, EventArgs e)
         {
             if (_isHighResRendering)
@@ -584,6 +605,7 @@ namespace FractalExplorer.Forms
                 }
             }
         }
+        */
         #endregion
 
         #region Palette Management
@@ -668,6 +690,9 @@ namespace FractalExplorer.Forms
             InitializeControls();
             InitializeEventHandlers();
 
+            // TODO: Привязать обработчик btnOpenSaveManager_Click к кнопке менеджера сохранения в дизайнере форм.
+            // Например: this.btnSaveManager.Click += new System.EventHandler(this.btnOpenSaveManager_Click);
+
             _centerX = 0.0m; _centerY = 0.0m;
             _renderedCenterX = _centerX; _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
@@ -698,8 +723,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region ISaveLoadCapableFractal Implementation
-        // Этот регион не требует изменений, так как он не участвует в рендеринге.
-        // Я оставил его здесь для полноты файла.
 
         private void btnStateManager_Click(object sender, EventArgs e)
         {
@@ -860,6 +883,88 @@ namespace FractalExplorer.Forms
             var specificSaves = saves.Cast<PhoenixSaveState>().ToList();
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
+        #endregion
+
+        #region IHighResRenderable Implementation
+
+        public HighResRenderState GetRenderState()
+        {
+            string c1ReStr = nudC1Re.Value.ToString("F6", CultureInfo.InvariantCulture).Replace(".", "_");
+            string c1ImStr = nudC1Im.Value.ToString("F6", CultureInfo.InvariantCulture).Replace(".", "_");
+            string fileNameDetails = $"phoenix_P{c1ReStr}_Q{c1ImStr}";
+
+            var state = new HighResRenderState
+            {
+                EngineType = this.FractalTypeIdentifier,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                BaseScale = BASE_SCALE,
+                Iterations = (int)nudIterations.Value,
+                Threshold = nudThreshold.Value,
+                ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+                FileNameDetails = fileNameDetails,
+                JuliaC = new ComplexDecimal(nudC1Re.Value, nudC1Im.Value) // Используем JuliaC для хранения C1
+                // C2 не передается, т.к. в основном не используется
+            };
+
+            return state;
+        }
+
+        private PhoenixEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
+        {
+            var engine = new PhoenixEngine();
+
+            if (forPreview)
+            {
+                engine.MaxIterations = Math.Min(state.Iterations, 150);
+            }
+            else
+            {
+                engine.MaxIterations = state.Iterations;
+            }
+
+            engine.ThresholdSquared = state.Threshold * state.Threshold;
+            engine.CenterX = state.CenterX;
+            engine.CenterY = state.CenterY;
+            engine.Scale = state.BaseScale / state.Zoom;
+            engine.C1 = state.JuliaC.Value; // C1 берем из JuliaC
+            engine.C2 = ComplexDecimal.Zero; // C2 предполагаем нулевым для рендера
+
+            var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
+            engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
+            engine.Palette = GeneratePaletteFunction(paletteForRender);
+
+            return engine;
+        }
+
+        public async Task<Bitmap> RenderHighResolutionAsync(HighResRenderState state, int width, int height, int ssaaFactor, IProgress<RenderProgress> progress, CancellationToken cancellationToken)
+        {
+            _isHighResRendering = true;
+            try
+            {
+                PhoenixEngine renderEngine = CreateEngineFromState(state, forPreview: false);
+                int threadCount = GetThreadCount();
+
+                Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
+
+                Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmapSSAA(
+                    width, height, threadCount, progressCallback, ssaaFactor, cancellationToken), cancellationToken);
+
+                return highResBitmap;
+            }
+            finally
+            {
+                _isHighResRendering = false;
+            }
+        }
+
+        public Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight)
+        {
+            var engine = CreateEngineFromState(state, forPreview: true);
+            return engine.RenderToBitmap(previewWidth, previewHeight, 1, _ => { }, CancellationToken.None);
+        }
+
         #endregion
     }
 }

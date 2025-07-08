@@ -122,15 +122,14 @@ namespace FractalExplorer.Engines
             bytesPerPixel = 4;
             byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
 
-            // ИСПРАВЛЕНИЕ: Защита от нулевых размеров прямо в движке.
             if (canvasWidth <= 0 || canvasHeight <= 0)
             {
-                return buffer; // Возвращаем пустой (черный) буфер.
+                return buffer;
             }
 
             decimal halfWidthPixels = canvasWidth / 2.0m;
             decimal halfHeightPixels = canvasHeight / 2.0m;
-            decimal unitsPerPixel = Scale / canvasWidth; // Эта строка теперь в безопасности.
+            decimal unitsPerPixel = Scale / canvasWidth;
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
@@ -159,16 +158,100 @@ namespace FractalExplorer.Engines
         }
 
         /// <summary>
+        /// Рендерит фрактал в новый объект Bitmap с использованием суперсэмплинга (SSAA).
+        /// </summary>
+        /// <param name="finalWidth">Финальная ширина изображения.</param>
+        /// <param name="finalHeight">Финальная высота изображения.</param>
+        /// <param name="numThreads">Количество потоков для рендеринга.</param>
+        /// <param name="reportProgressCallback">Callback для отчета о прогрессе (0-100).</param>
+        /// <param name="supersamplingFactor">Фактор суперсэмплинга (1 = выкл).</param>
+        /// <param name="cancellationToken">Токен для отмены операции.</param>
+        /// <returns>Объект Bitmap с отрисованным фракталом.</returns>
+        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken = default)
+        {
+            if (finalWidth <= 0 || finalHeight <= 0) return new Bitmap(1, 1);
+
+            if (supersamplingFactor <= 1)
+            {
+                return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback, cancellationToken);
+            }
+
+            int highResWidth = finalWidth * supersamplingFactor;
+            int highResHeight = finalHeight * supersamplingFactor;
+            Color[,] tempColorBuffer = new Color[highResWidth, highResHeight];
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
+            long doneLines = 0;
+            decimal unitsPerPixel = Scale / finalWidth;
+
+            // Этап 1: Рендеринг в высоком разрешении
+            Parallel.For(0, highResHeight, po, y =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                for (int x = 0; x < highResWidth; x++)
+                {
+                    decimal re = CenterX + (x - highResWidth / 2.0m) * (unitsPerPixel / supersamplingFactor);
+                    decimal im = CenterY - (y - highResHeight / 2.0m) * (unitsPerPixel / supersamplingFactor);
+                    int iterVal = GetIterationsForPoint(re, im);
+                    tempColorBuffer[x, y] = Palette(iterVal, MaxIterations, MaxColorIterations);
+                }
+                long currentDone = Interlocked.Increment(ref doneLines);
+                if (highResHeight > 0) reportProgressCallback((int)(50.0 * currentDone / highResHeight));
+            });
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Этап 2: Усреднение пикселей (Downsampling)
+            Bitmap bmp = new Bitmap(finalWidth, finalHeight, PixelFormat.Format24bppRgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, finalWidth, finalHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            byte[] finalBuffer = new byte[Math.Abs(bmpData.Stride) * finalHeight];
+            int sampleCount = supersamplingFactor * supersamplingFactor;
+            doneLines = 0;
+
+            Parallel.For(0, finalHeight, po, finalY =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int rowOffset = finalY * bmpData.Stride;
+                for (int finalX = 0; finalX < finalWidth; finalX++)
+                {
+                    long totalR = 0, totalG = 0, totalB = 0;
+                    int startX = finalX * supersamplingFactor;
+                    int startY = finalY * supersamplingFactor;
+                    for (int subY = 0; subY < supersamplingFactor; subY++)
+                    {
+                        for (int subX = 0; subX < supersamplingFactor; subX++)
+                        {
+                            Color pixelColor = tempColorBuffer[startX + subX, startY + subY];
+                            totalR += pixelColor.R;
+                            totalG += pixelColor.G;
+                            totalB += pixelColor.B;
+                        }
+                    }
+                    int index = rowOffset + finalX * 3;
+                    finalBuffer[index] = (byte)(totalB / sampleCount);
+                    finalBuffer[index + 1] = (byte)(totalG / sampleCount);
+                    finalBuffer[index + 2] = (byte)(totalR / sampleCount);
+                }
+                long currentDone = Interlocked.Increment(ref doneLines);
+                if (finalHeight > 0) reportProgressCallback(50 + (int)(50.0 * currentDone / finalHeight));
+            });
+
+            Marshal.Copy(finalBuffer, 0, bmpData.Scan0, finalBuffer.Length);
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+
+
+        /// <summary>
         /// Рендерит фрактал в новый объект Bitmap, используя параллельные вычисления.
         /// </summary>
         /// <param name="renderWidth">Ширина генерируемого изображения.</param>
         /// <param name="renderHeight">Высота генерируемого изображения.</param>
         /// <param name="numThreads">Количество потоков для рендеринга.</param>
         /// <param name="reportProgressCallback">Callback-функция для отчета о прогрессе (0-100).</param>
+        /// <param name="cancellationToken">Токен для отмены операции.</param>
         /// <returns>Объект Bitmap с отрисованным фракталом.</returns>
-        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback)
+        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
         {
-            // ИСПРАВЛЕНИЕ: Защита от нулевых размеров.
             if (renderWidth <= 0 || renderHeight <= 0)
             {
                 return new Bitmap(1, 1);
@@ -178,15 +261,16 @@ namespace FractalExplorer.Engines
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
             byte[] buffer = new byte[Math.Abs(bmpData.Stride) * renderHeight];
 
-            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
             long done = 0;
 
             decimal halfWidthPixels = renderWidth / 2.0m;
             decimal halfHeightPixels = renderHeight / 2.0m;
-            decimal unitsPerPixel = Scale / renderWidth; // Эта строка теперь в безопасности.
+            decimal unitsPerPixel = Scale / renderWidth;
 
             Parallel.For(0, renderHeight, po, y =>
             {
+                cancellationToken.ThrowIfCancellationRequested(); // Проверка отмены
                 int rowOffset = y * bmpData.Stride;
                 for (int x = 0; x < renderWidth; x++)
                 {

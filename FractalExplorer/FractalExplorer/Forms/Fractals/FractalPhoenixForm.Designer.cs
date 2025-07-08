@@ -294,7 +294,7 @@ namespace FractalExplorer.Forms
             btnSaveHighRes.TabIndex = 12;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
-            btnSaveHighRes.Click += btnSaveHighRes_Click;
+            btnSaveHighRes.Click += btnOpenSaveManager_Click;
             // 
             // lblThreshold
             // 
