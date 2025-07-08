@@ -18,6 +18,7 @@ namespace FractalExplorer.Forms
         private void InitializeComponent()
         {
             pnlControls = new Panel();
+            btnStateManager = new Button();
             btnSelectPhoenixParameters = new Button();
             lblC2Im = new Label();
             nudC2Im = new NumericUpDown();
@@ -28,9 +29,6 @@ namespace FractalExplorer.Forms
             lblC1Re = new Label();
             nudC1Re = new NumericUpDown();
             color_configurations = new Button();
-            nudSaveWidth = new NumericUpDown();
-            nudSaveHeight = new NumericUpDown();
-            pbHighResProgress = new ProgressBar();
             lblProgress = new Label();
             lblZoom = new Label();
             nudZoom = new NumericUpDown();
@@ -44,14 +42,11 @@ namespace FractalExplorer.Forms
             nudThreshold = new NumericUpDown();
             nudIterations = new NumericUpDown();
             canvas = new PictureBox();
-            btnStateManager = new Button();
             pnlControls.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudC2Im).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudC2Re).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudC1Im).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudC1Re).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveWidth).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveHeight).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudThreshold).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
@@ -71,9 +66,6 @@ namespace FractalExplorer.Forms
             pnlControls.Controls.Add(lblC1Re);
             pnlControls.Controls.Add(nudC1Re);
             pnlControls.Controls.Add(color_configurations);
-            pnlControls.Controls.Add(nudSaveWidth);
-            pnlControls.Controls.Add(nudSaveHeight);
-            pnlControls.Controls.Add(pbHighResProgress);
             pnlControls.Controls.Add(lblProgress);
             pnlControls.Controls.Add(lblZoom);
             pnlControls.Controls.Add(nudZoom);
@@ -91,6 +83,16 @@ namespace FractalExplorer.Forms
             pnlControls.Name = "pnlControls";
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
+            // 
+            // btnStateManager
+            // 
+            btnStateManager.Location = new Point(12, 422);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(204, 32);
+            btnStateManager.TabIndex = 35;
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
             // 
             // btnSelectPhoenixParameters
             // 
@@ -186,7 +188,7 @@ namespace FractalExplorer.Forms
             // 
             // color_configurations
             // 
-            color_configurations.Location = new Point(12, 395);
+            color_configurations.Location = new Point(12, 346);
             color_configurations.Name = "color_configurations";
             color_configurations.Size = new Size(204, 32);
             color_configurations.TabIndex = 15;
@@ -194,38 +196,10 @@ namespace FractalExplorer.Forms
             color_configurations.UseVisualStyleBackColor = true;
             color_configurations.Click += color_configurations_Click;
             // 
-            // nudSaveWidth
-            // 
-            nudSaveWidth.Location = new Point(16, 337);
-            nudSaveWidth.Maximum = new decimal(new int[] { 32768, 0, 0, 0 });
-            nudSaveWidth.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudSaveWidth.Name = "nudSaveWidth";
-            nudSaveWidth.Size = new Size(86, 23);
-            nudSaveWidth.TabIndex = 13;
-            nudSaveWidth.Value = new decimal(new int[] { 1920, 0, 0, 0 });
-            // 
-            // nudSaveHeight
-            // 
-            nudSaveHeight.Location = new Point(129, 337);
-            nudSaveHeight.Maximum = new decimal(new int[] { 32768, 0, 0, 0 });
-            nudSaveHeight.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            nudSaveHeight.Name = "nudSaveHeight";
-            nudSaveHeight.Size = new Size(83, 23);
-            nudSaveHeight.TabIndex = 14;
-            nudSaveHeight.Value = new decimal(new int[] { 1080, 0, 0, 0 });
-            // 
-            // pbHighResProgress
-            // 
-            pbHighResProgress.Location = new Point(12, 366);
-            pbHighResProgress.Name = "pbHighResProgress";
-            pbHighResProgress.Size = new Size(204, 23);
-            pbHighResProgress.TabIndex = 21;
-            pbHighResProgress.Visible = false;
-            // 
             // lblProgress
             // 
             lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(80, 510);
+            lblProgress.Location = new Point(80, 461);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(67, 15);
             lblProgress.TabIndex = 20;
@@ -254,7 +228,7 @@ namespace FractalExplorer.Forms
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(12, 433);
+            btnRender.Location = new Point(12, 384);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(204, 32);
             btnRender.TabIndex = 16;
@@ -264,7 +238,7 @@ namespace FractalExplorer.Forms
             // 
             // pbRenderProgress
             // 
-            pbRenderProgress.Location = new Point(12, 528);
+            pbRenderProgress.Location = new Point(12, 479);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(204, 23);
             pbRenderProgress.TabIndex = 14;
@@ -288,9 +262,9 @@ namespace FractalExplorer.Forms
             // 
             // btnSaveHighRes
             // 
-            btnSaveHighRes.Location = new Point(32, 308);
+            btnSaveHighRes.Location = new Point(12, 308);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(164, 23);
+            btnSaveHighRes.Size = new Size(204, 32);
             btnSaveHighRes.TabIndex = 12;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
@@ -345,16 +319,6 @@ namespace FractalExplorer.Forms
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
-            // btnStateManager
-            // 
-            btnStateManager.Location = new Point(12, 471);
-            btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(204, 32);
-            btnStateManager.TabIndex = 35;
-            btnStateManager.Text = "Менеджер сохранений";
-            btnStateManager.UseVisualStyleBackColor = true;
-            btnStateManager.Click += btnStateManager_Click;
-            // 
             // FractalPhoenixForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -373,8 +337,6 @@ namespace FractalExplorer.Forms
             ((System.ComponentModel.ISupportInitialize)nudC2Re).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudC1Im).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudC1Re).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveWidth).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudSaveHeight).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudThreshold).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
@@ -397,9 +359,6 @@ namespace FractalExplorer.Forms
         protected System.Windows.Forms.Label lblZoom;
         protected System.Windows.Forms.NumericUpDown nudZoom;
         protected System.Windows.Forms.Label lblProgress;
-        protected System.Windows.Forms.ProgressBar pbHighResProgress;
-        protected System.Windows.Forms.NumericUpDown nudSaveWidth;
-        protected System.Windows.Forms.NumericUpDown nudSaveHeight;
         protected System.Windows.Forms.Button color_configurations;
         // Новые контролы для Феникса
         protected System.Windows.Forms.Label lblC1Re;
