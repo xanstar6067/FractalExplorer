@@ -1,264 +1,354 @@
-# Fractal Explorer
+Fractal Explorer
 
-Welcome to Fractal Explorer! This is a Windows Forms application written in C# that allows you to generate, explore, and customize various types of beautiful fractal images.
+Welcome to Fractal Explorer! This is a comprehensive Windows Forms application written in C# that allows you to generate, explore, customize, and save a wide variety of beautiful fractal images. Dive into the infinite complexity of mathematical art with a powerful and user-friendly toolset.
+🌟 Key Features
 
-## 🌟 Key Features
+    Central Hub: A convenient launcher to access all available fractal types from a single, organized interface.
 
-*   **Variety of Fractals:** Explore classic and lesser-known fractals:
-    *   Mandelbrot Set
-    *   Julia Set (with interactive 'C' constant selection)
-    *   Burning Ship (Mandelbrot and Julia versions)
-    *   Serpinski Triangle (Geometric method and Chaos Game)
-    *   Newton Pools (with the ability to input custom formulas)
-*   **Interactive Navigation:**
-    *   Smooth zooming using the mouse wheel.
-    *   Panning the image by dragging with the mouse.
-*   **Deep Parameter Customization:**
-    *   Control the number of iterations and escape threshold.
-    *   Adjust the 'C' constant for Julia sets using a visual selector on a preview of the Mandelbrot or Burning Ship set.
-    *   Select the number of CPU threads to speed up rendering.
-*   **Advanced Color Management:**
-    *   **For Mandelbrot/Julia Family:**
-        *   Powerful palette editor: create, edit, and save custom palettes.
-        *   Support for gradient and discrete (cyclic) palettes.
-        *   A set of built-in palettes for a quick start.
-        *   Saving custom palettes in JSON format.
-    *   **For Newton Pools:**
-        *   Specialized color settings for each root of the equation.
-        *   Background color selection.
-        *   Toggle between gradient and discrete coloring for basins.
-        *   Save and load custom palettes for Newton fractals.
-    *   **For Serpinski Triangle:**
-        *   Choice of rendering mode: black & white, grayscale, custom colors for fractal and background.
-*   **Rendering and Saving:**
-    *   Tile-based rendering for previews with process visualization.
-    *   Multi-threaded rendering for efficient use of CPU resources.
-    *   Save fractals in high resolution (PNG) with customizable dimensions.
-    *   Progress bars for rendering and saving operations.
-*   **Custom Input for Newton Pools:**
-    *   Built-in parser for mathematical expressions (complex functions `f(z)`).
-    *   Ability to choose from preset formulas or input your own.
-    *   Display of parser debug information and found roots.
-*   **High-Precision Math:**
-    *   Use of a custom `ComplexDecimal` type for high-precision complex number operations (based on `decimal`).
+    Diverse Fractal Library: Explore classic and exotic fractals, including:
 
-## 🚀 Implemented Fractals
+        Mandelbrot Set & Julia Set
 
-*   **Mandelbrot Set:** `z = z² + c`
-*   **Julia Set:** `z = z² + c` (with a selectable constant `c`)
-*   **Burning Ship (Mandelbrot):** `z = (|Re(z)| + i * |-Im(z)|)² + c`
-*   **Burning Ship (Julia):** `z = (|Re(z)| + i * |-Im(z)|)² + c` (with a selectable constant `c`)
-*   **Serpinski Triangle:**
-    *   Geometric method (recursive construction)
-    *   "Chaos Game" (stochastic method)
-*   **Newton Pools:** Iterative Newton's method for finding roots of complex functions `f(z)`. Regions are colored based on which root the point converges to.
+        Burning Ship (Mandelbrot & Julia variations)
 
-## 🛠️ Technical Details
+        Sierpiński Triangle (via Chaos Game)
 
-*   **Language:** C#
-*   **Platform:** .NET Windows Forms
-*   **Rendering:**
-    *   Tile-based system for incremental display.
-    *   Multithreading to accelerate calculations.
-    *   Visualizer for the tile rendering process.
-*   **Mathematics:**
-    *   Custom `ComplexDecimal` structure for high-precision complex numbers.
-    *   Mathematical expression parser for the Newton fractal (supports numbers, variable 'z', 'i', and operators `+`, `-`, `*`, `/`, `^`).
-*   **Palettes:**
-    *   Serialization of custom palettes to JSON using a custom `JsonColorConverter`.
+        Newton's Pools
 
-## 🖥️ How to Use
+        Phoenix Fractal
 
-1.  Launch the application `FractalExplorer.exe`.
-2.  In the main window ("Fractal Manager" / "Менеджер фракталов"), select the fractal type you are interested in from the tabs.
-3.  Click the "Launch" button for the respective fractal.
-4.  In the opened fractal window:
-    *   Adjust parameters (iterations, zoom, 'C' constant for Julia, etc.) on the left panel.
-    *   Configure the color palette (if available for the given fractal type).
-    *   Use the mouse wheel to zoom and the left mouse button to pan the view.
-    *   Click "Render" to update the image with new parameters.
-    *   Save your favorite images in high resolution.
+    Interactive Exploration:
 
-## 🖼️ Screenshots
+        Smooth, high-precision zooming and panning with the mouse.
 
-<div class="gallery">
-  <a href="Pictures/HubMainWindow.png">
-    <img src="Pictures/HubMainWindow.png" alt="Hub Main Window" style="width:150px;">
-  </a>
-  <a href="Pictures/Mandelbrot.png">
-    <img src="Pictures/Mandelbrot.png" alt="Mandelbrot" style="width:150px;">
-  </a>
-  <a href="Pictures/MandelbrotBurningShip.png">
-    <img src="Pictures/MandelbrotBurningShip.png" alt="Mandelbrot Burning Ship" style="width:150px;">
-  </a>
-  <a href="Pictures/Julia.png">
-    <img src="Pictures/Julia.png" alt="Julia" style="width:150px;">
-  </a>
-  <a href="Pictures/JuliaBurningShip.png">
-    <img src="Pictures/JuliaBurningShip.png" alt="Julia Burning Ship" style="width:150px;">
-  </a>
-  <a href="Pictures/Serpinski.png">
-    <img src="Pictures/Serpinski.png" alt="Serpinski" style="width:150px;">
-  </a>
-  <a href="Pictures/NewtonPools.png">
-    <img src="Pictures/NewtonPools.png" alt="Newton Pools" style="width:150px;">
-  </a>
-</div>
+        Multi-threaded rendering for responsive navigation and fast calculations.
 
-<style>
-  .gallery {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .gallery img {
-    border: 1px solid #ddd;
-    padding: 5px;
-    transition: transform 0.2s;
-  }
-  .gallery img:hover {
-    transform: scale(1.1);
-  }
-  a {
-    text-decoration: none;
-  }
-</style>
+    Deep Parameter Control:
 
-## 📜 License
+        Adjust iteration counts, escape thresholds, and other core fractal parameters.
 
-This project is distributed under the Apache 2.0 license. The full text of the license is available in [LICENSE.md](LICENSE.md).
+        Interactive C-Value Selectors:
 
-# Исследователь Фракталов (Fractal Explorer)
+            For Julia sets, visually pick the complex constant c by clicking on a preview of the corresponding Mandelbrot or Burning Ship set.
 
-Добро пожаловать в "Исследователь Фракталов"! Это приложение для Windows Forms, написанное на C#, позволяет генерировать, исследовать и настраивать различные типы красивых фрактальных изображений.
+            For the Phoenix fractal, use a unique dual-slice selector to define the C1 (P and Q) parameters in a 4D parameter space.
 
-## 🌟 Ключевые Возможности
+Advanced Color Management
 
-*   **Разнообразие Фракталов:** Исследуйте классические и менее известные фракталы:
-    *   Множество Мандельброта
-    *   Множество Жюлиа (с интерактивным выбором константы 'C')
-    *   Горящий Корабль (версии Мандельброта и Жюлиа)
-    *   Треугольник Серпинского (геометрический метод и "Игра Хаоса")
-    *   Бассейны Ньютона (с возможностью ввода собственных формул)
-*   **Интерактивная Навигация:**
-    *   Плавное масштабирование с помощью колеса мыши.
-    *   Панорамирование изображения перетаскиванием мыши.
-*   **Глубокая Настройка Параметров:**
-    *   Управление количеством итераций и порогом выхода.
-    *   Настройка константы 'C' для множеств Жюлиа с помощью визуального селектора на превью множества Мандельброта или Горящего Корабля.
-    *   Выбор количества потоков ЦП для ускорения рендеринга.
-*   **Продвинутая Работа с Цветом:**
-    *   **Для семейства Мандельброта/Жюлиа:**
-        *   Мощный редактор палитр: создавайте, редактируйте и сохраняйте пользовательские палитры.
-        *   Поддержка градиентных и дискретных (циклических) палитр.
-        *   Набор встроенных палитр для быстрого старта.
-        *   Сохранение пользовательских палитр в формате JSON.
-    *   **Для Бассейнов Ньютона:**
-        *   Специализированная настройка цветов для каждого корня уравнения.
-        *   Выбор цвета фона.
-        *   Переключение между градиентной и дискретной окраской бассейнов.
-        *   Сохранение и загрузка пользовательских палитр для Ньютона.
-    *   **Для Треугольника Серпинского:**
-        *   Выбор режима отрисовки: черно-белый, оттенки серого, пользовательские цвета для фрактала и фона.
-*   **Рендеринг и Сохранение:**
-    *   Плиточный (тайловый) рендеринг для предпросмотра с визуализацией процесса.
-    *   Многопоточный рендеринг для эффективного использования ресурсов ЦП.
-    *   Сохранение фракталов в высоком разрешении (PNG) с настраиваемыми размерами.
-    *   Прогресс-бары для операций рендеринга и сохранения.
-*   **Пользовательский Ввод для Бассейнов Ньютона:**
-    *   Встроенный парсер для математических выражений (комплексные функции `f(z)`).
-    *   Возможность выбора из предустановленных формул или ввода своей собственной.
-    *   Отображение отладочной информации парсера и найденных корней.
-*   **Высокоточная Математика:**
-    *   Использование пользовательского типа `ComplexDecimal` для операций с комплексными числами повышенной точности (на основе `decimal`).
+The application features three distinct, specialized palette managers, tailored to the unique needs of different fractal families.
 
-## 🚀 Реализованные Фракталы
+    🎨 For Mandelbrot, Julia & Phoenix:
 
-*   **Множество Мандельброта:** `z = z² + c`
-*   **Множество Жюлиа:** `z = z² + c` (с выбираемой константой `c`)
-*   **Горящий Корабль (Мандельброт):** `z = (|Re(z)| + i * |-Im(z)|)² + c`
-*   **Горящий Корабль (Жюлиа):** `z = (|Re(z)| + i * |-Im(z)|)² + c` (с выбираемой константой `c`)
-*   **Треугольник Серпинского:**
-    *   Геометрический метод (рекурсивное построение)
-    *   "Игра Хаоса" (стохастический метод)
-*   **Бассейны Ньютона:** Итерационный метод Ньютона для поиска корней комплексных функций `f(z)`. Области окрашиваются в зависимости от того, к какому корню сходится точка.
+        A powerful editor to create, edit, copy, and save custom multi-color palettes.
 
-## 🛠️ Технические Детали
+        Toggle between smooth gradient and discrete cyclic coloring.
 
-*   **Язык:** C#
-*   **Платформа:** .NET Windows Forms
-*   **Рендеринг:**
-    *   Плиточная (тайловая) система для инкрементального отображения.
-    *   Многопоточность для ускорения вычислений.
-    *   Визуализатор процесса рендеринга плиток.
-*   **Математика:**
-    *   Пользовательская структура `ComplexDecimal` для высокоточных комплексных чисел.
-    *   Парсер математических выражений для фрактала Ньютона (поддерживает числа, переменную 'z', 'i' и операторы `+`, `-`, `*`, `/`, `^`).
-*   **Палитры:**
-    *   Сериализация пользовательских палитр в JSON с использованием кастомного `JsonColorConverter`.
+        Fine-tune the look with gamma correction and color cycle length.
 
-## 🖥️ Как Использовать
+        Comes with a rich set of built-in palettes to get you started.
 
-1.  Запустите приложение `FractalExplorer.exe`.
-2.  В главном окне ("Менеджер фракталов") выберите интересующий вас тип фрактала из вкладок.
-3.  Нажмите кнопку "Запустить" для соответствующего фрактала.
-4.  В открывшемся окне фрактала:
-    *   Настройте параметры (итерации, масштаб, константу 'C' для Жюлиа и т.д.) на панели слева.
-    *   Настройте цветовую палитру (если доступно для данного типа фрактала).
-    *   Используйте колесо мыши для масштабирования и левую кнопку мыши для панорамирования области просмотра.
-    *   Нажмите "Запустить рендер" для обновления изображения с новыми параметрами.
-    *   Сохраняйте понравившиеся изображения в высоком разрешении.
+    🔬 For Newton's Pools:
 
-## 🖼️ Скриншоты
+        A dynamic palette system where the number of color pickers automatically adjusts to the number of roots found for the current polynomial.
 
-<div class="gallery">
-  <a href="Pictures/HubMainWindow.png">
-    <img src="Pictures/HubMainWindow.png" alt="Hub Main Window" style="width:150px;">
-  </a>
-  <a href="Pictures/Mandelbrot.png">
-    <img src="Pictures/Mandelbrot.png" alt="Mandelbrot" style="width:150px;">
-  </a>
-  <a href="Pictures/MandelbrotBurningShip.png">
-    <img src="Pictures/MandelbrotBurningShip.png" alt="Mandelbrot Burning Ship" style="width:150px;">
-  </a>
-  <a href="Pictures/Julia.png">
-    <img src="Pictures/Julia.png" alt="Julia" style="width:150px;">
-  </a>
-  <a href="Pictures/JuliaBurningShip.png">
-    <img src="Pictures/JuliaBurningShip.png" alt="Julia Burning Ship" style="width:150px;">
-  </a>
-  <a href="Pictures/Serpinski.png">
-    <img src="Pictures/Serpinski.png" alt="Serpinski" style="width:150px;">
-  </a>
-  <a href="Pictures/NewtonPools.png">
-    <img src="Pictures/NewtonPools.png" alt="Newton Pools" style="width:150px;">
-  </a>
-</div>
+        Individually assign colors for each root's basin of attraction.
 
-<style>
-  .gallery {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .gallery img {
-    border: 1px solid #ddd;
-    padding: 5px;
-    transition: transform 0.2s;
-  }
-  .gallery img:hover {
-    transform: scale(1.1);
-  }
-  a {
-    text-decoration: none;
-  }
-</style>
+        Switch between sharp, discrete coloring and a smooth gradient based on iteration count.
 
-## 📜 Лицензия
+    🔺 For Sierpiński Triangle:
 
-Этот проект распространяется под лицензией Apache 2.0. Полный текст лицензии доступен в [LICENSE.md](LICENSE.md).
+        A straightforward yet effective manager to select custom colors for the fractal and the background, allowing for high-contrast, artistic renderings.
 
----
+State & Preset Management
 
-Project AI generated
-Проект создан при помощи ИИ
+    Save & Load States: Save your entire fractal configuration—including position, zoom, iterations, and parameters—to a JSON file. Never lose a great discovery.
+
+    Points of Interest: Load from a curated list of built-in presets that showcase stunning or mathematically significant locations for each fractal.
+
+    Live Preview Generation: The save/load dialog features a high-quality, interactive preview of each saved state.
+
+        Live Render Visualization: Watch as the preview is rendered in real-time with a tile-based visualizer.
+
+        Progressive Caching: Previews are intelligently cached, so tiles are only rendered once per session, making subsequent views of the same state instantaneous.
+
+High-Resolution Export
+
+    Save Manager: A dedicated form to export your creations as high-resolution images.
+
+    Formats: Save in PNG, JPG (with adjustable quality), or BMP formats.
+
+    Custom Resolution: Define any output resolution, from FullHD to 4K and beyond.
+
+    SSAA (Anti-Aliasing): Render images with Super-Sample Anti-Aliasing (from 2x to 8x) for incredibly crisp and smooth results, perfect for printing or display.
+
+    Future-Proof: The architecture is designed to easily accommodate more post-processing filters in future updates.
+
+🚀 Implemented Fractals
+
+    Mandelbrot Set: z = z² + c
+
+    Julia Set: z = z² + c (with a selectable constant c)
+
+    Burning Ship (Mandelbrot): z = (|Re(z)| + i * |-Im(z)|)² + c
+
+    Burning Ship (Julia): z = (|Re(z)| + i * |-Im(z)|)² + c (with a selectable constant c)
+
+    Phoenix Fractal: z_n+1 = z_n² + c1 + c2*z_{n-1}
+
+    Sierpiński Triangle: Generated using the "Chaos Game" stochastic method.
+
+    Newton's Pools: Iterative Newton's method for finding roots of complex functions f(z).
+
+        Features a built-in mathematical expression parser allowing you to input your own custom formulas like z^3 - 1 or sin(z).
+
+🛠️ Technical Details
+
+    Language: C#
+
+    Platform: .NET Windows Forms
+
+    Rendering:
+
+        Asynchronous, multi-threaded rendering engine for both on-screen display and high-resolution export.
+
+        Tile-based system with live visualization for previews.
+
+    Mathematics:
+
+        Custom ComplexDecimal structure for high-precision complex number operations, crucial for deep zooms.
+
+        Robust mathematical expression parser for the Newton fractal (supports numbers, variable 'z', 'i', and operators +, -, *, /, ^).
+
+    Data Persistence:
+
+        Custom fractal states and color palettes are serialized to human-readable JSON files, saved locally in a Saves directory.
+
+🖥️ How to Use
+
+    Launch the application FractalExplorer.exe.
+
+    In the main hub ("Менеджер фракталов"), select the fractal you want to explore from the tabs.
+
+    Click the "Запустить" (Launch) button.
+
+    In the fractal window:
+
+        Use the left panel to adjust parameters like iterations, color palettes, and fractal-specific constants.
+
+        Use the mouse wheel to zoom and the left mouse button to pan the view.
+
+        Click "Запустить рендер" (Render) to update the image.
+
+        Use the "Сохранить/Загрузить состояние" (Save/Load State) button to manage your fractal configurations.
+
+        Use the "Сохранить изображение" (Save Image) button to export your final artwork in high resolution.
+
+🖼️ Gallery
+<table>
+<tr>
+<td align="center"><b>Launcher Hub</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
+<td align="center"><b>Mandelbrot Set</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
+<td align="center"><b>Burning Ship (Mandelbrot)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Julia Set</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
+<td align="center"><b>Burning Ship (Julia)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
+<td align="center"><b>Julia 'C' Point Selector</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_2/04_Sierpinski.png" width="300"></td>
+<td align="center"><b>Newton's Pools</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
+<td align="center"><b>Phoenix Fractal</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Phoenix 'C1' Parameter Selector</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
+<td align="center"><b>Palette Manager (Mandelbrot)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
+<td align="center"><b>Palette Manager (Newton)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Palette Manager (Sierpiński)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSierpinski.png" width="300"></td>
+<td align="center"><b>Save/Load State Manager</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
+<td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractalManager(alpha).png" width="300"></td>
+</tr>
+</table>
+📜 License
+
+This project is distributed under the Apache 2.0 license. The full text of the license is available in LICENSE.md.
+Исследователь Фракталов (Fractal Explorer)
+
+Добро пожаловать в "Исследователь Фракталов"! Это комплексное приложение для Windows Forms, написанное на C#, которое позволяет генерировать, исследовать, настраивать и сохранять разнообразные и красивые фрактальные изображения. Погрузитесь в бесконечную сложность математического искусства с помощью мощного и удобного инструментария.
+🌟 Ключевые Возможности
+
+    Центральный Хаб: Удобный лаунчер для доступа ко всем доступным типам фракталов из единого, организованного интерфейса.
+
+    Разнообразная Библиотека Фракталов: Исследуйте классические и экзотические фракталы, включая:
+
+        Множество Мандельброта и Множество Жюлиа
+
+        Горящий Корабль (в вариациях Мандельброта и Жюлиа)
+
+        Треугольник Серпинского (метод "Игры Хаоса")
+
+        Бассейны Ньютона
+
+        Фрактал Феникс
+
+    Интерактивное Исследование:
+
+        Плавное, высокоточное масштабирование и панорамирование с помощью мыши.
+
+        Многопоточный рендеринг для отзывчивой навигации и быстрых вычислений.
+
+    Глубокая Настройка Параметров:
+
+        Управление количеством итераций, порогом выхода и другими ключевыми параметрами фракталов.
+
+        Интерактивные Селекторы Константы 'C':
+
+            Для множеств Жюлиа — визуальный выбор комплексной константы c кликом по превью соответствующего множества Мандельброта или Горящего Корабля.
+
+            Для фрактала Феникс — уникальный селектор с двумя срезами для определения параметров C1 (P и Q) в 4D-пространстве.
+
+Продвинутая Работа с Цветом
+
+Приложение включает три различных, специализированных менеджера палитр, созданных для уникальных потребностей разных семейств фракталов.
+
+    🎨 Для Мандельброта, Жюлиа и Феникса:
+
+        Мощный редактор для создания, редактирования, копирования и сохранения пользовательских многоцветных палитр.
+
+        Переключение между плавной градиентной и дискретной циклической окраской.
+
+        Тонкая настройка вида с помощью гамма-коррекции и длины цветового цикла.
+
+        Поставляется с богатым набором встроенных палитр для быстрого старта.
+
+    🔬 Для Бассейнов Ньютона:
+
+        Динамическая система палитр, где количество палитр с цветами автоматически подстраивается под число корней, найденных для текущего полинома.
+
+        Индивидуальное назначение цветов для каждого бассейна притяжения корня.
+
+        Переключение между четкой, дискретной окраской и плавным градиентом на основе числа итераций.
+
+    🔺 Для Треугольника Серпинского:
+
+        Простой, но эффективный менеджер для выбора пользовательских цветов для самого фрактала и фона, что позволяет создавать высококонтрастные, художественные изображения.
+
+Управление Состояниями и Пресетами
+
+    Сохранение и Загрузка Состояний: Сохраняйте всю конфигурацию фрактала — включая позицию, масштаб, итерации и параметры — в файл JSON. Никогда не теряйте свои лучшие находки.
+
+    Точки Интереса: Загружайте состояния из встроенного списка пресетов, которые демонстрируют потрясающие или математически значимые места для каждого фрактала.
+
+    Генерация Превью в Реальном Времени: Диалог сохранения/загрузки отображает высококачественное, интерактивное превью каждого сохраненного состояния.
+
+        Визуализация Рендеринга: Наблюдайте, как превью отрисовывается в реальном времени с помощью плиточного (тайлового) визуализатора.
+
+        Прогрессивное Кэширование: Превью интеллектуально кэшируются, поэтому плитки отрисовываются только один раз за сессию, делая последующие просмотры того же состояния мгновенными.
+
+Экспорт в Высоком Разрешении
+
+    Менеджер Сохранения: Специальная форма для экспорта ваших творений в виде изображений высокого разрешения.
+
+    Форматы: Сохранение в PNG, JPG (с настраиваемым качеством) или BMP.
+
+    Пользовательское Разрешение: Задавайте любое разрешение на выходе, от FullHD до 4K и выше.
+
+    SSAA (Сглаживание): Рендеринг изображений с суперсэмплингом (от 2x до 8x) для невероятно четких и плавных результатов, идеальных для печати или демонстрации.
+
+    Задел на Будущее: Архитектура спроектирована так, чтобы легко добавлять новые фильтры постобработки в будущих обновлениях.
+
+🚀 Реализованные Фракталы
+
+    Множество Мандельброта: z = z² + c
+
+    Множество Жюлиа: z = z² + c (с выбираемой константой c)
+
+    Горящий Корабль (Мандельброт): z = (|Re(z)| + i * |-Im(z)|)² + c
+
+    Горящий Корабль (Жюлиа): z = (|Re(z)| + i * |-Im(z)|)² + c (с выбираемой константой c)
+
+    Фрактал Феникс: z_n+1 = z_n² + c1 + c2*z_{n-1}
+
+    Треугольник Серпинского: Генерируется с помощью стохастического метода "Игра Хаоса".
+
+    Бассейны Ньютона: Итерационный метод Ньютона для поиска корней комплексных функций f(z).
+
+        Включает встроенный парсер математических выражений, позволяющий вводить собственные формулы, такие как z^3 - 1 или sin(z).
+
+🛠️ Технические Детали
+
+    Язык: C#
+
+    Платформа: .NET Windows Forms
+
+    Рендеринг:
+
+        Асинхронный, многопоточный движок рендеринга для отображения на экране и экспорта в высоком разрешении.
+
+        Плиточная система с живой визуализацией для превью.
+
+    Математика:
+
+        Пользовательская структура ComplexDecimal для высокоточных операций с комплексными числами, что критически важно для глубоких увеличений.
+
+        Надежный парсер математических выражений для фрактала Ньютона (поддерживает числа, переменную 'z', 'i' и операторы +, -, *, /, ^).
+
+    Сохранение Данных:
+
+        Пользовательские состояния фракталов и цветовые палитры сериализуются в читаемые JSON файлы и сохраняются локально в директорию Saves.
+
+🖥️ Как Использовать
+
+    Запустите приложение FractalExplorer.exe.
+
+    В главном хабе ("Менеджер фракталов") выберите интересующий вас фрактал из вкладок.
+
+    Нажмите кнопку "Запустить".
+
+    В окне фрактала:
+
+        Используйте левую панель для настройки параметров: итераций, цветовых палитр и специфичных для фрактала констант.
+
+        Используйте колесо мыши для масштабирования и левую кнопку мыши для панорамирования.
+
+        Нажмите "Запустить рендер" для обновления изображения.
+
+        Используйте кнопку "Сохранить/Загрузить состояние" для управления конфигурациями фракталов.
+
+        Используйте кнопку "Сохранить изображение" для экспорта вашего финального произведения в высоком разрешении.
+
+🖼️ Галерея
+<table>
+<tr>
+<td align="center"><b>Лаунчер-Хаб</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
+<td align="center"><b>Множество Мандельброта</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
+<td align="center"><b>Горящий Корабль (Мандельброт)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Множество Жюлиа</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
+<td align="center"><b>Горящий Корабль (Жюлиа)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
+<td align="center"><b>Селектор точки 'C' для Жюлиа</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Треугольник Серпинского</b><br><img src="Pictures/V1_2/04_Sierpinski.png" width="300"></td>
+<td align="center"><b>Бассейны Ньютона</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
+<td align="center"><b>Фрактал Феникс</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Селектор параметра 'C1' для Феникса</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
+<td align="center"><b>Менеджер палитр (Мандельброт)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
+<td align="center"><b>Менеджер палитр (Ньютон)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
+</tr>
+<tr>
+<td align="center"><b>Менеджер палитр (Серпинский)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSierpinski.png" width="300"></td>
+<td align="center"><b>Менеджер состояний</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
+<td align="center"><b>Рендеринг превью в реальном времени</b><br><img src="Pictures/V1_2/09_SaveFractalManager(alpha).png" width="300"></td>
+</tr>
+</table>
+📜 Лицензия
+
+Этот проект распространяется под лицензией Apache 2.0. Полный текст лицензии доступен в LICENSE.md.
+
+Project AI generated. Проект создан при помощи ИИ.
