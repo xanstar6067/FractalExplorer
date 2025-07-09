@@ -1,3 +1,4 @@
+	E:\VisualStudio_explore\C# projects\Git\FractalExplorer\Pictures\V1_2
 
     01_hub.png
     02_Mandelbrot.png
