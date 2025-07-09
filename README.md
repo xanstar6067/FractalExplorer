@@ -1,6 +1,7 @@
 Fractal Explorer
 
 Welcome to Fractal Explorer! This is a comprehensive Windows Forms application written in C# that allows you to generate, explore, customize, and save a wide variety of beautiful fractal images. Dive into the infinite complexity of mathematical art with a powerful and user-friendly toolset.
+
 🌟 Key Features
 
     Central Hub: A convenient launcher to access all available fractal types from a single, organized interface.
@@ -171,12 +172,13 @@ High-Resolution Export
 <td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
 </tr>
 </table>
-📜 License
+📜 **License**
 
 This project is distributed under the Apache 2.0 license. The full text of the license is available in LICENSE.md.
 Исследователь Фракталов (Fractal Explorer)
 
 Добро пожаловать в "Исследователь Фракталов"! Это комплексное приложение для Windows Forms, написанное на C#, которое позволяет генерировать, исследовать, настраивать и сохранять разнообразные и красивые фрактальные изображения. Погрузитесь в бесконечную сложность математического искусства с помощью мощного и удобного инструментария.
+
 🌟 Ключевые Возможности
 
     Центральный Хаб: Удобный лаунчер для доступа ко всем доступным типам фракталов из единого, организованного интерфейса.
@@ -322,32 +324,32 @@ This project is distributed under the Apache 2.0 license. The full text of the l
 🖼️ Галерея
 <table>
 <tr>
-<td align="center"><b>Launcher Hub</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
-<td align="center"><b>Mandelbrot Set</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
-<td align="center"><b>Burning Ship (Mandelbrot)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
+<td align="center"><b>Главное меню (Хаб)</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
+<td align="center"><b>Множество Мандельброта</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
+<td align="center"><b>Горящий Корабль (Мандельброт)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Julia Set</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
-<td align="center"><b>Burning Ship (Julia)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
-<td align="center"><b>Julia 'C' Point Selector</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
+<td align="center"><b>Множество Жюлиа</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
+<td align="center"><b>Горящий Корабль (Жюлиа)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
+<td align="center"><b>Выбор точки 'C' для Жюлиа</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_2/04_Serpinski.png" width="300"></td>
-<td align="center"><b>Newton's Pools</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
-<td align="center"><b>Phoenix Fractal</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
+<td align="center"><b>Треугольник Серпинского</b><br><img src="Pictures/V1_2/04_Serpinski.png" width="300"></td>
+<td align="center"><b>Бассейны Ньютона</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
+<td align="center"><b>Фрактал Феникс</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Phoenix 'C1' Parameter Selector</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
-<td align="center"><b>Palette Manager (Mandelbrot)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
-<td align="center"><b>Palette Manager (Newton)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
+<td align="center"><b>Выбор параметра 'C1' для Феникса</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
+<td align="center"><b>Менеджер палитр (Мандельброт)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
+<td align="center"><b>Менеджер палитр (Ньютон)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Palette Manager (Sierpiński)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
-<td align="center"><b>Save/Load State Manager</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
-<td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
+<td align="center"><b>Менеджер палитр (Серпинский)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
+<td align="center"><b>Менеджер состояний</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
+<td align="center"><b>Превью рендеринга</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
 </tr>
 </table>
-📜 Лицензия
+📜 **Лицензия**
 
 Этот проект распространяется под лицензией Apache 2.0. Полный текст лицензии доступен в LICENSE.md.
 
