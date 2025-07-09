@@ -345,7 +345,7 @@ This project is distributed under the Apache 2.0 license. The full text of the l
 </tr>
 <tr>
 <td align="center"><b>Менеджер палитр (Серпинский)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
-<td align="center"><b>Менеджер состояний</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
+<td align="center"><b>Менеджер сохранения/загрузки состояний</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
 <td align="center"><b>Превью рендеринга</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
 </tr>
 </table>
