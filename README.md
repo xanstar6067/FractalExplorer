@@ -156,7 +156,7 @@ High-Resolution Export
 <td align="center"><b>Julia 'C' Point Selector</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_2/04_Sierpinski.png" width="300"></td>
+<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_2/04_Serpinski.png" width="300"></td>
 <td align="center"><b>Newton's Pools</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
 <td align="center"><b>Phoenix Fractal</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
 </tr>
@@ -166,9 +166,9 @@ High-Resolution Export
 <td align="center"><b>Palette Manager (Newton)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Palette Manager (Sierpiński)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSierpinski.png" width="300"></td>
+<td align="center"><b>Palette Manager (Sierpiński)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
 <td align="center"><b>Save/Load State Manager</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
-<td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractalManager(alpha).png" width="300"></td>
+<td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
 </tr>
 </table>
 📜 License
@@ -322,29 +322,29 @@ This project is distributed under the Apache 2.0 license. The full text of the l
 🖼️ Галерея
 <table>
 <tr>
-<td align="center"><b>Лаунчер-Хаб</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
-<td align="center"><b>Множество Мандельброта</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
-<td align="center"><b>Горящий Корабль (Мандельброт)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
+<td align="center"><b>Launcher Hub</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
+<td align="center"><b>Mandelbrot Set</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
+<td align="center"><b>Burning Ship (Mandelbrot)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Множество Жюлиа</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
-<td align="center"><b>Горящий Корабль (Жюлиа)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
-<td align="center"><b>Селектор точки 'C' для Жюлиа</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
+<td align="center"><b>Julia Set</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
+<td align="center"><b>Burning Ship (Julia)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
+<td align="center"><b>Julia 'C' Point Selector</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Треугольник Серпинского</b><br><img src="Pictures/V1_2/04_Sierpinski.png" width="300"></td>
-<td align="center"><b>Бассейны Ньютона</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
-<td align="center"><b>Фрактал Феникс</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
+<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_2/04_Serpinski.png" width="300"></td>
+<td align="center"><b>Newton's Pools</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
+<td align="center"><b>Phoenix Fractal</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Селектор параметра 'C1' для Феникса</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
-<td align="center"><b>Менеджер палитр (Мандельброт)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
-<td align="center"><b>Менеджер палитр (Ньютон)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
+<td align="center"><b>Phoenix 'C1' Parameter Selector</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
+<td align="center"><b>Palette Manager (Mandelbrot)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
+<td align="center"><b>Palette Manager (Newton)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
 </tr>
 <tr>
-<td align="center"><b>Менеджер палитр (Серпинский)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSierpinski.png" width="300"></td>
-<td align="center"><b>Менеджер состояний</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
-<td align="center"><b>Рендеринг превью в реальном времени</b><br><img src="Pictures/V1_2/09_SaveFractalManager(alpha).png" width="300"></td>
+<td align="center"><b>Palette Manager (Sierpiński)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
+<td align="center"><b>Save/Load State Manager</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
+<td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
 </tr>
 </table>
 📜 Лицензия
