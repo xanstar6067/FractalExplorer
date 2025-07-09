@@ -1,0 +1,16 @@
+
+    01_hub.png
+    02_Mandelbrot.png
+    02_MandelbrotBurningShip.png
+    03_Julia.png
+    03_JuliaBurningShip.png
+    03_JuliaPointSelectors.png
+    04_Sierpinski.png
+    05_NewtonPools.png
+    06_Phoenix.png
+    06_PhoenixPointSelector.png
+    07_ColorPaletteManager.png
+    07_ColorPaletteManagerNewton.png
+    07_ColorPaletteManagerSierpinski.png
+    08_SaveFractalManager.png
+    09_SaveFractalManager(alpha).png
