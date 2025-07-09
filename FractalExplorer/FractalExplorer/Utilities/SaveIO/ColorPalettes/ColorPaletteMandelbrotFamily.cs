@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Utilities.JsonConverters;
 using System.Text.Json;
+using System.IO; // Добавлена необходимая директива для работы с путями
 
 namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
 {
@@ -32,11 +33,14 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             Palettes.Clear();
             Palettes.AddRange(CreateBuiltInPalettes());
 
-            if (File.Exists(CUSTOM_PALETTES_FILE))
+            // ИЗМЕНЕНО: Формирование полного пути к файлу в папке "Saves"
+            string filePath = Path.Combine(Application.StartupPath, "Saves", CUSTOM_PALETTES_FILE);
+
+            if (File.Exists(filePath))
             {
                 try
                 {
-                    string json = File.ReadAllText(CUSTOM_PALETTES_FILE);
+                    string json = File.ReadAllText(filePath);
                     var options = new JsonSerializerOptions();
                     options.Converters.Add(new JsonColorConverter());
                     var customPalettes = JsonSerializer.Deserialize<List<PaletteManagerMandelbrotFamily>>(json, options);
@@ -47,18 +51,34 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ошибка загрузки пользовательских палитр: {ex.Message}");
+                    // Для согласованности можно использовать MessageBox, как в другом менеджере
+                    MessageBox.Show($"Не удалось загрузить палитры для Мандельброта: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
         public void SaveCustomPalettes()
         {
-            var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            options.Converters.Add(new JsonColorConverter());
-            string json = JsonSerializer.Serialize(customPalettes, options);
-            File.WriteAllText(CUSTOM_PALETTES_FILE, json);
+            try
+            {
+                var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                options.Converters.Add(new JsonColorConverter());
+                string json = JsonSerializer.Serialize(customPalettes, options);
+
+                // ИЗМЕНЕНО: Создание директории "Saves", если она не существует
+                string savesDirectory = Path.Combine(Application.StartupPath, "Saves");
+                Directory.CreateDirectory(savesDirectory);
+
+                // ИЗМЕНЕНО: Формирование полного пути для сохранения
+                string filePath = Path.Combine(savesDirectory, CUSTOM_PALETTES_FILE);
+                File.WriteAllText(filePath, json);
+            }
+            catch (Exception ex)
+            {
+                // Для согласованности можно использовать MessageBox
+                MessageBox.Show($"Не удалось сохранить палитры для Мандельброта: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         /// <summary>
@@ -67,21 +87,13 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <returns>Коллекция встроенных палитр.</returns>
         private IEnumerable<PaletteManagerMandelbrotFamily> CreateBuiltInPalettes()
         {
-            // ИЗМЕНЕНО: Возвращены отдельные палитры "Огонь" и "Лёд"
             return new List<PaletteManagerMandelbrotFamily>
             {
                 new("Стандартный серый", new List<Color>(), true, true, 800, 1.0, false),
                 new("Ультрафиолет", new List<Color> { Color.Black, Color.DarkViolet, Color.Violet, Color.White }, true, true, 1000, 1.2, false),
-                
-                // НОВОЕ: Возвращена палитра "Огонь"
                 new("Огонь", new List<Color> { Color.Black, Color.DarkRed, Color.Red, Color.Orange, Color.Yellow, Color.White }, true, true, 400, 0.9, false),
-                
-                // НОВОЕ: Возвращена палитра "Лёд"
                 new("Лёд", new List<Color> { Color.Black, Color.DarkBlue, Color.Blue, Color.Cyan, Color.White }, true, true, 500, 1.2, false),
-
-                // Наша новая комбинированная палитра
                 new("Огонь и лед", new List<Color> { Color.Black, Color.DarkBlue, Color.Cyan, Color.White, Color.Yellow, Color.Red, Color.DarkRed }, true, true, 700, 1.0, false),
-
                 new("Психоделика", new List<Color> { Color.Red, Color.Yellow, Color.Lime, Color.Cyan, Color.Blue, Color.Magenta }, false, true, 6, 1.0, false),
                 new("Черно-белый", new List<Color> { Color.Black, Color.White }, false, true, 2, 1.0, false),
                 new("Сепия", new List<Color> { Color.FromArgb(20, 10, 0), Color.FromArgb(255, 240, 192) }, true, true, 500, 1.0, false)
