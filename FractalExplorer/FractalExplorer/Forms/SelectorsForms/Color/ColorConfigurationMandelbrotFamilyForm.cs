@@ -47,6 +47,13 @@ namespace FractalExplorer.Utilities
             nudMaxColorIterations.Minimum = 2;
             nudMaxColorIterations.Maximum = 100000;
             nudMaxColorIterations.Increment = 10;
+
+            // <<< ИЗМЕНЕНИЕ: Включаем возможность перетаскивания для списка цветов
+            // и подписываемся на необходимые события.
+            lbColorStops.AllowDrop = true;
+            lbColorStops.MouseDown += new MouseEventHandler(lbColorStops_MouseDown);
+            lbColorStops.DragOver += new DragEventHandler(lbColorStops_DragOver);
+            lbColorStops.DragDrop += new DragEventHandler(lbColorStops_DragDrop);
         }
         #endregion
 
@@ -122,6 +129,8 @@ namespace FractalExplorer.Utilities
             lbColorStops.Items.Clear();
             foreach (var color in _selectedPalette.Colors)
             {
+                // Для ListBox важно, чтобы элементы были уникальными. Имя цвета подходит.
+                // Если могут быть дубликаты, лучше использовать более сложный объект.
                 lbColorStops.Items.Add(color.Name);
             }
             panelPreview.Invalidate();
@@ -155,7 +164,6 @@ namespace FractalExplorer.Utilities
 
             nudMaxColorIterations.Enabled = isCustom && !_selectedPalette.AlignWithRenderIterations;
 
-            // ИЗМЕНЕНО: Кнопка "Копировать" теперь активна для любой выбранной палитры.
             btnCopy.Enabled = _selectedPalette != null;
         }
 
@@ -294,13 +302,11 @@ namespace FractalExplorer.Utilities
         /// <param name="e">Аргументы события.</param>
         private void btnCopy_Click(object sender, EventArgs e)
         {
-            // ИЗМЕНЕНО: Убрана проверка на IsBuiltIn, теперь можно копировать любую палитру.
             if (_selectedPalette == null)
             {
                 return;
             }
 
-            // Генерируем уникальное имя для копии
             string baseName = $"{_selectedPalette.Name} (копия)";
             string newName = baseName;
             int counter = 2;
@@ -309,12 +315,11 @@ namespace FractalExplorer.Utilities
                 newName = $"{baseName} {counter++}";
             }
 
-            // Создаем новую палитру как полную копию, но с флагом IsBuiltIn = false
             var newPalette = new PaletteManagerMandelbrotFamily(
                 name: newName,
-                colors: new List<Color>(_selectedPalette.Colors), // Важно создать новый список!
+                colors: new List<Color>(_selectedPalette.Colors),
                 isGradient: _selectedPalette.IsGradient,
-                isBuiltIn: false, // Копия всегда является пользовательской палитрой.
+                isBuiltIn: false,
                 maxColorIterations: _selectedPalette.MaxColorIterations,
                 gamma: _selectedPalette.Gamma,
                 alignWithRenderIterations: _selectedPalette.AlignWithRenderIterations
@@ -371,7 +376,6 @@ namespace FractalExplorer.Utilities
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.AlignWithRenderIterations = checkAlignSteps.Checked;
-                // Обновляем состояние контрола, чтобы заблокировать/разблокировать поле
                 nudMaxColorIterations.Enabled = !checkAlignSteps.Checked;
             }
         }
@@ -399,7 +403,7 @@ namespace FractalExplorer.Utilities
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.Gamma = (double)nudGamma.Value;
-                panelPreview.Invalidate(); // Обновляем предпросмотр при изменении гаммы
+                panelPreview.Invalidate();
             }
         }
 
@@ -443,6 +447,94 @@ namespace FractalExplorer.Utilities
         {
             Close();
         }
+        #endregion
+
+        // <<< НОВЫЙ РАЗДЕЛ >>>
+        #region Drag and Drop for Color List
+
+        /// <summary>
+        /// Обработчик события нажатия кнопки мыши на списке цветов.
+        /// Начинает операцию перетаскивания (Drag and Drop).
+        /// </summary>
+        private void lbColorStops_MouseDown(object sender, MouseEventArgs e)
+        {
+            // Перетаскивание доступно только для пользовательских палитр.
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            if (e.Button == MouseButtons.Left)
+            {
+                int index = lbColorStops.IndexFromPoint(e.Location);
+                if (index != ListBox.NoMatches)
+                {
+                    // Начинаем операцию, передавая текст выбранного элемента как данные.
+                    lbColorStops.DoDragDrop(lbColorStops.Items[index], DragDropEffects.Move);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Обработчик события, когда перетаскиваемый элемент находится над списком.
+        /// Устанавливает эффект "перемещение", чтобы показать пользователю, что сюда можно "бросить" элемент.
+        /// </summary>
+        private void lbColorStops_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effect = DragDropEffects.Move;
+        }
+
+        /// <summary>
+        /// Обработчик события, когда пользователь "бросает" элемент на список.
+        /// Выполняет фактическую перестановку цвета в источнике данных.
+        /// </summary>
+        private void lbColorStops_DragDrop(object sender, DragEventArgs e)
+        {
+            // Перетаскивание доступно только для пользовательских палитр.
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            // Получаем точку, где был отпущен элемент.
+            Point point = lbColorStops.PointToClient(new Point(e.X, e.Y));
+            // Находим индекс элемента, на который "бросили" (целевой индекс).
+            int destinationIndex = lbColorStops.IndexFromPoint(point);
+
+            // Если "бросили" на пустое место внизу, считаем, что это последний элемент.
+            if (destinationIndex == ListBox.NoMatches)
+            {
+                destinationIndex = lbColorStops.Items.Count - 1;
+            }
+
+            // Получаем данные перетаскиваемого элемента (это текст, который мы передали в MouseDown).
+            string draggedItemText = (string)e.Data.GetData(typeof(string));
+            // Находим его исходный индекс в списке.
+            int sourceIndex = lbColorStops.Items.IndexOf(draggedItemText);
+
+            // Если исходный и целевой индексы совпадают, ничего не делаем.
+            if (sourceIndex == destinationIndex)
+            {
+                return;
+            }
+
+            // Теперь работаем с реальным источником данных - списком `_selectedPalette.Colors`.
+            // Получаем объект Color, который мы перемещаем.
+            Color draggedColor = _selectedPalette.Colors[sourceIndex];
+
+            // Удаляем его со старого места и вставляем в новое.
+            _selectedPalette.Colors.RemoveAt(sourceIndex);
+            _selectedPalette.Colors.Insert(destinationIndex, draggedColor);
+
+            // Полностью обновляем все детали палитры на форме.
+            // Это самый надежный способ, так как он перерисовывает список
+            // и панель предпросмотра на основе актуальных данных.
+            DisplayPaletteDetails();
+
+            // После обновления снова выделяем перемещенный элемент для удобства.
+            lbColorStops.SelectedIndex = destinationIndex;
+        }
+
         #endregion
     }
 }

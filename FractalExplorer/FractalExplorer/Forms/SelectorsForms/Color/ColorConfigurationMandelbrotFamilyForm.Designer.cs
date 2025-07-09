@@ -355,7 +355,7 @@
         private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.CheckBox checkAlignSteps; // НОВОЕ
+        private System.Windows.Forms.CheckBox checkAlignSteps;
         private System.Windows.Forms.NumericUpDown nudGamma;
         private System.Windows.Forms.Label labelGamma;
         private System.Windows.Forms.NumericUpDown nudMaxColorIterations;
