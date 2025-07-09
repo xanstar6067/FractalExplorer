@@ -136,6 +136,7 @@
             // 
             // mandelbrotPreviewCanvas
             // 
+            mandelbrotPreviewCanvas.BorderStyle = BorderStyle.FixedSingle;
             mandelbrotPreviewCanvas.Dock = DockStyle.Fill;
             mandelbrotPreviewCanvas.Location = new Point(0, 0);
             mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
