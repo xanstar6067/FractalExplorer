@@ -248,7 +248,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 300,
                 Threshold = 2.0m,
-                PaletteName = "Зеленый фонарь", // Обновлено: соответствует новой встроенной палитре
+                PaletteName = "Зеленый", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2J = new FractalMandelbrotFamilyForm.PreviewParams
