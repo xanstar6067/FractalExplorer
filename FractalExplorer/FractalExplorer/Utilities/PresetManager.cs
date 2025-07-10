@@ -394,10 +394,10 @@ namespace FractalExplorer.Utilities
             var preset3 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Призрачные Паруса",
-                CenterX = 0.352m,
-                CenterY = 1.71m,
-                Zoom = 70.0m,
-                Iterations = 400,
+                CenterX = -1.7423683296426555512135816837m,
+                CenterY = 0.0648050817843091259643027922m,
+                Zoom = 76.0m,     // Умеренный зум, чтобы сфокусироваться на "парусах"
+                Iterations = 1000, 
                 Threshold = 2.0m,
                 PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
