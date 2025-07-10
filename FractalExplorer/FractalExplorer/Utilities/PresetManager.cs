@@ -342,8 +342,8 @@ namespace FractalExplorer.Utilities
             var preset1 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Центральный Корабль",
-                CenterX = -0.5m,
-                CenterY = -0.5m,
+                CenterX = 0.0m,
+                CenterY = 0.0m,
                 Zoom = 0.8m,
                 Iterations = 300,
                 Threshold = 2.0m,
