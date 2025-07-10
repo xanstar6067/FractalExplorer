@@ -147,13 +147,13 @@ namespace FractalExplorer.Utilities
             // Уникальный узор, напоминающий электрическую розетку, найденный в сложной области фрактала Мандельброта.
             var preset3 = new MandelbrotFamilySaveState("Mandelbrot")
             {
-                SaveName = "Электрическая Розетка",
-                CenterX = 0.27488735305156m,
-                CenterY = 0.00494881779930m,
-                Zoom = 6500.0m,
+                SaveName = "Лоза",
+                CenterX = 0.3855604675494107229386479028m,
+                CenterY = -0.1050451711526294339131097223m,
+                Zoom = 150.0m,
                 Iterations = 800,
                 Threshold = 2.0m,
-                PaletteName = "Психоделика", // Обновлено: теперь соответствует новой встроенной палитре
+                PaletteName = "Огонь", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3 = new FractalMandelbrotFamilyForm.PreviewParams
