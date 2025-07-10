@@ -40,13 +40,13 @@ namespace FractalExplorer.Projects
         /// Получает начальную координату X центра для фрактала "Пылающий корабль" Мандельброта.
         /// </summary>
         // Это значение было выбрано как хороший центр для начального отображения фрактала "Пылающий корабль".
-        protected override decimal InitialCenterX => -0.25m;
+        protected override decimal InitialCenterX => 0.0m;
 
         /// <summary>
         /// Получает начальную координату Y центра для фрактала "Пылающий корабль" Мандельброта.
         /// </summary>
         // Это значение было выбрано как хороший центр для начального отображения фрактала "Пылающий корабль".
-        protected override decimal InitialCenterY => -0.5m;
+        protected override decimal InitialCenterY => 0.5m;
 
         /// <summary>
         /// Вызывается после завершения инициализации формы.
