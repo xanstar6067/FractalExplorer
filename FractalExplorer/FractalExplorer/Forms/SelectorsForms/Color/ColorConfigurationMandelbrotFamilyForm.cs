@@ -99,7 +99,14 @@ namespace FractalExplorer.Utilities
         /// <param name="e">Аргументы события.</param>
         private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (lbPalettes.SelectedIndex == -1) return;
+            if (lbPalettes.SelectedIndex == -1)
+            {
+                // Если ничего не выбрано, очищаем детали и выключаем кнопки
+                _selectedPalette = null;
+                UpdateControlsState();
+                panelPreview.Invalidate();
+                return;
+            }
             string selectedName = lbPalettes.SelectedItem.ToString().Replace(" [Встроенная]", "");
             _selectedPalette = _paletteManager.Palettes.FirstOrDefault(p => p.Name == selectedName);
             if (_selectedPalette == null) return;
@@ -148,7 +155,23 @@ namespace FractalExplorer.Utilities
         /// </summary>
         private void UpdateControlsState()
         {
-            if (_selectedPalette == null) return;
+            if (_selectedPalette == null)
+            {
+                // Если палитра не выбрана, отключаем большинство контролов
+                bool isEnabled = false;
+                txtName.Enabled = isEnabled;
+                checkIsGradient.Enabled = isEnabled;
+                checkAlignSteps.Enabled = isEnabled;
+                lbColorStops.Enabled = isEnabled;
+                btnAddColor.Enabled = isEnabled;
+                btnEditColor.Enabled = isEnabled;
+                btnRemoveColor.Enabled = isEnabled;
+                btnDelete.Enabled = isEnabled;
+                nudGamma.Enabled = isEnabled;
+                nudMaxColorIterations.Enabled = isEnabled;
+                btnCopy.Enabled = isEnabled;
+                return;
+            }
 
             bool isCustom = !_selectedPalette.IsBuiltIn;
 
@@ -289,7 +312,10 @@ namespace FractalExplorer.Utilities
                 newName = $"Новая палитра {++counter}";
             }
             var newPalette = new PaletteManagerMandelbrotFamily(newName, new List<Color> { Color.Black, Color.White }, true, false, 500, 1.0, false);
-            _paletteManager.Palettes.Add(newPalette);
+
+            // ИЗМЕНЕНО: Используем безопасный метод менеджера для добавления палитры
+            _paletteManager.AddPalette(newPalette);
+
             PopulatePaletteList();
             lbPalettes.SelectedItem = newPalette.Name;
         }
@@ -325,7 +351,9 @@ namespace FractalExplorer.Utilities
                 alignWithRenderIterations: _selectedPalette.AlignWithRenderIterations
             );
 
-            _paletteManager.Palettes.Add(newPalette);
+            // ИЗМЕНЕНО: Используем безопасный метод менеджера для добавления палитры
+            _paletteManager.AddPalette(newPalette);
+
             PopulatePaletteList();
             lbPalettes.SelectedItem = newPalette.Name;
         }
@@ -343,9 +371,25 @@ namespace FractalExplorer.Utilities
                 DialogResult confirmResult = MessageBox.Show($"Вы уверены, что хотите удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (confirmResult == DialogResult.Yes)
                 {
-                    _paletteManager.Palettes.Remove(_selectedPalette);
-                    PopulatePaletteList();
-                    lbPalettes.SelectedIndex = Math.Max(0, lbPalettes.Items.Count - 1);
+                    // ИЗМЕНЕНО: Используем безопасный метод менеджера для удаления
+                    bool removed = _paletteManager.RemovePalette(_selectedPalette);
+
+                    if (removed)
+                    {
+                        PopulatePaletteList();
+                        // Устанавливаем выбор на последний элемент в списке или
+                        // оставляем без выбора, если список пуст.
+                        if (lbPalettes.Items.Count > 0)
+                        {
+                            lbPalettes.SelectedIndex = lbPalettes.Items.Count - 1;
+                        }
+                        else
+                        {
+                            // Если список стал пустым, нужно явно сбросить выбор.
+                            // Событие SelectedIndexChanged позаботится об остальном.
+                            lbPalettes.SelectedIndex = -1;
+                        }
+                    }
                 }
             }
         }
