@@ -227,7 +227,8 @@ namespace FractalDraving
 
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
-            nudZoom.Minimum = 0.000000000000001m;
+            nudZoom.Minimum = 0.01m;
+            nudZoom.Maximum = decimal.MaxValue;
             _zoom = BaseScale / 4.0m;
             nudZoom.Value = _zoom;
 
@@ -335,7 +336,43 @@ namespace FractalDraving
             decimal scaleBeforeZoom = BaseScale / _zoom;
             decimal mouseReal = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
             decimal mouseImaginary = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
-            _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, _zoom * zoomFactor));
+
+            // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
+
+            decimal newZoom;
+            if (zoomFactor > 1.0m) // Приближаем (умножаем)
+            {
+                // Проверяем, не вызовет ли умножение переполнение.
+                // Для этого делим максимальное значение на наш множитель.
+                if (_zoom > nudZoom.Maximum / zoomFactor)
+                {
+                    // Если вызовет, просто присваиваем максимум.
+                    newZoom = nudZoom.Maximum;
+                }
+                else
+                {
+                    // Иначе - безопасно умножаем.
+                    newZoom = _zoom * zoomFactor;
+                }
+            }
+            else // Отдаляем (делим)
+            {
+                // Проверяем, не станет ли результат меньше минимума.
+                // Для этого умножаем минимальное значение на множитель.
+                if (_zoom < nudZoom.Minimum / zoomFactor)
+                {
+                    // Если станет, просто присваиваем минимум.
+                    newZoom = nudZoom.Minimum;
+                }
+                else
+                {
+                    // Иначе - безопасно умножаем (что эквивалентно делению).
+                    newZoom = _zoom * zoomFactor;
+                }
+            }
+
+            // Окончательно ограничиваем значение на случай, если Minimum/Maximum изменились
+            _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, newZoom));
             decimal scaleAfterZoom = BaseScale / _zoom;
             _centerX = mouseReal - (e.X - canvas.Width / 2.0m) * scaleAfterZoom / canvas.Width;
             _centerY = mouseImaginary + (e.Y - canvas.Height / 2.0m) * scaleAfterZoom / canvas.Height;
