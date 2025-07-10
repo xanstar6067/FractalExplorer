@@ -430,15 +430,15 @@ namespace FractalExplorer.Utilities
             // Форма фрактала Жюлиа "Горящий Корабль", напоминающая цветок или сложную космическую структуру.
             var preset1 = new JuliaFamilySaveState("JuliaBurningShip")
             {
-                SaveName = "Космический Цветок",
-                CRe = -1.7551867961883m,
-                CIm = 0.01068m,
+                SaveName = "Фиолетовый Пламень Жюлиа",
+                CRe = 0.598214268684387m,
+                CIm = 1.17851734161377m,
                 CenterX = 0m,
                 CenterY = 0m,
                 Zoom = 1.0m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
+                PaletteName = "Ультрафиолет", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams1JBS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -460,9 +460,9 @@ namespace FractalExplorer.Utilities
             // Динамичная форма, напоминающая голову или тело дракона, пылающего яркими, огненными цветами.
             var preset2 = new JuliaFamilySaveState("JuliaBurningShip")
             {
-                SaveName = "Огненный Дракон",
-                CRe = -0.4m,
-                CIm = -1.6m,
+                SaveName = "Пульсарный Рубин",
+                CRe = -0.0517381690442562m,
+                CIm = -0.267557740211487m,
                 CenterX = 0m,
                 CenterY = 0m,
                 Zoom = 1.0m,
@@ -490,15 +490,15 @@ namespace FractalExplorer.Utilities
             // Абстрактная форма, напоминающая галактическую туманность с плавными переходами цветов.
             var preset3 = new JuliaFamilySaveState("JuliaBurningShip")
             {
-                SaveName = "Туманность Андромеды (стил.)",
-                CRe = -1.1m,
-                CIm = -0.23m,
+                SaveName = "Психонавт",
+                CRe = 0.736607134342194m,
+                CIm = 1.09152793884277m,
                 CenterX = 0m,
                 CenterY = 0m,
                 Zoom = 1.0m,
-                Iterations = 400,
+                Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Ультрафиолет", // Обновлено: соответствует новой встроенной палитре
+                PaletteName = "Психоделика", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams3JBS = new FractalMandelbrotFamilyForm.PreviewParams
