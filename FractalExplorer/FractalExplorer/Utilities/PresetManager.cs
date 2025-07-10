@@ -368,12 +368,12 @@ namespace FractalExplorer.Utilities
             var preset2 = new MandelbrotFamilySaveState("MandelbrotBurningShip")
             {
                 SaveName = "Глубоководный Корабль",
-                CenterX = -1.768739999999000m,
-                CenterY = -0.001640000000000m,
-                Zoom = 1000.0m,
-                Iterations = 500,
+                CenterX = -1.7623214771385076201641266142m,
+                CenterY = 0.0200163188745603751465416114m,
+                Zoom = 40.0m,
+                Iterations = 700,
                 Threshold = 2.0m,
-                PaletteName = "Ультрафиолет", // Обновлено: соответствует новой встроенной палитре
+                PaletteName = "Ультрафиолет",
                 Timestamp = DateTime.MinValue
             };
             var previewParams2BS = new FractalMandelbrotFamilyForm.PreviewParams
@@ -395,7 +395,7 @@ namespace FractalExplorer.Utilities
             {
                 SaveName = "Призрачные Паруса",
                 CenterX = 0.352m,
-                CenterY = -1.71m,
+                CenterY = 1.71m,
                 Zoom = 70.0m,
                 Iterations = 400,
                 Threshold = 2.0m,
