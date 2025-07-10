@@ -53,7 +53,7 @@
             lbPalettes.ItemHeight = 15;
             lbPalettes.Location = new Point(7, 22);
             lbPalettes.Name = "lbPalettes";
-            lbPalettes.Size = new Size(193, 364);
+            lbPalettes.Size = new Size(224, 364);
             lbPalettes.TabIndex = 0;
             lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
             // 
@@ -63,7 +63,7 @@
             panelPreview.BorderStyle = BorderStyle.FixedSingle;
             panelPreview.Location = new Point(8, 74);
             panelPreview.Name = "panelPreview";
-            panelPreview.Size = new Size(411, 38);
+            panelPreview.Size = new Size(391, 38);
             panelPreview.TabIndex = 1;
             panelPreview.Paint += panelPreview_Paint;
             // 
@@ -74,13 +74,13 @@
             lbColorStops.ItemHeight = 15;
             lbColorStops.Location = new Point(8, 223);
             lbColorStops.Name = "lbColorStops";
-            lbColorStops.Size = new Size(299, 169);
+            lbColorStops.Size = new Size(279, 169);
             lbColorStops.TabIndex = 2;
             // 
             // btnAddColor
             // 
             btnAddColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAddColor.Location = new Point(312, 223);
+            btnAddColor.Location = new Point(292, 223);
             btnAddColor.Name = "btnAddColor";
             btnAddColor.Size = new Size(107, 28);
             btnAddColor.TabIndex = 3;
@@ -91,7 +91,7 @@
             // btnRemoveColor
             // 
             btnRemoveColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnRemoveColor.Location = new Point(312, 291);
+            btnRemoveColor.Location = new Point(292, 291);
             btnRemoveColor.Name = "btnRemoveColor";
             btnRemoveColor.Size = new Size(107, 28);
             btnRemoveColor.TabIndex = 5;
@@ -102,7 +102,7 @@
             // btnEditColor
             // 
             btnEditColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnEditColor.Location = new Point(312, 257);
+            btnEditColor.Location = new Point(292, 257);
             btnEditColor.Name = "btnEditColor";
             btnEditColor.Size = new Size(107, 28);
             btnEditColor.TabIndex = 4;
@@ -115,7 +115,7 @@
             txtName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtName.Location = new Point(8, 38);
             txtName.Name = "txtName";
-            txtName.Size = new Size(299, 23);
+            txtName.Size = new Size(279, 23);
             txtName.TabIndex = 6;
             txtName.TextChanged += txtName_TextChanged;
             txtName.KeyDown += txtName_KeyDown;
@@ -125,7 +125,7 @@
             // 
             checkIsGradient.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             checkIsGradient.AutoSize = true;
-            checkIsGradient.Location = new Point(315, 40);
+            checkIsGradient.Location = new Point(295, 40);
             checkIsGradient.Name = "checkIsGradient";
             checkIsGradient.Size = new Size(76, 19);
             checkIsGradient.TabIndex = 7;
@@ -147,7 +147,7 @@
             // btnCopy
             // 
             btnCopy.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnCopy.Location = new Point(74, 391);
+            btnCopy.Location = new Point(91, 391);
             btnCopy.Name = "btnCopy";
             btnCopy.Size = new Size(88, 28);
             btnCopy.TabIndex = 15;
@@ -158,7 +158,7 @@
             // btnDelete
             // 
             btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnDelete.Location = new Point(166, 391);
+            btnDelete.Location = new Point(198, 391);
             btnDelete.Name = "btnDelete";
             btnDelete.Size = new Size(33, 28);
             btnDelete.TabIndex = 9;
@@ -213,7 +213,7 @@
             groupBox1.Controls.Add(btnDelete);
             groupBox1.Location = new Point(10, 11);
             groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(206, 428);
+            groupBox1.Size = new Size(238, 428);
             groupBox1.TabIndex = 13;
             groupBox1.TabStop = false;
             groupBox1.Text = "Список палитр";
@@ -235,9 +235,9 @@
             groupBox2.Controls.Add(checkIsGradient);
             groupBox2.Controls.Add(btnEditColor);
             groupBox2.Controls.Add(btnRemoveColor);
-            groupBox2.Location = new Point(234, 11);
+            groupBox2.Location = new Point(254, 11);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(424, 428);
+            groupBox2.Size = new Size(404, 428);
             groupBox2.TabIndex = 14;
             groupBox2.TabStop = false;
             groupBox2.Text = "Редактор палитры";
