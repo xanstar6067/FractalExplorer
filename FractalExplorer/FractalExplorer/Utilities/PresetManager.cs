@@ -218,7 +218,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Психоделика",
+                PaletteName = "Огонь",
                 Timestamp = DateTime.MinValue
             };
             var previewParams1J = new FractalMandelbrotFamilyForm.PreviewParams
@@ -248,7 +248,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 1.0m,
                 Iterations = 300,
                 Threshold = 2.0m,
-                PaletteName = "Стандартный серый", // Обновлено: соответствует новой встроенной палитре
+                PaletteName = "Зеленый фонарь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
             var previewParams2J = new FractalMandelbrotFamilyForm.PreviewParams

@@ -96,6 +96,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                 new("Огонь и лед", new List<Color> { Color.Black, Color.DarkBlue, Color.Cyan, Color.White, Color.Yellow, Color.Red, Color.DarkRed }, true, true, 700, 1.0, false),
                 new("Психоделика", new List<Color> { Color.Red, Color.Yellow, Color.Lime, Color.Cyan, Color.Blue, Color.Magenta }, false, true, 6, 1.0, false),
                 new("Черно-белый", new List<Color> { Color.Black, Color.White }, false, true, 2, 1.0, false),
+                new("Зеленый фонарь", new List<Color> { Color.Black, Color.FromArgb(255, 0, 128, 0), Color.FromArgb(255, 0, 204, 0), Color.FromArgb(255, 0, 234, 0), Color.FromArgb(255, 60, 255, 60), Color.FromArgb(255, 145, 255, 145), Color.FromArgb(255, 213, 255, 213), Color.White }, true, true, 120, 1.0, false),
                 new("Сепия", new List<Color> { Color.FromArgb(20, 10, 0), Color.FromArgb(255, 240, 192) }, true, true, 500, 1.0, false)
             };
         }
