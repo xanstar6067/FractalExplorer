@@ -118,6 +118,8 @@
             txtName.Size = new Size(299, 23);
             txtName.TabIndex = 6;
             txtName.TextChanged += txtName_TextChanged;
+            txtName.KeyDown += txtName_KeyDown;
+            txtName.Leave += txtName_LostFocus;
             // 
             // checkIsGradient
             // 

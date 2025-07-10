@@ -239,14 +239,30 @@ namespace FractalExplorer.Utilities
         /// <param name="e">Аргументы события.</param>
         private void txtName_TextChanged(object sender, EventArgs e)
         {
-            if (_selectedPalette != null && !_selectedPalette.IsBuiltIn && txtName.Focused)
+            // Теперь этот метод просто обновляет имя в объекте палитры.
+            // Он больше не трогает ListBox, поэтому фокус не теряется.
+            if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.Name = txtName.Text;
-                int selectedIndex = lbPalettes.SelectedIndex;
-                if (selectedIndex != -1)
-                {
-                    lbPalettes.Items[selectedIndex] = txtName.Text;
-                }
+            }
+        }
+
+        /// <summary>
+        /// Обновляет отображаемое имя выбранной палитры в списке lbPalettes.
+        /// </summary>
+        private void UpdatePaletteListDisplayName()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn) return;
+
+            int selectedIndex = lbPalettes.SelectedIndex;
+            if (selectedIndex != -1)
+            {
+                // Чтобы избежать любых побочных эффектов, на время обновления
+                // отписываемся от события изменения индекса, а потом подписываемся обратно.
+                // Это надежная практика.
+                lbPalettes.SelectedIndexChanged -= lbPalettes_SelectedIndexChanged;
+                lbPalettes.Items[selectedIndex] = _selectedPalette.Name;
+                lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
             }
         }
 
@@ -465,6 +481,26 @@ namespace FractalExplorer.Utilities
         #endregion
 
         #region Main Form Actions
+
+        private void txtName_LostFocus(object sender, EventArgs e)
+        {
+            // Когда пользователь уводит фокус с поля ввода, обновляем имя в списке.
+            UpdatePaletteListDisplayName();
+        }
+
+        private void txtName_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Когда пользователь нажимает Enter, также обновляем имя в списке
+            // и "съедаем" нажатие, чтобы не было системного звука "бип".
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true; // Подавляем системный звук
+                UpdatePaletteListDisplayName();
+                // Опционально: можно перевести фокус на следующий элемент, например, на кнопку "Применить"
+                // btnApply.Focus();
+            }
+        }
+
         /// <summary>
         /// Обработчик события клика по кнопке "Apply".
         /// Устанавливает выбранную палитру как активную в менеджере палитр
@@ -493,7 +529,6 @@ namespace FractalExplorer.Utilities
         }
         #endregion
 
-        // <<< НОВЫЙ РАЗДЕЛ >>>
         #region Drag and Drop for Color List
 
         /// <summary>
@@ -580,5 +615,10 @@ namespace FractalExplorer.Utilities
         }
 
         #endregion
+
+        private void txtName_KeyDown_1(object sender, KeyEventArgs e)
+        {
+
+        }
     }
 }
