@@ -681,7 +681,6 @@ namespace FractalExplorer
         /// Открывает менеджер сохранения изображений.
         /// </summary>
         /// <remarks>
-        /// TODO: Привязать этот обработчик к новой кнопке в дизайнере.
         /// </remarks>
         private void btnOpenSaveManager_Click(object sender, EventArgs e)
         {
