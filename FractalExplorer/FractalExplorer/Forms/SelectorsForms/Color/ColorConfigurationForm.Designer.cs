@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer.Utilities
 {
-    partial class ColorConfigurationMandelbrotFamilyForm
+    partial class ColorConfigurationForm
     {
         private System.ComponentModel.IContainer components = null;
 

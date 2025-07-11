@@ -6,7 +6,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
     /// Базовый класс для определения цветовой палитры.
     /// Содержит имя палитры, список цветов, флаг градиента и признак, является ли палитра встроенной.
     /// </summary>
-    public class PaletteManagerMandelbrotFamily
+    public class Palette
     {
         #region Properties
 
@@ -58,13 +58,13 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         #region Constructors
 
         /// <summary>
-        /// Инициализирует новый пустой экземпляр класса <see cref="PaletteManagerMandelbrotFamily"/>.
+        /// Инициализирует новый пустой экземпляр класса <see cref="Palette"/>.
         /// Используется для десериализации.
         /// </summary>
-        public PaletteManagerMandelbrotFamily() { }
+        public Palette() { }
 
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="PaletteManagerMandelbrotFamily"/> с заданными параметрами.
+        /// Инициализирует новый экземпляр класса <see cref="Palette"/> с заданными параметрами.
         /// </summary>
         /// <param name="name">Имя палитры.</param>
         /// <param name="colors">Список цветов палитры.</param>
@@ -73,7 +73,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <param name="maxColorIterations">Длина цветового цикла.</param>
         /// <param name="gamma">Значение гамма-коррекции.</param>
         /// <param name="alignWithRenderIterations">Флаг для синхронизации с итерациями рендера.</param> // НОВОЕ
-        public PaletteManagerMandelbrotFamily(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false, int maxColorIterations = 500, double gamma = 1.0, bool alignWithRenderIterations = false)
+        public Palette(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false, int maxColorIterations = 500, double gamma = 1.0, bool alignWithRenderIterations = false)
         {
             Name = name;
             Colors = colors;

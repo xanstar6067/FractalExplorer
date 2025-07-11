@@ -9,17 +9,17 @@ namespace FractalExplorer.Utilities
     /// выбирать, просматривать, создавать новые, редактировать цвета, копировать
     /// и применять выбранную палитру.
     /// </summary>
-    public partial class ColorConfigurationMandelbrotFamilyForm : Form
+    public partial class ColorConfigurationForm : Form
     {
         #region Fields
         /// <summary>
         /// Менеджер палитр, управляющий доступными палитрами.
         /// </summary>
-        private readonly ColorPaletteMandelbrotFamily _paletteManager;
+        private readonly PaletteManager _paletteManager;
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
-        private PaletteManagerMandelbrotFamily _selectedPalette;
+        private Palette _selectedPalette;
         #endregion
 
         #region Events
@@ -31,10 +31,10 @@ namespace FractalExplorer.Utilities
 
         #region Constructor
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationMandelbrotFamilyForm"/>.
+        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationForm"/>.
         /// </summary>
         /// <param name="paletteManager">Менеджер палитр для управления палитрами.</param>
-        public ColorConfigurationMandelbrotFamilyForm(ColorPaletteMandelbrotFamily paletteManager)
+        public ColorConfigurationForm(PaletteManager paletteManager)
         {
             InitializeComponent();
             _paletteManager = paletteManager;
@@ -327,7 +327,7 @@ namespace FractalExplorer.Utilities
             {
                 newName = $"Новая палитра {++counter}";
             }
-            var newPalette = new PaletteManagerMandelbrotFamily(newName, new List<Color> { Color.Black, Color.White }, true, false, 500, 1.0, false);
+            var newPalette = new Palette(newName, new List<Color> { Color.Black, Color.White }, true, false, 500, 1.0, false);
 
             // ИЗМЕНЕНО: Используем безопасный метод менеджера для добавления палитры
             _paletteManager.AddPalette(newPalette);
@@ -357,7 +357,7 @@ namespace FractalExplorer.Utilities
                 newName = $"{baseName} {counter++}";
             }
 
-            var newPalette = new PaletteManagerMandelbrotFamily(
+            var newPalette = new Palette(
                 name: newName,
                 colors: new List<Color>(_selectedPalette.Colors),
                 isGradient: _selectedPalette.IsGradient,

@@ -33,11 +33,11 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Менеджер цветовых палитр для фракталов семейства Мандельброта.
         /// </summary>
-        private ColorPaletteMandelbrotFamily _paletteManager;
+        private PaletteManager _paletteManager;
         /// <summary>
         /// Форма для настройки параметров цветовой палитры.
         /// </summary>
-        private ColorConfigurationMandelbrotFamilyForm _colorConfigForm;
+        private ColorConfigurationForm _colorConfigForm;
         /// <summary>
         /// Форма для выбора C-параметров фрактала Феникс.
         /// </summary>
@@ -231,7 +231,7 @@ namespace FractalExplorer.Forms
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
-                _colorConfigForm = new ColorConfigurationMandelbrotFamilyForm(_paletteManager);
+                _colorConfigForm = new ColorConfigurationForm(_paletteManager);
                 _colorConfigForm.PaletteApplied += OnPaletteApplied;
                 _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
                 _colorConfigForm.Show(this);
@@ -694,7 +694,7 @@ namespace FractalExplorer.Forms
         /// </summary>
         /// <param name="palette">Палитра для создания функции.</param>
         /// <returns>Функция, возвращающая цвет для заданного числа итераций.</returns>
-        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
+        private Func<int, int, int, Color> GeneratePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
@@ -774,7 +774,7 @@ namespace FractalExplorer.Forms
         private void FractalPhoenixForm_Load(object sender, EventArgs e)
         {
             _baseTitle = this.Text;
-            _paletteManager = new ColorPaletteMandelbrotFamily();
+            _paletteManager = new PaletteManager();
             _fractalEngine = new PhoenixEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;

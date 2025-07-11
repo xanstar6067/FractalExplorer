@@ -6,23 +6,23 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
     /// <summary>
     /// Управляет коллекцией цветовых палитр, включая загрузку, сохранение и создание встроенных палитр.
     /// </summary>
-    public class ColorPaletteMandelbrotFamily
+    public class PaletteManager
     {
         private const string CUSTOM_PALETTES_FILE = "custom_palettes_mandelbrot.json";
 
         /// <summary>
         /// Список всех доступных палитр (встроенных и пользовательских).
         /// </summary>
-        public List<PaletteManagerMandelbrotFamily> Palettes { get; private set; }
+        public List<Palette> Palettes { get; private set; }
 
         /// <summary>
         /// Текущая активная палитра, используемая для рендеринга.
         /// </summary>
-        public PaletteManagerMandelbrotFamily ActivePalette { get; set; }
+        public Palette ActivePalette { get; set; }
 
-        public ColorPaletteMandelbrotFamily()
+        public PaletteManager()
         {
-            Palettes = new List<PaletteManagerMandelbrotFamily>();
+            Palettes = new List<Palette>();
             LoadPalettes();
             ActivePalette ??= Palettes.FirstOrDefault();
         }
@@ -41,7 +41,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                     string json = File.ReadAllText(filePath);
                     var options = new JsonSerializerOptions();
                     options.Converters.Add(new JsonColorConverter());
-                    var customPalettes = JsonSerializer.Deserialize<List<PaletteManagerMandelbrotFamily>>(json, options);
+                    var customPalettes = JsonSerializer.Deserialize<List<Palette>>(json, options);
                     if (customPalettes != null)
                     {
                         Palettes.AddRange(customPalettes);
@@ -61,7 +61,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// Безопасно добавляет новую палитру в коллекцию, избегая дубликатов.
         /// </summary>
         /// <param name="palette">Палитра для добавления.</param>
-        public void AddPalette(PaletteManagerMandelbrotFamily palette)
+        public void AddPalette(Palette palette)
         {
             if (palette != null && !Palettes.Contains(palette))
             {
@@ -74,7 +74,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// </summary>
         /// <param name="paletteToRemove">Палитра для удаления.</param>
         /// <returns>true, если удаление прошло успешно; иначе false.</returns>
-        public bool RemovePalette(PaletteManagerMandelbrotFamily paletteToRemove)
+        public bool RemovePalette(Palette paletteToRemove)
         {
             // Нельзя удалять встроенные палитры
             if (paletteToRemove == null || paletteToRemove.IsBuiltIn)
@@ -116,9 +116,9 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// Создает коллекцию встроенных (предопределенных) цветовых палитр.
         /// </summary>
         /// <returns>Коллекция встроенных палитр.</returns>
-        private IEnumerable<PaletteManagerMandelbrotFamily> CreateBuiltInPalettesMandelbrotFamily()
+        private IEnumerable<Palette> CreateBuiltInPalettesMandelbrotFamily()
         {
-            return new List<PaletteManagerMandelbrotFamily>
+            return new List<Palette>
             {
                 // Оригинальные палитры
                 new("Стандартный серый", new List<Color>(), true, true, 800, 1.0, false),

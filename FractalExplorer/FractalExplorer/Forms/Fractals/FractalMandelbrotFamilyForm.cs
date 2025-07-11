@@ -35,7 +35,7 @@ namespace FractalDraving
         /// <summary>
         /// Менеджер палитр, используемый этой формой для управления цветовыми схемами.
         /// </summary>
-        private ColorPaletteMandelbrotFamily _paletteManager;
+        private PaletteManager _paletteManager;
 
         /// <summary>
         /// Кэш для цветов палитры с уже примененной гамма-коррекцией.
@@ -52,7 +52,7 @@ namespace FractalDraving
         /// <summary>
         /// Форма конфигурации палитр, связанная с этой формой, для настройки цветов.
         /// </summary>
-        private ColorConfigurationMandelbrotFamilyForm _colorConfigForm;
+        private ColorConfigurationForm _colorConfigForm;
 
         /// <summary>
         /// Размер одной плитки (тайла) в пикселях для пошагового рендеринга.
@@ -291,7 +291,7 @@ namespace FractalDraving
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
-                _colorConfigForm = new ColorConfigurationMandelbrotFamilyForm(_paletteManager);
+                _colorConfigForm = new ColorConfigurationForm(_paletteManager);
                 _colorConfigForm.PaletteApplied += OnPaletteApplied;
                 _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
                 _colorConfigForm.Show(this);
@@ -954,7 +954,7 @@ namespace FractalDraving
         /// <param name="palette">Менеджер палитры.</param>
         /// <param name="maxIterationsForAlignment">Максимальное количество итераций рендера для выравнивания.</param>
         /// <returns>Строковая подпись палитры.</returns>
-        private string GeneratePaletteSignature(PaletteManagerMandelbrotFamily palette, int maxIterationsForAlignment)
+        private string GeneratePaletteSignature(Palette palette, int maxIterationsForAlignment)
         {
             var sb = new StringBuilder();
             sb.Append(palette.Name);
@@ -975,7 +975,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="palette">Менеджер палитры, на основе которой генерируется функция.</param>
         /// <returns>Функция для получения цвета.</returns>
-        private Func<int, int, int, Color> GeneratePaletteFunction(PaletteManagerMandelbrotFamily palette)
+        private Func<int, int, int, Color> GeneratePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
@@ -1076,7 +1076,7 @@ namespace FractalDraving
         private void FormBase_Load(object sender, EventArgs e)
         {
             _baseTitle = this.Text;
-            _paletteManager = new ColorPaletteMandelbrotFamily();
+            _paletteManager = new PaletteManager();
             _fractalEngine = CreateEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
