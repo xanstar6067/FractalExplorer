@@ -62,6 +62,7 @@
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(cbSmooth);
             pnlControls.Controls.Add(lbSSAA);
             pnlControls.Controls.Add(cbSSAA);
             pnlControls.Controls.Add(btnStateManager);
@@ -315,7 +316,7 @@
             cbSmooth.AutoSize = true;
             cbSmooth.Checked = true;
             cbSmooth.CheckState = CheckState.Checked;
-            cbSmooth.Location = new Point(138, 121);
+            cbSmooth.Location = new Point(6, 249);
             cbSmooth.Name = "cbSmooth";
             cbSmooth.Size = new Size(153, 19);
             cbSmooth.TabIndex = 2;
@@ -336,7 +337,6 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1084, 636);
-            Controls.Add(cbSmooth);
             Controls.Add(canvas);
             Controls.Add(pnlControls);
             MinimumSize = new Size(1100, 675);
@@ -355,7 +355,6 @@
             ((System.ComponentModel.ISupportInitialize)nudBaseScale).EndInit();
             ((System.ComponentModel.ISupportInitialize)canvas).EndInit();
             ResumeLayout(false);
-            PerformLayout();
         }
         #endregion
 
