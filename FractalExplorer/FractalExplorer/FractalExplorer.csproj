@@ -47,4 +47,8 @@
 
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Engines\EngineImplementations\" />
+  </ItemGroup>
+
 </Project>
