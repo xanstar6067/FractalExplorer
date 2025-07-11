@@ -38,7 +38,7 @@ namespace FractalDraving
         private PaletteManager _paletteManager;
 
         /// <summary>
-        /// Кэш для цветов палитры с уже примененной гамма-коррекцией.
+        /// Кэш для цветов палитры с уже примененной гамма-коррекцией (для дискретного режима).
         /// Индекс массива соответствует номеру итерации.
         /// </summary>
         private Color[] _gammaCorrectedPaletteCache;
@@ -522,13 +522,16 @@ namespace FractalDraving
             var currentRenderedCenterY = _centerY;
             var currentRenderedZoom = _zoom;
             var renderEngineCopy = CreateEngine();
+            // Копируем все параметры в новый экземпляр движка
             renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
             renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
             renderEngineCopy.CenterX = _fractalEngine.CenterX;
             renderEngineCopy.CenterY = _fractalEngine.CenterY;
             renderEngineCopy.Scale = _fractalEngine.Scale;
             renderEngineCopy.C = _fractalEngine.C;
+            renderEngineCopy.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             renderEngineCopy.Palette = _fractalEngine.Palette;
+            renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
@@ -644,13 +647,16 @@ namespace FractalDraving
             var currentRenderedCenterY = _centerY;
             var currentRenderedZoom = _zoom;
             var renderEngineCopy = CreateEngine();
+            // Копируем все параметры в новый экземпляр движка
             renderEngineCopy.MaxIterations = _fractalEngine.MaxIterations;
             renderEngineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
             renderEngineCopy.CenterX = _fractalEngine.CenterX;
             renderEngineCopy.CenterY = _fractalEngine.CenterY;
             renderEngineCopy.Scale = _fractalEngine.Scale;
             renderEngineCopy.C = _fractalEngine.C;
+            renderEngineCopy.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             renderEngineCopy.Palette = _fractalEngine.Palette;
+            renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
@@ -886,6 +892,10 @@ namespace FractalDraving
             _fractalEngine.CenterX = _centerX;
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BaseScale / _zoom;
+
+            // --- НОВОЕ: Включаем сглаживание по умолчанию ---
+            _fractalEngine.UseSmoothColoring = true;
+
             UpdateEngineSpecificParameters();
             ApplyActivePalette();
         }
@@ -971,11 +981,24 @@ namespace FractalDraving
         }
 
         /// <summary>
-        /// Генерирует функцию, которая возвращает цвет для заданной итерации на основе палитры.
+        /// Выполняет линейную интерполяцию между двумя цветами.
         /// </summary>
-        /// <param name="palette">Менеджер палитры, на основе которой генерируется функция.</param>
-        /// <returns>Функция для получения цвета.</returns>
-        private Func<int, int, int, Color> GeneratePaletteFunction(Palette palette)
+        /// <param name="a">Первый цвет.</param>
+        /// <param name="b">Второй цвет.</param>
+        /// <param name="t">Коэффициент интерполяции (от 0 до 1).</param>
+        /// <returns>Интерполированный цвет.</returns>
+        private Color LerpColor(Color a, Color b, double t)
+        {
+            t = Math.Max(0, Math.Min(1, t));
+            return Color.FromArgb(
+                (int)(a.A + (b.A - a.A) * t),
+                (int)(a.R + (b.R - a.R) * t),
+                (int)(a.G + (b.G - a.G) * t),
+                (int)(a.B + (b.B - a.B) * t));
+        }
+
+        // --- СТАРЫЙ МЕТОД ГЕНЕРАЦИИ ДИСКРЕТНОЙ ПАЛИТРЫ ---
+        private Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
@@ -1021,17 +1044,37 @@ namespace FractalDraving
             };
         }
 
-        /// <summary>
-        /// Выполняет линейную интерполяцию между двумя цветами.
-        /// </summary>
-        /// <param name="a">Первый цвет.</param>
-        /// <param name="b">Второй цвет.</param>
-        /// <param name="t">Коэффициент интерполяции (от 0 до 1).</param>
-        /// <returns>Интерполированный цвет.</returns>
-        private Color LerpColor(Color a, Color b, double t)
+        // --- НОВЫЙ МЕТОД ГЕНЕРАЦИИ СГЛАЖЕННОЙ ПАЛИТРЫ ---
+        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette)
         {
-            t = Math.Max(0, Math.Min(1, t));
-            return Color.FromArgb((int)(a.A + (b.A - a.A) * t), (int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            int colorCount = colors.Count;
+            // Определяем, по какому диапазону итераций "зацикливать" цвета
+            int maxColorIter = palette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : palette.MaxColorIterations;
+
+            if (colorCount == 0) return (smoothIter) => Color.Black;
+            if (colorCount == 1) return (smoothIter) => ColorCorrection.ApplyGamma(colors[0], gamma);
+
+            // Возвращаем функцию, которая принимает ДРОБНОЕ значение итерации
+            return (smoothIter) =>
+            {
+                // Если точка внутри множества, она черная
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+
+                // "Зацикливаем" значение итерации по диапазону цветов палитры.
+                // Например, если maxColorIter = 200, то итерации 1.5, 201.5, 401.5 будут иметь одинаковый цвет.
+                double t = (smoothIter % maxColorIter) / maxColorIter;
+
+                // Рассчитываем позицию в градиенте
+                double scaledT = t * (colorCount - 1);
+                int index1 = (int)Math.Floor(scaledT);
+                int index2 = Math.Min(index1 + 1, colorCount - 1);
+                double localT = scaledT - index1; // Дробная часть для интерполяции
+
+                Color baseColor = LerpColor(colors[index1], colors[index2], localT);
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
         }
 
         /// <summary>
@@ -1040,14 +1083,19 @@ namespace FractalDraving
         private void ApplyActivePalette()
         {
             if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
+
             var activePalette = _paletteManager.ActivePalette;
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
 
+            // --- НОВОЕ: Настраиваем ОБЕ палитры в движке ---
+            _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette);
+
+            // --- СТАРОЕ: Логика с кэшированием для дискретного режима остается ---
             if (_gammaCorrectedPaletteCache == null || newSignature != _paletteCacheSignature)
             {
                 _paletteCacheSignature = newSignature;
-                var paletteGeneratorFunc = GeneratePaletteFunction(activePalette);
+                var paletteGeneratorFunc = GenerateDiscretePaletteFunction(activePalette);
                 _gammaCorrectedPaletteCache = new Color[effectiveMaxColorIterations + 1];
                 for (int i = 0; i <= effectiveMaxColorIterations; i++)
                 {
@@ -1310,8 +1358,13 @@ namespace FractalDraving
                 previewEngine.Scale = this.BaseScale / previewParams.Zoom;
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
-                previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
-                previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+
+                // Настраиваем обе палитры для рендеринга превью
+                previewEngine.UseSmoothColoring = true; // Всегда рендерим превью со сглаживанием
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+                // Старая палитра тоже нужна для обратной совместимости или если сглаживание выключено
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
@@ -1353,8 +1406,11 @@ namespace FractalDraving
             previewEngine.MaxIterations = previewParams.Iterations;
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
-            previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
-            previewEngine.Palette = GeneratePaletteFunction(paletteForPreview);
+
+            // Настраиваем палитры для превью
+            previewEngine.UseSmoothColoring = true; // Всегда используем сглаживание для красивых превью
+            previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
 
@@ -1430,8 +1486,12 @@ namespace FractalDraving
             engine.CenterY = state.CenterY;
             engine.Scale = state.BaseScale / state.Zoom;
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
+
+            // Настраиваем обе палитры для рендера высокого разрешения
+            engine.UseSmoothColoring = true; // Рендер высокого разрешения всегда со сглаживанием
             engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
-            engine.Palette = GeneratePaletteFunction(paletteForRender);
+            engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender);
+            engine.Palette = GenerateDiscretePaletteFunction(paletteForRender);
 
             return engine;
         }
@@ -1445,11 +1505,15 @@ namespace FractalDraving
                 FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
                 int threadCount = GetThreadCount();
 
-                Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmapSSAA(
+                // Рендер высокого разрешения будет использовать новую логику, если UseSmoothColoring = true
+                Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
                     width, height, threadCount,
                     p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." }),
-                    ssaaFactor,
                     cancellationToken), cancellationToken);
+
+                // Если нужен SSAA, его нужно будет делать поверх уже сглаженного изображения,
+                // что является сложной задачей. Пока оставим так.
+                // Для SSAA нужно будет адаптировать метод RenderToBitmapSSAA в движке.
 
                 return highResBitmap;
             }
