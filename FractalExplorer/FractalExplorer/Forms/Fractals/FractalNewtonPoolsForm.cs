@@ -55,7 +55,7 @@ namespace FractalExplorer
         /// <summary>
         /// Размер одной плитки (тайла) для пошагового рендеринга.
         /// </summary>
-        private const int TILE_SIZE = 32;
+        private const int TILE_SIZE = 16;
 
         /// <summary>
         /// Объект для блокировки доступа к битмапам во время рендеринга.
