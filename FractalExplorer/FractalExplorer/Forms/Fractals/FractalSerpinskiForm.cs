@@ -18,36 +18,89 @@ namespace FractalExplorer
     /// Представляет основную форму для отображения и взаимодействия с фракталом Серпинского.
     /// Реализует интерфейс <see cref="ISaveLoadCapableFractal"/> для сохранения и загрузки состояний фрактала.
     /// </summary>
-    public partial class FractalSerpinsky : Form, ISaveLoadCapableFractal, IHighResRenderable
+    public partial class FractalSerpinski : Form, ISaveLoadCapableFractal, IHighResRenderable
     {
         #region Fields
+        /// <summary>
+        /// Движок для рендеринга фрактала Серпинского.
+        /// </summary>
         private readonly FractalSerpinskyEngine _engine;
+        /// <summary>
+        /// Bitmap для отображения на холсте.
+        /// </summary>
         private Bitmap canvasBitmap;
+        /// <summary>
+        /// Флаг, указывающий, что в данный момент выполняется рендеринг предпросмотра.
+        /// </summary>
         private volatile bool isRenderingPreview = false;
+        /// <summary>
+        /// Флаг, указывающий, что в данный момент выполняется рендеринг в высоком разрешении.
+        /// </summary>
         private volatile bool isHighResRendering = false;
+        /// <summary>
+        /// Источник токена отмены для рендеринга предпросмотра.
+        /// </summary>
         private CancellationTokenSource previewRenderCts;
+        /// <summary>
+        /// Источник токена отмены для рендеринга в высоком разрешении.
+        /// </summary>
         private CancellationTokenSource highResRenderCts;
+        /// <summary>
+        /// Таймер для отложенного запуска рендеринга после взаимодействия с пользователем.
+        /// </summary>
         private System.Windows.Forms.Timer renderTimer;
+        /// <summary>
+        /// Текущий уровень масштабирования.
+        /// </summary>
         private double currentZoom = 1.0;
+        /// <summary>
+        /// Текущая координата X центра отображения.
+        /// </summary>
         private double centerX = 0.0;
+        /// <summary>
+        /// Текущая координата Y центра отображения.
+        /// </summary>
         private double centerY = 0.0;
+        /// <summary>
+        /// Уровень масштабирования на момент последнего рендеринга.
+        /// </summary>
         private double renderedZoom = 1.0;
+        /// <summary>
+        /// Координата X центра на момент последнего рендеринга.
+        /// </summary>
         private double renderedCenterX = 0.0;
+        /// <summary>
+        /// Координата Y центра на момент последнего рендеринга.
+        /// </summary>
         private double renderedCenterY = 0.0;
+        /// <summary>
+        /// Начальная точка для панорамирования.
+        /// </summary>
         private Point panStart;
+        /// <summary>
+        /// Флаг, указывающий, что выполняется панорамирование.
+        /// </summary>
         private bool panning = false;
-
+        /// <summary>
+        /// Базовый заголовок окна.
+        /// </summary>
         private string _baseTitle;
+        /// <summary>
+        /// Менеджер цветовых палитр для фрактала Серпинского.
+        /// </summary>
         private SerpinskyPaletteManager _paletteManager;
+        /// <summary>
+        /// Форма конфигурации цветов.
+        /// </summary>
         private ColorConfigurationSerpinskyForm _colorConfigForm;
         #endregion
 
         #region Constructor
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="FractalSerpinsky"/>.
+        /// Инициализирует новый экземпляр класса <see cref="FractalSerpinski"/>.
         /// Создает экземпляр движка фрактала и менеджера палитр.
         /// </summary>
-        public FractalSerpinsky()
+        public FractalSerpinski()
         {
             InitializeComponent();
             _engine = new FractalSerpinskyEngine();
@@ -95,9 +148,6 @@ namespace FractalExplorer
             FractalTypeIsGeometry.CheckedChanged += FractalType_CheckedChanged;
             FractalTypeIsChaos.CheckedChanged += FractalType_CheckedChanged;
 
-            // TODO: Привяжите этот обработчик к новой кнопке "Менеджер сохранения" в дизайнере
-            // this.btnOpenSaveManager.Click += new System.EventHandler(this.btnOpenSaveManager_Click);
-
             FractalTypeIsGeometry.Checked = true;
             UpdateAbortButtonState();
         }
@@ -105,6 +155,11 @@ namespace FractalExplorer
 
         #region UI Event Handlers
 
+        /// <summary>
+        /// Обрабатывает изменение типа фрактала (геометрический или хаос).
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void FractalType_CheckedChanged(object sender, EventArgs e)
         {
             CheckBox activeCheckBox = sender as CheckBox;
@@ -127,6 +182,11 @@ namespace FractalExplorer
             ScheduleRender();
         }
 
+        /// <summary>
+        /// Открывает форму конфигурации цветов.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void color_configurations_Click(object sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
@@ -142,12 +202,22 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Срабатывает при применении новой палитры в форме конфигурации.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void OnPaletteApplied(object sender, EventArgs e)
         {
             ApplyActivePalette();
             ScheduleRender();
         }
 
+        /// <summary>
+        /// Запускает принудительный рендеринг немедленно.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void btnRender_Click(object sender, EventArgs e)
         {
             previewRenderCts?.Cancel();
@@ -155,6 +225,11 @@ namespace FractalExplorer
             RenderTimer_Tick(sender, e);
         }
 
+        /// <summary>
+        /// Открывает диалог менеджера состояний для сохранения/загрузки.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void btnStateManager_Click(object sender, EventArgs e)
         {
             using (var dialog = new Forms.SaveLoadDialogForm(this))
@@ -163,6 +238,11 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Отменяет текущий процесс рендеринга.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void abortRender_Click(object sender, EventArgs e)
         {
             if (isRenderingPreview) previewRenderCts?.Cancel();
@@ -171,8 +251,9 @@ namespace FractalExplorer
 
         /// <summary>
         /// Открывает менеджер сохранения изображений.
-        /// TODO: Привязать этот обработчик к новой кнопке в дизайнере.
         /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void btnOpenSaveManager_Click(object sender, EventArgs e)
         {
             if (isRenderingPreview) previewRenderCts?.Cancel();
@@ -193,6 +274,11 @@ namespace FractalExplorer
 
         #region Rendering Logic
 
+        /// <summary>
+        /// Обрабатывает изменение параметров рендеринга и планирует новый рендеринг.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void ParamControl_Changed(object sender, EventArgs e)
         {
             if (isHighResRendering) return;
@@ -200,6 +286,9 @@ namespace FractalExplorer
             ScheduleRender();
         }
 
+        /// <summary>
+        /// Планирует отложенный рендеринг предпросмотра.
+        /// </summary>
         private void ScheduleRender()
         {
             if (isHighResRendering || WindowState == FormWindowState.Minimized) return;
@@ -208,6 +297,11 @@ namespace FractalExplorer
             renderTimer.Start();
         }
 
+        /// <summary>
+        /// Выполняет асинхронный рендеринг предпросмотра фрактала на холст.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private async void RenderTimer_Tick(object sender, EventArgs e)
         {
             renderTimer.Stop();
@@ -264,7 +358,7 @@ namespace FractalExplorer
             }
             catch (OperationCanceledException)
             {
-                // Ignore
+                // Игнорируем отмену операции
             }
             catch (Exception ex)
             {
@@ -282,6 +376,11 @@ namespace FractalExplorer
 
         #region Canvas Interaction
 
+        /// <summary>
+        /// Отрисовывает холст, применяя трансформации для панорамирования и масштабирования.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void CanvasSerpinsky_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(_engine.BackgroundColor);
@@ -308,6 +407,11 @@ namespace FractalExplorer
             e.Graphics.DrawImage(canvasBitmap, new RectangleF(offsetX, offsetY, scaleWidth, scaleHeight));
         }
 
+        /// <summary>
+        /// Обрабатывает масштабирование с помощью колеса мыши.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события мыши.</param>
         private void CanvasSerpinsky_MouseWheel(object sender, MouseEventArgs e)
         {
             if (isHighResRendering || canvasSerpinsky.Width <= 0) return;
@@ -325,6 +429,11 @@ namespace FractalExplorer
             else ScheduleRender();
         }
 
+        /// <summary>
+        /// Начинает операцию панорамирования при нажатии левой кнопки мыши.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события мыши.</param>
         private void CanvasSerpinsky_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
@@ -334,6 +443,11 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Выполняет панорамирование при перемещении мыши с зажатой левой кнопкой.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события мыши.</param>
         private void CanvasSerpinsky_MouseMove(object sender, MouseEventArgs e)
         {
             if (!panning) return;
@@ -347,11 +461,26 @@ namespace FractalExplorer
             ScheduleRender();
         }
 
+        /// <summary>
+        /// Завершает операцию панорамирования при отпускании левой кнопки мыши.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события мыши.</param>
         private void CanvasSerpinsky_MouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left) panning = false;
         }
 
+        /// <summary>
+        /// Преобразует экранные координаты в мировые координаты фрактала.
+        /// </summary>
+        /// <param name="screenPoint">Точка на экране.</param>
+        /// <param name="screenWidth">Ширина экрана.</param>
+        /// <param name="screenHeight">Высота экрана.</param>
+        /// <param name="zoom">Текущий зум.</param>
+        /// <param name="centerX">Координата X центра.</param>
+        /// <param name="centerY">Координата Y центра.</param>
+        /// <returns>Точка в мировых координатах.</returns>
         private PointF ScreenToWorld(Point screenPoint, int screenWidth, int screenHeight, double zoom, double centerX, double centerY)
         {
             double aspectRatio = (double)screenWidth / screenHeight;
@@ -367,6 +496,9 @@ namespace FractalExplorer
 
         #region Utility Methods
 
+        /// <summary>
+        /// Обновляет параметры движка фрактала на основе текущих значений элементов управления.
+        /// </summary>
         private void UpdateEngineParameters()
         {
             _engine.RenderMode = FractalTypeIsGeometry.Checked ? SerpinskyRenderMode.Geometric : SerpinskyRenderMode.Chaos;
@@ -377,6 +509,9 @@ namespace FractalExplorer
             ApplyActivePalette();
         }
 
+        /// <summary>
+        /// Применяет активную цветовую палитру к движку рендеринга.
+        /// </summary>
         private void ApplyActivePalette()
         {
             if (_engine == null || _paletteManager?.ActivePalette == null) return;
@@ -387,90 +522,19 @@ namespace FractalExplorer
             _engine.BackgroundColor = activePalette.BackgroundColor;
         }
 
-        /*
-        // Старый метод сохранения, заменен на менеджер изображений.
-        private async void btnSavePNG_Click(object sender, EventArgs e)
-        {
-            if (isRenderingPreview) previewRenderCts?.Cancel();
-            if (isHighResRendering) return;
-
-            int outputWidth = (int)nudW2.Value;
-            int outputHeight = (int)nudH2.Value;
-
-            using (var saveDialog = new SaveFileDialog { Filter = "PNG Image|*.png", FileName = $"serpinski_{DateTime.Now:yyyyMMdd_HHmmss}.png" })
-            {
-                if (saveDialog.ShowDialog() != DialogResult.OK) return;
-
-                isHighResRendering = true;
-                SetMainControlsEnabled(false);
-                UpdateAbortButtonState();
-                progressPNGSerpinsky.Visible = true;
-                UpdateProgressBar(progressPNGSerpinsky, 0);
-
-                highResRenderCts = new CancellationTokenSource();
-                CancellationToken token = highResRenderCts.Token;
-
-                var renderEngine = new FractalSerpinskyEngine();
-                UpdateEngineParameters();
-                renderEngine.RenderMode = _engine.RenderMode;
-                renderEngine.ColorMode = _engine.ColorMode;
-                renderEngine.Iterations = _engine.Iterations;
-                renderEngine.Zoom = _engine.Zoom;
-                renderEngine.CenterX = _engine.CenterX;
-                renderEngine.CenterY = _engine.CenterY;
-                renderEngine.FractalColor = _engine.FractalColor;
-                renderEngine.BackgroundColor = _engine.BackgroundColor;
-
-                int numThreads = GetThreadCount();
-
-                try
-                {
-                    var stopwatch = Stopwatch.StartNew();
-                    Bitmap highResBitmap = await Task.Run(() =>
-                    {
-                        var bitmap = new Bitmap(outputWidth, outputHeight, PixelFormat.Format32bppArgb);
-                        var bmpData = bitmap.LockBits(new Rectangle(0, 0, outputWidth, outputHeight), ImageLockMode.WriteOnly, bitmap.PixelFormat);
-                        var pixelBuffer = new byte[bmpData.Stride * outputHeight];
-                        renderEngine.RenderToBuffer(
-                            pixelBuffer, outputWidth, outputHeight, bmpData.Stride, 4,
-                            numThreads, token, (progress) => UpdateProgressBar(progressPNGSerpinsky, progress));
-                        token.ThrowIfCancellationRequested();
-                        Marshal.Copy(pixelBuffer, 0, bmpData.Scan0, pixelBuffer.Length);
-                        bitmap.UnlockBits(bmpData);
-                        return bitmap;
-                    }, token);
-                    stopwatch.Stop();
-
-                    highResBitmap.Save(saveDialog.FileName, ImageFormat.Png);
-                    double elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
-                    MessageBox.Show($"Изображение сохранено!\nВремя рендеринга: {elapsedSeconds:F3} сек.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    highResBitmap.Dispose();
-                }
-                catch (OperationCanceledException)
-                {
-                    MessageBox.Show("Сохранение было отменено.", "Отмена", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                finally
-                {
-                    isHighResRendering = false;
-                    SetMainControlsEnabled(true);
-                    UpdateAbortButtonState();
-                    progressPNGSerpinsky.Visible = false;
-                    highResRenderCts.Dispose();
-                }
-            }
-        }
-        */
-
+        /// <summary>
+        /// Определяет количество потоков для рендеринга на основе выбора пользователя.
+        /// </summary>
+        /// <returns>Количество потоков.</returns>
         private int GetThreadCount()
         {
             return cbCPUThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbCPUThreads.SelectedItem);
         }
 
+        /// <summary>
+        /// Включает или отключает основные элементы управления на панели.
+        /// </summary>
+        /// <param name="enabled">True, чтобы включить; false, чтобы отключить.</param>
         private void SetMainControlsEnabled(bool enabled)
         {
             foreach (Control ctrl in panel1.Controls)
@@ -480,6 +544,9 @@ namespace FractalExplorer
             UpdateAbortButtonState();
         }
 
+        /// <summary>
+        /// Обновляет состояние кнопки отмены рендеринга.
+        /// </summary>
         private void UpdateAbortButtonState()
         {
             if (IsHandleCreated)
@@ -488,6 +555,11 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Потокобезопасно обновляет значение ProgressBar.
+        /// </summary>
+        /// <param name="progressBar">Прогресс-бар для обновления.</param>
+        /// <param name="percentage">Процент выполнения (0-100).</param>
         private void UpdateProgressBar(ProgressBar progressBar, int percentage)
         {
             if (progressBar.IsHandleCreated)
@@ -496,6 +568,10 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Освобождает ресурсы при закрытии формы.
+        /// </summary>
+        /// <param name="e">Данные события.</param>
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             previewRenderCts?.Cancel();
@@ -511,21 +587,48 @@ namespace FractalExplorer
 
         #region ISaveLoadCapableFractal Implementation
 
+        /// <inheritdoc />
         public string FractalTypeIdentifier => "Serpinsky";
 
+        /// <inheritdoc />
         public Type ConcreteSaveStateType => typeof(SerpinskySaveState);
 
+        /// <summary>
+        /// Содержит параметры для рендеринга предпросмотра состояния фрактала.
+        /// </summary>
         public class SerpinskyPreviewParams
         {
+            /// <summary>
+            /// Режим рендеринга.
+            /// </summary>
             public SerpinskyRenderMode RenderMode { get; set; }
+            /// <summary>
+            /// Количество итераций.
+            /// </summary>
             public int Iterations { get; set; }
+            /// <summary>
+            /// Уровень масштабирования.
+            /// </summary>
             public double Zoom { get; set; }
+            /// <summary>
+            /// Координата X центра.
+            /// </summary>
             public double CenterX { get; set; }
+            /// <summary>
+            /// Координата Y центра.
+            /// </summary>
             public double CenterY { get; set; }
+            /// <summary>
+            /// Цвет фрактала.
+            /// </summary>
             public Color FractalColor { get; set; }
+            /// <summary>
+            /// Цвет фона.
+            /// </summary>
             public Color BackgroundColor { get; set; }
         }
 
+        /// <inheritdoc />
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             var state = new SerpinskySaveState(this.FractalTypeIdentifier)
@@ -559,6 +662,7 @@ namespace FractalExplorer
             return state;
         }
 
+        /// <inheritdoc />
         public void LoadState(FractalSaveStateBase stateBase)
         {
             if (stateBase is SerpinskySaveState state)
@@ -597,10 +701,20 @@ namespace FractalExplorer
             }
         }
 
+        /// <summary>
+        /// Кэшированное изображение предпросмотра.
+        /// </summary>
         private static Bitmap _cachedPreviewBitmap;
+        /// <summary>
+        /// Идентификатор состояния для кэшированного предпросмотра.
+        /// </summary>
         private static string _cachedPreviewStateIdentifier;
+        /// <summary>
+        /// Объект блокировки для доступа к кэшу предпросмотра.
+        /// </summary>
         private static readonly object _previewCacheLock = new object();
 
+        /// <inheritdoc />
         public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             string currentStateIdentifier = $"{state.SaveName}_{state.Timestamp}";
@@ -653,6 +767,7 @@ namespace FractalExplorer
             return tileBuffer;
         }
 
+        /// <inheritdoc />
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
             if (string.IsNullOrEmpty(state.PreviewParametersJson))
@@ -700,12 +815,14 @@ namespace FractalExplorer
             return bmp;
         }
 
+        /// <inheritdoc />
         public List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             var specificSaves = SaveFileManager.LoadSaves<SerpinskySaveState>(this.FractalTypeIdentifier);
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <inheritdoc />
         public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<SerpinskySaveState>().ToList();
@@ -714,6 +831,7 @@ namespace FractalExplorer
         #endregion
 
         #region IHighResRenderable Implementation
+        /// <inheritdoc />
         public HighResRenderState GetRenderState()
         {
             var state = new HighResRenderState
@@ -729,23 +847,26 @@ namespace FractalExplorer
             return state;
         }
 
+        /// <summary>
+        /// Создает и настраивает экземпляр движка <see cref="FractalSerpinskyEngine"/> на основе состояния рендеринга.
+        /// </summary>
+        /// <param name="state">Состояние рендеринга.</param>
+        /// <param name="forPreview">Если true, используются пониженные настройки для быстрого предпросмотра.</param>
+        /// <returns>Настроенный экземпляр движка.</returns>
         private FractalSerpinskyEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
             var engine = new FractalSerpinskyEngine();
 
-            // Применяем текущую палитру
             var currentPalette = _paletteManager.ActivePalette;
             engine.FractalColor = currentPalette.FractalColor;
             engine.BackgroundColor = currentPalette.BackgroundColor;
             engine.ColorMode = SerpinskyColorMode.CustomColor;
 
-            // Применяем основные параметры
             engine.RenderMode = FractalTypeIsGeometry.Checked ? SerpinskyRenderMode.Geometric : SerpinskyRenderMode.Chaos;
             engine.CenterX = (double)state.CenterX;
             engine.CenterY = (double)state.CenterY;
             engine.Zoom = (double)state.Zoom;
 
-            // Для предпросмотра используем меньше итераций
             if (forPreview)
             {
                 engine.Iterations = (engine.RenderMode == SerpinskyRenderMode.Geometric)
@@ -760,6 +881,7 @@ namespace FractalExplorer
             return engine;
         }
 
+        /// <inheritdoc />
         public async Task<Bitmap> RenderHighResolutionAsync(HighResRenderState state, int width, int height, int ssaaFactor, IProgress<RenderProgress> progress, CancellationToken cancellationToken)
         {
             isHighResRendering = true;
@@ -775,11 +897,10 @@ namespace FractalExplorer
 
                 if (renderEngine.RenderMode == SerpinskyRenderMode.Geometric)
                 {
-                    // --- СТРАТЕГИЯ SSAA ДЛЯ ГЕОМЕТРИЧЕСКОГО РЕЖИМА ---
+                    // Стратегия SSAA для геометрического режима
                     int highResWidth = width * ssaaFactor;
                     int highResHeight = height * ssaaFactor;
 
-                    // 1. Рендерим в высоком разрешении
                     var highResBmp = new Bitmap(highResWidth, highResHeight, PixelFormat.Format32bppArgb);
                     var bmpData = highResBmp.LockBits(new Rectangle(0, 0, highResWidth, highResHeight), ImageLockMode.WriteOnly, highResBmp.PixelFormat);
                     var buffer = new byte[bmpData.Stride * highResHeight];
@@ -790,7 +911,6 @@ namespace FractalExplorer
                     Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
                     highResBmp.UnlockBits(bmpData);
 
-                    // 2. Качественно сжимаем до целевого размера
                     var finalBmp = new Bitmap(width, height);
                     using (var g = Graphics.FromImage(finalBmp))
                     {
@@ -802,14 +922,12 @@ namespace FractalExplorer
                 }
                 else // Chaos Mode
                 {
-                    // --- СТРАТЕГИЯ УВЕЛИЧЕНИЯ ИТЕРАЦИЙ ДЛЯ РЕЖИМА ХАОСА ---
-                    // Масштабируем количество точек пропорционально количеству пикселей
-                    double basePixels = 1000 * 1000; // Базовое разрешение (1 мегапиксель)
+                    // Стратегия увеличения итераций для режима хаоса
+                    double basePixels = 1000 * 1000;
                     double targetPixels = width * height;
                     double qualityFactor = Math.Max(1.0, targetPixels / basePixels);
                     renderEngine.Iterations = (int)(state.Iterations * qualityFactor);
 
-                    // Рендерим в целевом разрешении, но с большим количеством точек
                     var finalBmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
                     var bmpData = finalBmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, finalBmp.PixelFormat);
                     var buffer = new byte[bmpData.Stride * height];
@@ -831,6 +949,7 @@ namespace FractalExplorer
             }
         }
 
+        /// <inheritdoc />
         public Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight)
         {
             var engine = CreateEngineFromState(state, forPreview: true);

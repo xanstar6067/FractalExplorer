@@ -663,7 +663,7 @@ namespace FractalExplorer.Utilities
                 BackgroundColor = Color.White,
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1S = new FractalSerpinsky.SerpinskyPreviewParams
+            var previewParams1S = new FractalSerpinski.SerpinskyPreviewParams
             {
                 RenderMode = preset1.RenderMode,
                 // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
@@ -692,7 +692,7 @@ namespace FractalExplorer.Utilities
                 BackgroundColor = Color.FromArgb(10, 0, 20),
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2S = new FractalSerpinsky.SerpinskyPreviewParams
+            var previewParams2S = new FractalSerpinski.SerpinskyPreviewParams
             {
                 RenderMode = preset2.RenderMode,
                 // Количество итераций для превью ограничивается, чтобы рендер был быстрым.

@@ -99,7 +99,7 @@ namespace FractalExplorer
         /// <param name="e">Аргументы события.</param>
         private void btnLaunchSerpinsky_Click(object sender, EventArgs e)
         {
-            var form = new FractalSerpinsky();
+            var form = new FractalSerpinski();
             form.Show();
         }
 

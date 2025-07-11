@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer
 {
-    partial class FractalSerpinsky
+    partial class FractalSerpinski
     {
         /// <summary>
         /// Required designer variable.
@@ -224,7 +224,7 @@
             canvasSerpinsky.TabIndex = 2;
             canvasSerpinsky.TabStop = false;
             // 
-            // FractalSerpinsky
+            // FractalSerpinski
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -232,7 +232,7 @@
             Controls.Add(canvasSerpinsky);
             Controls.Add(panel1);
             MinimumSize = new Size(1100, 675);
-            Name = "FractalSerpinsky";
+            Name = "FractalSerpinski";
             Text = "Треугольник Серпинского";
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
