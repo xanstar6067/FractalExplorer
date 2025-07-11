@@ -614,11 +614,6 @@ namespace FractalExplorer.Utilities
             lbColorStops.SelectedIndex = destinationIndex;
         }
 
-        #endregion
-
-        private void txtName_KeyDown_1(object sender, KeyEventArgs e)
-        {
-
-        }
+        #endregion 
     }
 }
