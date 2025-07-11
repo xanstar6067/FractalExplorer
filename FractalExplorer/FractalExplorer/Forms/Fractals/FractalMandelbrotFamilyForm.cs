@@ -1508,9 +1508,9 @@ namespace FractalDraving
             engine.CenterY = state.CenterY;
             engine.Scale = state.BaseScale / state.Zoom;
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
-
+            
             // Настраиваем обе палитры для рендера высокого разрешения
-            engine.UseSmoothColoring = true; // Рендер высокого разрешения всегда со сглаживанием
+            engine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
             engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender);
             engine.Palette = GenerateDiscretePaletteFunction(paletteForRender);
