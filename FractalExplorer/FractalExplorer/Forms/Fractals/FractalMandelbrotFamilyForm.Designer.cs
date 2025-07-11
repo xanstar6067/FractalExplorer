@@ -62,7 +62,6 @@
             // 
             // pnlControls
             // 
-            pnlControls.Controls.Add(cbSmooth);
             pnlControls.Controls.Add(lbSSAA);
             pnlControls.Controls.Add(cbSSAA);
             pnlControls.Controls.Add(btnStateManager);
@@ -110,7 +109,7 @@
             // 
             // btnStateManager
             // 
-            btnStateManager.Location = new Point(6, 359);
+            btnStateManager.Location = new Point(6, 388);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(218, 32);
             btnStateManager.TabIndex = 34;
@@ -120,7 +119,7 @@
             // 
             // color_configurations
             // 
-            color_configurations.Location = new Point(6, 283);
+            color_configurations.Location = new Point(6, 312);
             color_configurations.Name = "color_configurations";
             color_configurations.Size = new Size(218, 32);
             color_configurations.TabIndex = 33;
@@ -149,7 +148,7 @@
             // lblProgress
             // 
             lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(83, 394);
+            lblProgress.Location = new Point(80, 423);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(67, 15);
             lblProgress.TabIndex = 20;
@@ -178,7 +177,7 @@
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(6, 321);
+            btnRender.Location = new Point(6, 350);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(218, 32);
             btnRender.TabIndex = 2;
@@ -187,7 +186,7 @@
             // 
             // pbRenderProgress
             // 
-            pbRenderProgress.Location = new Point(6, 412);
+            pbRenderProgress.Location = new Point(6, 441);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(218, 23);
             pbRenderProgress.TabIndex = 14;
@@ -211,7 +210,7 @@
             // 
             // btnSaveHighRes
             // 
-            btnSaveHighRes.Location = new Point(6, 245);
+            btnSaveHighRes.Location = new Point(6, 274);
             btnSaveHighRes.Name = "btnSaveHighRes";
             btnSaveHighRes.Size = new Size(218, 32);
             btnSaveHighRes.TabIndex = 11;
@@ -316,7 +315,7 @@
             cbSmooth.AutoSize = true;
             cbSmooth.Checked = true;
             cbSmooth.CheckState = CheckState.Checked;
-            cbSmooth.Location = new Point(39, 445);
+            cbSmooth.Location = new Point(138, 121);
             cbSmooth.Name = "cbSmooth";
             cbSmooth.Size = new Size(153, 19);
             cbSmooth.TabIndex = 2;
@@ -337,6 +336,7 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1084, 636);
+            Controls.Add(cbSmooth);
             Controls.Add(canvas);
             Controls.Add(pnlControls);
             MinimumSize = new Size(1100, 675);
@@ -355,6 +355,7 @@
             ((System.ComponentModel.ISupportInitialize)nudBaseScale).EndInit();
             ((System.ComponentModel.ISupportInitialize)canvas).EndInit();
             ResumeLayout(false);
+            PerformLayout();
         }
         #endregion
 
