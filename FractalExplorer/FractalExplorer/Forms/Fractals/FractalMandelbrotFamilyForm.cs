@@ -482,12 +482,31 @@ namespace FractalDraving
 
         private void ApplyActivePalette(IFractalEngine engine)
         {
+            // Шаг 1: Устанавливаем базовые параметры для движка из UI
             engine.MaxIterations = (int)nudIterations.Value;
             engine.ThresholdSquared = (double)(nudThreshold.Value * nudThreshold.Value);
 
+            // Шаг 2: Пытаемся получить активную палитру из менеджера
             var activePalette = _paletteManager.ActivePalette;
-            if (activePalette == null) return;
 
+            // Шаг 3: ГЛАВНОЕ ИЗМЕНЕНИЕ. Проверяем, нашлась ли палитра.
+            if (activePalette == null)
+            {
+                // ЕСЛИ НЕ НАШЛАСЬ:
+                // Даем движку простую "аварийную" черно-белую палитру.
+                // Это гарантирует, что у нас всегда будут цвета для рисования.
+                engine.Palette = (iter, maxIter, maxColorIter) => {
+                    if (iter == maxIter) return Color.Black; // Точки внутри множества - черные
+                                                             // Точки снаружи - оттенки серого, чем дальше от края, тем светлее
+                    int c = 255 - (int)(255.0 * iter / maxIter);
+                    return Color.FromArgb(c, c, c);
+                };
+                engine.MaxColorIterations = engine.MaxIterations;
+                return; // Выходим из метода. Настройка завершена.
+            }
+
+            // Шаг 4: ЕСЛИ ПАЛИТРА НАШЛАСЬ - продолжаем как раньше.
+            // Настраиваем сложную палитру с кэшем и градиентами.
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? engine.MaxIterations : activePalette.MaxColorIterations;
             string newSignature = GeneratePaletteSignature(activePalette, engine.MaxIterations);
 
