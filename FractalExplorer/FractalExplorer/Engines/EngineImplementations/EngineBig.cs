@@ -77,9 +77,10 @@ namespace FractalExplorer.Engines.EngineImplementations
             var z = ComplexBigDecimal.Zero;
             while (iter < MaxIterations && z.MagnitudeSquared <= _thresholdSquaredBig)
             {
+                // ПРАВИЛЬНАЯ ЛОГИКА для Burning Ship
                 var z_abs = new ComplexBigDecimal(
                     new BigDecimal(System.Numerics.BigInteger.Abs(z.Real.Mantissa), z.Real.Exponent),
-                    new BigDecimal(System.Numerics.BigInteger.Abs(z.Imaginary.Mantissa), z.Imaginary.Exponent)
+                    new BigDecimal(System.Numerics.BigInteger.Negate(System.Numerics.BigInteger.Abs(z.Imaginary.Mantissa)), z.Imaginary.Exponent) // Мнимая часть должна быть < 0
                 );
                 z = z_abs * z_abs + c;
                 iter++;
@@ -92,9 +93,10 @@ namespace FractalExplorer.Engines.EngineImplementations
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= _thresholdSquaredBig)
             {
+                // ПРАВИЛЬНАЯ ЛОГИКА для Burning Ship
                 var z_abs = new ComplexBigDecimal(
                     new BigDecimal(System.Numerics.BigInteger.Abs(z.Real.Mantissa), z.Real.Exponent),
-                    new BigDecimal(System.Numerics.BigInteger.Abs(z.Imaginary.Mantissa), z.Imaginary.Exponent)
+                    new BigDecimal(System.Numerics.BigInteger.Negate(System.Numerics.BigInteger.Abs(z.Imaginary.Mantissa)), z.Imaginary.Exponent) // Мнимая часть должна быть < 0
                 );
                 z = z_abs * z_abs + c;
                 iter++;

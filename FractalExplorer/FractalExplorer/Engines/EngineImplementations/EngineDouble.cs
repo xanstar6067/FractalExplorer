@@ -67,7 +67,7 @@ namespace FractalExplorer.Engines.EngineImplementations
             var z = ComplexDouble.Zero;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = new ComplexDouble(Math.Abs(z.Real), Math.Abs(z.Imaginary));
+                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary)); // Минус здесь
                 z = z * z + c;
                 iter++;
             }
@@ -80,7 +80,7 @@ namespace FractalExplorer.Engines.EngineImplementations
             var c = new ComplexDouble((double)c_decimal.Real, (double)c_decimal.Imaginary);
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = new ComplexDouble(Math.Abs(z.Real), Math.Abs(z.Imaginary));
+                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary)); // И минус здесь
                 z = z * z + c;
                 iter++;
             }
