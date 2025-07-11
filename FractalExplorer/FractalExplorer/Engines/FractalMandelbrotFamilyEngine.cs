@@ -1,6 +1,4 @@
-﻿// --- ЗАМЕНИТЬ ВЕСЬ КОД В ФАЙЛЕ FractalMandelbrotFamilyEngine.cs ---
-
-using ExtendedNumerics;
+﻿using ExtendedNumerics;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using System;
