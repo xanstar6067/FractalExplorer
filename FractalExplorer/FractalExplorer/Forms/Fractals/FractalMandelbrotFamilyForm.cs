@@ -187,6 +187,10 @@ namespace FractalDraving
             if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
 
+            // ИСПРАВЛЕНИЕ: Убедимся, что обработчик для btnStateManager привязан.
+            var stateManagerButton = Controls.Find("btnStateManager", true).FirstOrDefault();
+            if (stateManagerButton != null) stateManagerButton.Click += btnStateManager_Click;
+
             var configButton = Controls.Find("color_configurations", true).FirstOrDefault();
             if (configButton != null) configButton.Click += color_configurations_Click;
 
@@ -232,6 +236,15 @@ namespace FractalDraving
                 _colorConfigForm.Show(this);
             }
             else _colorConfigForm.Activate();
+        }
+
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+            // Этот метод открывает диалог управления сохранениями и пресетами.
+            using (var dialog = new SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
         }
 
         #endregion
@@ -692,8 +705,6 @@ namespace FractalDraving
         }
         public virtual List<FractalSaveStateBase> LoadAllSavesForThisType() { throw new NotImplementedException(); }
         public virtual void SaveAllSavesForThisType(List<FractalSaveStateBase> saves) { throw new NotImplementedException(); }
-        // Этот метод больше не используется, но может требоваться по зависимостям, которые мы не трогали
-        private void btnOpenSaveManager_Click(object sender, EventArgs e) { }
 
         // Старый асинхронный метод для превью тайлов, который можно будет удалить или адаптировать позже
         public virtual async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
