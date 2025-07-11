@@ -1,4 +1,6 @@
-﻿using ExtendedNumerics;
+﻿// --- ЗАМЕНИТЬ ВЕСЬ КОД В ФАЙЛЕ FractalMandelbrotFamilyEngine.cs ---
+
+using ExtendedNumerics;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using System;
@@ -17,9 +19,6 @@ namespace FractalExplorer.Engines
     /// </summary>
     public abstract class FractalMandelbrotFamilyEngine
     {
-        /// <summary>
-        /// Пороговое значение масштабирования (zoom), после которого движок переключается на вычисления с BigDecimal.
-        /// </summary>
         public static readonly decimal ZoomThresholdForBigDecimal = 22758000000000000000000000m;
 
         public int MaxIterations { get; set; }
@@ -39,9 +38,6 @@ namespace FractalExplorer.Engines
         protected abstract int GetIterationsForPointBig(BigDecimal re, BigDecimal im);
         #endregion
 
-        /// <summary>
-        /// Проверяет, нужно ли использовать вычисления с высокой точностью (BigDecimal).
-        /// </summary>
         private bool ShouldUseBigDecimal()
         {
             if (Scale == 0) return false;
@@ -50,51 +46,88 @@ namespace FractalExplorer.Engines
                 decimal currentZoom = BaseScale / Scale;
                 return currentZoom > ZoomThresholdForBigDecimal;
             }
-            catch (OverflowException)
+            catch (OverflowException) { return true; }
+        }
+
+        /// <summary>
+        /// Устанавливает точность для вычислений с BigDecimal на основе текущего масштаба.
+        /// Это ключевая оптимизация для предотвращения зависаний при глубоком зуме.
+        /// </summary>
+        private void SetPrecisionForBigMath()
+        {
+            try
             {
-                return true;
+                BigDecimal currentZoom;
+                try
+                {
+                    currentZoom = new BigDecimal(BaseScale / Scale);
+                }
+                catch (OverflowException)
+                {
+                    currentZoom = BigDecimal.Pow(10, 30);
+                }
+
+                int requiredPrecision = (int)BigDecimal.Log10(currentZoom < 1 ? 1 : currentZoom) + 15;
+
+                const int minPrecision = 50;
+                const int maxPrecision = 1000;
+
+                BigDecimal.Precision = Math.Max(minPrecision, Math.Min(maxPrecision, requiredPrecision));
+            }
+            catch
+            {
+                BigDecimal.Precision = 50;
             }
         }
 
-        #region Tile Rendering (RenderTile, RenderSingleTile) - Логика выбора точности
+        #region Public Rendering Methods (Dispatchers)
 
-        /// <summary>
-        /// Отрисовывает одну плитку (тайл) в предоставленный общий буфер пикселей.
-        /// Этот метод оставлен для совместимости, но не использует внутреннее распараллеливание.
-        /// </summary>
         public void RenderTile(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
         {
-            // Эта реализация осталась последовательной для обратной совместимости, если где-то используется.
-            // Основной рендеринг в форме использует RenderSingleTile, который теперь распараллелен.
             if (ShouldUseBigDecimal())
-            {
                 RenderTileBig(buffer, stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
-            }
             else
-            {
                 RenderTileDecimal(buffer, stride, bytesPerPixel, tile, canvasWidth, canvasHeight);
-            }
         }
 
-        /// <summary>
-        /// Отрисовывает одну плитку в ее собственный, отдельный байтовый массив.
-        /// ВНУТРЕННИЕ ЦИКЛЫ ЭТОГО МЕТОДА РАСПАРАЛЛЕЛЕНЫ для ускорения на многоядерных ЦП.
-        /// </summary>
         public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
             if (ShouldUseBigDecimal())
-            {
                 return RenderSingleTileBig(tile, canvasWidth, canvasHeight, out bytesPerPixel);
-            }
             else
-            {
                 return RenderSingleTileDecimal(tile, canvasWidth, canvasHeight, out bytesPerPixel);
-            }
+        }
+
+        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
+        {
+            if (supersamplingFactor <= 1)
+                return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
+
+            if (ShouldUseBigDecimal())
+                return RenderSingleTileSSAABig(tile, canvasWidth, canvasHeight, supersamplingFactor, out bytesPerPixel);
+            else
+                return RenderSingleTileSSAADecimal(tile, canvasWidth, canvasHeight, supersamplingFactor, out bytesPerPixel);
+        }
+
+        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken = default)
+        {
+            if (ShouldUseBigDecimal())
+                return RenderToBitmapSSAABig(finalWidth, finalHeight, numThreads, reportProgressCallback, supersamplingFactor, cancellationToken);
+            else
+                return RenderToBitmapSSAADecimal(finalWidth, finalHeight, numThreads, reportProgressCallback, supersamplingFactor, cancellationToken);
+        }
+
+        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
+        {
+            if (ShouldUseBigDecimal())
+                return RenderToBitmapBig(renderWidth, renderHeight, numThreads, reportProgressCallback, cancellationToken);
+            else
+                return RenderToBitmapDecimal(renderWidth, renderHeight, numThreads, reportProgressCallback, cancellationToken);
         }
 
         #endregion
 
-        #region Internal Sequential Tile Rendering (для RenderTile)
+        #region Internal Rendering Implementations
 
         private void RenderTileDecimal(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
         {
@@ -102,7 +135,6 @@ namespace FractalExplorer.Engines
             decimal halfWidthPixels = canvasWidth / 2.0m;
             decimal halfHeightPixels = canvasHeight / 2.0m;
             decimal unitsPerPixel = Scale / canvasWidth;
-
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
                 int canvasY = tile.Bounds.Y + y;
@@ -111,13 +143,10 @@ namespace FractalExplorer.Engines
                 {
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
-
                     decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
                     decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
-
                     int iter = GetIterationsForPoint(re, im);
                     Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-
                     int bufferIndex = canvasY * stride + canvasX * bytesPerPixel;
                     if (bufferIndex + bytesPerPixel - 1 < buffer.Length)
                     {
@@ -130,11 +159,11 @@ namespace FractalExplorer.Engines
 
         private void RenderTileBig(byte[] buffer, int stride, int bytesPerPixel, TileInfo tile, int canvasWidth, int canvasHeight)
         {
+            SetPrecisionForBigMath();
             if (canvasWidth <= 0 || canvasHeight <= 0) return;
             BigDecimal centerX_big = new BigDecimal(CenterX), centerY_big = new BigDecimal(CenterY), scale_big = new BigDecimal(Scale);
             BigDecimal halfWidthPixels_big = new BigDecimal(canvasWidth) / 2, halfHeightPixels_big = new BigDecimal(canvasHeight) / 2;
             BigDecimal unitsPerPixel_big = scale_big / canvasWidth;
-
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
                 int canvasY = tile.Bounds.Y + y;
@@ -143,13 +172,10 @@ namespace FractalExplorer.Engines
                 {
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
-
                     BigDecimal re = centerX_big + (canvasX - halfWidthPixels_big) * unitsPerPixel_big;
                     BigDecimal im = centerY_big - (canvasY - halfHeightPixels_big) * unitsPerPixel_big;
-
                     int iter = GetIterationsForPointBig(re, im);
                     Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-
                     int bufferIndex = canvasY * stride + canvasX * bytesPerPixel;
                     if (bufferIndex + bytesPerPixel - 1 < buffer.Length)
                     {
@@ -160,13 +186,6 @@ namespace FractalExplorer.Engines
             }
         }
 
-        #endregion
-
-        #region Internal PARALLEL Tile Rendering (для RenderSingleTile)
-
-        /// <summary>
-        /// Рендерит плитку с использованием Decimal и внутреннего распараллеливания по строкам.
-        /// </summary>
         private byte[] RenderSingleTileDecimal(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
@@ -177,7 +196,6 @@ namespace FractalExplorer.Engines
             decimal halfHeightPixels = canvasHeight / 2.0m;
             decimal unitsPerPixel = Scale / canvasWidth;
 
-            // Стандартный последовательный рендеринг для decimal
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
                 for (int x = 0; x < tile.Bounds.Width; x++)
@@ -197,18 +215,13 @@ namespace FractalExplorer.Engines
                     buffer[bufferIndex + 3] = 255;
                 }
             }
-
             return buffer;
         }
 
-        /// <summary>
-        /// Рендерит плитку с использованием BigDecimal и внутреннего распараллеливания по строкам.
-        /// </summary>
         private byte[] RenderSingleTileBig(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
-            // ИСПРАВЛЕНИЕ: Сначала присваиваем значение out-параметру.
+            SetPrecisionForBigMath();
             bytesPerPixel = 4;
-            // Затем создаем локальную копию переменной для использования внутри лямбда-выражения.
             int bpp = bytesPerPixel;
 
             byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bpp];
@@ -218,7 +231,6 @@ namespace FractalExplorer.Engines
             BigDecimal halfWidthPixels_big = new BigDecimal(canvasWidth) / 2, halfHeightPixels_big = new BigDecimal(canvasHeight) / 2;
             BigDecimal unitsPerPixel_big = scale_big / canvasWidth;
 
-            // Цикл по Y распараллелен. Все ядра рендерят одну "тяжелую" плитку.
             Parallel.For(0, tile.Bounds.Height, y =>
             {
                 for (int x = 0; x < tile.Bounds.Width; x++)
@@ -232,7 +244,6 @@ namespace FractalExplorer.Engines
                     int iter = GetIterationsForPointBig(re, im);
                     Color pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
 
-                    // ИСПОЛЬЗУЕМ ЛОКАЛЬНУЮ ПЕРЕМЕННУЮ bpp
                     int bufferIndex = (y * tile.Bounds.Width + x) * bpp;
                     buffer[bufferIndex] = pixelColor.B;
                     buffer[bufferIndex + 1] = pixelColor.G;
@@ -244,33 +255,11 @@ namespace FractalExplorer.Engines
             return buffer;
         }
 
-        #endregion
-
-        #region Supersampling (SSAA) Implementation - методы также используют внутреннее распараллеливание
-
-        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
-        {
-            if (supersamplingFactor <= 1)
-            {
-                return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
-            }
-
-            if (ShouldUseBigDecimal())
-            {
-                return RenderSingleTileSSAABig(tile, canvasWidth, canvasHeight, supersamplingFactor, out bytesPerPixel);
-            }
-            else
-            {
-                return RenderSingleTileSSAADecimal(tile, canvasWidth, canvasHeight, supersamplingFactor, out bytesPerPixel);
-            }
-        }
-
         private byte[] RenderSingleTileSSAADecimal(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
             byte[] finalTileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
             if (canvasWidth <= 0 || canvasHeight <= 0) return finalTileBuffer;
-
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
             int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
             Color[,] highResColorBuffer = new Color[highResTileWidth, highResTileHeight];
@@ -278,8 +267,6 @@ namespace FractalExplorer.Engines
             decimal unitsPerSubPixel = Scale / highResCanvasWidth;
             decimal highResHalfWidthPixels = highResCanvasWidth / 2.0m;
             decimal highResHalfHeightPixels = (long)canvasHeight * supersamplingFactor / 2.0m;
-
-            // Расчет суперсэмплированных данных уже был распараллелен, что хорошо.
             Parallel.For(0, highResTileHeight, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
@@ -292,16 +279,13 @@ namespace FractalExplorer.Engines
                     highResColorBuffer[x, y] = Palette(iterVal, MaxIterations, MaxColorIterations);
                 }
             });
-
-            // Усреднение (downsampling) выполняется последовательно, т.к. это очень быстрая операция.
             int sampleCount = supersamplingFactor * supersamplingFactor;
             for (int finalY = 0; finalY < tile.Bounds.Height; finalY++)
             {
                 for (int finalX = 0; finalX < tile.Bounds.Width; finalX++)
                 {
                     long totalR = 0, totalG = 0, totalB = 0;
-                    int startSubX = finalX * supersamplingFactor;
-                    int startSubY = finalY * supersamplingFactor;
+                    int startSubX = finalX * supersamplingFactor, startSubY = finalY * supersamplingFactor;
                     for (int subY = 0; subY < supersamplingFactor; subY++)
                     {
                         for (int subX = 0; subX < supersamplingFactor; subX++)
@@ -322,21 +306,18 @@ namespace FractalExplorer.Engines
 
         private byte[] RenderSingleTileSSAABig(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
         {
+            SetPrecisionForBigMath();
             bytesPerPixel = 4;
             byte[] finalTileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
             if (canvasWidth <= 0 || canvasHeight <= 0) return finalTileBuffer;
-
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
             int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
             Color[,] highResColorBuffer = new Color[highResTileWidth, highResTileHeight];
-
             BigDecimal centerX_big = new BigDecimal(CenterX), centerY_big = new BigDecimal(CenterY), scale_big = new BigDecimal(Scale);
             BigDecimal highResCanvasWidth_big = new BigDecimal(canvasWidth) * supersamplingFactor;
             BigDecimal unitsPerSubPixel_big = scale_big / highResCanvasWidth_big;
             BigDecimal highResHalfWidthPixels_big = highResCanvasWidth_big / 2;
             BigDecimal highResHalfHeightPixels_big = new BigDecimal(canvasHeight) * supersamplingFactor / 2;
-
-            // Расчет суперсэмплированных данных уже был распараллелен.
             Parallel.For(0, highResTileHeight, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
@@ -349,16 +330,13 @@ namespace FractalExplorer.Engines
                     highResColorBuffer[x, y] = Palette(iterVal, MaxIterations, MaxColorIterations);
                 }
             });
-
-            // Усреднение (downsampling).
             int sampleCount = supersamplingFactor * supersamplingFactor;
             for (int finalY = 0; finalY < tile.Bounds.Height; finalY++)
             {
                 for (int finalX = 0; finalX < tile.Bounds.Width; finalX++)
                 {
                     long totalR = 0, totalG = 0, totalB = 0;
-                    int startSubX = finalX * supersamplingFactor;
-                    int startSubY = finalY * supersamplingFactor;
+                    int startSubX = finalX * supersamplingFactor, startSubY = finalY * supersamplingFactor;
                     for (int subY = 0; subY < supersamplingFactor; subY++)
                     {
                         for (int subX = 0; subX < supersamplingFactor; subX++)
@@ -377,39 +355,21 @@ namespace FractalExplorer.Engines
             return finalTileBuffer;
         }
 
-        #endregion
-
-        #region Full Bitmap Rendering (для сохранения в высоком разрешении)
-
-        public Bitmap RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken = default)
-        {
-            // Эта логика осталась без изменений, она уже оптимально распараллелена для своей задачи.
-            if (ShouldUseBigDecimal())
-            {
-                return RenderToBitmapSSAABig(finalWidth, finalHeight, numThreads, reportProgressCallback, supersamplingFactor, cancellationToken);
-            }
-            else
-            {
-                return RenderToBitmapSSAADecimal(finalWidth, finalHeight, numThreads, reportProgressCallback, supersamplingFactor, cancellationToken);
-            }
-        }
-
         private Bitmap RenderToBitmapSSAADecimal(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken)
         {
             if (finalWidth <= 0 || finalHeight <= 0) return new Bitmap(1, 1);
             if (supersamplingFactor <= 1)
                 return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback, cancellationToken);
-
             int highResWidth = finalWidth * supersamplingFactor;
             int highResHeight = finalHeight * supersamplingFactor;
             Color[,] tempColorBuffer = new Color[highResWidth, highResHeight];
             ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
             long doneLines = 0;
             decimal unitsPerPixel = Scale / finalWidth;
-
             try
             {
-                Parallel.For(0, highResHeight, po, y => {
+                Parallel.For(0, highResHeight, po, y =>
+                {
                     cancellationToken.ThrowIfCancellationRequested();
                     for (int x = 0; x < highResWidth; x++)
                     {
@@ -427,7 +387,8 @@ namespace FractalExplorer.Engines
                 byte[] finalBuffer = new byte[Math.Abs(bmpData.Stride) * finalHeight];
                 int sampleCount = supersamplingFactor * supersamplingFactor;
                 doneLines = 0;
-                Parallel.For(0, finalHeight, po, finalY => {
+                Parallel.For(0, finalHeight, po, finalY =>
+                {
                     cancellationToken.ThrowIfCancellationRequested();
                     int rowOffset = finalY * bmpData.Stride;
                     for (int finalX = 0; finalX < finalWidth; finalX++)
@@ -459,6 +420,7 @@ namespace FractalExplorer.Engines
 
         private Bitmap RenderToBitmapSSAABig(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken)
         {
+            SetPrecisionForBigMath();
             if (finalWidth <= 0 || finalHeight <= 0) return new Bitmap(1, 1);
             int highResWidth = finalWidth * supersamplingFactor, highResHeight = finalHeight * supersamplingFactor;
             Color[,] tempColorBuffer = new Color[highResWidth, highResHeight];
@@ -469,7 +431,8 @@ namespace FractalExplorer.Engines
             BigDecimal highResWidth_big = highResWidth, highResHeight_big = highResHeight;
             try
             {
-                Parallel.For(0, highResHeight, po, y => {
+                Parallel.For(0, highResHeight, po, y =>
+                {
                     cancellationToken.ThrowIfCancellationRequested();
                     for (int x = 0; x < highResWidth; x++)
                     {
@@ -487,7 +450,8 @@ namespace FractalExplorer.Engines
                 byte[] finalBuffer = new byte[Math.Abs(bmpData.Stride) * finalHeight];
                 int sampleCount = supersamplingFactor * supersamplingFactor;
                 doneLines = 0;
-                Parallel.For(0, finalHeight, po, finalY => {
+                Parallel.For(0, finalHeight, po, finalY =>
+                {
                     cancellationToken.ThrowIfCancellationRequested();
                     int rowOffset = finalY * bmpData.Stride;
                     for (int finalX = 0; finalX < finalWidth; finalX++)
@@ -517,14 +481,6 @@ namespace FractalExplorer.Engines
             catch (OperationCanceledException) { return new Bitmap(1, 1); }
         }
 
-        public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
-        {
-            if (ShouldUseBigDecimal())
-                return RenderToBitmapBig(renderWidth, renderHeight, numThreads, reportProgressCallback, cancellationToken);
-            else
-                return RenderToBitmapDecimal(renderWidth, renderHeight, numThreads, reportProgressCallback, cancellationToken);
-        }
-
         private Bitmap RenderToBitmapDecimal(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken)
         {
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
@@ -536,7 +492,8 @@ namespace FractalExplorer.Engines
             decimal halfWidthPixels = renderWidth / 2.0m, halfHeightPixels = renderHeight / 2.0m, unitsPerPixel = Scale / renderWidth;
             try
             {
-                Parallel.For(0, renderHeight, po, y => {
+                Parallel.For(0, renderHeight, po, y =>
+                {
                     cancellationToken.ThrowIfCancellationRequested();
                     int rowOffset = y * bmpData.Stride;
                     for (int x = 0; x < renderWidth; x++)
@@ -552,7 +509,7 @@ namespace FractalExplorer.Engines
                     if (renderHeight > 0) reportProgressCallback((int)(100.0 * currentDone / renderHeight));
                 });
             }
-            catch (OperationCanceledException) { /* Игнорируем */ }
+            catch (OperationCanceledException) { /* Ignored */ }
             Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
             bmp.UnlockBits(bmpData);
             return bmp;
@@ -560,6 +517,7 @@ namespace FractalExplorer.Engines
 
         private Bitmap RenderToBitmapBig(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken)
         {
+            SetPrecisionForBigMath();
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
             Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -571,7 +529,8 @@ namespace FractalExplorer.Engines
             BigDecimal unitsPerPixel_big = scale_big / renderWidth;
             try
             {
-                Parallel.For(0, renderHeight, po, y => {
+                Parallel.For(0, renderHeight, po, y =>
+                {
                     cancellationToken.ThrowIfCancellationRequested();
                     int rowOffset = y * bmpData.Stride;
                     for (int x = 0; x < renderWidth; x++)
@@ -587,7 +546,7 @@ namespace FractalExplorer.Engines
                     if (renderHeight > 0) reportProgressCallback((int)(100.0 * currentDone / renderHeight));
                 });
             }
-            catch (OperationCanceledException) { /* Игнорируем */ }
+            catch (OperationCanceledException) { /* Ignored */ }
             Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
             bmp.UnlockBits(bmpData);
             return bmp;
@@ -597,23 +556,18 @@ namespace FractalExplorer.Engines
 
     }
 
-    #region Concrete Engines (с сохранением оригинальной формулы Burning Ship)
+    #region Concrete Engines
 
-    /// <summary>
-    /// Движок рендеринга для множества Мандельброта.
-    /// </summary>
     public class MandelbrotEngine : FractalMandelbrotFamilyEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im) => CalculateIterations(ComplexDecimal.Zero, new ComplexDecimal(re, im));
         protected override int GetIterationsForPointBig(BigDecimal re, BigDecimal im) => CalculateIterationsBig(ComplexBig.Zero, new ComplexBig(re, im));
-
         public override int CalculateIterations(ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared) { z = z * z + c; iter++; }
             return iter;
         }
-
         public override int CalculateIterationsBig(ComplexBig z, ComplexBig c)
         {
             int iter = 0;
@@ -623,21 +577,16 @@ namespace FractalExplorer.Engines
         }
     }
 
-    /// <summary>
-    /// Движок рендеринга для множества Жюлиа.
-    /// </summary>
     public class JuliaEngine : FractalMandelbrotFamilyEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im) => CalculateIterations(new ComplexDecimal(re, im), C);
         protected override int GetIterationsForPointBig(BigDecimal re, BigDecimal im) => CalculateIterationsBig(new ComplexBig(re, im), new ComplexBig(new BigDecimal(C.Real), new BigDecimal(C.Imaginary)));
-
         public override int CalculateIterations(ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared) { z = z * z + c; iter++; }
             return iter;
         }
-
         public override int CalculateIterationsBig(ComplexBig z, ComplexBig c)
         {
             int iter = 0;
@@ -647,14 +596,10 @@ namespace FractalExplorer.Engines
         }
     }
 
-    /// <summary>
-    /// Движок рендеринга для фрактала "Пылающий корабль" Мандельброта.
-    /// </summary>
     public class MandelbrotBurningShipEngine : FractalMandelbrotFamilyEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im) => CalculateIterations(ComplexDecimal.Zero, new ComplexDecimal(re, im));
         protected override int GetIterationsForPointBig(BigDecimal re, BigDecimal im) => CalculateIterationsBig(ComplexBig.Zero, new ComplexBig(re, im));
-
         public override int CalculateIterations(ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
@@ -666,7 +611,6 @@ namespace FractalExplorer.Engines
             }
             return iter;
         }
-
         public override int CalculateIterationsBig(ComplexBig z, ComplexBig c)
         {
             int iter = 0;
@@ -681,14 +625,10 @@ namespace FractalExplorer.Engines
         }
     }
 
-    /// <summary>
-    /// Движок рендеринга для фрактала "Пылающий корабль" Жюлиа.
-    /// </summary>
     public class JuliaBurningShipEngine : FractalMandelbrotFamilyEngine
     {
         protected override int GetIterationsForPoint(decimal re, decimal im) => CalculateIterations(new ComplexDecimal(re, im), C);
         protected override int GetIterationsForPointBig(BigDecimal re, BigDecimal im) => CalculateIterationsBig(new ComplexBig(re, im), new ComplexBig(new BigDecimal(C.Real), new BigDecimal(C.Imaginary)));
-
         public override int CalculateIterations(ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
@@ -700,7 +640,6 @@ namespace FractalExplorer.Engines
             }
             return iter;
         }
-
         public override int CalculateIterationsBig(ComplexBig z, ComplexBig c)
         {
             int iter = 0;
