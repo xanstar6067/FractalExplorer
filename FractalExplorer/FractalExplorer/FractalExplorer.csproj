@@ -47,4 +47,8 @@
 
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ExtendedNumerics.BigDecimal" Version="3000.0.4.132" />
+  </ItemGroup>
+
 </Project>
