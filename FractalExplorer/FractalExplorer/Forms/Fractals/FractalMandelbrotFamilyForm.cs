@@ -260,6 +260,7 @@ namespace FractalDraving
             nudZoom.ValueChanged += ParamControl_Changed;
             if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
+            cbSmooth.CheckedChanged += ParamControl_Changed;
 
             btnRender.Click += (s, e) => ScheduleRender();
 
@@ -893,8 +894,8 @@ namespace FractalDraving
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BaseScale / _zoom;
 
-            // --- НОВОЕ: Включаем сглаживание по умолчанию ---
-            _fractalEngine.UseSmoothColoring = true;
+            // --- НОВОЕ: Включаем сглаживание по умолчанию ---  // теперь реализовано. потом удалю этот комментарий.
+            _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
 
             UpdateEngineSpecificParameters();
             ApplyActivePalette();
@@ -1005,13 +1006,14 @@ namespace FractalDraving
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
 
+            // --- ИСПРАВЛЕНИЕ: ВОЗВРАЩАЕМ СПЕЦИАЛЬНУЮ ЛОГИКУ ДЛЯ "Стандартный серый" ---
             if (palette.Name == "Стандартный серый")
             {
                 return (iter, maxIter, maxColorIter) =>
                 {
                     if (iter == maxIter) return Color.Black;
                     double logMax = Math.Log(maxColorIter + 1);
-                    if (logMax == 0) return Color.Black;
+                    if (logMax <= 0) return Color.Black;
                     double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
                     int cVal = (int)(255.0 * (1 - tLog));
                     return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
@@ -1050,27 +1052,41 @@ namespace FractalDraving
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
-            // Определяем, по какому диапазону итераций "зацикливать" цвета
             int maxColorIter = palette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : palette.MaxColorIterations;
 
+            // --- ИСПРАВЛЕНИЕ: ВОЗВРАЩАЕМ СПЕЦИАЛЬНУЮ ЛОГИКУ ДЛЯ "Стандартный серый" ---
+            if (palette.Name == "Стандартный серый")
+            {
+                return (smoothIter) =>
+                {
+                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+
+                    double logMax = Math.Log(maxColorIter + 1);
+                    if (logMax <= 0) return Color.Black;
+
+                    // Используем ту же логарифмическую шкалу, но с дробным значением и зацикливанием
+                    double iterValue = smoothIter % maxColorIter;
+                    double tLog = Math.Log(iterValue + 1) / logMax;
+                    int cVal = (int)(255.0 * (1 - tLog));
+
+                    return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
+                };
+            }
+
             if (colorCount == 0) return (smoothIter) => Color.Black;
-            if (colorCount == 1) return (smoothIter) => ColorCorrection.ApplyGamma(colors[0], gamma);
+            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
             // Возвращаем функцию, которая принимает ДРОБНОЕ значение итерации
             return (smoothIter) =>
             {
-                // Если точка внутри множества, она черная
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
 
-                // "Зацикливаем" значение итерации по диапазону цветов палитры.
-                // Например, если maxColorIter = 200, то итерации 1.5, 201.5, 401.5 будут иметь одинаковый цвет.
                 double t = (smoothIter % maxColorIter) / maxColorIter;
 
-                // Рассчитываем позицию в градиенте
                 double scaledT = t * (colorCount - 1);
                 int index1 = (int)Math.Floor(scaledT);
                 int index2 = Math.Min(index1 + 1, colorCount - 1);
-                double localT = scaledT - index1; // Дробная часть для интерполяции
+                double localT = scaledT - index1;
 
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
@@ -1088,10 +1104,8 @@ namespace FractalDraving
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
 
-            // --- НОВОЕ: Настраиваем ОБЕ палитры в движке ---
             _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette);
 
-            // --- СТАРОЕ: Логика с кэшированием для дискретного режима остается ---
             if (_gammaCorrectedPaletteCache == null || newSignature != _paletteCacheSignature)
             {
                 _paletteCacheSignature = newSignature;

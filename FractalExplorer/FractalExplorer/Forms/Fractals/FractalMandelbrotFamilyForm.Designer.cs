@@ -47,6 +47,7 @@
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
             canvas = new PictureBox();
+            cbSmooth = new CheckBox();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
@@ -61,6 +62,7 @@
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(cbSmooth);
             pnlControls.Controls.Add(lbSSAA);
             pnlControls.Controls.Add(cbSSAA);
             pnlControls.Controls.Add(btnStateManager);
@@ -318,6 +320,16 @@
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
+            // cbSmooth
+            // 
+            cbSmooth.AutoSize = true;
+            cbSmooth.Location = new Point(49, 441);
+            cbSmooth.Name = "cbSmooth";
+            cbSmooth.Size = new Size(83, 19);
+            cbSmooth.TabIndex = 2;
+            cbSmooth.Text = "checkBox1";
+            cbSmooth.UseVisualStyleBackColor = true;
+            // 
             // FractalMandelbrotFamilyForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -370,5 +382,6 @@
         private Button btnStateManager;
         private ComboBox cbSSAA;
         protected Label lbSSAA;
+        private CheckBox cbSmooth;
     }
 }
