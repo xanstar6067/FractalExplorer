@@ -1,12 +1,9 @@
-﻿using FractalDraving;
-using FractalExplorer.Engines; // Может быть не нужен, но оставим для совместимости
+﻿using FractalExplorer.Engines; 
 using FractalExplorer.Forms;
 using FractalExplorer.Utilities.JsonConverters;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using System; // Добавим для Math
-using System.Collections.Generic; // Добавим для List
-using System.Drawing; // Добавим для Color
+
 using System.Text.Json;
 
 namespace FractalExplorer.Utilities
@@ -19,10 +16,31 @@ namespace FractalExplorer.Utilities
     {
         #region Constants
 
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов семейства Мандельброта.
+        /// Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
+        /// в окне сохранения/загрузки, не нагружая систему слишком сильно.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1000;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Феникс.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Бассейны Ньютона.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра геометрического фрактала Серпинского.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра хаотического фрактала Серпинского.
+        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
 
         #endregion
@@ -31,7 +49,8 @@ namespace FractalExplorer.Utilities
 
         /// <summary>
         /// ИСПРАВЛЕНИЕ: Локальный класс, заменяющий удаленный FractalMandelbrotFamilyForm.PreviewParams.
-        /// Это делает PresetManager самодостаточным и устраняет ошибку компиляции.
+        /// Это делает PresetManager самодостаточным и устраняет ошибку компиляции,
+        /// позволяя сериализовать параметры предпросмотра для семейства Мандельброта/Жюлиа.
         /// </summary>
         private class MandelbrotPreviewParams
         {
@@ -146,7 +165,7 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
             presets.Add(preset2);
 
-            // Пресет 3: Электрическая Розетка (переименовано в Лоза)
+            // Пресет 3: Лоза
             // Уникальный узор, напоминающий электрическую розетку, найденный в сложной области фрактала Мандельброта.
             var preset3 = new MandelbrotFamilySaveState("Mandelbrot")
             {
@@ -429,7 +448,7 @@ namespace FractalExplorer.Utilities
         {
             var presets = new List<FractalSaveStateBase>();
 
-            // Пресет 1: Космический Цветок (переименовано в Фиолетовый Пламень Жюлиа)
+            // Пресет 1: Фиолетовый Пламень Жюлиа
             // Форма фрактала Жюлиа "Горящий Корабль", напоминающая цветок или сложную космическую структуру.
             var preset1 = new JuliaFamilySaveState("JuliaBurningShip")
             {
@@ -459,7 +478,7 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1JBS);
             presets.Add(preset1);
 
-            // Пресет 2: Огненный Дракон (переименовано в Пульсарный Рубин)
+            // Пресет 2: Пульсарный Рубин
             // Динамичная форма, напоминающая голову или тело дракона, пылающего яркими, огненными цветами.
             var preset2 = new JuliaFamilySaveState("JuliaBurningShip")
             {
@@ -489,7 +508,7 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2JBS);
             presets.Add(preset2);
 
-            // Пресет 3: Туманность Андромеды (стил.) (переименовано в Психонавт)
+            // Пресет 3: Психонавт
             // Абстрактная форма, напоминающая галактическую туманность с плавными переходами цветов.
             var preset3 = new JuliaFamilySaveState("JuliaBurningShip")
             {
