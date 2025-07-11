@@ -13,7 +13,7 @@ namespace FractalExplorer.Engines
     /// <summary>
     /// Абстрактный базовый класс, реализующий общую логику рендеринга.
     /// </summary>
-    public abstract class EngineBase : IFractalEngine
+    public abstract class EngineBaseMandelbrotFamily : IFractalEngine
     {
         public int MaxIterations { get; set; }
         public double ThresholdSquared { get; set; } = 4.0;
