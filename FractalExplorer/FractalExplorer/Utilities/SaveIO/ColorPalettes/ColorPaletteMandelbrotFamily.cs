@@ -30,9 +30,8 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         private void LoadPalettes()
         {
             Palettes.Clear();
-            Palettes.AddRange(CreateBuiltInPalettes());
+            Palettes.AddRange(CreateBuiltInPalettesMandelbrotFamily());
 
-            // ИЗМЕНЕНО: Формирование полного пути к файлу в папке "Saves"
             string filePath = Path.Combine(Application.StartupPath, "Saves", CUSTOM_PALETTES_FILE);
 
             if (File.Exists(filePath))
@@ -117,7 +116,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// Создает коллекцию встроенных (предопределенных) цветовых палитр.
         /// </summary>
         /// <returns>Коллекция встроенных палитр.</returns>
-        private IEnumerable<PaletteManagerMandelbrotFamily> CreateBuiltInPalettes()
+        private IEnumerable<PaletteManagerMandelbrotFamily> CreateBuiltInPalettesMandelbrotFamily()
         {
             return new List<PaletteManagerMandelbrotFamily>
             {
