@@ -11,17 +11,50 @@ using System.Windows.Forms;
 
 namespace FractalExplorer.Forms.Other
 {
+    /// <summary>
+    /// Форма для управления процессом рендеринга и сохранения изображений фракталов в высоком разрешении.
+    /// </summary>
     public partial class SaveImageManagerForm : Form
     {
+        /// <summary>
+        /// Источник для рендеринга изображения.
+        /// </summary>
         private readonly IHighResRenderable _renderSource;
+
+        /// <summary>
+        /// Состояние рендеринга, содержащее параметры для отрисовки.
+        /// </summary>
         private readonly HighResRenderState _renderState;
+
+        /// <summary>
+        /// Источник токенов для отмены асинхронной операции рендеринга.
+        /// </summary>
         private CancellationTokenSource _cts;
+
+        /// <summary>
+        /// Флаг, указывающий, выполняется ли в данный момент процесс рендеринга.
+        /// </summary>
         private bool _isRendering = false;
 
+        /// <summary>
+        /// Секундомер для измерения времени рендеринга.
+        /// </summary>
         private readonly Stopwatch _renderStopwatch;
+
+        /// <summary>
+        /// Таймер для обновления пользовательского интерфейса.
+        /// </summary>
         private readonly System.Windows.Forms.Timer _uiUpdateTimer;
+
+        /// <summary>
+        /// Последнее сообщение о статусе для отображения.
+        /// </summary>
         private string _lastStatusMessage;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="SaveImageManagerForm"/>.
+        /// </summary>
+        /// <param name="renderSource">Источник, способный выполнить рендеринг изображения в высоком разрешении.</param>
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
             InitializeComponent();
@@ -33,6 +66,9 @@ namespace FractalExplorer.Forms.Other
             _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
         }
 
+        /// <summary>
+        /// Обрабатывает событие Tick таймера обновления UI для обновления метки статуса.
+        /// </summary>
         private void UiUpdateTimer_Tick(object sender, EventArgs e)
         {
             this.Invoke((Action)(() =>
@@ -44,6 +80,9 @@ namespace FractalExplorer.Forms.Other
             }));
         }
 
+        /// <summary>
+        /// Обрабатывает событие Load формы, инициализируя значения по умолчанию.
+        /// </summary>
         private void SaveImageManagerForm_Load(object sender, EventArgs e)
         {
             cbFormat.SelectedIndex = 0;
@@ -53,11 +92,17 @@ namespace FractalExplorer.Forms.Other
             lblStatus.Text = _lastStatusMessage;
         }
 
+        /// <summary>
+        /// Обрабатывает событие SelectedIndexChanged для выпадающего списка форматов.
+        /// </summary>
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateJpgQualityUI();
         }
 
+        /// <summary>
+        /// Показывает или скрывает элементы управления качеством JPG в зависимости от выбранного формата изображения.
+        /// </summary>
         private void UpdateJpgQualityUI()
         {
             bool isJpg = cbFormat.SelectedItem?.ToString() == "JPG";
@@ -66,23 +111,35 @@ namespace FractalExplorer.Forms.Other
             lblJpgQualityValue.Visible = isJpg;
         }
 
+        /// <summary>
+        /// Обрабатывает событие Scroll ползунка качества JPG, обновляя метку со значением.
+        /// </summary>
         private void trackBarJpgQuality_Scroll(object sender, EventArgs e)
         {
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
+        /// <summary>
+        /// Устанавливает разрешение Full HD (1920x1080).
+        /// </summary>
         private void btnPresetFHD_Click(object sender, EventArgs e)
         {
             nudWidth.Value = 1920;
             nudHeight.Value = 1080;
         }
 
+        /// <summary>
+        /// Устанавливает разрешение 4K UHD (3840x2160).
+        /// </summary>
         private void btnPreset4K_Click(object sender, EventArgs e)
         {
             nudWidth.Value = 3840;
             nudHeight.Value = 2160;
         }
 
+        /// <summary>
+        /// Обрабатывает нажатие на кнопку "Сохранить", запуская процесс рендеринга и сохранения.
+        /// </summary>
         private async void btnSave_Click(object sender, EventArgs e)
         {
             string format = cbFormat.SelectedItem.ToString();
@@ -121,8 +178,6 @@ namespace FractalExplorer.Forms.Other
                     int height = (int)nudHeight.Value;
                     int ssaaFactor = GetSsaaFactor();
                     ImageFormat imageFormat = GetImageFormat(format);
-
-                    // <<< ИЗМЕНЕНИЕ: Считываем значение качества JPG здесь, в UI-потоке.
                     int jpgQuality = trackBarJpgQuality.Value;
 
                     Bitmap resultBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, width, height, ssaaFactor, progress, _cts.Token);
@@ -136,7 +191,6 @@ namespace FractalExplorer.Forms.Other
                     lblStatus.Text = $"Сохранение файла... (Заняло {renderTime:mm\\:ss})";
                     progressBar.Value = 100;
 
-                    // <<< ИЗМЕНЕНИЕ: Передаем значение качества в фоновую задачу.
                     await Task.Run(() => SaveBitmap(resultBitmap, sfd.FileName, imageFormat, jpgQuality), _cts.Token);
                     resultBitmap.Dispose();
 
@@ -174,14 +228,19 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
-        // <<< ИЗМЕНЕНИЕ: Сигнатура метода теперь принимает jpgQuality.
+        /// <summary>
+        /// Сохраняет указанное изображение в файл с заданным форматом и настройками качества.
+        /// </summary>
+        /// <param name="bitmap">Изображение для сохранения.</param>
+        /// <param name="filePath">Путь к выходному файлу.</param>
+        /// <param name="format">Формат изображения.</param>
+        /// <param name="jpgQuality">Настройка качества для формата JPG (0-100).</param>
         private void SaveBitmap(Bitmap bitmap, string filePath, ImageFormat format, int jpgQuality)
         {
             if (format == ImageFormat.Jpeg)
             {
                 var qualityEncoder = Encoder.Quality;
                 var encoderParameters = new EncoderParameters(1);
-                // <<< ИЗМЕНЕНИЕ: Используем переданный параметр, а не обращаемся к контролу.
                 encoderParameters.Param[0] = new EncoderParameter(qualityEncoder, (long)jpgQuality);
 
                 ImageCodecInfo jpgEncoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
@@ -196,6 +255,9 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
+        /// <summary>
+        /// Обрабатывает нажатие на кнопку "Отмена"/"Закрыть".
+        /// </summary>
         private void btnCancel_Click(object sender, EventArgs e)
         {
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
@@ -209,6 +271,9 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
+        /// <summary>
+        /// Обрабатывает событие закрытия формы для гарантированной отмены выполняющегося рендеринга.
+        /// </summary>
         private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
@@ -218,6 +283,10 @@ namespace FractalExplorer.Forms.Other
             _uiUpdateTimer?.Dispose();
         }
 
+        /// <summary>
+        /// Включает или отключает элементы управления пользовательского интерфейса в зависимости от состояния рендеринга.
+        /// </summary>
+        /// <param name="enabled">True для включения элементов, false для отключения.</param>
         private void SetUiState(bool enabled)
         {
             if (this.IsDisposed) return;
@@ -239,6 +308,10 @@ namespace FractalExplorer.Forms.Other
             }));
         }
 
+        /// <summary>
+        /// Получает коэффициент Super-Sampling Anti-Aliasing (SSAA) из выбора в UI.
+        /// </summary>
+        /// <returns>Целочисленный коэффициент SSAA.</returns>
         private int GetSsaaFactor()
         {
             switch (cbSSAA.SelectedIndex)
@@ -250,6 +323,11 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
+        /// <summary>
+        /// Преобразует строковое имя формата в соответствующий объект <see cref="ImageFormat"/>.
+        /// </summary>
+        /// <param name="format">Имя формата (например, "JPG", "PNG").</param>
+        /// <returns>Соответствующий <see cref="ImageFormat"/>.</returns>
         private ImageFormat GetImageFormat(string format)
         {
             switch (format.ToUpper())
