@@ -46,8 +46,8 @@
             nudIm = new NumericUpDown();
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
-            canvas = new PictureBox();
             cbSmooth = new CheckBox();
+            canvas = new PictureBox();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
@@ -311,6 +311,18 @@
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
             // 
+            // cbSmooth
+            // 
+            cbSmooth.AutoSize = true;
+            cbSmooth.Checked = true;
+            cbSmooth.CheckState = CheckState.Checked;
+            cbSmooth.Location = new Point(39, 445);
+            cbSmooth.Name = "cbSmooth";
+            cbSmooth.Size = new Size(153, 19);
+            cbSmooth.TabIndex = 2;
+            cbSmooth.Text = "Плавное окрашивание";
+            cbSmooth.UseVisualStyleBackColor = true;
+            // 
             // canvas
             // 
             canvas.Dock = DockStyle.Fill;
@@ -319,16 +331,6 @@
             canvas.Size = new Size(853, 636);
             canvas.TabIndex = 1;
             canvas.TabStop = false;
-            // 
-            // cbSmooth
-            // 
-            cbSmooth.AutoSize = true;
-            cbSmooth.Location = new Point(49, 441);
-            cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(83, 19);
-            cbSmooth.TabIndex = 2;
-            cbSmooth.Text = "checkBox1";
-            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // FractalMandelbrotFamilyForm
             // 
