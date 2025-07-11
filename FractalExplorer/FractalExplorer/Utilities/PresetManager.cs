@@ -1,9 +1,12 @@
 ﻿using FractalDraving;
-using FractalExplorer.Engines;
+using FractalExplorer.Engines; // Может быть не нужен, но оставим для совместимости
 using FractalExplorer.Forms;
 using FractalExplorer.Utilities.JsonConverters;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System; // Добавим для Math
+using System.Collections.Generic; // Добавим для List
+using System.Drawing; // Добавим для Color
 using System.Text.Json;
 
 namespace FractalExplorer.Utilities
@@ -16,32 +19,32 @@ namespace FractalExplorer.Utilities
     {
         #region Constants
 
-        /// <summary>
-        /// Ограничение на количество итераций для предварительного просмотра пресетов семейства Мандельброта.
-        /// Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
-        /// в окне сохранения/загрузки, не нагружая систему слишком сильно.
-        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1000;
-
-        /// <summary>
-        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Феникс.
-        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
-
-        /// <summary>
-        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Бассейны Ньютона.
-        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
-
-        /// <summary>
-        /// Ограничение на количество итераций для предварительного просмотра геометрического фрактала Серпинского.
-        /// </summary>
         private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
+        private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
+
+        #endregion
+
+        #region Private Helper Classes
 
         /// <summary>
-        /// Ограничение на количество итераций для предварительного просмотра хаотического фрактала Серпинского.
+        /// ИСПРАВЛЕНИЕ: Локальный класс, заменяющий удаленный FractalMandelbrotFamilyForm.PreviewParams.
+        /// Это делает PresetManager самодостаточным и устраняет ошибку компиляции.
         /// </summary>
-        private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
+        private class MandelbrotPreviewParams
+        {
+            public decimal CenterX { get; set; }
+            public decimal CenterY { get; set; }
+            public decimal Zoom { get; set; }
+            public int Iterations { get; set; }
+            public string PaletteName { get; set; }
+            public decimal Threshold { get; set; }
+            public decimal CRe { get; set; }
+            public decimal CIm { get; set; }
+            public string PreviewEngineType { get; set; }
+        }
 
         #endregion
 
@@ -102,7 +105,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Лёд", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1 = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
@@ -130,7 +133,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2 = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
@@ -143,7 +146,7 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
             presets.Add(preset2);
 
-            // Пресет 3: Электрическая Розетка
+            // Пресет 3: Электрическая Розетка (переименовано в Лоза)
             // Уникальный узор, напоминающий электрическую розетку, найденный в сложной области фрактала Мандельброта.
             var preset3 = new MandelbrotFamilySaveState("Mandelbrot")
             {
@@ -156,7 +159,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3 = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
@@ -182,7 +185,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Ультрафиолет", // Обновлено: теперь соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams4 = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams4 = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
@@ -221,7 +224,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1J = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1J = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
@@ -251,7 +254,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Зеленый", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2J = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2J = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
@@ -281,7 +284,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3J = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3J = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
@@ -311,7 +314,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams4J = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams4J = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
@@ -350,7 +353,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1BS = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1BS = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
@@ -376,7 +379,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Ультрафиолет",
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2BS = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2BS = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
@@ -397,12 +400,12 @@ namespace FractalExplorer.Utilities
                 CenterX = -1.7423683296426555512135816837m,
                 CenterY = 0.0648050817843091259643027922m,
                 Zoom = 76.0m,     // Умеренный зум, чтобы сфокусироваться на "парусах"
-                Iterations = 1000, 
+                Iterations = 1000,
                 Threshold = 2.0m,
                 PaletteName = "Лёд", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3BS = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3BS = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
@@ -426,7 +429,7 @@ namespace FractalExplorer.Utilities
         {
             var presets = new List<FractalSaveStateBase>();
 
-            // Пресет 1: Космический Цветок
+            // Пресет 1: Космический Цветок (переименовано в Фиолетовый Пламень Жюлиа)
             // Форма фрактала Жюлиа "Горящий Корабль", напоминающая цветок или сложную космическую структуру.
             var preset1 = new JuliaFamilySaveState("JuliaBurningShip")
             {
@@ -441,7 +444,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Ультрафиолет", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams1JBS = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams1JBS = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
@@ -456,7 +459,7 @@ namespace FractalExplorer.Utilities
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1JBS);
             presets.Add(preset1);
 
-            // Пресет 2: Огненный Дракон
+            // Пресет 2: Огненный Дракон (переименовано в Пульсарный Рубин)
             // Динамичная форма, напоминающая голову или тело дракона, пылающего яркими, огненными цветами.
             var preset2 = new JuliaFamilySaveState("JuliaBurningShip")
             {
@@ -471,7 +474,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Огонь", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams2JBS = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams2JBS = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
@@ -486,7 +489,7 @@ namespace FractalExplorer.Utilities
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2JBS);
             presets.Add(preset2);
 
-            // Пресет 3: Туманность Андромеды (стил.)
+            // Пресет 3: Туманность Андромеды (стил.) (переименовано в Психонавт)
             // Абстрактная форма, напоминающая галактическую туманность с плавными переходами цветов.
             var preset3 = new JuliaFamilySaveState("JuliaBurningShip")
             {
@@ -501,7 +504,7 @@ namespace FractalExplorer.Utilities
                 PaletteName = "Психоделика", // Обновлено: соответствует новой встроенной палитре
                 Timestamp = DateTime.MinValue
             };
-            var previewParams3JBS = new FractalMandelbrotFamilyForm.PreviewParams
+            var previewParams3JBS = new MandelbrotPreviewParams // ИСПРАВЛЕНО
             {
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
