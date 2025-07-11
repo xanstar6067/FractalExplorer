@@ -1054,17 +1054,21 @@ namespace FractalDraving
             int colorCount = colors.Count;
             int maxColorIter = palette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : palette.MaxColorIterations;
 
-            // --- ИСПРАВЛЕНИЕ: ВОЗВРАЩАЕМ СПЕЦИАЛЬНУЮ ЛОГИКУ ДЛЯ "Стандартный серый" ---
+            // --- Специальная обработка для "Стандартный серый" ---
             if (palette.Name == "Стандартный серый")
             {
                 return (smoothIter) =>
                 {
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
 
+                    // --- ИСПРАВЛЕНИЕ: Защита от отрицательных значений ---
+                    // Предотвращаем сбой Math.Log при отрицательном smoothIter
+                    if (smoothIter < 0) smoothIter = 0;
+                    // ---------------------------------------------------
+
                     double logMax = Math.Log(maxColorIter + 1);
                     if (logMax <= 0) return Color.Black;
 
-                    // Используем ту же логарифмическую шкалу, но с дробным значением и зацикливанием
                     double iterValue = smoothIter % maxColorIter;
                     double tLog = Math.Log(iterValue + 1) / logMax;
                     int cVal = (int)(255.0 * (1 - tLog));
@@ -1076,10 +1080,14 @@ namespace FractalDraving
             if (colorCount == 0) return (smoothIter) => Color.Black;
             if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
-            // Возвращаем функцию, которая принимает ДРОБНОЕ значение итерации
+            // --- Общая логика для градиентных палитр ---
             return (smoothIter) =>
             {
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+
+                // --- ИСПРАВЛЕНИЕ: Защита от отрицательных значений (для единообразия и безопасности) ---
+                if (smoothIter < 0) smoothIter = 0;
+                // ------------------------------------------------------------------------------------
 
                 double t = (smoothIter % maxColorIter) / maxColorIter;
 
