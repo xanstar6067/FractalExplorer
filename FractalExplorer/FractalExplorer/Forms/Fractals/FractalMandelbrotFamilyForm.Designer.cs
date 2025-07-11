@@ -215,7 +215,7 @@
             btnSaveHighRes.TabIndex = 11;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
-            btnSaveHighRes.Click += btnStateManager_Click;
+            btnSaveHighRes.Click += btnOpenSaveManager_Click;
             // 
             // lblThreshold
             // 
