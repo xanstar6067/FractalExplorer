@@ -950,38 +950,55 @@ namespace FractalExplorer.Forms
         /// </summary>
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette)
         {
+            // Получаем общие свойства палитры
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
-            int maxColorIter = palette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : palette.MaxColorIterations;
 
+            // Специальная обработка для палитры "Стандартный серый"
             if (palette.Name == "Стандартный серый")
             {
+                // Используем логарифмическую шкалу для более мягкого и детального градиента
                 return (smoothIter) =>
                 {
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                     if (smoothIter < 0) smoothIter = 0;
-                    double logMax = Math.Log(maxColorIter + 1);
+
+                    // Логарифм от максимального числа итераций для нормализации
+                    double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
                     if (logMax <= 0) return Color.Black;
-                    double iterValue = smoothIter % maxColorIter;
-                    double tLog = Math.Log(iterValue + 1) / logMax;
-                    int cVal = (int)(255.0 * (1 - tLog));
-                    return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
+
+                    // Нормализуем по логарифмической шкале
+                    double tLog = Math.Log(smoothIter + 1) / logMax;
+
+                    // Инвертируем для градиента от белого к черному
+                    int gray_level = (int)(255.0 * (1.0 - tLog));
+                    gray_level = Math.Max(0, Math.Min(255, gray_level));
+
+                    Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
             }
 
+            // Обработка крайних случаев для других палитр
             if (colorCount == 0) return (smoothIter) => Color.Black;
             if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
+            // Общая логика для всех остальных цветных градиентных палитр
             return (smoothIter) =>
             {
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
-                double t = (smoothIter % maxColorIter) / maxColorIter;
+
+                // Нормализуем по всему диапазону без "полосатости"
+                double t = smoothIter / _fractalEngine.MaxIterations;
+                t = Math.Max(0.0, Math.Min(1.0, t));
+
                 double scaledT = t * (colorCount - 1);
                 int index1 = (int)Math.Floor(scaledT);
                 int index2 = Math.Min(index1 + 1, colorCount - 1);
                 double localT = scaledT - index1;
+
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
