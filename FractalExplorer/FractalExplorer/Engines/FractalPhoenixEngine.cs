@@ -111,6 +111,37 @@ namespace FractalExplorer.Engines
             return iter;
         }
 
+        // --- НОВЫЙ ПЕРЕГРУЖЕННЫЙ МЕТОД ДЛЯ ПОТОКОБЕЗОПАСНЫХ ВЫЗОВОВ ---
+        /// <summary>
+        /// Потокобезопасная версия для вычисления итераций, принимающая C1 как параметр.
+        /// </summary>
+        /// <returns>Количество итераций до выхода за порог.</returns>
+        public int CalculateIterations(ref ComplexDecimal z_current, ComplexDecimal z_prev, ComplexDecimal c1_param)
+        {
+            int iter = 0;
+            decimal p_const = c1_param.Real; // Использует параметр, а не свойство
+            decimal q_const = c1_param.Imaginary; // Использует параметр, а не свойство
+
+            while (iter < MaxIterations && z_current.MagnitudeSquared <= ThresholdSquared)
+            {
+                try
+                {
+                    decimal x_next = z_current.Real * z_current.Real - z_current.Imaginary * z_current.Imaginary + p_const + q_const * z_prev.Real;
+                    decimal y_next = 2 * z_current.Real * z_current.Imaginary + q_const * z_prev.Imaginary;
+
+                    z_prev = z_current;
+                    z_current = new ComplexDecimal(x_next, y_next);
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    iter = MaxIterations;
+                    break;
+                }
+            }
+            return iter;
+        }
+
         /// <summary>
         /// Вычисляет "сглаженное" значение итерации.
         /// </summary>
