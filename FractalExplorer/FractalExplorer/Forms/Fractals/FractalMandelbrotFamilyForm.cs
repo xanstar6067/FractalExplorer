@@ -1373,7 +1373,7 @@ namespace FractalDraving
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                previewEngine.MaxIterations = 400; // Используем достаточное количество итераций для превью
+                previewEngine.MaxIterations = 400;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
@@ -1381,18 +1381,24 @@ namespace FractalDraving
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
-                // --- ИСПРАВЛЕНИЕ: Возвращаем логику из старого кода для корректного превью ---
-                // 1. Отключаем сглаживание для превью, чтобы использовать проверенный дискретный метод.
-                previewEngine.UseSmoothColoring = false;
-
-                // 2. Настраиваем параметры для дискретной палитры.
-                previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
-                    ? previewEngine.MaxIterations
-                    : paletteForPreview.MaxColorIterations;
-
-                // 3. Генерируем и присваиваем функцию ДИСКРЕТНОЙ палитры.
-                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
-                // -----------------------------------------------------------------------------
+                // Проверяем, включено ли сглаживание в основной форме
+                previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
+                previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
+                if (previewEngine.UseSmoothColoring)
+                {
+                    // --- РЕЖИМ СГЛАЖИВАНИЯ (вернет темную картинку) ---
+                    previewEngine.UseSmoothColoring = true;
+                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+                }
+                else
+                {
+                    // --- РЕЖИМ ДИСКРЕТНЫХ ЦВЕТОВ (яркая картинка) ---
+                    previewEngine.UseSmoothColoring = false;
+                    previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
+                        ? previewEngine.MaxIterations
+                        : paletteForPreview.MaxColorIterations;
+                    previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+                }
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
@@ -1436,18 +1442,27 @@ namespace FractalDraving
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
-            // --- ИСПРАВЛЕНИЕ: Возвращаем логику из старого кода для корректного превью ---
-            // 1. Отключаем сглаживание для превью.
-            previewEngine.UseSmoothColoring = false;
-            //previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
-            // 2. Настраиваем параметры для дискретной палитры.
-            previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
-                ? previewEngine.MaxIterations
-                : paletteForPreview.MaxColorIterations;
-
-            // 3. Генерируем и присваиваем функцию ДИСКРЕТНОЙ палитры.
-            previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
-            // -----------------------------------------------------------------------------
+            // Проверяем, включено ли сглаживание в основной форме
+            previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
+            previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
+            if (previewEngine.UseSmoothColoring)
+            {
+                // 1. Включаем флаг
+                previewEngine.UseSmoothColoring = true;
+                // 2. ОБЯЗАТЕЛЬНО присваиваем функцию сглаженной палитры
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+            }
+            else
+            {
+                // 1. Выключаем флаг
+                previewEngine.UseSmoothColoring = false;
+                // 2. Настраиваем и присваиваем функцию дискретной палитры
+                previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
+                    ? previewEngine.MaxIterations
+                    : paletteForPreview.MaxColorIterations;
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+            }
+            // --- КОНЕЦ ПРАВИЛЬНОЙ ЛОГИКИ ---
 
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
