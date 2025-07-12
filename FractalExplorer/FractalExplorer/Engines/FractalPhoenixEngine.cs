@@ -1,10 +1,12 @@
-﻿using System;
+﻿using FractalExplorer.Resources;
+using FractalExplorer.Utilities; // NEW: Подключаем пространство имен для ComplexDouble
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using FractalExplorer.Resources;
+
 
 namespace FractalExplorer.Engines
 {
@@ -15,6 +17,10 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class PhoenixEngine
     {
+        // NEW: Порог масштаба для переключения точности. 1 / 200,000.
+        // Если Scale меньше или равен этому значению (т.е. зум больше), используется decimal.
+        //private const decimal PrecisionSwitchScale = 1.0m / 200000.0m;
+        private const decimal PrecisionSwitchScale = 1.0E-12m;
         #region Properties
         /// <summary>
         /// Максимальное количество итераций для каждой точки.
@@ -76,7 +82,7 @@ namespace FractalExplorer.Engines
 
         #region Core Calculation Logic
         /// <summary>
-        /// Вычисляет количество итераций для фрактала Феникса.
+        /// Вычисляет количество итераций для фрактала Феникса. (Decimal)
         /// z_next = z_current^2 + P + Q * z_prev
         /// </summary>
         /// <param name="z_current">Начальное значение z_current. По ссылке, чтобы вернуть финальное значение.</param>
@@ -84,43 +90,19 @@ namespace FractalExplorer.Engines
         /// <returns>Количество итераций до выхода за порог.</returns>
         public int CalculateIterations(ref ComplexDecimal z_current, ComplexDecimal z_prev)
         {
-            int iter = 0;
-            decimal p_const = C1.Real;
-            decimal q_const = C1.Imaginary;
-
-            // Параметр C2 (c2_param) здесь не используется, но оставлен для возможного расширения.
-
-            while (iter < MaxIterations && z_current.MagnitudeSquared <= ThresholdSquared)
-            {
-                try
-                {
-                    decimal x_next = z_current.Real * z_current.Real - z_current.Imaginary * z_current.Imaginary + p_const + q_const * z_prev.Real;
-                    decimal y_next = 2 * z_current.Real * z_current.Imaginary + q_const * z_prev.Imaginary;
-
-                    z_prev = z_current;
-                    z_current = new ComplexDecimal(x_next, y_next);
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    // Если произошло переполнение, считаем, что точка ушла в бесконечность
-                    iter = MaxIterations;
-                    break;
-                }
-            }
-            return iter;
+            // MODIFIED: Вызываем потокобезопасную версию для консистентности.
+            return CalculateIterations(ref z_current, z_prev, this.C1);
         }
 
-        // --- НОВЫЙ ПЕРЕГРУЖЕННЫЙ МЕТОД ДЛЯ ПОТОКОБЕЗОПАСНЫХ ВЫЗОВОВ ---
         /// <summary>
-        /// Потокобезопасная версия для вычисления итераций, принимающая C1 как параметр.
+        /// Потокобезопасная версия для вычисления итераций, принимающая C1 как параметр. (Decimal)
         /// </summary>
         /// <returns>Количество итераций до выхода за порог.</returns>
         public int CalculateIterations(ref ComplexDecimal z_current, ComplexDecimal z_prev, ComplexDecimal c1_param)
         {
             int iter = 0;
-            decimal p_const = c1_param.Real; // Использует параметр, а не свойство
-            decimal q_const = c1_param.Imaginary; // Использует параметр, а не свойство
+            decimal p_const = c1_param.Real;
+            decimal q_const = c1_param.Imaginary;
 
             while (iter < MaxIterations && z_current.MagnitudeSquared <= ThresholdSquared)
             {
@@ -142,12 +124,33 @@ namespace FractalExplorer.Engines
             return iter;
         }
 
+        // --- NEW: МЕТОД ДЛЯ ВЫЧИСЛЕНИЙ С ТОЧНОСТЬЮ DOUBLE ---
         /// <summary>
-        /// Вычисляет "сглаженное" значение итерации.
+        /// Потокобезопасная версия для вычисления итераций с точностью double.
         /// </summary>
-        /// <param name="iter">Целочисленное количество итераций.</param>
-        /// <param name="finalZ">Комплексное число в момент выхода за порог.</param>
-        /// <returns>Дробное (сглаженное) значение итерации.</returns>
+        public int CalculateIterations(ref ComplexDouble z_current, ComplexDouble z_prev, ComplexDouble c1_param)
+        {
+            int iter = 0;
+            double p_const = c1_param.Real;
+            double q_const = c1_param.Imaginary;
+            double thresholdSq = (double)this.ThresholdSquared;
+
+            while (iter < MaxIterations && z_current.MagnitudeSquared <= thresholdSq)
+            {
+                // Для double нет нужды в try-catch, он уйдет в Infinity.
+                double x_next = z_current.Real * z_current.Real - z_current.Imaginary * z_current.Imaginary + p_const + q_const * z_prev.Real;
+                double y_next = 2 * z_current.Real * z_current.Imaginary + q_const * z_prev.Imaginary;
+
+                z_prev = z_current;
+                z_current = new ComplexDouble(x_next, y_next);
+                iter++;
+            }
+            return iter;
+        }
+
+        /// <summary>
+        /// Вычисляет "сглаженное" значение итерации. (Decimal)
+        /// </summary>
         private double CalculateSmoothValue(int iter, ComplexDecimal finalZ)
         {
             if (iter >= MaxIterations)
@@ -155,9 +158,26 @@ namespace FractalExplorer.Engines
                 return iter; // Точка внутри множества.
             }
 
-            // ВАЖНО: Эта формула математически корректна для z=z^2+c.
-            // Для фрактала Феникс она является лишь аппроксимацией, но дает визуально "гладкий" результат.
             double log_zn_sq = Math.Log((double)finalZ.MagnitudeSquared);
+            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
+
+            return iter + 1 - nu;
+        }
+
+        // NEW: Перегрузка для ComplexDouble
+        /// <summary>
+        /// Вычисляет "сглаженное" значение итерации. (Double)
+        /// </summary>
+        private double CalculateSmoothValue(int iter, ComplexDouble finalZ)
+        {
+            if (iter >= MaxIterations || double.IsInfinity(finalZ.MagnitudeSquared) || double.IsNaN(finalZ.MagnitudeSquared))
+            {
+                return iter;
+            }
+
+            double log_zn_sq = Math.Log(finalZ.MagnitudeSquared);
+            if (log_zn_sq <= 0) return iter; // Избегаем логарифма от некорректных значений
+
             double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
 
             return iter + 1 - nu;
@@ -168,8 +188,8 @@ namespace FractalExplorer.Engines
 
         /// <summary>
         /// Отрисовывает одну плитку в ее собственный, отдельный байтовый массив.
-        /// Поддерживает как дискретное, так и сглаженное окрашивание.
         /// </summary>
+        // MODIFIED: Добавлена логика переключения точности
         public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
             bytesPerPixel = 4; // BGRA
@@ -177,44 +197,93 @@ namespace FractalExplorer.Engines
 
             if (canvasWidth <= 0 || canvasHeight <= 0) return buffer;
 
-            decimal halfWidthPixels = canvasWidth / 2.0m;
-            decimal halfHeightPixels = canvasHeight / 2.0m;
-            decimal unitsPerPixel = Scale / canvasWidth;
-
-            for (int y = 0; y < tile.Bounds.Height; y++)
+            // --- ВЫБОР ТОЧНОСТИ ---
+            if (this.Scale <= PrecisionSwitchScale)
             {
-                int canvasY = tile.Bounds.Y + y;
-                if (canvasY >= canvasHeight) continue;
+                // --- ВЫСОКАЯ ТОЧНОСТЬ (DECIMAL) ---
+                decimal halfWidthPixels = canvasWidth / 2.0m;
+                decimal halfHeightPixels = canvasHeight / 2.0m;
+                decimal unitsPerPixel = Scale / canvasWidth;
+                ComplexDecimal c1_local = this.C1; // Для потокобезопасности
 
-                for (int x = 0; x < tile.Bounds.Width; x++)
+                for (int y = 0; y < tile.Bounds.Height; y++)
                 {
-                    int canvasX = tile.Bounds.X + x;
-                    if (canvasX >= canvasWidth) continue;
-
-                    decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
-                    decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
-
-                    Color pixelColor;
-                    ComplexDecimal z_current = new ComplexDecimal(re, im);
-                    ComplexDecimal z_prev = ComplexDecimal.Zero; // C2 используется как z_prev
-
-                    if (UseSmoothColoring && SmoothPalette != null)
+                    int canvasY = tile.Bounds.Y + y;
+                    for (int x = 0; x < tile.Bounds.Width; x++)
                     {
-                        int iter = CalculateIterations(ref z_current, z_prev);
-                        double smoothIter = CalculateSmoothValue(iter, z_current);
-                        pixelColor = SmoothPalette(smoothIter);
-                    }
-                    else
-                    {
-                        int iter = CalculateIterations(ref z_current, z_prev);
-                        pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-                    }
+                        int canvasX = tile.Bounds.X + x;
 
-                    int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
-                    buffer[bufferIndex] = pixelColor.B;
-                    buffer[bufferIndex + 1] = pixelColor.G;
-                    buffer[bufferIndex + 2] = pixelColor.R;
-                    buffer[bufferIndex + 3] = 255; // Alpha
+                        decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
+                        decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
+
+                        Color pixelColor;
+                        ComplexDecimal z_current = new ComplexDecimal(re, im);
+                        ComplexDecimal z_prev = ComplexDecimal.Zero;
+
+                        int iter = CalculateIterations(ref z_current, z_prev, c1_local);
+
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z_current);
+                            pixelColor = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
+
+                        int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
+                        buffer[bufferIndex] = pixelColor.B;
+                        buffer[bufferIndex + 1] = pixelColor.G;
+                        buffer[bufferIndex + 2] = pixelColor.R;
+                        buffer[bufferIndex + 3] = 255;
+                    }
+                }
+            }
+            else
+            {
+                // --- СТАНДАРТНАЯ ТОЧНОСТЬ (DOUBLE) ---
+                double centerX_d = (double)CenterX;
+                double centerY_d = (double)CenterY;
+                double scale_d = (double)Scale;
+                ComplexDouble c1_d = new ComplexDouble((double)C1.Real, (double)C1.Imaginary);
+
+                double halfWidthPixels = canvasWidth / 2.0;
+                double halfHeightPixels = canvasHeight / 2.0;
+                double unitsPerPixel = scale_d / canvasWidth;
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    int canvasY = tile.Bounds.Y + y;
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        int canvasX = tile.Bounds.X + x;
+
+                        double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
+                        double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
+
+                        Color pixelColor;
+                        ComplexDouble z_current = new ComplexDouble(re, im);
+                        ComplexDouble z_prev = ComplexDouble.Zero;
+
+                        int iter = CalculateIterations(ref z_current, z_prev, c1_d);
+
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z_current);
+                            pixelColor = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
+
+                        int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
+                        buffer[bufferIndex] = pixelColor.B;
+                        buffer[bufferIndex + 1] = pixelColor.G;
+                        buffer[bufferIndex + 2] = pixelColor.R;
+                        buffer[bufferIndex + 3] = 255;
+                    }
                 }
             }
             return buffer;
@@ -223,6 +292,7 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Отрисовывает одну плитку с использованием суперсэмплинга (SSAA).
         /// </summary>
+        // MODIFIED: Добавлена логика переключения точности
         public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int ssaaFactor, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
@@ -238,38 +308,83 @@ namespace FractalExplorer.Engines
             int highResTileHeight = tile.Bounds.Height * ssaaFactor;
             Color[,] highResColorBuffer = new Color[highResTileWidth, highResTileHeight];
 
-            long highResCanvasWidth = (long)canvasWidth * ssaaFactor;
-            decimal unitsPerSubPixel = Scale / highResCanvasWidth;
-            decimal highResHalfWidthPixels = highResCanvasWidth / 2.0m;
-            decimal highResHalfHeightPixels = (long)canvasHeight * ssaaFactor / 2.0m;
-
-            Parallel.For(0, highResTileHeight, y =>
+            // --- ВЫБОР ТОЧНОСТИ ---
+            if (this.Scale <= PrecisionSwitchScale)
             {
-                for (int x = 0; x < highResTileWidth; x++)
+                // --- ВЫСОКАЯ ТОЧНОСТЬ (DECIMAL) ---
+                long highResCanvasWidth = (long)canvasWidth * ssaaFactor;
+                decimal unitsPerSubPixel = Scale / highResCanvasWidth;
+                decimal highResHalfWidthPixels = highResCanvasWidth / 2.0m;
+                decimal highResHalfHeightPixels = (long)canvasHeight * ssaaFactor / 2.0m;
+                ComplexDecimal c1_local = this.C1;
+
+                Parallel.For(0, highResTileHeight, y =>
                 {
-                    long globalHighResX = (long)tile.Bounds.X * ssaaFactor + x;
-                    long globalHighResY = (long)tile.Bounds.Y * ssaaFactor + y;
-
-                    decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
-                    decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
-
-                    ComplexDecimal z_current = new ComplexDecimal(re, im);
-                    ComplexDecimal z_prev = ComplexDecimal.Zero;
-
-                    if (UseSmoothColoring && SmoothPalette != null)
+                    for (int x = 0; x < highResTileWidth; x++)
                     {
-                        int iter = CalculateIterations(ref z_current, z_prev);
-                        double smoothIter = CalculateSmoothValue(iter, z_current);
-                        highResColorBuffer[x, y] = SmoothPalette(smoothIter);
-                    }
-                    else
-                    {
-                        int iter = CalculateIterations(ref z_current, z_prev);
-                        highResColorBuffer[x, y] = Palette(iter, MaxIterations, MaxColorIterations);
-                    }
-                }
-            });
+                        long globalHighResX = (long)tile.Bounds.X * ssaaFactor + x;
+                        long globalHighResY = (long)tile.Bounds.Y * ssaaFactor + y;
 
+                        decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                        decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+
+                        ComplexDecimal z_current = new ComplexDecimal(re, im);
+                        ComplexDecimal z_prev = ComplexDecimal.Zero;
+                        int iter = CalculateIterations(ref z_current, z_prev, c1_local);
+
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z_current);
+                            highResColorBuffer[x, y] = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            highResColorBuffer[x, y] = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
+                    }
+                });
+            }
+            else
+            {
+                // --- СТАНДАРТНАЯ ТОЧНОСТЬ (DOUBLE) ---
+                double centerX_d = (double)CenterX;
+                double centerY_d = (double)CenterY;
+                double scale_d = (double)Scale;
+                ComplexDouble c1_d = new ComplexDouble((double)C1.Real, (double)C1.Imaginary);
+
+                double highResCanvasWidth = (double)canvasWidth * ssaaFactor;
+                double unitsPerSubPixel = scale_d / highResCanvasWidth;
+                double highResHalfWidthPixels = highResCanvasWidth / 2.0;
+                double highResHalfHeightPixels = (double)canvasHeight * ssaaFactor / 2.0;
+
+                Parallel.For(0, highResTileHeight, y =>
+                {
+                    for (int x = 0; x < highResTileWidth; x++)
+                    {
+                        long globalHighResX = (long)tile.Bounds.X * ssaaFactor + x;
+                        long globalHighResY = (long)tile.Bounds.Y * ssaaFactor + y;
+
+                        double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                        double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+
+                        ComplexDouble z_current = new ComplexDouble(re, im);
+                        ComplexDouble z_prev = ComplexDouble.Zero;
+                        int iter = CalculateIterations(ref z_current, z_prev, c1_d);
+
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z_current);
+                            highResColorBuffer[x, y] = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            highResColorBuffer[x, y] = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
+                    }
+                });
+            }
+
+            // Усреднение цвета (Downsampling)
             int sampleCount = ssaaFactor * ssaaFactor;
             for (int finalY = 0; finalY < tile.Bounds.Height; finalY++)
             {
@@ -301,6 +416,7 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Рендерит фрактал в новый объект Bitmap (с поддержкой SSAA через другой метод).
         /// </summary>
+        // MODIFIED: Добавлена логика переключения точности и исправлена потокобезопасность
         public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
         {
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
@@ -311,49 +427,100 @@ namespace FractalExplorer.Engines
 
             ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
             long done = 0;
-            decimal halfWidthPixels = renderWidth / 2.0m;
-            decimal halfHeightPixels = renderHeight / 2.0m;
-            decimal unitsPerPixel = Scale / renderWidth;
 
-            Parallel.For(0, renderHeight, po, y =>
+            // --- ВЫБОР ТОЧНОСТИ ---
+            if (this.Scale <= PrecisionSwitchScale)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                int rowOffset = y * bmpData.Stride;
-                for (int x = 0; x < renderWidth; x++)
+                // --- ВЫСОКАЯ ТОЧНОСТЬ (DECIMAL) ---
+                decimal halfWidthPixels = renderWidth / 2.0m;
+                decimal halfHeightPixels = renderHeight / 2.0m;
+                decimal unitsPerPixel = Scale / renderWidth;
+                ComplexDecimal c1_local = this.C1; // Захват параметра для потокобезопасности
+
+                Parallel.For(0, renderHeight, po, y =>
                 {
-                    decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
-                    decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
-
-                    Color pixelColor;
-                    ComplexDecimal z_current = new ComplexDecimal(re, im);
-                    ComplexDecimal z_prev = ComplexDecimal.Zero;
-
-                    if (UseSmoothColoring && SmoothPalette != null)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int rowOffset = y * bmpData.Stride;
+                    for (int x = 0; x < renderWidth; x++)
                     {
-                        int iter = CalculateIterations(ref z_current, z_prev);
-                        double smoothIter = CalculateSmoothValue(iter, z_current);
-                        pixelColor = SmoothPalette(smoothIter);
-                    }
-                    else
-                    {
-                        int iter = CalculateIterations(ref z_current, z_prev);
-                        pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-                    }
+                        decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
+                        decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
 
-                    int index = rowOffset + x * 3;
-                    if (index + 2 < buffer.Length)
-                    {
-                        buffer[index] = pixelColor.B;
-                        buffer[index + 1] = pixelColor.G;
-                        buffer[index + 2] = pixelColor.R;
+                        Color pixelColor;
+                        ComplexDecimal z_current = new ComplexDecimal(re, im);
+                        ComplexDecimal z_prev = ComplexDecimal.Zero;
+
+                        int iter = CalculateIterations(ref z_current, z_prev, c1_local);
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z_current);
+                            pixelColor = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
+
+                        int index = rowOffset + x * 3;
+                        if (index + 2 < buffer.Length)
+                        {
+                            buffer[index] = pixelColor.B;
+                            buffer[index + 1] = pixelColor.G;
+                            buffer[index + 2] = pixelColor.R;
+                        }
                     }
-                }
-                long currentDone = Interlocked.Increment(ref done);
-                if (renderHeight > 0)
-                {
+                    long currentDone = Interlocked.Increment(ref done);
                     reportProgressCallback((int)(100.0 * currentDone / renderHeight));
-                }
-            });
+                });
+            }
+            else
+            {
+                // --- СТАНДАРТНАЯ ТОЧНОСТЬ (DOUBLE) ---
+                double centerX_d = (double)CenterX;
+                double centerY_d = (double)CenterY;
+                double scale_d = (double)Scale;
+                ComplexDouble c1_d = new ComplexDouble((double)C1.Real, (double)C1.Imaginary);
+
+                double halfWidthPixels = renderWidth / 2.0;
+                double halfHeightPixels = renderHeight / 2.0;
+                double unitsPerPixel = scale_d / renderWidth;
+
+                Parallel.For(0, renderHeight, po, y =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int rowOffset = y * bmpData.Stride;
+                    for (int x = 0; x < renderWidth; x++)
+                    {
+                        double re = centerX_d + (x - halfWidthPixels) * unitsPerPixel;
+                        double im = centerY_d - (y - halfHeightPixels) * unitsPerPixel;
+
+                        Color pixelColor;
+                        ComplexDouble z_current = new ComplexDouble(re, im);
+                        ComplexDouble z_prev = ComplexDouble.Zero;
+
+                        int iter = CalculateIterations(ref z_current, z_prev, c1_d);
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z_current);
+                            pixelColor = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
+
+                        int index = rowOffset + x * 3;
+                        if (index + 2 < buffer.Length)
+                        {
+                            buffer[index] = pixelColor.B;
+                            buffer[index + 1] = pixelColor.G;
+                            buffer[index + 2] = pixelColor.R;
+                        }
+                    }
+                    long currentDone = Interlocked.Increment(ref done);
+                    reportProgressCallback((int)(100.0 * currentDone / renderHeight));
+                });
+            }
 
             Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
             bmp.UnlockBits(bmpData);
@@ -363,6 +530,7 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Рендерит фрактал в новый объект Bitmap с использованием суперсэмплинга (SSAA).
         /// </summary>
+        // MODIFIED: Не требует изменений, т.к. вызывает исправленный RenderToBitmap
         public async Task<Bitmap> RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int ssaaFactor, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
@@ -370,6 +538,7 @@ namespace FractalExplorer.Engines
                 if (finalWidth <= 0 || finalHeight <= 0) return new Bitmap(1, 1);
                 if (ssaaFactor <= 1)
                 {
+                    // Вызовет RenderToBitmap, который уже содержит логику переключения точности
                     return RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback, cancellationToken);
                 }
 
@@ -385,7 +554,7 @@ namespace FractalExplorer.Engines
                     C2 = this.C2,
                     CenterX = this.CenterX,
                     CenterY = this.CenterY,
-                    Scale = this.Scale,
+                    Scale = this.Scale, // Scale передается "как есть"
                     UseSmoothColoring = this.UseSmoothColoring,
                     Palette = this.Palette,
                     SmoothPalette = this.SmoothPalette,
@@ -393,6 +562,7 @@ namespace FractalExplorer.Engines
                 };
 
                 Action<int> highResProgress = p => reportProgressCallback(p / 2);
+                // highResEngine.RenderToBitmap сам выберет нужную точность на основе this.Scale
                 Bitmap highResBmp = highResEngine.RenderToBitmap(highResWidth, highResHeight, numThreads, highResProgress, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -401,7 +571,6 @@ namespace FractalExplorer.Engines
                 Bitmap finalBmp = new Bitmap(finalWidth, finalHeight, PixelFormat.Format24bppRgb);
                 using (var g = Graphics.FromImage(finalBmp))
                 {
-                    // Имитируем отчет о прогрессе для этой быстрой операции
                     downsampleProgress(10);
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                     g.DrawImage(highResBmp, 0, 0, finalWidth, finalHeight);
