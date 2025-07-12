@@ -1059,27 +1059,26 @@ namespace FractalDraving
             // Специальная обработка для палитры "Стандартный серый"
             if (palette.Name == "Стандартный серый")
             {
-                // Возвращаем новую, корректную функцию для оттенков серого
+                // Используем логарифмическую шкалу для более мягкого и детального градиента
                 return (smoothIter) =>
                 {
-                    // Точки внутри множества остаются черными
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
-                    // Защита от отрицательных значений, которые могут возникнуть в формуле сглаживания
                     if (smoothIter < 0) smoothIter = 0;
 
-                    // 1. Нормализуем значение итерации по всему диапазону (0.0 до 1.0)
-                    double normalized = smoothIter / _fractalEngine.MaxIterations;
+                    // 1. Рассчитываем логарифм от максимального числа итераций.
+                    //    Это будет наш "масштаб" для нормализации.
+                    double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
+                    if (logMax <= 0) return Color.Black; // Защита от деления на ноль
 
-                    // 2. Применяем КОРЕНЬ, чтобы "растянуть" темные участки. Это ключ к красивому градиенту.
-                    double transformed = Math.Sqrt(normalized);
+                    // 2. Берем логарифм от текущей итерации и нормализуем его.
+                    //    Это даст нам значение 't' от 0.0 до 1.0 по логарифмической шкале.
+                    double tLog = Math.Log(smoothIter + 1) / logMax;
 
-                    // 3. Преобразуем значение [0, 1] в уровень серого [0, 255]
-                    int gray_level = (int)(255 * transformed);
-
-                    // 4. Ограничиваем значение на всякий случай
+                    // 3. Инвертируем значение, чтобы получить градиент от белого к черному.
+                    int gray_level = (int)(255.0 * (1.0 - tLog));
                     gray_level = Math.Max(0, Math.Min(255, gray_level));
 
-                    // 5. Создаем цвет и применяем гамма-коррекцию
+                    // 4. Создаем цвет и применяем гамма-коррекцию
                     Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
                     return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
@@ -1089,28 +1088,20 @@ namespace FractalDraving
             if (colorCount == 0) return (smoothIter) => Color.Black;
             if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
-            // Общая логика для всех остальных цветных градиентных палитр
+            // Общая логика для всех остальных цветных градиентных палитр (остается без изменений)
             return (smoothIter) =>
             {
-                // Точки внутри множества остаются черными
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
-                // Защита от отрицательных значений
                 if (smoothIter < 0) smoothIter = 0;
 
-                // 1. Нормализуем значение по всему диапазону.
-                //    УБРАНА операция остатка (%), чтобы палитра не повторялась.
                 double t = smoothIter / _fractalEngine.MaxIterations;
-
-                // 2. Ограничиваем t диапазоном [0, 1] для стабильности
                 t = Math.Max(0.0, Math.Min(1.0, t));
 
-                // 3. Находим нужный сегмент в градиенте
                 double scaledT = t * (colorCount - 1);
                 int index1 = (int)Math.Floor(scaledT);
                 int index2 = Math.Min(index1 + 1, colorCount - 1);
                 double localT = scaledT - index1;
 
-                // 4. Интерполируем цвет и применяем гамма-коррекцию
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
