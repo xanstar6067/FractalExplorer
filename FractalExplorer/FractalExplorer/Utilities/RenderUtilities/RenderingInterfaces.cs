@@ -22,6 +22,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public string ActivePaletteName { get; set; }
         public ComplexDecimal? JuliaC { get; set; }
         public string FileNameDetails { get; set; }
+        public bool UseSmoothColoring { get; set; }
     }
 
     /// <summary>

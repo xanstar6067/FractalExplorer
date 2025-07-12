@@ -303,6 +303,9 @@ namespace FractalExplorer.SelectorsForms
 
             decimal fixedQ_scalar = nudQImaginary.Value; // Q-координата фиксирована для среза P.
 
+            // --- ИЗМЕНЕНИЕ: Устанавливаем фиксированный параметр C2 для движка один раз перед циклом ---
+            _sliceRenderEngine.C2 = _fixedC2;
+
             Bitmap newBitmap = null;
             try
             {
@@ -313,8 +316,6 @@ namespace FractalExplorer.SelectorsForms
                     byte[] buffer = new byte[Math.Abs(bmpData.Stride) * h];
                     long renderedLines = 0;
 
-                    // Используем Parallel.For для эффективного рендеринга среза,
-                    // распределяя работу по нескольким ядрам ЦП.
                     Parallel.For(0, h, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount }, y_pixel =>
                     {
                         if (token.IsCancellationRequested)
@@ -323,60 +324,66 @@ namespace FractalExplorer.SelectorsForms
                         }
                         for (int x_pixel = 0; x_pixel < w; x_pixel++)
                         {
-                            // Преобразуем пиксельные координаты в координаты фрактала.
                             decimal p_scalar_for_engine = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
-                            decimal z0_im_for_slice_visual = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h); // Ось Y инвертирована.
+                            decimal z0_im_for_slice_visual = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h);
 
                             ComplexDecimal c1_engine_param = new ComplexDecimal(p_scalar_for_engine, fixedQ_scalar);
                             ComplexDecimal z0_for_slice = new ComplexDecimal(0, z0_im_for_slice_visual);
 
-                            int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
-                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS); // Используем палитру из движка.
+                            // --- ИЗМЕНЕНИЕ: Обновленный вызов метода CalculateIterations ---
+                            // 1. Устанавливаем C1, который меняется для каждого пикселя
+                            _sliceRenderEngine.C1 = c1_engine_param;
+
+                            // 2. Готовим начальные значения для итерации
+                            ComplexDecimal z_current = z0_for_slice;
+                            ComplexDecimal z_prev = ComplexDecimal.Zero; // z_prev для среза всегда начинается с нуля
+
+                            // 3. Вызываем метод с новой, более простой сигнатурой
+                            int iter = _sliceRenderEngine.CalculateIterations(ref z_current, z_prev);
+
+                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
                             int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B;
                             buffer[idx + 1] = c.G;
                             buffer[idx + 2] = c.R;
                         }
                         long currentProgress = Interlocked.Increment(ref renderedLines);
-                        // Обновляем прогресс-бар, используя Invoke для безопасности потоков.
                         if (pb.IsHandleCreated && !pb.IsDisposed)
                         {
                             pb.Invoke((Action)(() => pb.Value = (int)(100.0 * currentProgress / h)));
                         }
                     });
-                    token.ThrowIfCancellationRequested(); // Проверяем отмену после завершения рендера.
+                    token.ThrowIfCancellationRequested();
                     Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
                     bmp.UnlockBits(bmpData);
                     return bmp;
                 }, token);
 
-                // Обновляем битмап на UI потоке.
                 if (this.IsHandleCreated && !this.IsDisposed && sliceCanvasP.IsHandleCreated && !sliceCanvasP.IsDisposed)
                 {
                     sliceCanvasP.Invoke((Action)(() =>
                     {
-                        _slicePBitmap?.Dispose(); // Освобождаем старый битмап.
+                        _slicePBitmap?.Dispose();
                         _slicePBitmap = newBitmap;
-                        // Сохраняем параметры, по которым был отрендерен битмап.
                         _renderedSlicePMinRe = minR_axis;
                         _renderedSlicePMaxRe = maxR_axis;
                         _renderedSlicePMinIm = minI_axis;
                         _renderedSlicePMaxIm = maxI_axis;
-                        sliceCanvasP.Invalidate(); // Запрашиваем перерисовку канваса.
+                        sliceCanvasP.Invalidate();
                     }));
                 }
                 else
                 {
-                    newBitmap?.Dispose(); // Если форма уже закрыта, освобождаем ресурсы.
+                    newBitmap?.Dispose();
                 }
             }
             catch (OperationCanceledException)
             {
-                newBitmap?.Dispose(); // Освобождаем ресурсы, если рендер был отменен.
+                newBitmap?.Dispose();
             }
             catch (Exception ex)
             {
-                newBitmap?.Dispose(); // Освобождаем ресурсы при ошибке.
+                newBitmap?.Dispose();
                 if (this.IsHandleCreated && !this.IsDisposed)
                 {
                     MessageBox.Show($"Ошибка рендера среза P: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -385,7 +392,6 @@ namespace FractalExplorer.SelectorsForms
             finally
             {
                 _isRenderingSliceP = false;
-                // Скрываем прогресс-бар и сбрасываем его значение.
                 if (pb.IsHandleCreated && !pb.IsDisposed)
                 {
                     pb.Invoke((Action)(() => { pb.Visible = false; pb.Value = 0; }));
@@ -423,6 +429,9 @@ namespace FractalExplorer.SelectorsForms
 
             decimal fixedP_scalar = nudPReal.Value; // P-координата фиксирована для среза Q.
 
+            // --- ИЗМЕНЕНИЕ: Устанавливаем фиксированный параметр C2 для движка один раз перед циклом ---
+            _sliceRenderEngine.C2 = _fixedC2;
+
             Bitmap newBitmap = null;
             try
             {
@@ -441,22 +450,30 @@ namespace FractalExplorer.SelectorsForms
                         }
                         for (int x_pixel = 0; x_pixel < w; x_pixel++)
                         {
-                            // Преобразуем пиксельные координаты в координаты фрактала.
                             decimal q_scalar_for_engine = (decimal)(minR_axis + x_pixel * (maxR_axis - minR_axis) / w);
-                            decimal z0_im_for_slice_visual = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h); // Ось Y инвертирована.
+                            decimal z0_im_for_slice_visual = (decimal)(maxI_axis - y_pixel * (maxI_axis - minI_axis) / h);
 
                             ComplexDecimal c1_engine_param = new ComplexDecimal(fixedP_scalar, q_scalar_for_engine);
                             ComplexDecimal z0_for_slice = new ComplexDecimal(0, z0_im_for_slice_visual);
 
-                            int iter = _sliceRenderEngine.CalculateIterations(z0_for_slice, ComplexDecimal.Zero, c1_engine_param, _fixedC2);
-                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS); // Используем палитру из движка.
+                            // --- ИЗМЕНЕНИЕ: Обновленный вызов метода CalculateIterations ---
+                            // 1. Устанавливаем C1, который меняется для каждого пикселя
+                            _sliceRenderEngine.C1 = c1_engine_param;
+
+                            // 2. Готовим начальные значения для итерации
+                            ComplexDecimal z_current = z0_for_slice;
+                            ComplexDecimal z_prev = ComplexDecimal.Zero;
+
+                            // 3. Вызываем метод с новой, более простой сигнатурой
+                            int iter = _sliceRenderEngine.CalculateIterations(ref z_current, z_prev);
+
+                            Color c = _sliceRenderEngine.Palette(iter, SLICE_ITERATIONS, SLICE_ITERATIONS);
                             int idx = y_pixel * bmpData.Stride + x_pixel * 3;
                             buffer[idx] = c.B;
                             buffer[idx + 1] = c.G;
                             buffer[idx + 2] = c.R;
                         }
                         long currentProgress = Interlocked.Increment(ref renderedLines);
-                        // Обновляем прогресс-бар, используя Invoke для безопасности потоков.
                         if (pb.IsHandleCreated && !pb.IsDisposed)
                         {
                             pb.Invoke((Action)(() => pb.Value = (int)(100.0 * currentProgress / h)));
@@ -468,33 +485,31 @@ namespace FractalExplorer.SelectorsForms
                     return bmp;
                 }, token);
 
-                // Обновляем битмап на UI потоке.
                 if (this.IsHandleCreated && !this.IsDisposed && sliceCanvasQ.IsHandleCreated && !sliceCanvasQ.IsDisposed)
                 {
                     sliceCanvasQ.Invoke((Action)(() =>
                     {
                         _sliceQBitmap?.Dispose();
                         _sliceQBitmap = newBitmap;
-                        // Сохраняем параметры, по которым был отрендерен битмап.
                         _renderedSliceQMinRe = minR_axis;
                         _renderedSliceQMaxRe = maxR_axis;
                         _renderedSliceQMinIm = minI_axis;
                         _renderedSliceQMaxIm = maxI_axis;
-                        sliceCanvasQ.Invalidate(); // Запрашиваем перерисовку канваса.
+                        sliceCanvasQ.Invalidate();
                     }));
                 }
                 else
                 {
-                    newBitmap?.Dispose(); // Если форма уже закрыта, освобождаем ресурсы.
+                    newBitmap?.Dispose();
                 }
             }
             catch (OperationCanceledException)
             {
-                newBitmap?.Dispose(); // Освобождаем ресурсы, если рендер был отменен.
+                newBitmap?.Dispose();
             }
             catch (Exception ex)
             {
-                newBitmap?.Dispose(); // Освобождаем ресурсы при ошибке.
+                newBitmap?.Dispose();
                 if (this.IsHandleCreated && !this.IsDisposed)
                 {
                     MessageBox.Show($"Ошибка рендера среза Q: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -503,7 +518,6 @@ namespace FractalExplorer.SelectorsForms
             finally
             {
                 _isRenderingSliceQ = false;
-                // Скрываем прогресс-бар и сбрасываем его значение.
                 if (pb.IsHandleCreated && !pb.IsDisposed)
                 {
                     pb.Invoke((Action)(() => { pb.Visible = false; pb.Value = 0; }));
