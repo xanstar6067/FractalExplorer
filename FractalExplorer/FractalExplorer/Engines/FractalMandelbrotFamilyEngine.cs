@@ -24,7 +24,7 @@ namespace FractalExplorer.Engines
         /// Рассчитан как начальный масштаб (4.0) / желаемый зум (20000x).
         /// При значениях Scale МЕНЬШЕ этого порога будет использоваться decimal.
         /// </summary>
-        private const decimal SCALE_THRESHOLD_FOR_DECIMAL = 4.0m / 20000.0m;
+        private const decimal SCALE_THRESHOLD_FOR_DECIMAL = 4.0m / 2000000000.0m;
 
         #endregion
 

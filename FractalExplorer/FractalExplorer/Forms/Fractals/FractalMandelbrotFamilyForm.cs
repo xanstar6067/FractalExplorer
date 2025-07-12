@@ -959,6 +959,76 @@ namespace FractalDraving
 
         #region Palette Management
 
+        // --- НОВЫЙ МЕТОД ГЕНЕРАЦИИ СГЛАЖЕННОЙ ПАЛИТРЫ (с учетом MaxColorIterations) ---
+        // --- ИЗМЕНЕНИЕ: Добавлен параметр effectiveMaxColorIterations ---
+        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
+        {
+            // Получаем общие свойства палитры
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            int colorCount = colors.Count;
+
+            // --- ИЗМЕНЕНИЕ: Защита от деления на ноль, если период не задан ---
+            if (effectiveMaxColorIterations <= 0)
+            {
+                // Возвращаем черный цвет или цвет по умолчанию, если период невалиден
+                return (smoothIter) => Color.Black;
+            }
+
+            // Специальная обработка для палитры "Стандартный серый"
+            if (palette.Name == "Стандартный серый")
+            {
+                return (smoothIter) =>
+                {
+                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                    if (smoothIter < 0) smoothIter = 0;
+
+                    // --- ИЗМЕНЕНИЕ: Логарифм теперь от периода, а не от всех итераций ---
+                    double logMax = Math.Log(effectiveMaxColorIterations + 1);
+                    if (logMax <= 0) return Color.Black;
+
+                    // --- ИЗМЕНЕНИЕ: Используем остаток от деления для цикличности ---
+                    double cyclicIter = smoothIter % effectiveMaxColorIterations;
+
+                    double tLog = Math.Log(cyclicIter + 1) / logMax;
+
+                    int gray_level = (int)(255.0 * (1.0 - tLog));
+                    gray_level = Math.Max(0, Math.Min(255, gray_level));
+
+                    Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
+            }
+
+            // Обработка крайних случаев для других палитр
+            if (colorCount == 0) return (smoothIter) => Color.Black;
+            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
+
+            // Общая логика для всех остальных цветных градиентных палитр
+            return (smoothIter) =>
+            {
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                if (smoothIter < 0) smoothIter = 0;
+
+                // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+                // 1. Берем остаток от деления, чтобы получить значение внутри одного цикла/периода.
+                double cyclicIter = smoothIter % effectiveMaxColorIterations;
+                // 2. Нормализуем его по отношению к длине этого периода.
+                double t = cyclicIter / effectiveMaxColorIterations;
+                // -------------------------
+
+                t = Math.Max(0.0, Math.Min(1.0, t));
+
+                double scaledT = t * (colorCount - 1);
+                int index1 = (int)Math.Floor(scaledT);
+                int index2 = Math.Min(index1 + 1, colorCount - 1);
+                double localT = scaledT - index1;
+
+                Color baseColor = LerpColor(colors[index1], colors[index2], localT);
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
+        }
+
         /// <summary>
         /// Генерирует уникальную "подпись" для палитры на основе ее параметров.
         /// </summary>
@@ -1119,7 +1189,9 @@ namespace FractalDraving
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
 
-            _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette);
+            // --- ИЗМЕНЕНИЕ: Передаем effectiveMaxColorIterations в функцию генерации ---
+            _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette, effectiveMaxColorIterations);
+            // -------------------------------------------------------------------------
 
             if (_gammaCorrectedPaletteCache == null || newSignature != _paletteCacheSignature)
             {
