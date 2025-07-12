@@ -854,13 +854,11 @@ namespace FractalExplorer.Forms
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
 
-            // --- ИЗМЕНЕНИЕ: Защита от деления на ноль, если период не задан ---
-            if (effectiveMaxColorIterations <= 0)
-            {
-                return (smoothIter) => Color.Black;
-            }
+            // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
 
-            // Специальная обработка для палитры "Стандартный серый"
+            // >>> СПЕЦИАЛЬНЫЙ СЛУЧАЙ: для алгоритмической серой палитры.
+            // Эта палитра должна быть плавной по всему диапазону итераций,
+            // поэтому она намеренно ИГНОРИРУЕТ effectiveMaxColorIterations, чтобы избежать "ломаных" переходов.
             if (palette.Name == "Стандартный серый")
             {
                 return (smoothIter) =>
@@ -868,40 +866,51 @@ namespace FractalExplorer.Forms
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                     if (smoothIter < 0) smoothIter = 0;
 
-                    // --- ИЗМЕНЕНИЕ: Логарифм теперь от периода ---
-                    double logMax = Math.Log(effectiveMaxColorIterations + 1);
-                    if (logMax <= 0) return Color.Black;
+                    // 1. Используем ОБЩЕЕ количество итераций рендера для масштабирования.
+                    //    Это ключ к плавному градиенту без разрывов.
+                    double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
+                    if (logMax <= 0) return Color.Black; // Защита от деления на ноль
 
-                    // --- ИЗМЕНЕНИЕ: Используем остаток от деления для цикличности ---
-                    double cyclicIter = smoothIter % effectiveMaxColorIterations;
+                    // 2. Берем логарифм от ПРЯМОГО значения итерации (без цикличности).
+                    double tLog = Math.Log(smoothIter + 1) / logMax;
 
-                    double tLog = Math.Log(cyclicIter + 1) / logMax;
-
+                    // 3. Инвертируем значение для градиента от почти белого к черному.
                     int gray_level = (int)(255.0 * (1.0 - tLog));
                     gray_level = Math.Max(0, Math.Min(255, gray_level));
 
+                    // 4. Создаем цвет и применяем гамма-коррекцию.
                     Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
                     return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
             }
 
-            // Обработка крайних случаев для других палитр
+            // >>> ОБЩИЙ СЛУЧАЙ: для всех остальных палитр (градиентных и циклических).
+            // Эта логика корректно использует effectiveMaxColorIterations для повторения палитры.
+
+            // Защита от деления на ноль, если период не задан.
+            if (effectiveMaxColorIterations <= 0)
+            {
+                return (smoothIter) => Color.Black;
+            }
+
+            // Обработка крайних случаев.
             if (colorCount == 0) return (smoothIter) => Color.Black;
             if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
-            // Общая логика для всех остальных цветных градиентных палитр
+            // Общая логика для всех цветных градиентных палитр.
             return (smoothIter) =>
             {
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
 
-                // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
                 // 1. Берем остаток от деления, чтобы получить значение внутри одного цикла/периода.
                 double cyclicIter = smoothIter % effectiveMaxColorIterations;
-                // 2. Нормализуем его по отношению к длине этого периода.
-                double t = cyclicIter / effectiveMaxColorIterations;
-                // -------------------------
 
+                // 2. Нормализуем его по отношению к длине этого периода.
+                //    (double) необходимо для корректного деления.
+                double t = cyclicIter / (double)effectiveMaxColorIterations;
+
+                // 3. Остальная логика интерполяции цвета остается без изменений.
                 t = Math.Max(0.0, Math.Min(1.0, t));
 
                 double scaledT = t * (colorCount - 1);
@@ -912,6 +921,8 @@ namespace FractalExplorer.Forms
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
+
+            // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
         }
 
         /// <summary>
