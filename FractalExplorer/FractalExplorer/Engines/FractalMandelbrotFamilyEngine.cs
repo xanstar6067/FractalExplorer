@@ -120,9 +120,62 @@ namespace FractalExplorer.Engines
         private double CalculateSmoothValue(int iter, ComplexDecimal finalZ)
         {
             if (iter >= MaxIterations) return iter;
-            double log_zn_sq = Math.Log((double)finalZ.MagnitudeSquared);
-            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
-            return iter + 1 - nu;
+
+            double magnitudeSquared = (double)finalZ.MagnitudeSquared;
+
+            // Проверка на валидность и минимальное значение
+            if (double.IsInfinity(magnitudeSquared) || double.IsNaN(magnitudeSquared) || magnitudeSquared <= 1.0)
+            {
+                return iter;
+            }
+
+            // Добавляем ограничение на максимальное значение для предотвращения overflow
+            if (magnitudeSquared > 1e100)
+            {
+                magnitudeSquared = 1e100;
+            }
+
+            try
+            {
+                double log_zn_sq = Math.Log(magnitudeSquared);
+                double log_bailout = Math.Log((double)ThresholdSquared);
+
+                // Дополнительная проверка на валидность логарифмов
+                if (double.IsInfinity(log_zn_sq) || double.IsNaN(log_zn_sq) ||
+                    double.IsInfinity(log_bailout) || double.IsNaN(log_bailout))
+                {
+                    return iter;
+                }
+
+                double log_ratio = log_zn_sq / log_bailout;
+                if (log_ratio <= 1.0) return iter; // Изменено с 0 на 1.0
+
+                double nu = Math.Log(log_ratio) / Math.Log(2);
+
+                // Ограничиваем nu разумными пределами
+                if (double.IsNaN(nu) || double.IsInfinity(nu))
+                {
+                    return iter;
+                }
+
+                // Ограничиваем nu в пределах [0, 1]
+                nu = Math.Max(0, Math.Min(1, nu));
+
+                double smoothIter = iter + 1 - nu;
+
+                // Проверяем финальный результат
+                if (double.IsNaN(smoothIter) || double.IsInfinity(smoothIter) || smoothIter < 0)
+                {
+                    return iter;
+                }
+
+                return smoothIter;
+            }
+            catch
+            {
+                // В случае любых вычислительных ошибок возвращаем обычное значение итерации
+                return iter;
+            }
         }
 
         /// <summary>
@@ -131,9 +184,62 @@ namespace FractalExplorer.Engines
         private double CalculateSmoothValueDouble(int iter, ComplexDouble finalZ)
         {
             if (iter >= MaxIterations) return iter;
-            double log_zn_sq = Math.Log(finalZ.MagnitudeSquared);
-            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
-            return iter + 1 - nu;
+
+            double magnitudeSquared = finalZ.MagnitudeSquared;
+
+            // Проверка на валидность и минимальное значение
+            if (double.IsInfinity(magnitudeSquared) || double.IsNaN(magnitudeSquared) || magnitudeSquared <= 1.0)
+            {
+                return iter;
+            }
+
+            // Добавляем ограничение на максимальное значение для предотвращения overflow
+            if (magnitudeSquared > 1e100)
+            {
+                magnitudeSquared = 1e100;
+            }
+
+            try
+            {
+                double log_zn_sq = Math.Log(magnitudeSquared);
+                double log_bailout = Math.Log((double)ThresholdSquared);
+
+                // Дополнительная проверка на валидность логарифмов
+                if (double.IsInfinity(log_zn_sq) || double.IsNaN(log_zn_sq) ||
+                    double.IsInfinity(log_bailout) || double.IsNaN(log_bailout))
+                {
+                    return iter;
+                }
+
+                double log_ratio = log_zn_sq / log_bailout;
+                if (log_ratio <= 1.0) return iter; // Изменено с 0 на 1.0
+
+                double nu = Math.Log(log_ratio) / Math.Log(2);
+
+                // Ограничиваем nu разумными пределами
+                if (double.IsNaN(nu) || double.IsInfinity(nu))
+                {
+                    return iter;
+                }
+
+                // Ограничиваем nu в пределах [0, 1]
+                nu = Math.Max(0, Math.Min(1, nu));
+
+                double smoothIter = iter + 1 - nu;
+
+                // Проверяем финальный результат
+                if (double.IsNaN(smoothIter) || double.IsInfinity(smoothIter) || smoothIter < 0)
+                {
+                    return iter;
+                }
+
+                return smoothIter;
+            }
+            catch
+            {
+                // В случае любых вычислительных ошибок возвращаем обычное значение итерации
+                return iter;
+            }
         }
 
         #endregion
@@ -528,8 +634,15 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break; // Прерываем цикл, если число стало слишком большим
+                }
             }
             return iter;
         }
@@ -546,8 +659,15 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break; // Прерываем цикл, если число стало слишком большим
+                }
             }
             return iter;
         }
@@ -569,8 +689,15 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break;
+                }
             }
             return iter;
         }
@@ -587,8 +714,15 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break;
+                }
             }
             return iter;
         }
@@ -610,9 +744,16 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary)); // Note: Math.Abs for decimal is slow
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break;
+                }
             }
             return iter;
         }
@@ -629,9 +770,16 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break;
+                }
             }
             return iter;
         }
@@ -653,9 +801,16 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break;
+                }
             }
             return iter;
         }
@@ -672,9 +827,16 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                z = z * z + c;
-                iter++;
+                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
+                {
+                    z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                    z = z * z + c;
+                    iter++;
+                }
+                catch (OverflowException)
+                {
+                    break;
+                }
             }
             return iter;
         }
