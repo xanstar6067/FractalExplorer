@@ -1284,7 +1284,7 @@ namespace FractalExplorer.Forms
                 previewEngine.C1 = new ComplexDecimal(previewParams.C1Re, previewParams.C1Im);
                 previewEngine.C2 = new ComplexDecimal(previewParams.C2Re, previewParams.C2Im);
                 previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-
+                previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
                 previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
 
