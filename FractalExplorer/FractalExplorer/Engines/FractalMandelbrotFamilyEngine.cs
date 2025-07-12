@@ -120,62 +120,9 @@ namespace FractalExplorer.Engines
         private double CalculateSmoothValue(int iter, ComplexDecimal finalZ)
         {
             if (iter >= MaxIterations) return iter;
-
-            double magnitudeSquared = (double)finalZ.MagnitudeSquared;
-
-            // Проверка на валидность и минимальное значение
-            if (double.IsInfinity(magnitudeSquared) || double.IsNaN(magnitudeSquared) || magnitudeSquared <= 1.0)
-            {
-                return iter;
-            }
-
-            // Добавляем ограничение на максимальное значение для предотвращения overflow
-            if (magnitudeSquared > 1e100)
-            {
-                magnitudeSquared = 1e100;
-            }
-
-            try
-            {
-                double log_zn_sq = Math.Log(magnitudeSquared);
-                double log_bailout = Math.Log((double)ThresholdSquared);
-
-                // Дополнительная проверка на валидность логарифмов
-                if (double.IsInfinity(log_zn_sq) || double.IsNaN(log_zn_sq) ||
-                    double.IsInfinity(log_bailout) || double.IsNaN(log_bailout))
-                {
-                    return iter;
-                }
-
-                double log_ratio = log_zn_sq / log_bailout;
-                if (log_ratio <= 1.0) return iter; // Изменено с 0 на 1.0
-
-                double nu = Math.Log(log_ratio) / Math.Log(2);
-
-                // Ограничиваем nu разумными пределами
-                if (double.IsNaN(nu) || double.IsInfinity(nu))
-                {
-                    return iter;
-                }
-
-                // Ограничиваем nu в пределах [0, 1]
-                nu = Math.Max(0, Math.Min(1, nu));
-
-                double smoothIter = iter + 1 - nu;
-
-                // Проверяем финальный результат
-                if (double.IsNaN(smoothIter) || double.IsInfinity(smoothIter) || smoothIter < 0)
-                {
-                    return iter;
-                }
-
-                return smoothIter;
-            }
-            catch
-            {
-                // В случае любых вычислительных ошибок возвращаем обычное значение итерации
-                return iter;
-            }
+            double log_zn_sq = Math.Log((double)finalZ.MagnitudeSquared);
+            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
+            return iter + 1 - nu;
         }
 
         /// <summary>
@@ -184,62 +131,9 @@ namespace FractalExplorer.Engines
         private double CalculateSmoothValueDouble(int iter, ComplexDouble finalZ)
         {
             if (iter >= MaxIterations) return iter;
-
-            double magnitudeSquared = finalZ.MagnitudeSquared;
-
-            // Проверка на валидность и минимальное значение
-            if (double.IsInfinity(magnitudeSquared) || double.IsNaN(magnitudeSquared) || magnitudeSquared <= 1.0)
-            {
-                return iter;
-            }
-
-            // Добавляем ограничение на максимальное значение для предотвращения overflow
-            if (magnitudeSquared > 1e100)
-            {
-                magnitudeSquared = 1e100;
-            }
-
-            try
-            {
-                double log_zn_sq = Math.Log(magnitudeSquared);
-                double log_bailout = Math.Log((double)ThresholdSquared);
-
-                // Дополнительная проверка на валидность логарифмов
-                if (double.IsInfinity(log_zn_sq) || double.IsNaN(log_zn_sq) ||
-                    double.IsInfinity(log_bailout) || double.IsNaN(log_bailout))
-                {
-                    return iter;
-                }
-
-                double log_ratio = log_zn_sq / log_bailout;
-                if (log_ratio <= 1.0) return iter; // Изменено с 0 на 1.0
-
-                double nu = Math.Log(log_ratio) / Math.Log(2);
-
-                // Ограничиваем nu разумными пределами
-                if (double.IsNaN(nu) || double.IsInfinity(nu))
-                {
-                    return iter;
-                }
-
-                // Ограничиваем nu в пределах [0, 1]
-                nu = Math.Max(0, Math.Min(1, nu));
-
-                double smoothIter = iter + 1 - nu;
-
-                // Проверяем финальный результат
-                if (double.IsNaN(smoothIter) || double.IsInfinity(smoothIter) || smoothIter < 0)
-                {
-                    return iter;
-                }
-
-                return smoothIter;
-            }
-            catch
-            {
-                // В случае любых вычислительных ошибок возвращаем обычное значение итерации
-                return iter;
-            }
+            double log_zn_sq = Math.Log(finalZ.MagnitudeSquared);
+            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
+            return iter + 1 - nu;
         }
 
         #endregion
@@ -324,15 +218,23 @@ namespace FractalExplorer.Engines
                         int rowOffset = y * bmpData.Stride;
                         for (int x = 0; x < renderWidth; x++)
                         {
-                            decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
-                            decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
+                            Color pixelColor;
+                            try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
+                            {
+                                decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
+                                decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
 
-                            GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                            int iter = CalculateIterations(ref z, c);
+                                GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
+                                int iter = CalculateIterations(ref z, c);
 
-                            Color pixelColor = UseSmoothColoring && SmoothPalette != null
-                                ? SmoothPalette(CalculateSmoothValue(iter, z))
-                                : Palette(iter, MaxIterations, MaxColorIterations);
+                                pixelColor = UseSmoothColoring && SmoothPalette != null
+                                    ? SmoothPalette(CalculateSmoothValue(iter, z))
+                                    : Palette(iter, MaxIterations, MaxColorIterations);
+                            }
+                            catch (OverflowException)
+                            {
+                                pixelColor = Color.Black; // Безопасный цвет при переполнении
+                            }
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -361,15 +263,23 @@ namespace FractalExplorer.Engines
                         int rowOffset = y * bmpData.Stride;
                         for (int x = 0; x < renderWidth; x++)
                         {
-                            double re = centerX_d + (x - halfWidthPixels_d) * unitsPerPixel_d;
-                            double im = centerY_d - (y - halfHeightPixels_d) * unitsPerPixel_d;
+                            Color pixelColor;
+                            try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
+                            {
+                                double re = centerX_d + (x - halfWidthPixels_d) * unitsPerPixel_d;
+                                double im = centerY_d - (y - halfHeightPixels_d) * unitsPerPixel_d;
 
-                            GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                            int iter = CalculateIterationsDouble(ref z, c);
+                                GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
+                                int iter = CalculateIterationsDouble(ref z, c);
 
-                            Color pixelColor = UseSmoothColoring && SmoothPalette != null
-                                ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                                : Palette(iter, MaxIterations, MaxColorIterations);
+                                pixelColor = UseSmoothColoring && SmoothPalette != null
+                                    ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
+                                    : Palette(iter, MaxIterations, MaxColorIterations);
+                            }
+                            catch (OverflowException)
+                            {
+                                pixelColor = Color.Black; // Безопасный цвет при переполнении
+                            }
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -418,22 +328,29 @@ namespace FractalExplorer.Engines
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
-                    decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
-                    decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
-
                     Color pixelColor;
-                    GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-
-                    int iter = CalculateIterations(ref z, c);
-
-                    if (UseSmoothColoring && SmoothPalette != null)
+                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
                     {
-                        double smoothIter = CalculateSmoothValue(iter, z);
-                        pixelColor = SmoothPalette(smoothIter);
+                        decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
+                        decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
+
+                        GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
+
+                        int iter = CalculateIterations(ref z, c);
+
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValue(iter, z);
+                            pixelColor = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
                     }
-                    else
+                    catch (OverflowException)
                     {
-                        pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        pixelColor = Color.Black;
                     }
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
@@ -466,22 +383,29 @@ namespace FractalExplorer.Engines
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
-                    double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
-                    double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
-
                     Color pixelColor;
-                    GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-
-                    int iter = CalculateIterationsDouble(ref z, c);
-
-                    if (UseSmoothColoring && SmoothPalette != null)
+                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
                     {
-                        double smoothIter = CalculateSmoothValueDouble(iter, z);
-                        pixelColor = SmoothPalette(smoothIter);
+                        double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
+                        double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
+
+                        GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
+
+                        int iter = CalculateIterationsDouble(ref z, c);
+
+                        if (UseSmoothColoring && SmoothPalette != null)
+                        {
+                            double smoothIter = CalculateSmoothValueDouble(iter, z);
+                            pixelColor = SmoothPalette(smoothIter);
+                        }
+                        else
+                        {
+                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        }
                     }
-                    else
+                    catch (OverflowException)
                     {
-                        pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
+                        pixelColor = Color.Black;
                     }
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
@@ -509,18 +433,25 @@ namespace FractalExplorer.Engines
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {
-                    long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
-                    long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
+                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
+                    {
+                        long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
+                        long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
 
-                    decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
-                    decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+                        decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                        decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                    GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                    int iter = CalculateIterations(ref z, c);
+                        GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
+                        int iter = CalculateIterations(ref z, c);
 
-                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValue(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                        highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
+                            ? SmoothPalette(CalculateSmoothValue(iter, z))
+                            : Palette(iter, MaxIterations, MaxColorIterations);
+                    }
+                    catch (OverflowException)
+                    {
+                        highResColorBuffer[x, y] = Color.Black;
+                    }
                 }
             });
 
@@ -571,18 +502,25 @@ namespace FractalExplorer.Engines
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {
-                    long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
-                    long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
+                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
+                    {
+                        long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
+                        long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
 
-                    double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
-                    double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+                        double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                        double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                    GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                    int iter = CalculateIterationsDouble(ref z, c);
+                        GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
+                        int iter = CalculateIterationsDouble(ref z, c);
 
-                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                        highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
+                            ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
+                            : Palette(iter, MaxIterations, MaxColorIterations);
+                    }
+                    catch (OverflowException)
+                    {
+                        highResColorBuffer[x, y] = Color.Black;
+                    }
                 }
             });
 
@@ -632,17 +570,12 @@ namespace FractalExplorer.Engines
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
+            // Теперь, когда защита есть на более высоком уровне, try-catch здесь не обязателен,
+            // но и не мешает (является "защитой в глубине"). Оставляем как есть.
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break; // Прерываем цикл, если число стало слишком большим
-                }
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -659,15 +592,8 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break; // Прерываем цикл, если число стало слишком большим
-                }
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -689,15 +615,8 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break;
-                }
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -714,15 +633,8 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break;
-                }
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -744,16 +656,9 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break;
-                }
+                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary)); // Note: Math.Abs for decimal is slow
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -770,16 +675,9 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break;
-                }
+                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -801,16 +699,9 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break;
-                }
+                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
@@ -827,16 +718,9 @@ namespace FractalExplorer.Engines
             double thresholdSq = (double)this.ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                try // <<< ИЗМЕНЕНИЕ: Добавлена защита от переполнения
-                {
-                    z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
-                    z = z * z + c;
-                    iter++;
-                }
-                catch (OverflowException)
-                {
-                    break;
-                }
+                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                z = z * z + c;
+                iter++;
             }
             return iter;
         }
