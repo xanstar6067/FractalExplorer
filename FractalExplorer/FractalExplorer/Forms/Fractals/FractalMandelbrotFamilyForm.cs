@@ -1373,7 +1373,7 @@ namespace FractalDraving
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                previewEngine.MaxIterations = 400;
+                previewEngine.MaxIterations = 400; // Используем достаточное количество итераций для превью
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
@@ -1381,11 +1381,18 @@ namespace FractalDraving
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
-                // Настраиваем обе палитры для рендеринга превью
-                previewEngine.UseSmoothColoring = true; // Всегда рендерим превью со сглаживанием
-                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
-                // Старая палитра тоже нужна для обратной совместимости или если сглаживание выключено
+                // --- ИСПРАВЛЕНИЕ: Возвращаем логику из старого кода для корректного превью ---
+                // 1. Отключаем сглаживание для превью, чтобы использовать проверенный дискретный метод.
+                previewEngine.UseSmoothColoring = false;
+
+                // 2. Настраиваем параметры для дискретной палитры.
+                previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
+                    ? previewEngine.MaxIterations
+                    : paletteForPreview.MaxColorIterations;
+
+                // 3. Генерируем и присваиваем функцию ДИСКРЕТНОЙ палитры.
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+                // -----------------------------------------------------------------------------
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
@@ -1429,9 +1436,18 @@ namespace FractalDraving
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
-            // Настраиваем палитры для превью
-            previewEngine.UseSmoothColoring = true; // Всегда используем сглаживание для красивых превью
-            previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+            // --- ИСПРАВЛЕНИЕ: Возвращаем логику из старого кода для корректного превью ---
+            // 1. Отключаем сглаживание для превью.
+            previewEngine.UseSmoothColoring = false;
+
+            // 2. Настраиваем параметры для дискретной палитры.
+            previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
+                ? previewEngine.MaxIterations
+                : paletteForPreview.MaxColorIterations;
+
+            // 3. Генерируем и присваиваем функцию ДИСКРЕТНОЙ палитры.
+            previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+            // -----------------------------------------------------------------------------
 
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
