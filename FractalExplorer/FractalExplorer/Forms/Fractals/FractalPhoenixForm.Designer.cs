@@ -18,6 +18,7 @@ namespace FractalExplorer.Forms
         private void InitializeComponent()
         {
             pnlControls = new Panel();
+            cbSmooth = new CheckBox();
             btnStateManager = new Button();
             btnSelectPhoenixParameters = new Button();
             lblC2Im = new Label();
@@ -42,6 +43,8 @@ namespace FractalExplorer.Forms
             nudThreshold = new NumericUpDown();
             nudIterations = new NumericUpDown();
             canvas = new PictureBox();
+            lbSSAA = new Label();
+            cbSSAA = new ComboBox();
             pnlControls.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudC2Im).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudC2Re).BeginInit();
@@ -55,6 +58,9 @@ namespace FractalExplorer.Forms
             // 
             // pnlControls
             // 
+            pnlControls.Controls.Add(lbSSAA);
+            pnlControls.Controls.Add(cbSSAA);
+            pnlControls.Controls.Add(cbSmooth);
             pnlControls.Controls.Add(btnStateManager);
             pnlControls.Controls.Add(btnSelectPhoenixParameters);
             pnlControls.Controls.Add(lblC2Im);
@@ -84,9 +90,21 @@ namespace FractalExplorer.Forms
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
             // 
+            // cbSmooth
+            // 
+            cbSmooth.AutoSize = true;
+            cbSmooth.Checked = true;
+            cbSmooth.CheckState = CheckState.Checked;
+            cbSmooth.Location = new Point(12, 336);
+            cbSmooth.Name = "cbSmooth";
+            cbSmooth.Size = new Size(153, 19);
+            cbSmooth.TabIndex = 3;
+            cbSmooth.Text = "Плавное окрашивание";
+            cbSmooth.UseVisualStyleBackColor = true;
+            // 
             // btnStateManager
             // 
-            btnStateManager.Location = new Point(12, 422);
+            btnStateManager.Location = new Point(12, 472);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(204, 32);
             btnStateManager.TabIndex = 35;
@@ -188,7 +206,7 @@ namespace FractalExplorer.Forms
             // 
             // color_configurations
             // 
-            color_configurations.Location = new Point(12, 346);
+            color_configurations.Location = new Point(12, 396);
             color_configurations.Name = "color_configurations";
             color_configurations.Size = new Size(204, 32);
             color_configurations.TabIndex = 15;
@@ -199,7 +217,7 @@ namespace FractalExplorer.Forms
             // lblProgress
             // 
             lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(80, 461);
+            lblProgress.Location = new Point(80, 511);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(67, 15);
             lblProgress.TabIndex = 20;
@@ -228,7 +246,7 @@ namespace FractalExplorer.Forms
             // 
             // btnRender
             // 
-            btnRender.Location = new Point(12, 384);
+            btnRender.Location = new Point(12, 434);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(204, 32);
             btnRender.TabIndex = 16;
@@ -238,7 +256,7 @@ namespace FractalExplorer.Forms
             // 
             // pbRenderProgress
             // 
-            pbRenderProgress.Location = new Point(12, 479);
+            pbRenderProgress.Location = new Point(12, 529);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(204, 23);
             pbRenderProgress.TabIndex = 14;
@@ -262,7 +280,7 @@ namespace FractalExplorer.Forms
             // 
             // btnSaveHighRes
             // 
-            btnSaveHighRes.Location = new Point(12, 308);
+            btnSaveHighRes.Location = new Point(12, 358);
             btnSaveHighRes.Name = "btnSaveHighRes";
             btnSaveHighRes.Size = new Size(204, 32);
             btnSaveHighRes.TabIndex = 12;
@@ -319,6 +337,23 @@ namespace FractalExplorer.Forms
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
+            // lbSSAA
+            // 
+            lbSSAA.AutoSize = true;
+            lbSSAA.Location = new Point(10, 311);
+            lbSSAA.Name = "lbSSAA";
+            lbSSAA.Size = new Size(112, 15);
+            lbSSAA.TabIndex = 43;
+            lbSSAA.Text = "Сглаживание SSAA";
+            // 
+            // cbSSAA
+            // 
+            cbSSAA.FormattingEnabled = true;
+            cbSSAA.Location = new Point(128, 308);
+            cbSSAA.Name = "cbSSAA";
+            cbSSAA.Size = new Size(95, 23);
+            cbSSAA.TabIndex = 42;
+            // 
             // FractalPhoenixForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -371,5 +406,8 @@ namespace FractalExplorer.Forms
         protected System.Windows.Forms.NumericUpDown nudC2Im;
         protected System.Windows.Forms.Button btnSelectPhoenixParameters;
         private Button btnStateManager;
+        private CheckBox cbSmooth;
+        protected Label lbSSAA;
+        private ComboBox cbSSAA;
     }
 }

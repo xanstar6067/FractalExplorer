@@ -1386,13 +1386,11 @@ namespace FractalDraving
                 previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
                 if (previewEngine.UseSmoothColoring)
                 {
-                    // --- РЕЖИМ СГЛАЖИВАНИЯ (вернет темную картинку) ---
                     previewEngine.UseSmoothColoring = true;
                     previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
                 }
                 else
                 {
-                    // --- РЕЖИМ ДИСКРЕТНЫХ ЦВЕТОВ (яркая картинка) ---
                     previewEngine.UseSmoothColoring = false;
                     previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
                         ? previewEngine.MaxIterations
