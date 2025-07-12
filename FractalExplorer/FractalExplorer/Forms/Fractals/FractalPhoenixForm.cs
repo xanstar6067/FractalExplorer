@@ -167,7 +167,8 @@ namespace FractalExplorer.Forms
 
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
-            nudZoom.Minimum = 0.000000000000001m;
+            nudZoom.Minimum = 0.001m;
+            nudZoom.Maximum = decimal.MaxValue;
             _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
