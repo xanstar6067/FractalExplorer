@@ -496,9 +496,19 @@ namespace FractalExplorer.Forms
                         var bitmapRect = new Rectangle(0, 0, _currentRenderingBitmap.Width, _currentRenderingBitmap.Height);
                         tileRect.Intersect(bitmapRect);
                         if (tileRect.Width == 0 || tileRect.Height == 0) return;
+
+                        // --- ИСПРАВЛЕННЫЙ БЛОК КОПИРОВАНИЯ ---
+                        // Этот код корректно копирует данные тайла построчно, учитывая stride битмапа.
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tileRect, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-                        Marshal.Copy(tileBuffer, 0, bmpData.Scan0, tileBuffer.Length);
+                        int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
+                        for (int y = 0; y < tileRect.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            int srcOffset = y * tileWidthInBytes;
+                            Marshal.Copy(tileBuffer, srcOffset, destPtr, tileRect.Width * bytesPerPixel);
+                        }
                         _currentRenderingBitmap.UnlockBits(bmpData);
+                        // --- КОНЕЦ ИСПРАВЛЕННОГО БЛОКА ---
                     }
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
                     if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
