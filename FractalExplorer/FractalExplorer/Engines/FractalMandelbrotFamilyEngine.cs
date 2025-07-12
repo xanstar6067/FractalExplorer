@@ -218,23 +218,15 @@ namespace FractalExplorer.Engines
                         int rowOffset = y * bmpData.Stride;
                         for (int x = 0; x < renderWidth; x++)
                         {
-                            Color pixelColor;
-                            try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
-                            {
-                                decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
-                                decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
+                            decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
+                            decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
 
-                                GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                                int iter = CalculateIterations(ref z, c);
+                            GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
+                            int iter = CalculateIterations(ref z, c);
 
-                                pixelColor = UseSmoothColoring && SmoothPalette != null
-                                    ? SmoothPalette(CalculateSmoothValue(iter, z))
-                                    : Palette(iter, MaxIterations, MaxColorIterations);
-                            }
-                            catch (OverflowException)
-                            {
-                                pixelColor = Color.Black; // Безопасный цвет при переполнении
-                            }
+                            Color pixelColor = UseSmoothColoring && SmoothPalette != null
+                                ? SmoothPalette(CalculateSmoothValue(iter, z))
+                                : Palette(iter, MaxIterations, MaxColorIterations);
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -263,23 +255,15 @@ namespace FractalExplorer.Engines
                         int rowOffset = y * bmpData.Stride;
                         for (int x = 0; x < renderWidth; x++)
                         {
-                            Color pixelColor;
-                            try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
-                            {
-                                double re = centerX_d + (x - halfWidthPixels_d) * unitsPerPixel_d;
-                                double im = centerY_d - (y - halfHeightPixels_d) * unitsPerPixel_d;
+                            double re = centerX_d + (x - halfWidthPixels_d) * unitsPerPixel_d;
+                            double im = centerY_d - (y - halfHeightPixels_d) * unitsPerPixel_d;
 
-                                GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                                int iter = CalculateIterationsDouble(ref z, c);
+                            GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
+                            int iter = CalculateIterationsDouble(ref z, c);
 
-                                pixelColor = UseSmoothColoring && SmoothPalette != null
-                                    ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                                    : Palette(iter, MaxIterations, MaxColorIterations);
-                            }
-                            catch (OverflowException)
-                            {
-                                pixelColor = Color.Black; // Безопасный цвет при переполнении
-                            }
+                            Color pixelColor = UseSmoothColoring && SmoothPalette != null
+                                ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
+                                : Palette(iter, MaxIterations, MaxColorIterations);
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -328,29 +312,22 @@ namespace FractalExplorer.Engines
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
+                    decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
+                    decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
+
                     Color pixelColor;
-                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
+                    GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
+
+                    int iter = CalculateIterations(ref z, c);
+
+                    if (UseSmoothColoring && SmoothPalette != null)
                     {
-                        decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
-                        decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
-
-                        GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-
-                        int iter = CalculateIterations(ref z, c);
-
-                        if (UseSmoothColoring && SmoothPalette != null)
-                        {
-                            double smoothIter = CalculateSmoothValue(iter, z);
-                            pixelColor = SmoothPalette(smoothIter);
-                        }
-                        else
-                        {
-                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-                        }
+                        double smoothIter = CalculateSmoothValue(iter, z);
+                        pixelColor = SmoothPalette(smoothIter);
                     }
-                    catch (OverflowException)
+                    else
                     {
-                        pixelColor = Color.Black;
+                        pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
                     }
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
@@ -383,29 +360,22 @@ namespace FractalExplorer.Engines
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
+                    double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
+                    double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
+
                     Color pixelColor;
-                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
+                    GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
+
+                    int iter = CalculateIterationsDouble(ref z, c);
+
+                    if (UseSmoothColoring && SmoothPalette != null)
                     {
-                        double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
-                        double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
-
-                        GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-
-                        int iter = CalculateIterationsDouble(ref z, c);
-
-                        if (UseSmoothColoring && SmoothPalette != null)
-                        {
-                            double smoothIter = CalculateSmoothValueDouble(iter, z);
-                            pixelColor = SmoothPalette(smoothIter);
-                        }
-                        else
-                        {
-                            pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
-                        }
+                        double smoothIter = CalculateSmoothValueDouble(iter, z);
+                        pixelColor = SmoothPalette(smoothIter);
                     }
-                    catch (OverflowException)
+                    else
                     {
-                        pixelColor = Color.Black;
+                        pixelColor = Palette(iter, MaxIterations, MaxColorIterations);
                     }
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
@@ -433,25 +403,18 @@ namespace FractalExplorer.Engines
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {
-                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
-                    {
-                        long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
-                        long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
+                    long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
+                    long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
 
-                        decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
-                        decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+                    decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                    decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                        GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                        int iter = CalculateIterations(ref z, c);
+                    GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
+                    int iter = CalculateIterations(ref z, c);
 
-                        highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                            ? SmoothPalette(CalculateSmoothValue(iter, z))
-                            : Palette(iter, MaxIterations, MaxColorIterations);
-                    }
-                    catch (OverflowException)
-                    {
-                        highResColorBuffer[x, y] = Color.Black;
-                    }
+                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
+                        ? SmoothPalette(CalculateSmoothValue(iter, z))
+                        : Palette(iter, MaxIterations, MaxColorIterations);
                 }
             });
 
@@ -502,25 +465,18 @@ namespace FractalExplorer.Engines
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {
-                    try // <<< ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАЩИТА ВСЕГО ПИКСЕЛЯ
-                    {
-                        long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
-                        long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
+                    long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
+                    long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
 
-                        double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
-                        double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+                    double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                    double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                        GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                        int iter = CalculateIterationsDouble(ref z, c);
+                    GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
+                    int iter = CalculateIterationsDouble(ref z, c);
 
-                        highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                            ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                            : Palette(iter, MaxIterations, MaxColorIterations);
-                    }
-                    catch (OverflowException)
-                    {
-                        highResColorBuffer[x, y] = Color.Black;
-                    }
+                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
+                        ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
+                        : Palette(iter, MaxIterations, MaxColorIterations);
                 }
             });
 
@@ -570,8 +526,6 @@ namespace FractalExplorer.Engines
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
-            // Теперь, когда защита есть на более высоком уровне, try-catch здесь не обязателен,
-            // но и не мешает (является "защитой в глубине"). Оставляем как есть.
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
                 z = z * z + c;

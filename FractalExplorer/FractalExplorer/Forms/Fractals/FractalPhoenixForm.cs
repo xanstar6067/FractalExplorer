@@ -873,7 +873,7 @@ namespace FractalExplorer.Forms
             _fractalEngine.MaxColorIterations = effectiveMaxColorIterations;
 
             // Генерируем функцию для сглаженной палитры
-            _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette, _fractalEngine.MaxIterations);
+            _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette);
 
             // Генерируем и кэшируем дискретную палитру
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
@@ -948,18 +948,18 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Генерирует функцию сглаженного окрашивания на основе заданной палитры.
         /// </summary>
-        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int maxRenderIterations)
+        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
-            int maxColorIter = palette.AlignWithRenderIterations ? maxRenderIterations : palette.MaxColorIterations;
+            int maxColorIter = palette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : palette.MaxColorIterations;
 
             if (palette.Name == "Стандартный серый")
             {
                 return (smoothIter) =>
                 {
-                    if (smoothIter >= maxRenderIterations) return Color.Black; // ИСПОЛЬЗУЕМ ПАРАМЕТР
+                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                     if (smoothIter < 0) smoothIter = 0;
                     double logMax = Math.Log(maxColorIter + 1);
                     if (logMax <= 0) return Color.Black;
@@ -971,11 +971,11 @@ namespace FractalExplorer.Forms
             }
 
             if (colorCount == 0) return (smoothIter) => Color.Black;
-            if (colorCount == 1) return (smoothIter) => (smoothIter >= maxRenderIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma); // ИСПОЛЬЗУЕМ ПАРАМЕТР
+            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
             return (smoothIter) =>
             {
-                if (smoothIter >= maxRenderIterations) return Color.Black; // ИСПОЛЬЗУЕМ ПАРАМЕТР
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
                 double t = (smoothIter % maxColorIter) / maxColorIter;
                 double scaledT = t * (colorCount - 1);
@@ -1197,7 +1197,7 @@ namespace FractalExplorer.Forms
 
                 if (previewEngine.UseSmoothColoring)
                 {
-                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, previewEngine.MaxIterations);
+                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
                 }
                 else
                 {
@@ -1242,7 +1242,7 @@ namespace FractalExplorer.Forms
 
             if (previewEngine.UseSmoothColoring)
             {
-                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, previewEngine.MaxIterations);
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
             }
             else
             {
@@ -1317,7 +1317,7 @@ namespace FractalExplorer.Forms
 
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
             engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
-            engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender, engine.MaxIterations);
+            engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender);
             engine.Palette = GenerateDiscretePaletteFunction(paletteForRender);
 
             return engine;
