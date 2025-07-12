@@ -1439,7 +1439,7 @@ namespace FractalDraving
             // --- ИСПРАВЛЕНИЕ: Возвращаем логику из старого кода для корректного превью ---
             // 1. Отключаем сглаживание для превью.
             previewEngine.UseSmoothColoring = false;
-
+            //previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             // 2. Настраиваем параметры для дискретной палитры.
             previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
                 ? previewEngine.MaxIterations
