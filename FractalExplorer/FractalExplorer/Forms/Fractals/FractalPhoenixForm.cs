@@ -1207,7 +1207,8 @@ namespace FractalExplorer.Forms
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = Math.Min(state.Iterations, 75),
+                // --- ИСПРАВЛЕНИЕ: Ограничение Math.Min убрано. Теперь используется ПОЛНОЕ количество итераций. ---
+                Iterations = state.Iterations,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 C1Re = state.C1Re,
@@ -1271,7 +1272,8 @@ namespace FractalExplorer.Forms
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
                 previewEngine.Scale = BASE_SCALE / previewParams.Zoom;
-                previewEngine.MaxIterations = 250;
+                // --- ИСПРАВЛЕНИЕ: Убрано жесткое значение 250. Используются итерации из параметров превью. ---
+                previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
                 previewEngine.C1 = new ComplexDecimal(previewParams.C1Re, previewParams.C1Im);
                 previewEngine.C2 = new ComplexDecimal(previewParams.C2Re, previewParams.C2Im);
