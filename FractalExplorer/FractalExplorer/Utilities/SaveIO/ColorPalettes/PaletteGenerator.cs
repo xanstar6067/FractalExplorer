@@ -126,7 +126,5 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                 (int)(a.G + (b.G - a.G) * t),
                 (int)(a.B + (b.B - a.B) * t));
         }
-    }
-
-    
+    }  
 }
