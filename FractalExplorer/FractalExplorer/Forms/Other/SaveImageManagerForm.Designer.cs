@@ -1,4 +1,6 @@
-﻿namespace FractalExplorer.Forms.Other
+﻿// Обратите внимание: пространство имен вашего проекта может отличаться.
+// Убедитесь, что оно совпадает с вашим.
+namespace FractalExplorer.Forms.Other
 {
     partial class SaveImageManagerForm
     {
@@ -20,7 +22,7 @@
             this.pnlMain = new System.Windows.Forms.Panel();
             this.grpEffects = new System.Windows.Forms.GroupBox();
             this.grpPostProcessing = new System.Windows.Forms.GroupBox();
-            this.lblComingSoon = new System.Windows.Forms.Label();
+            this.chkApplyBicubic = new System.Windows.Forms.CheckBox();
             this.lblSsaa = new System.Windows.Forms.Label();
             this.cbSSAA = new System.Windows.Forms.ComboBox();
             this.grpOutput = new System.Windows.Forms.GroupBox();
@@ -75,8 +77,8 @@
             // 
             // grpPostProcessing
             // 
-            this.grpPostProcessing.Controls.Add(this.lblComingSoon);
-            this.grpPostProcessing.Enabled = false;
+            this.grpPostProcessing.Controls.Add(this.chkApplyBicubic);
+            this.grpPostProcessing.Enabled = true;
             this.grpPostProcessing.Location = new System.Drawing.Point(9, 81);
             this.grpPostProcessing.Name = "grpPostProcessing";
             this.grpPostProcessing.Size = new System.Drawing.Size(543, 102);
@@ -84,16 +86,15 @@
             this.grpPostProcessing.TabStop = false;
             this.grpPostProcessing.Text = "Пост-обработка";
             // 
-            // lblComingSoon
+            // chkApplyBicubic
             // 
-            this.lblComingSoon.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblComingSoon.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.lblComingSoon.Location = new System.Drawing.Point(3, 19);
-            this.lblComingSoon.Name = "lblComingSoon";
-            this.lblComingSoon.Size = new System.Drawing.Size(537, 80);
-            this.lblComingSoon.TabIndex = 0;
-            this.lblComingSoon.Text = "Фильтры будут доступны в будущих версиях";
-            this.lblComingSoon.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.chkApplyBicubic.AutoSize = true;
+            this.chkApplyBicubic.Location = new System.Drawing.Point(12, 25);
+            this.chkApplyBicubic.Name = "chkApplyBicubic";
+            this.chkApplyBicubic.Size = new System.Drawing.Size(262, 19);
+            this.chkApplyBicubic.TabIndex = 0;
+            this.chkApplyBicubic.Text = "Применить бикубическую интерполяцию";
+            this.chkApplyBicubic.UseVisualStyleBackColor = true;
             // 
             // lblSsaa
             // 
@@ -349,6 +350,7 @@
             this.grpEffects.ResumeLayout(false);
             this.grpEffects.PerformLayout();
             this.grpPostProcessing.ResumeLayout(false);
+            this.grpPostProcessing.PerformLayout();
             this.grpOutput.ResumeLayout(false);
             this.grpOutput.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarJpgQuality)).EndInit();
@@ -381,9 +383,10 @@
         private System.Windows.Forms.Button btnPreset4K;
         private System.Windows.Forms.Button btnPresetFHD;
         private System.Windows.Forms.GroupBox grpPostProcessing;
-        private System.Windows.Forms.Label lblComingSoon;
         private System.Windows.Forms.TrackBar trackBarJpgQuality;
         private System.Windows.Forms.Label lblJpgQuality;
         private System.Windows.Forms.Label lblJpgQualityValue;
+        // Новое поле для CheckBox
+        private System.Windows.Forms.CheckBox chkApplyBicubic;
     }
 }

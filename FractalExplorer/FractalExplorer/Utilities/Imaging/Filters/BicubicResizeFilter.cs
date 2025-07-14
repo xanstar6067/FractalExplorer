@@ -19,15 +19,18 @@ namespace FractalExplorer.Utilities.Imaging.Filters
             NewHeight = newHeight;
         }
 
-        // 1. Добавляем ключевое слово 'unsafe' к методу Apply
         public unsafe Bitmap Apply(Bitmap sourceImage)
         {
             if (sourceImage == null) throw new ArgumentNullException(nameof(sourceImage));
 
             var newBitmap = new Bitmap(NewWidth, NewHeight, sourceImage.PixelFormat);
 
+            // ИСПРАВЛЕНИЕ: Считываем размеры ДО блокировки и цикла.
+            int sourceWidth = sourceImage.Width;
+            int sourceHeight = sourceImage.Height;
+
             BitmapData sourceData = sourceImage.LockBits(
-                new Rectangle(0, 0, sourceImage.Width, sourceImage.Height),
+                new Rectangle(0, 0, sourceWidth, sourceHeight), // Используем локальную переменную
                 ImageLockMode.ReadOnly, sourceImage.PixelFormat);
 
             BitmapData destData = newBitmap.LockBits(
@@ -41,13 +44,12 @@ namespace FractalExplorer.Utilities.Imaging.Filters
             IntPtr sourceScan0 = sourceData.Scan0;
             IntPtr destScan0 = destData.Scan0;
 
-            float xRatio = (float)sourceImage.Width / NewWidth;
-            float yRatio = (float)sourceImage.Height / NewHeight;
+            // ИСПРАВЛЕНИЕ: Используем локальные переменные
+            float xRatio = (float)sourceWidth / NewWidth;
+            float yRatio = (float)sourceHeight / NewHeight;
 
             Parallel.For(0, NewHeight, y =>
             {
-                // Так как весь метод Apply помечен как unsafe,
-                // здесь больше не будет ошибки.
                 byte* destRow = (byte*)destScan0 + (y * destStride);
 
                 for (int x = 0; x < NewWidth; x++)
@@ -61,11 +63,12 @@ namespace FractalExplorer.Utilities.Imaging.Filters
                     float fx = sourceX - ix;
                     float fy = sourceY - iy;
 
-                    byte b = InterpolateChannel(sourceScan0, sourceImage.Width, sourceImage.Height, sourceStride, bytesPerPixel, 0, ix, iy, fx, fy);
-                    byte g = InterpolateChannel(sourceScan0, sourceImage.Width, sourceImage.Height, sourceStride, bytesPerPixel, 1, ix, iy, fx, fy);
-                    byte r = InterpolateChannel(sourceScan0, sourceImage.Width, sourceImage.Height, sourceStride, bytesPerPixel, 2, ix, iy, fx, fy);
+                    // ИСПРАВЛЕНИЕ: Передаем в метод локальные переменные, а не свойства объекта
+                    byte b = InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 0, ix, iy, fx, fy);
+                    byte g = InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 1, ix, iy, fx, fy);
+                    byte r = InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 2, ix, iy, fx, fy);
                     byte a = (bytesPerPixel == 4) ?
-                             InterpolateChannel(sourceScan0, sourceImage.Width, sourceImage.Height, sourceStride, bytesPerPixel, 3, ix, iy, fx, fy)
+                             InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 3, ix, iy, fx, fy)
                              : (byte)255;
 
                     destRow[x * bytesPerPixel] = b;
@@ -84,7 +87,6 @@ namespace FractalExplorer.Utilities.Imaging.Filters
             return newBitmap;
         }
 
-        
         private unsafe byte InterpolateChannel(IntPtr sourceScan0, int width, int height, int stride, int bpp, int offset, int ix, int iy, float fx, float fy)
         {
             byte* p = (byte*)sourceScan0;
