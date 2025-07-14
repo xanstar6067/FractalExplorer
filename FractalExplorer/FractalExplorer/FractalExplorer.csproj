@@ -43,6 +43,7 @@
 
     <!-- ОТКЛЮЧАЕМ ДЕТЕРМИНИЗМ, чтобы разрешить использование '*' в AssemblyVersion -->
     <Deterministic>false</Deterministic>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- === КОНЕЦ НАСТРОЕК ВЕРСИОНИРОВАНИЯ === -->
 
   </PropertyGroup>
