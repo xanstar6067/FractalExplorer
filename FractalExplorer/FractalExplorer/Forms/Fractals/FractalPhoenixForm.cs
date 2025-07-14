@@ -498,7 +498,6 @@ namespace FractalExplorer.Forms
                         tileRect.Intersect(bitmapRect);
                         if (tileRect.Width == 0 || tileRect.Height == 0) return;
 
-                        // --- ИСПРАВЛЕННЫЙ БЛОК КОПИРОВАНИЯ ---
                         // Этот код корректно копирует данные тайла построчно, учитывая stride битмапа.
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tileRect, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
@@ -509,7 +508,6 @@ namespace FractalExplorer.Forms
                             Marshal.Copy(tileBuffer, srcOffset, destPtr, tileRect.Width * bytesPerPixel);
                         }
                         _currentRenderingBitmap.UnlockBits(bmpData);
-                        // --- КОНЕЦ ИСПРАВЛЕННОГО БЛОКА ---
                     }
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
                     if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
@@ -845,20 +843,16 @@ namespace FractalExplorer.Forms
 
         /// <summary>
         /// Генерирует функцию сглаженного окрашивания на основе заданной палитры.
-        /// --- ИЗМЕНЕНИЕ: Добавлен параметр effectiveMaxColorIterations ---
         /// </summary>
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
-            // Получаем общие свойства палитры
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
 
-            // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
-
-            // >>> СПЕЦИАЛЬНЫЙ СЛУЧАЙ: для алгоритмической серой палитры.
+            // Специальный случай для алгоритмической серой палитры.
             // Эта палитра должна быть плавной по всему диапазону итераций,
-            // поэтому она намеренно ИГНОРИРУЕТ effectiveMaxColorIterations, чтобы избежать "ломаных" переходов.
+            // поэтому она намеренно игнорирует effectiveMaxColorIterations, чтобы избежать "ломаных" переходов.
             if (palette.Name == "Стандартный серый")
             {
                 return (smoothIter) =>
@@ -866,12 +860,11 @@ namespace FractalExplorer.Forms
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                     if (smoothIter < 0) smoothIter = 0;
 
-                    // 1. Используем ОБЩЕЕ количество итераций рендера для масштабирования.
-                    //    Это ключ к плавному градиенту без разрывов.
+                    // 1. Используем общее количество итераций рендера для масштабирования.
                     double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
                     if (logMax <= 0) return Color.Black; // Защита от деления на ноль
 
-                    // 2. Берем логарифм от ПРЯМОГО значения итерации (без цикличности).
+                    // 2. Берем логарифм от прямого значения итерации (без цикличности).
                     double tLog = Math.Log(smoothIter + 1) / logMax;
 
                     // 3. Инвертируем значение для градиента от почти белого к черному.
@@ -884,16 +877,14 @@ namespace FractalExplorer.Forms
                 };
             }
 
-            // >>> ОБЩИЙ СЛУЧАЙ: для всех остальных палитр (градиентных и циклических).
+            // Общий случай для всех остальных палитр (градиентных и циклических).
             // Эта логика корректно использует effectiveMaxColorIterations для повторения палитры.
 
-            // Защита от деления на ноль, если период не задан.
             if (effectiveMaxColorIterations <= 0)
             {
                 return (smoothIter) => Color.Black;
             }
 
-            // Обработка крайних случаев.
             if (colorCount == 0) return (smoothIter) => Color.Black;
             if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
@@ -907,7 +898,6 @@ namespace FractalExplorer.Forms
                 double cyclicIter = smoothIter % effectiveMaxColorIterations;
 
                 // 2. Нормализуем его по отношению к длине этого периода.
-                //    (double) необходимо для корректного деления.
                 double t = cyclicIter / (double)effectiveMaxColorIterations;
 
                 // 3. Остальная логика интерполяции цвета остается без изменений.
@@ -921,8 +911,6 @@ namespace FractalExplorer.Forms
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
-
-            // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
         }
 
         /// <summary>
@@ -954,13 +942,10 @@ namespace FractalExplorer.Forms
             var activePalette = _paletteManager.ActivePalette;
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
 
-            // --- ИЗМЕНЕНИЕ: Это значение теперь нужно и для дискретной, и для сглаженной палитры ---
             _fractalEngine.MaxColorIterations = effectiveMaxColorIterations;
 
             // Генерируем функцию для сглаженной палитры
-            // --- ИЗМЕНЕНИЕ: Передаем effectiveMaxColorIterations в функцию генерации ---
             _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette, effectiveMaxColorIterations);
-            // -------------------------------------------------------------------------
 
             // Генерируем и кэшируем дискретную палитру
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
@@ -1037,7 +1022,6 @@ namespace FractalExplorer.Forms
         /// </summary>
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette)
         {
-            // Получаем общие свойства палитры
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
@@ -1254,9 +1238,6 @@ namespace FractalExplorer.Forms
 
                 var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
                 if (paletteToLoad != null) _paletteManager.ActivePalette = paletteToLoad;
-
-                // Примечание: состояние cbSmooth не сохраняется/загружается, оно остается как есть в UI.
-                // Это соответствует поведению формы Мандельброта.
 
                 lock (_bitmapLock)
                 {
