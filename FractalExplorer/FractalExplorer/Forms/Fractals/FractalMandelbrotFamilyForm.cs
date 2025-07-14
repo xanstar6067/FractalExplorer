@@ -894,7 +894,6 @@ namespace FractalDraving
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BaseScale / _zoom;
 
-            // --- НОВОЕ: Включаем сглаживание по умолчанию ---  // теперь реализовано. потом удалю этот комментарий.
             _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
 
             UpdateEngineSpecificParameters();
@@ -959,8 +958,6 @@ namespace FractalDraving
 
         #region Palette Management
 
-        // --- НОВЫЙ МЕТОД ГЕНЕРАЦИИ СГЛАЖЕННОЙ ПАЛИТРЫ (с учетом MaxColorIterations) ---
-        // --- ИЗМЕНЕНИЕ: Добавлен параметр effectiveMaxColorIterations ---
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
             // Получаем общие свойства палитры
@@ -968,9 +965,6 @@ namespace FractalDraving
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
 
-            // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
-
-            // >>> СПЕЦИАЛЬНЫЙ СЛУЧАЙ: для алгоритмической серой палитры.
             // Эта палитра должна быть плавной по всему диапазону итераций,
             // поэтому она намеренно ИГНОРИРУЕТ effectiveMaxColorIterations, чтобы избежать "ломаных" переходов.
             if (palette.Name == "Стандартный серый")
@@ -998,7 +992,6 @@ namespace FractalDraving
                 };
             }
 
-            // >>> ОБЩИЙ СЛУЧАЙ: для всех остальных палитр (градиентных и циклических).
             // Эта логика корректно использует effectiveMaxColorIterations для повторения палитры.
 
             // Защита от деления на ноль, если период не задан.
@@ -1035,8 +1028,6 @@ namespace FractalDraving
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
-
-            // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
         }
 
         /// <summary>
@@ -1078,7 +1069,6 @@ namespace FractalDraving
                 (int)(a.B + (b.B - a.B) * t));
         }
 
-        // --- СТАРЫЙ МЕТОД ГЕНЕРАЦИИ ДИСКРЕТНОЙ ПАЛИТРЫ ---
         private Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
@@ -1086,7 +1076,6 @@ namespace FractalDraving
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
 
-            // --- ИСПРАВЛЕНИЕ: ВОЗВРАЩАЕМ СПЕЦИАЛЬНУЮ ЛОГИКУ ДЛЯ "Стандартный серый" ---
             if (palette.Name == "Стандартный серый")
             {
                 return (iter, maxIter, maxColorIter) =>
@@ -1126,15 +1115,12 @@ namespace FractalDraving
             };
         }
 
-        // --- НОВЫЙ МЕТОД ГЕНЕРАЦИИ СГЛАЖЕННОЙ ПАЛИТРЫ ---
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette)
         {
             // Получаем общие свойства палитры
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
-
-            // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
 
             // Специальная обработка для палитры "Стандартный серый"
             if (palette.Name == "Стандартный серый")
@@ -1185,7 +1171,6 @@ namespace FractalDraving
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
-            // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
         }
 
         /// <summary>
@@ -1199,9 +1184,7 @@ namespace FractalDraving
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
 
-            // --- ИЗМЕНЕНИЕ: Передаем effectiveMaxColorIterations в функцию генерации ---
             _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette, effectiveMaxColorIterations);
-            // -------------------------------------------------------------------------
 
             if (_gammaCorrectedPaletteCache == null || newSignature != _paletteCacheSignature)
             {
@@ -1549,7 +1532,6 @@ namespace FractalDraving
                     : paletteForPreview.MaxColorIterations;
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
             }
-            // --- КОНЕЦ ПРАВИЛЬНОЙ ЛОГИКИ ---
 
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
@@ -1626,7 +1608,7 @@ namespace FractalDraving
             engine.CenterY = state.CenterY;
             engine.Scale = state.BaseScale / state.Zoom;
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
-            
+
             // Настраиваем обе палитры для рендера высокого разрешения
             engine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
