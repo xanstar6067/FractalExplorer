@@ -1628,47 +1628,20 @@ namespace FractalDraving
             {
                 FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
                 int threadCount = GetThreadCount();
+                Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
 
-                // --- НОВАЯ ЛОГИКА С УЧЕТОМ SSAA ---
-                if (ssaaFactor > 1)
-                {
-                    // 1. Рассчитываем разрешение для рендеринга с учетом SSAA.
-                    int highResWidth = width * ssaaFactor;
-                    int highResHeight = height * ssaaFactor;
+                // Теперь форма просто делегирует рендеринг движку,
+                // передавая ему фактор SSAA. Движок сам разберется, что делать.
+                Bitmap finalBitmap = await renderEngine.RenderToBitmapSSAA(
+                    width,
+                    height,
+                    threadCount,
+                    progressCallback,
+                    ssaaFactor,
+                    cancellationToken
+                );
 
-                    progress.Report(new RenderProgress { Percentage = 0, Status = $"Рендеринг в {highResWidth}x{highResHeight} (SSAA {ssaaFactor}x)..." });
-
-                    // 2. Рендерим ОГРОМНОЕ изображение в этом высоком разрешении.
-                    Bitmap highResBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
-                        highResWidth, highResHeight, threadCount,
-                        p => progress.Report(new RenderProgress { Percentage = (int)(p * 0.98), Status = "Рендеринг..." }), // 98% времени на рендер
-                        cancellationToken), cancellationToken);
-
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    progress.Report(new RenderProgress { Percentage = 98, Status = "Уменьшение изображения..." });
-
-                    // 3. Уменьшаем огромное изображение до целевого размера.
-                    //    Используем стандартный конструктор Bitmap, который выполняет качественное сжатие.
-                    Bitmap finalBitmap = new Bitmap(highResBitmap, width, height);
-
-                    // 4. Немедленно освобождаем память, занятую огромным изображением.
-                    highResBitmap.Dispose();
-
-                    progress.Report(new RenderProgress { Percentage = 100, Status = "Готово" });
-                    return finalBitmap;
-                }
-                else
-                {
-                    // --- СТАРАЯ ЛОГИКА (Если SSAA выключен) ---
-                    // Просто рендерим в целевом разрешении.
-                    Bitmap finalBitmap = await Task.Run(() => renderEngine.RenderToBitmap(
-                        width, height, threadCount,
-                        p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." }),
-                        cancellationToken), cancellationToken);
-
-                    return finalBitmap;
-                }
+                return finalBitmap;
             }
             finally
             {

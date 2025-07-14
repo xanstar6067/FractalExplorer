@@ -291,6 +291,47 @@ namespace FractalExplorer.Engines
             return bmp;
         }
 
+        /// <summary>
+        /// Рендерит фрактал в новый объект Bitmap с использованием суперсэмплинга (SSAA).
+        /// Этот метод инкапсулирует всю логику SSAA: рендеринг в высоком разрешении и последующее уменьшение.
+        /// </summary>
+        public Task<Bitmap> RenderToBitmapSSAA(int finalWidth, int finalHeight, int numThreads, Action<int> reportProgressCallback, int supersamplingFactor, CancellationToken cancellationToken = default)
+        {
+            // Если SSAA не требуется, просто вызываем обычный рендер.
+            if (supersamplingFactor <= 1)
+            {
+                return Task.Run(() => RenderToBitmap(finalWidth, finalHeight, numThreads, reportProgressCallback, cancellationToken), cancellationToken);
+            }
+
+            // Асинхронно выполняем весь процесс SSAA
+            return Task.Run(() =>
+            {
+                // 1. Рассчитываем разрешение для рендеринга с учетом SSAA.
+                int highResWidth = finalWidth * supersamplingFactor;
+                int highResHeight = finalHeight * supersamplingFactor;
+
+                // Обертка для прогресс-бара, чтобы он занимал 98% времени.
+                Action<int> highResProgressCallback = p => reportProgressCallback((int)(p * 0.98));
+
+                // 2. Рендерим ОГРОМНОЕ изображение. Используем уже существующий метод.
+                Bitmap highResBitmap = RenderToBitmap(highResWidth, highResHeight, numThreads, highResProgressCallback, cancellationToken);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                reportProgressCallback(98); // Обновляем прогресс до 98%
+
+                // 3. Уменьшаем огромное изображение до целевого размера.
+                Bitmap finalBitmap = new Bitmap(highResBitmap, finalWidth, finalHeight);
+
+                // 4. Немедленно освобождаем память от огромного битмапа.
+                highResBitmap.Dispose();
+
+                reportProgressCallback(100); // Готово!
+
+                return finalBitmap;
+            }, cancellationToken);
+        }
+
         #endregion
 
         #region Private Rendering Helpers
