@@ -1362,7 +1362,8 @@ namespace FractalDraving
                 CenterX = _centerX,
                 CenterY = _centerY,
                 Zoom = _zoom,
-                Iterations = Math.Min((int)nudIterations.Value, 75),
+                // --- ИСПРАВЛЕНИЕ: Ограничение Math.Min убрано. Теперь в превью записывается ПОЛНОЕ количество итераций. ---
+                Iterations = (int)nudIterations.Value,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 PreviewEngineType = state.PreviewEngineType
@@ -1445,7 +1446,8 @@ namespace FractalDraving
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                previewEngine.MaxIterations = 400;
+                // --- ИСПРАВЛЕНИЕ: Убрано жесткое значение 400. Теперь движок использует количество итераций из параметров превью. ---
+                previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
