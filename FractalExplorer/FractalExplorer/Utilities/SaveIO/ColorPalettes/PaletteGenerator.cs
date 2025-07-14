@@ -128,19 +128,5 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         }
     }
 
-    /// <summary>
-    /// Вспомогательный класс для применения гамма-коррекции.
-    /// </summary>
-    public static class ColorCorrection
-    {
-        public static Color ApplyGamma(Color original, double gamma)
-        {
-            if (Math.Abs(gamma - 1.0) < 0.01) return original;
-            double invGamma = 1.0 / gamma;
-            int r = (int)(255 * Math.Pow(original.R / 255.0, invGamma));
-            int g = (int)(255 * Math.Pow(original.G / 255.0, invGamma));
-            int b = (int)(255 * Math.Pow(original.B / 255.0, invGamma));
-            return Color.FromArgb(original.A, Math.Min(255, r), Math.Min(255, g), Math.Min(255, b));
-        }
-    }
+    
 }

@@ -27,10 +27,7 @@ namespace FractalExplorer.Forms.Other
             InitializeComponent();
         }
 
-        private void TestingFractalSystemForm_Load(object sender, EventArgs e)
-        {
-            // Можно добавить инициализацию здесь, если потребуется
-        }
+        private void TestingFractalSystemForm_Load(object sender, EventArgs e) { }
 
         private async void btnRunTests_Click(object sender, EventArgs e)
         {
@@ -54,7 +51,6 @@ namespace FractalExplorer.Forms.Other
                 }
                 progressBarOverall.Value = Math.Min(report.CurrentTestNumber, progressBarOverall.Maximum);
                 lblOverallProgress.Text = $"Общий прогресс: {report.CurrentTestNumber} / {report.TotalTests}";
-
                 lblCurrentTest.Text = $"Текущий тест: {report.CurrentTestName}";
                 progressBarCurrent.Value = Math.Min(report.CurrentTestProgress, 100);
 
@@ -80,7 +76,7 @@ namespace FractalExplorer.Forms.Other
             }
             catch (Exception ex)
             {
-                rtbLog.AppendText($"\n--- КРИТИЧЕСКАЯ ОШИБКА: {ex.Message} ---\n");
+                rtbLog.AppendText($"\n--- КРИТИЧЕСКАЯ ОШИБКА: {ex.GetType().Name} в тесте '{lblCurrentTest.Text}' - {ex.Message} ---\n");
                 MessageBox.Show($"Во время тестирования произошла ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
@@ -123,31 +119,28 @@ namespace FractalExplorer.Forms.Other
         private static readonly string OUTPUT_DIR = Path.Combine(Application.StartupPath, "Test", "ImagesOut");
 
         private readonly PaletteManager _mandelbrotPaletteManager = new PaletteManager();
-        private readonly NewtonPaletteManager _newtonPaletteManager = new NewtonPaletteManager();
 
         public async Task RunTestsAsync(IProgress<TestProgressReport> progress, CancellationToken token)
         {
             await Task.Run(async () =>
             {
                 var scenarios = GenerateTestScenarios();
-                int testCounter = 0;
-
                 var report = new TestProgressReport
                 {
                     TotalTests = scenarios.Count,
-                    LogMessage = $"Начинается выполнение {scenarios.Count} тестов..."
+                    LogMessage = $"Сгенерировано {scenarios.Count} тестовых сценариев..."
                 };
                 progress.Report(report);
 
-                foreach (var scenario in scenarios)
+                for (int i = 0; i < scenarios.Count; i++)
                 {
+                    var scenario = scenarios[i];
                     token.ThrowIfCancellationRequested();
-                    testCounter++;
 
-                    report.CurrentTestNumber = testCounter;
+                    report.CurrentTestNumber = i + 1;
                     report.CurrentTestName = scenario.TestName;
                     report.CurrentTestProgress = 0;
-                    report.LogMessage = $"[{testCounter}/{scenarios.Count}] Запуск: {scenario.TestName}";
+                    report.LogMessage = $"[{i + 1}/{scenarios.Count}] Запуск: {scenario.TestName}";
                     progress.Report(report);
 
                     try
@@ -155,12 +148,10 @@ namespace FractalExplorer.Forms.Other
                         var engine = CreateEngine(scenario);
                         ConfigureEngine(engine, scenario);
 
-                        // --- НОВОЕ: Механизм "троттлинга" для обновления прогресс-бара ---
                         var stopwatch = Stopwatch.StartNew();
                         long lastReportTime = 0;
                         var renderProgress = new Progress<int>(p =>
                         {
-                            // Обновляем UI не чаще, чем раз в 50 миллисекунд (20 раз/сек)
                             if (stopwatch.ElapsedMilliseconds > lastReportTime + 50)
                             {
                                 report.CurrentTestProgress = p;
@@ -173,30 +164,24 @@ namespace FractalExplorer.Forms.Other
                         SaveImage(result, scenario);
 
                         report.CurrentTestProgress = 100;
-                        report.LogMessage = $"Успешно: {scenario.TestName}";
+                        report.LogMessage = $"Успешно: {scenario.TestName} (за {stopwatch.Elapsed.TotalSeconds:F2} с)";
                         progress.Report(report);
                     }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
+                    catch (OperationCanceledException) { throw; }
                     catch (Exception ex)
                     {
                         report.LogMessage = $"ОШИБКА в тесте '{scenario.TestName}': {ex.Message}";
                         progress.Report(report);
                     }
                 }
-
                 await Task.Delay(100, token);
-
-            }, token).ConfigureAwait(false); // Добавлено и здесь для надежности
+            }, token).ConfigureAwait(false);
         }
 
         private List<VisualTestScenario> GenerateTestScenarios()
         {
             var scenarios = new List<VisualTestScenario>();
             int testId = 1;
-
             var fractalTypes = new[] { "Mandelbrot", "Julia", "MandelbrotBurningShip", "JuliaBurningShip", "Phoenix", "NewtonPools", "Serpinsky" };
 
             foreach (var type in fractalTypes)
@@ -243,13 +228,12 @@ namespace FractalExplorer.Forms.Other
 
         private void ConfigureEngine(object engine, VisualTestScenario scenario)
         {
-            // Эта логика остается без изменений, она корректна
             if (engine is FractalMandelbrotFamilyEngine mbEngine)
             {
                 var state = (MandelbrotFamilySaveState)scenario.Preset;
                 mbEngine.CenterX = state.CenterX;
                 mbEngine.CenterY = state.CenterY;
-                mbEngine.Scale = 3.0m / state.Zoom;
+                mbEngine.Scale = (scenario.FractalType.Contains("BurningShip") ? 4.0m : 3.0m) / state.Zoom;
                 mbEngine.MaxIterations = state.Iterations;
                 mbEngine.ThresholdSquared = state.Threshold * state.Threshold;
                 mbEngine.UseSmoothColoring = scenario.UseSmoothColoring;
@@ -259,12 +243,16 @@ namespace FractalExplorer.Forms.Other
                 int effectiveIters = palette.AlignWithRenderIterations ? mbEngine.MaxIterations : palette.MaxColorIterations;
                 mbEngine.MaxColorIterations = effectiveIters;
 
-                mbEngine.Palette = (i, m, mc) => (i >= m) ? Color.Black : palette.Colors.Any() ? palette.Colors[i % palette.Colors.Count] : Color.Gray;
-                mbEngine.SmoothPalette = (d) => palette.Colors.Any() ? palette.Colors[(int)d % palette.Colors.Count] : Color.Gray;
+                mbEngine.Palette = PaletteGenerator.CreateDiscrete(palette);
+                mbEngine.SmoothPalette = PaletteGenerator.CreateSmooth(palette, effectiveIters, mbEngine.MaxIterations);
 
                 if (engine is JuliaEngine jEngine && state is JuliaFamilySaveState jState)
                 {
                     jEngine.C = new ComplexDecimal(jState.CRe, jState.CIm);
+                }
+                else if (engine is JuliaBurningShipEngine jbsEngine && state is JuliaFamilySaveState jbsState)
+                {
+                    jbsEngine.C = new ComplexDecimal(jbsState.CRe, jbsState.CIm);
                 }
             }
             else if (engine is PhoenixEngine phxEngine)
@@ -284,20 +272,26 @@ namespace FractalExplorer.Forms.Other
                 int effectiveIters = palette.AlignWithRenderIterations ? phxEngine.MaxIterations : palette.MaxColorIterations;
                 phxEngine.MaxColorIterations = effectiveIters;
 
-                phxEngine.Palette = (i, m, mc) => (i >= m) ? Color.Black : palette.Colors.Any() ? palette.Colors[i % palette.Colors.Count] : Color.Gray;
-                phxEngine.SmoothPalette = (d) => palette.Colors.Any() ? palette.Colors[(int)d % palette.Colors.Count] : Color.Gray;
+                phxEngine.Palette = PaletteGenerator.CreateDiscrete(palette);
+                phxEngine.SmoothPalette = PaletteGenerator.CreateSmooth(palette, effectiveIters, phxEngine.MaxIterations);
             }
             else if (engine is FractalNewtonEngine newtonEngine)
             {
                 var state = (NewtonSaveState)scenario.Preset;
-                newtonEngine.SetFormula(state.Formula, out _);
+                if (!newtonEngine.SetFormula(state.Formula, out string debugInfo))
+                    throw new InvalidOperationException($"Ошибка парсинга формулы '{state.Formula}': {debugInfo}");
+
                 newtonEngine.CenterX = (double)state.CenterX;
                 newtonEngine.CenterY = (double)state.CenterY;
-                newtonEngine.Scale = (double)(3.0m / state.Zoom);
+                newtonEngine.Scale = 3.0 / (double)state.Zoom;
                 newtonEngine.MaxIterations = state.Iterations;
-                newtonEngine.UseGradient = state.PaletteSnapshot.IsGradient;
-                newtonEngine.RootColors = state.PaletteSnapshot.RootColors.ToArray();
-                newtonEngine.BackgroundColor = state.PaletteSnapshot.BackgroundColor;
+
+                var paletteSnapshot = state.PaletteSnapshot;
+                newtonEngine.UseGradient = paletteSnapshot.IsGradient;
+                newtonEngine.BackgroundColor = paletteSnapshot.BackgroundColor;
+                newtonEngine.RootColors = (paletteSnapshot.RootColors?.Any() == true)
+                    ? paletteSnapshot.RootColors.ToArray()
+                    : ColorConfigurationNewtonPoolsForm.GenerateHarmonicColors(newtonEngine.Roots.Count).ToArray();
             }
             else if (engine is FractalSerpinskyEngine serpinskyEngine)
             {
@@ -318,17 +312,14 @@ namespace FractalExplorer.Forms.Other
             Action<int> reportProgress = p => ((IProgress<int>)progress).Report(p);
 
             if (engine is FractalMandelbrotFamilyEngine mbEngine)
-            {
                 return mbEngine.RenderToBitmapSSAA(RENDER_WIDTH, RENDER_HEIGHT, NUM_THREADS, reportProgress, ssaaFactor, token);
-            }
+
             if (engine is PhoenixEngine phxEngine)
-            {
                 return phxEngine.RenderToBitmapSSAA(RENDER_WIDTH, RENDER_HEIGHT, NUM_THREADS, reportProgress, ssaaFactor, token);
-            }
+
             if (engine is FractalNewtonEngine newtonEngine)
-            {
                 return Task.Run(() => newtonEngine.RenderToBitmapSSAA(RENDER_WIDTH, RENDER_HEIGHT, NUM_THREADS, reportProgress, ssaaFactor, token), token);
-            }
+
             if (engine is FractalSerpinskyEngine serpinskyEngine)
             {
                 return Task.Run(() =>
