@@ -367,7 +367,7 @@ namespace FractalDraving
                 }
                 else
                 {
-                    newZoom = _zoom * zoomFactor;
+                    newZoom = _zoom / zoomFactor;
                 }
             }
 
@@ -1115,64 +1115,6 @@ namespace FractalDraving
             };
         }
 
-        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette)
-        {
-            // Получаем общие свойства палитры
-            double gamma = palette.Gamma;
-            var colors = new List<Color>(palette.Colors);
-            int colorCount = colors.Count;
-
-            // Специальная обработка для палитры "Стандартный серый"
-            if (palette.Name == "Стандартный серый")
-            {
-                // Используем логарифмическую шкалу для более мягкого и детального градиента
-                return (smoothIter) =>
-                {
-                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
-                    if (smoothIter < 0) smoothIter = 0;
-
-                    // 1. Рассчитываем логарифм от максимального числа итераций.
-                    //    Это будет наш "масштаб" для нормализации.
-                    double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
-                    if (logMax <= 0) return Color.Black; // Защита от деления на ноль
-
-                    // 2. Берем логарифм от текущей итерации и нормализуем его.
-                    //    Это даст нам значение 't' от 0.0 до 1.0 по логарифмической шкале.
-                    double tLog = Math.Log(smoothIter + 1) / logMax;
-
-                    // 3. Инвертируем значение, чтобы получить градиент от белого к черному.
-                    int gray_level = (int)(255.0 * (1.0 - tLog));
-                    gray_level = Math.Max(0, Math.Min(255, gray_level));
-
-                    // 4. Создаем цвет и применяем гамма-коррекцию
-                    Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
-                    return ColorCorrection.ApplyGamma(baseColor, gamma);
-                };
-            }
-
-            // Обработка крайних случаев для других палитр
-            if (colorCount == 0) return (smoothIter) => Color.Black;
-            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
-
-            // Общая логика для всех остальных цветных градиентных палитр (остается без изменений)
-            return (smoothIter) =>
-            {
-                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
-                if (smoothIter < 0) smoothIter = 0;
-
-                double t = smoothIter / _fractalEngine.MaxIterations;
-                t = Math.Max(0.0, Math.Min(1.0, t));
-
-                double scaledT = t * (colorCount - 1);
-                int index1 = (int)Math.Floor(scaledT);
-                int index2 = Math.Min(index1 + 1, colorCount - 1);
-                double localT = scaledT - index1;
-
-                Color baseColor = LerpColor(colors[index1], colors[index2], localT);
-                return ColorCorrection.ApplyGamma(baseColor, gamma);
-            };
-        }
-
         /// <summary>
         /// Применяет активную палитру к движку рендеринга, используя кэш для оптимизации.
         /// </summary>
@@ -1455,20 +1397,22 @@ namespace FractalDraving
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
+                int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations
+                        ? previewEngine.MaxIterations
+                        : paletteForPreview.MaxColorIterations;
+
                 // Проверяем, включено ли сглаживание в основной форме
                 previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
                 previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
                 if (previewEngine.UseSmoothColoring)
                 {
                     previewEngine.UseSmoothColoring = true;
-                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
                 }
                 else
                 {
                     previewEngine.UseSmoothColoring = false;
-                    previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
-                        ? previewEngine.MaxIterations
-                        : paletteForPreview.MaxColorIterations;
+                    previewEngine.MaxColorIterations = effectiveMaxColorIterations;
                     previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
                 }
 
@@ -1514,6 +1458,10 @@ namespace FractalDraving
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
+            int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations
+                    ? previewEngine.MaxIterations
+                    : paletteForPreview.MaxColorIterations;
+
             // Проверяем, включено ли сглаживание в основной форме
             previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
@@ -1522,16 +1470,14 @@ namespace FractalDraving
                 // 1. Включаем флаг
                 previewEngine.UseSmoothColoring = true;
                 // 2. ОБЯЗАТЕЛЬНО присваиваем функцию сглаженной палитры
-                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview);
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
             }
             else
             {
                 // 1. Выключаем флаг
                 previewEngine.UseSmoothColoring = false;
                 // 2. Настраиваем и присваиваем функцию дискретной палитры
-                previewEngine.MaxColorIterations = paletteForPreview.AlignWithRenderIterations
-                    ? previewEngine.MaxIterations
-                    : paletteForPreview.MaxColorIterations;
+                previewEngine.MaxColorIterations = effectiveMaxColorIterations;
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
             }
 
@@ -1567,7 +1513,8 @@ namespace FractalDraving
                 Iterations = (int)nudIterations.Value,
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
-                FileNameDetails = this.GetSaveFileNameDetails()
+                FileNameDetails = this.GetSaveFileNameDetails(),
+                UseSmoothColoring = cbSmooth.Checked // <-- Передаем актуальное состояние сглаживания
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
@@ -1612,9 +1559,11 @@ namespace FractalDraving
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
 
             // Настраиваем обе палитры для рендера высокого разрешения
-            engine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
-            engine.MaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
-            engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender);
+            engine.UseSmoothColoring = state.UseSmoothColoring;
+            int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
+            engine.MaxColorIterations = effectiveMaxColorIterations;
+
+            engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender, effectiveMaxColorIterations);
             engine.Palette = GenerateDiscretePaletteFunction(paletteForRender);
 
             return engine;
