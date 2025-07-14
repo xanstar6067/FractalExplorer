@@ -47,12 +47,15 @@
             tabPagePhoenix = new TabPage();
             richTextBox5 = new RichTextBox();
             btnLaunchPhoenix = new Button();
+            tabPageSysTesting = new TabPage();
+            btnLaunchTestForm = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
             tabPageSerpinsky.SuspendLayout();
             tabPageNewtonPools.SuspendLayout();
             tabPagePhoenix.SuspendLayout();
+            tabPageSysTesting.SuspendLayout();
             SuspendLayout();
             // 
             // tabPageJulia
@@ -63,7 +66,7 @@
             tabPageJulia.Location = new Point(4, 26);
             tabPageJulia.Name = "tabPageJulia";
             tabPageJulia.Padding = new Padding(3);
-            tabPageJulia.Size = new Size(792, 195);
+            tabPageJulia.Size = new Size(792, 316);
             tabPageJulia.TabIndex = 1;
             tabPageJulia.Text = "Множество Жюлиа";
             tabPageJulia.UseVisualStyleBackColor = true;
@@ -107,7 +110,7 @@
             tabPageMandelbrot.Location = new Point(4, 26);
             tabPageMandelbrot.Name = "tabPageMandelbrot";
             tabPageMandelbrot.Padding = new Padding(3);
-            tabPageMandelbrot.Size = new Size(792, 271);
+            tabPageMandelbrot.Size = new Size(792, 316);
             tabPageMandelbrot.TabIndex = 0;
             tabPageMandelbrot.Text = "Множество Мандельброта";
             tabPageMandelbrot.UseVisualStyleBackColor = true;
@@ -131,7 +134,7 @@
             richTextBox1.Location = new Point(184, 3);
             richTextBox1.Name = "richTextBox1";
             richTextBox1.ReadOnly = true;
-            richTextBox1.Size = new Size(605, 265);
+            richTextBox1.Size = new Size(605, 310);
             richTextBox1.TabIndex = 2;
             richTextBox1.Text = resources.GetString("richTextBox1.Text");
             // 
@@ -152,6 +155,7 @@
             tabControlFractals.Controls.Add(tabPageSerpinsky);
             tabControlFractals.Controls.Add(tabPageNewtonPools);
             tabControlFractals.Controls.Add(tabPagePhoenix);
+            tabControlFractals.Controls.Add(tabPageSysTesting);
             tabControlFractals.Dock = DockStyle.Right;
             tabControlFractals.Font = new Font("Segoe UI", 10F);
             tabControlFractals.Location = new Point(0, 0);
@@ -167,7 +171,7 @@
             tabPageSerpinsky.Location = new Point(4, 26);
             tabPageSerpinsky.Name = "tabPageSerpinsky";
             tabPageSerpinsky.Padding = new Padding(3);
-            tabPageSerpinsky.Size = new Size(792, 195);
+            tabPageSerpinsky.Size = new Size(792, 316);
             tabPageSerpinsky.TabIndex = 2;
             tabPageSerpinsky.Text = "Треугольник Серпинского";
             tabPageSerpinsky.UseVisualStyleBackColor = true;
@@ -181,7 +185,7 @@
             richTextBox3.Location = new Point(184, 3);
             richTextBox3.Name = "richTextBox3";
             richTextBox3.ReadOnly = true;
-            richTextBox3.Size = new Size(605, 189);
+            richTextBox3.Size = new Size(605, 310);
             richTextBox3.TabIndex = 4;
             richTextBox3.Text = resources.GetString("richTextBox3.Text");
             // 
@@ -202,7 +206,7 @@
             tabPageNewtonPools.Location = new Point(4, 26);
             tabPageNewtonPools.Name = "tabPageNewtonPools";
             tabPageNewtonPools.Padding = new Padding(3);
-            tabPageNewtonPools.Size = new Size(792, 195);
+            tabPageNewtonPools.Size = new Size(792, 316);
             tabPageNewtonPools.TabIndex = 3;
             tabPageNewtonPools.Text = "Бассейны Ньютона";
             tabPageNewtonPools.UseVisualStyleBackColor = true;
@@ -216,7 +220,7 @@
             richTextBox4.Location = new Point(184, 3);
             richTextBox4.Name = "richTextBox4";
             richTextBox4.ReadOnly = true;
-            richTextBox4.Size = new Size(605, 189);
+            richTextBox4.Size = new Size(605, 310);
             richTextBox4.TabIndex = 6;
             richTextBox4.Text = resources.GetString("richTextBox4.Text");
             // 
@@ -265,6 +269,27 @@
             btnLaunchPhoenix.UseVisualStyleBackColor = true;
             btnLaunchPhoenix.Click += btnLaunchPhoenix_Click;
             // 
+            // tabPageSysTesting
+            // 
+            tabPageSysTesting.Controls.Add(btnLaunchTestForm);
+            tabPageSysTesting.Location = new Point(4, 26);
+            tabPageSysTesting.Name = "tabPageSysTesting";
+            tabPageSysTesting.Padding = new Padding(3);
+            tabPageSysTesting.Size = new Size(792, 316);
+            tabPageSysTesting.TabIndex = 5;
+            tabPageSysTesting.Text = "Тесты";
+            tabPageSysTesting.UseVisualStyleBackColor = true;
+            // 
+            // btnLaunchTestForm
+            // 
+            btnLaunchTestForm.Location = new Point(72, 48);
+            btnLaunchTestForm.Name = "btnLaunchTestForm";
+            btnLaunchTestForm.Size = new Size(135, 86);
+            btnLaunchTestForm.TabIndex = 0;
+            btnLaunchTestForm.Text = "button2";
+            btnLaunchTestForm.UseVisualStyleBackColor = true;
+            btnLaunchTestForm.Click += btnLaunchTestForm_Click;
+            // 
             // LauncherHubForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -281,6 +306,7 @@
             tabPageSerpinsky.ResumeLayout(false);
             tabPageNewtonPools.ResumeLayout(false);
             tabPagePhoenix.ResumeLayout(false);
+            tabPageSysTesting.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -304,5 +330,7 @@
         private TabPage tabPagePhoenix;
         private RichTextBox richTextBox5;
         private Button btnLaunchPhoenix;
+        private TabPage tabPageSysTesting;
+        private Button btnLaunchTestForm;
     }
 }

@@ -1,6 +1,7 @@
-using System.Reflection;
 using FractalExplorer.Forms;
+using FractalExplorer.Forms.Other;
 using FractalExplorer.Projects; 
+using System.Reflection;
 
 namespace FractalExplorer
 {
@@ -153,5 +154,13 @@ namespace FractalExplorer
         }
 
         #endregion
+
+        private void btnLaunchTestForm_Click(object sender, EventArgs e)
+        {
+            using (var testForm = new TestingFractalSystemForm())
+            {
+                testForm.ShowDialog(this);
+            }
+        }
     }
 }
