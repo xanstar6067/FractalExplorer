@@ -17,7 +17,10 @@ namespace FractalExplorer.Forms
         #region Windows Form Designer generated code
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalPhoenixForm));
             pnlControls = new Panel();
+            lbSSAA = new Label();
+            cbSSAA = new ComboBox();
             cbSmooth = new CheckBox();
             btnStateManager = new Button();
             btnSelectPhoenixParameters = new Button();
@@ -43,8 +46,6 @@ namespace FractalExplorer.Forms
             nudThreshold = new NumericUpDown();
             nudIterations = new NumericUpDown();
             canvas = new PictureBox();
-            lbSSAA = new Label();
-            cbSSAA = new ComboBox();
             pnlControls.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudC2Im).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudC2Re).BeginInit();
@@ -89,6 +90,23 @@ namespace FractalExplorer.Forms
             pnlControls.Name = "pnlControls";
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
+            // 
+            // lbSSAA
+            // 
+            lbSSAA.AutoSize = true;
+            lbSSAA.Location = new Point(10, 311);
+            lbSSAA.Name = "lbSSAA";
+            lbSSAA.Size = new Size(112, 15);
+            lbSSAA.TabIndex = 43;
+            lbSSAA.Text = "Сглаживание SSAA";
+            // 
+            // cbSSAA
+            // 
+            cbSSAA.FormattingEnabled = true;
+            cbSSAA.Location = new Point(128, 308);
+            cbSSAA.Name = "cbSSAA";
+            cbSSAA.Size = new Size(95, 23);
+            cbSSAA.TabIndex = 42;
             // 
             // cbSmooth
             // 
@@ -337,23 +355,6 @@ namespace FractalExplorer.Forms
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
-            // lbSSAA
-            // 
-            lbSSAA.AutoSize = true;
-            lbSSAA.Location = new Point(10, 311);
-            lbSSAA.Name = "lbSSAA";
-            lbSSAA.Size = new Size(112, 15);
-            lbSSAA.TabIndex = 43;
-            lbSSAA.Text = "Сглаживание SSAA";
-            // 
-            // cbSSAA
-            // 
-            cbSSAA.FormattingEnabled = true;
-            cbSSAA.Location = new Point(128, 308);
-            cbSSAA.Name = "cbSSAA";
-            cbSSAA.Size = new Size(95, 23);
-            cbSSAA.TabIndex = 42;
-            // 
             // FractalPhoenixForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -361,6 +362,7 @@ namespace FractalExplorer.Forms
             ClientSize = new Size(1084, 636);
             Controls.Add(canvas);
             Controls.Add(pnlControls);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 675);
             Name = "FractalPhoenixForm";
             Text = "Фрактал Феникс";

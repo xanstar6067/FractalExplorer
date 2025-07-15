@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NewtonPools));
             panel1 = new Panel();
             btnStateManager = new Button();
             btnConfigurePalette = new Button();
@@ -292,6 +293,7 @@
             ClientSize = new Size(1084, 636);
             Controls.Add(fractal_bitmap);
             Controls.Add(panel1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 675);
             Name = "NewtonPools";
             Text = "Бассейны Ньютона";

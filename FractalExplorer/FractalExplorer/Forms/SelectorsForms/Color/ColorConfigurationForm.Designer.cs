@@ -16,6 +16,7 @@
         #region Windows Form Designer generated code
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorConfigurationForm));
             lbPalettes = new ListBox();
             panelPreview = new Panel();
             lbColorStops = new ListBox();
@@ -313,7 +314,7 @@
             label1.TabIndex = 8;
             label1.Text = "Название палитры:";
             // 
-            // ColorConfigurationMandelbrotFamilyForm
+            // ColorConfigurationForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -324,10 +325,11 @@
             Controls.Add(btnClose);
             Controls.Add(btnApply);
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             MinimumSize = new Size(685, 540);
-            Name = "ColorConfigurationMandelbrotFamilyForm";
+            Name = "ColorConfigurationForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Настройка цветовых палитр";
             Load += ColorConfigurationForm_Load;

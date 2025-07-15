@@ -17,6 +17,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorConfigurationNewtonPoolsForm));
             groupBox1 = new GroupBox();
             flpRootColorPickers = new FlowLayoutPanel();
             groupBox2 = new GroupBox();
@@ -152,7 +153,7 @@
             chkIsGradient.UseVisualStyleBackColor = true;
             chkIsGradient.CheckedChanged += chkIsGradient_CheckedChanged;
             // 
-            // color_setting_NewtonPoolsForm
+            // ColorConfigurationNewtonPoolsForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -165,9 +166,10 @@
             Controls.Add(btnSave);
             Controls.Add(groupBox2);
             Controls.Add(groupBox1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimumSize = new Size(500, 390);
-            Name = "color_setting_NewtonPoolsForm";
+            Name = "ColorConfigurationNewtonPoolsForm";
             Text = "Настройка палитры для Бассейнов Ньютона";
             FormClosing += ColorSetting_FormClosing;
             groupBox1.ResumeLayout(false);

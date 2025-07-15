@@ -17,207 +17,204 @@
 
         private void InitializeComponent()
         {
-            this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.lbPalettes = new System.Windows.Forms.ListBox();
-            this.btnNew = new System.Windows.Forms.Button();
-            this.btnDelete = new System.Windows.Forms.Button();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.panelBackgroundColor = new System.Windows.Forms.Panel();
-            this.label4 = new System.Windows.Forms.Label();
-            this.panelFractalColor = new System.Windows.Forms.Panel();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
-            this.txtName = new System.Windows.Forms.TextBox();
-            this.btnClose = new System.Windows.Forms.Button();
-            this.btnApply = new System.Windows.Forms.Button();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
-            this.groupBox1.SuspendLayout();
-            this.groupBox2.SuspendLayout();
-            this.SuspendLayout();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorConfigurationSerpinskyForm));
+            groupBox1 = new GroupBox();
+            lbPalettes = new ListBox();
+            btnNew = new Button();
+            btnDelete = new Button();
+            groupBox2 = new GroupBox();
+            panelBackgroundColor = new Panel();
+            label4 = new Label();
+            panelFractalColor = new Panel();
+            label3 = new Label();
+            label1 = new Label();
+            txtName = new TextBox();
+            btnClose = new Button();
+            btnApply = new Button();
+            btnSave = new Button();
+            colorDialog1 = new ColorDialog();
+            groupBox1.SuspendLayout();
+            groupBox2.SuspendLayout();
+            SuspendLayout();
             // 
             // groupBox1
             // 
-            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.groupBox1.Controls.Add(this.lbPalettes);
-            this.groupBox1.Controls.Add(this.btnNew);
-            this.groupBox1.Controls.Add(this.btnDelete);
-            this.groupBox1.Location = new System.Drawing.Point(12, 12);
-            this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(236, 269);
-            this.groupBox1.TabIndex = 14;
-            this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Список палитр";
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            groupBox1.Controls.Add(lbPalettes);
+            groupBox1.Controls.Add(btnNew);
+            groupBox1.Controls.Add(btnDelete);
+            groupBox1.Location = new Point(12, 12);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(236, 269);
+            groupBox1.TabIndex = 14;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Список палитр";
             // 
             // lbPalettes
             // 
-            this.lbPalettes.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.lbPalettes.FormattingEnabled = true;
-            this.lbPalettes.ItemHeight = 15;
-            this.lbPalettes.Location = new System.Drawing.Point(8, 22);
-            this.lbPalettes.Name = "lbPalettes";
-            this.lbPalettes.Size = new System.Drawing.Size(220, 199);
-            this.lbPalettes.TabIndex = 0;
-            this.lbPalettes.SelectedIndexChanged += new System.EventHandler(this.lbPalettes_SelectedIndexChanged);
+            lbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lbPalettes.FormattingEnabled = true;
+            lbPalettes.ItemHeight = 15;
+            lbPalettes.Location = new Point(8, 22);
+            lbPalettes.Name = "lbPalettes";
+            lbPalettes.Size = new Size(220, 199);
+            lbPalettes.TabIndex = 0;
+            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
             // 
             // btnNew
             // 
-            this.btnNew.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnNew.Location = new System.Drawing.Point(8, 233);
-            this.btnNew.Name = "btnNew";
-            this.btnNew.Size = new System.Drawing.Size(109, 30);
-            this.btnNew.TabIndex = 8;
-            this.btnNew.Text = "Новая";
-            this.btnNew.UseVisualStyleBackColor = true;
-            this.btnNew.Click += new System.EventHandler(this.btnNew_Click);
+            btnNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnNew.Location = new Point(8, 233);
+            btnNew.Name = "btnNew";
+            btnNew.Size = new Size(109, 30);
+            btnNew.TabIndex = 8;
+            btnNew.Text = "Новая";
+            btnNew.UseVisualStyleBackColor = true;
+            btnNew.Click += btnNew_Click;
             // 
             // btnDelete
             // 
-            this.btnDelete.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnDelete.Location = new System.Drawing.Point(123, 233);
-            this.btnDelete.Name = "btnDelete";
-            this.btnDelete.Size = new System.Drawing.Size(105, 30);
-            this.btnDelete.TabIndex = 9;
-            this.btnDelete.Text = "Удалить";
-            this.btnDelete.UseVisualStyleBackColor = true;
-            this.btnDelete.Click += new System.EventHandler(this.btnDelete_Click);
+            btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnDelete.Location = new Point(123, 233);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(105, 30);
+            btnDelete.TabIndex = 9;
+            btnDelete.Text = "Удалить";
+            btnDelete.UseVisualStyleBackColor = true;
+            btnDelete.Click += btnDelete_Click;
             // 
             // groupBox2
             // 
-            this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox2.Controls.Add(this.panelBackgroundColor);
-            this.groupBox2.Controls.Add(this.label4);
-            this.groupBox2.Controls.Add(this.panelFractalColor);
-            this.groupBox2.Controls.Add(this.label3);
-            this.groupBox2.Controls.Add(this.label1);
-            this.groupBox2.Controls.Add(this.txtName);
-            this.groupBox2.Location = new System.Drawing.Point(264, 12);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(278, 269);
-            this.groupBox2.TabIndex = 15;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Редактор палитры";
+            groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Controls.Add(panelBackgroundColor);
+            groupBox2.Controls.Add(label4);
+            groupBox2.Controls.Add(panelFractalColor);
+            groupBox2.Controls.Add(label3);
+            groupBox2.Controls.Add(label1);
+            groupBox2.Controls.Add(txtName);
+            groupBox2.Location = new Point(264, 12);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Size = new Size(278, 269);
+            groupBox2.TabIndex = 15;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Редактор палитры";
             // 
             // panelBackgroundColor
             // 
-            this.panelBackgroundColor.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelBackgroundColor.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.panelBackgroundColor.Location = new System.Drawing.Point(125, 114);
-            this.panelBackgroundColor.Name = "panelBackgroundColor";
-            this.panelBackgroundColor.Size = new System.Drawing.Size(130, 23);
-            this.panelBackgroundColor.TabIndex = 13;
-            this.panelBackgroundColor.Click += new System.EventHandler(this.panelBackgroundColor_Click);
+            panelBackgroundColor.BorderStyle = BorderStyle.FixedSingle;
+            panelBackgroundColor.Cursor = Cursors.Hand;
+            panelBackgroundColor.Location = new Point(125, 114);
+            panelBackgroundColor.Name = "panelBackgroundColor";
+            panelBackgroundColor.Size = new Size(130, 23);
+            panelBackgroundColor.TabIndex = 13;
+            panelBackgroundColor.Click += panelBackgroundColor_Click;
             // 
             // label4
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(15, 118);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(68, 15);
-            this.label4.TabIndex = 12;
-            this.label4.Text = "Цвет фона:";
+            label4.AutoSize = true;
+            label4.Location = new Point(15, 118);
+            label4.Name = "label4";
+            label4.Size = new Size(68, 15);
+            label4.TabIndex = 12;
+            label4.Text = "Цвет фона:";
             // 
             // panelFractalColor
             // 
-            this.panelFractalColor.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.panelFractalColor.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.panelFractalColor.Location = new System.Drawing.Point(125, 80);
-            this.panelFractalColor.Name = "panelFractalColor";
-            this.panelFractalColor.Size = new System.Drawing.Size(130, 23);
-            this.panelFractalColor.TabIndex = 11;
-            this.panelFractalColor.Click += new System.EventHandler(this.panelFractalColor_Click);
+            panelFractalColor.BorderStyle = BorderStyle.FixedSingle;
+            panelFractalColor.Cursor = Cursors.Hand;
+            panelFractalColor.Location = new Point(125, 80);
+            panelFractalColor.Name = "panelFractalColor";
+            panelFractalColor.Size = new Size(130, 23);
+            panelFractalColor.TabIndex = 11;
+            panelFractalColor.Click += panelFractalColor_Click;
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(15, 84);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(91, 15);
-            this.label3.TabIndex = 10;
-            this.label3.Text = "Цвет фрактала:";
+            label3.AutoSize = true;
+            label3.Location = new Point(15, 84);
+            label3.Name = "label3";
+            label3.Size = new Size(91, 15);
+            label3.TabIndex = 10;
+            label3.Text = "Цвет фрактала:";
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(15, 25);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(112, 15);
-            this.label1.TabIndex = 9;
-            this.label1.Text = "Название палитры:";
+            label1.AutoSize = true;
+            label1.Location = new Point(15, 25);
+            label1.Name = "label1";
+            label1.Size = new Size(113, 15);
+            label1.TabIndex = 9;
+            label1.Text = "Название палитры:";
             // 
             // txtName
             // 
-            this.txtName.Location = new System.Drawing.Point(15, 43);
-            this.txtName.Name = "txtName";
-            this.txtName.Size = new System.Drawing.Size(240, 23);
-            this.txtName.TabIndex = 0;
-            this.txtName.TextChanged += new System.EventHandler(this.txtName_TextChanged);
+            txtName.Location = new Point(15, 43);
+            txtName.Name = "txtName";
+            txtName.Size = new Size(240, 23);
+            txtName.TabIndex = 0;
+            txtName.TextChanged += txtName_TextChanged;
             // 
             // btnClose
             // 
-            this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClose.Location = new System.Drawing.Point(448, 298);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(94, 30);
-            this.btnClose.TabIndex = 16;
-            this.btnClose.Text = "Закрыть";
-            this.btnClose.UseVisualStyleBackColor = true;
-            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
+            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnClose.Location = new Point(448, 298);
+            btnClose.Name = "btnClose";
+            btnClose.Size = new Size(94, 30);
+            btnClose.TabIndex = 16;
+            btnClose.Text = "Закрыть";
+            btnClose.UseVisualStyleBackColor = true;
+            btnClose.Click += btnClose_Click;
             // 
             // btnApply
             // 
-            this.btnApply.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnApply.Location = new System.Drawing.Point(348, 298);
-            this.btnApply.Name = "btnApply";
-            this.btnApply.Size = new System.Drawing.Size(94, 30);
-            this.btnApply.TabIndex = 17;
-            this.btnApply.Text = "Применить";
-            this.btnApply.UseVisualStyleBackColor = true;
-            this.btnApply.Click += new System.EventHandler(this.btnApply_Click);
+            btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnApply.Location = new Point(348, 298);
+            btnApply.Name = "btnApply";
+            btnApply.Size = new Size(94, 30);
+            btnApply.TabIndex = 17;
+            btnApply.Text = "Применить";
+            btnApply.UseVisualStyleBackColor = true;
+            btnApply.Click += btnApply_Click;
             // 
             // btnSave
             // 
-            this.btnSave.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnSave.Location = new System.Drawing.Point(12, 298);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(155, 30);
-            this.btnSave.TabIndex = 18;
-            this.btnSave.Text = "Сохранить палитры";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
+            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnSave.Location = new Point(12, 298);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(155, 30);
+            btnSave.TabIndex = 18;
+            btnSave.Text = "Сохранить палитры";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnSave_Click;
             // 
             // colorDialog1
             // 
-            this.colorDialog1.AnyColor = true;
-            this.colorDialog1.FullOpen = true;
+            colorDialog1.AnyColor = true;
+            colorDialog1.FullOpen = true;
             // 
             // ColorConfigurationSerpinskyForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(554, 340);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.btnApply);
-            this.Controls.Add(this.btnClose);
-            this.Controls.Add(this.groupBox2);
-            this.Controls.Add(this.groupBox1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(570, 379);
-            this.Name = "ColorConfigurationSerpinskyForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Настройка палитры (Серпинский)";
-            this.Load += new System.EventHandler(this.ColorConfigurationSerpinskyForm_Load);
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(554, 340);
+            Controls.Add(btnSave);
+            Controls.Add(btnApply);
+            Controls.Add(btnClose);
+            Controls.Add(groupBox2);
+            Controls.Add(groupBox1);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            MaximizeBox = false;
+            MinimizeBox = false;
+            MinimumSize = new Size(570, 379);
+            Name = "ColorConfigurationSerpinskyForm";
+            StartPosition = FormStartPosition.CenterParent;
+            Text = "Настройка палитры (Серпинский)";
+            Load += ColorConfigurationSerpinskyForm_Load;
+            groupBox1.ResumeLayout(false);
+            groupBox2.ResumeLayout(false);
+            groupBox2.PerformLayout();
+            ResumeLayout(false);
 
         }
 

@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SaveLoadDialogForm));
             listBoxSaves = new ListBox();
             pictureBoxPreview = new PictureBox();
             textBoxSaveName = new TextBox();
@@ -170,6 +171,7 @@
             Controls.Add(textBoxSaveName);
             Controls.Add(pictureBoxPreview);
             Controls.Add(listBoxSaves);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(550, 350);
             Name = "SaveLoadDialogForm";
             StartPosition = FormStartPosition.CenterParent;

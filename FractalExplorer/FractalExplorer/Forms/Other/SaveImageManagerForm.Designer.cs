@@ -17,6 +17,7 @@
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SaveImageManagerForm));
             pnlMain = new Panel();
             grpEffects = new GroupBox();
             cbLanczosFactor = new ComboBox();
@@ -398,6 +399,7 @@
             Controls.Add(pnlMain);
             Controls.Add(pnlBottom);
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "SaveImageManagerForm";
