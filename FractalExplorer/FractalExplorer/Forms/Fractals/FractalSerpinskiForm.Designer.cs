@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalSerpinski));
             panel1 = new Panel();
             color_configurations = new Button();
             btnStateManager = new Button();
@@ -231,6 +232,7 @@
             ClientSize = new Size(1084, 636);
             Controls.Add(canvasSerpinsky);
             Controls.Add(panel1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 675);
             Name = "FractalSerpinski";
             Text = "Треугольник Серпинского";

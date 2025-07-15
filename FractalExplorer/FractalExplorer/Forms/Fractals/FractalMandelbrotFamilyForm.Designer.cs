@@ -22,7 +22,9 @@
         #region Windows Form Designer generated code
         protected void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalMandelbrotFamilyForm));
             pnlControls = new Panel();
+            cbSmooth = new CheckBox();
             lbSSAA = new Label();
             cbSSAA = new ComboBox();
             btnStateManager = new Button();
@@ -46,7 +48,6 @@
             nudIm = new NumericUpDown();
             nudRe = new NumericUpDown();
             nudBaseScale = new NumericUpDown();
-            cbSmooth = new CheckBox();
             canvas = new PictureBox();
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
@@ -90,6 +91,18 @@
             pnlControls.Name = "pnlControls";
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
+            // 
+            // cbSmooth
+            // 
+            cbSmooth.AutoSize = true;
+            cbSmooth.Checked = true;
+            cbSmooth.CheckState = CheckState.Checked;
+            cbSmooth.Location = new Point(6, 249);
+            cbSmooth.Name = "cbSmooth";
+            cbSmooth.Size = new Size(153, 19);
+            cbSmooth.TabIndex = 2;
+            cbSmooth.Text = "Плавное окрашивание";
+            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // lbSSAA
             // 
@@ -311,18 +324,6 @@
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
             // 
-            // cbSmooth
-            // 
-            cbSmooth.AutoSize = true;
-            cbSmooth.Checked = true;
-            cbSmooth.CheckState = CheckState.Checked;
-            cbSmooth.Location = new Point(6, 249);
-            cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(153, 19);
-            cbSmooth.TabIndex = 2;
-            cbSmooth.Text = "Плавное окрашивание";
-            cbSmooth.UseVisualStyleBackColor = true;
-            // 
             // canvas
             // 
             canvas.Dock = DockStyle.Fill;
@@ -339,6 +340,7 @@
             ClientSize = new Size(1084, 636);
             Controls.Add(canvas);
             Controls.Add(pnlControls);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 675);
             Name = "FractalMandelbrotFamilyForm";
             Text = "FractalFormBase";

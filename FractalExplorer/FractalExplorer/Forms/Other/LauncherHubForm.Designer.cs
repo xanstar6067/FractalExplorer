@@ -272,6 +272,7 @@
             ClientSize = new Size(800, 346);
             Controls.Add(tabControlFractals);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             Name = "LauncherHubForm";
             Text = "Менеджер фракталов";

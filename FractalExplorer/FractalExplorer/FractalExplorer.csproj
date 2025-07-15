@@ -44,12 +44,13 @@
     <!-- ОТКЛЮЧАЕМ ДЕТЕРМИНИЗМ, чтобы разрешить использование '*' в AssemblyVersion -->
     <Deterministic>false</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>FractalExplorer.ico</ApplicationIcon>
     <!-- === КОНЕЦ НАСТРОЕК ВЕРСИОНИРОВАНИЯ === -->
 
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ExtendedNumerics.BigDecimal" Version="3000.0.4.132" />
+    <Content Include="FractalExplorer.ico" />
   </ItemGroup>
 
   <ItemGroup>
