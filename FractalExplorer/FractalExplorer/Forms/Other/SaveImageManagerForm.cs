@@ -130,8 +130,13 @@ namespace FractalExplorer.Forms.Other
             cbFormat.SelectedIndex = Math.Max(0, Math.Min(cbFormat.Items.Count - 1, settings.SaveForm_FormatIndex));
             cbSSAA.SelectedIndex = Math.Max(0, Math.Min(cbSSAA.Items.Count - 1, settings.SaveForm_SsaaIndex));
             trackBarJpgQuality.Value = Math.Max(trackBarJpgQuality.Minimum, Math.Min(trackBarJpgQuality.Maximum, settings.SaveForm_JpgQuality));
+
+            // MODIFIED: Загрузка настроек для новых элементов
             chkApplyBicubic.Checked = settings.SaveForm_ApplyBicubic;
             cbBicubicFactor.SelectedIndex = Math.Max(0, Math.Min(cbBicubicFactor.Items.Count - 1, settings.SaveForm_BicubicFactorIndex));
+            chkApplyLanczos.Checked = settings.SaveForm_ApplyLanczos;
+            cbLanczosFactor.SelectedIndex = Math.Max(0, Math.Min(cbLanczosFactor.Items.Count - 1, settings.SaveForm_LanczosFactorIndex));
+
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
@@ -146,8 +151,13 @@ namespace FractalExplorer.Forms.Other
             settings.SaveForm_FormatIndex = cbFormat.SelectedIndex;
             settings.SaveForm_SsaaIndex = cbSSAA.SelectedIndex;
             settings.SaveForm_JpgQuality = trackBarJpgQuality.Value;
+
+            // MODIFIED: Сохранение настроек для новых элементов
             settings.SaveForm_ApplyBicubic = chkApplyBicubic.Checked;
             settings.SaveForm_BicubicFactorIndex = cbBicubicFactor.SelectedIndex;
+            settings.SaveForm_ApplyLanczos = chkApplyLanczos.Checked;
+            settings.SaveForm_LanczosFactorIndex = cbLanczosFactor.SelectedIndex;
+
             settings.Save();
         }
 
@@ -157,7 +167,27 @@ namespace FractalExplorer.Forms.Other
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e) => UpdateJpgQualityUI();
         private void trackBarJpgQuality_Scroll(object sender, EventArgs e) => lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
-        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e) => UpdateEffectControls();
+
+        // MODIFIED: Обработчики для взаимного исключения чекбоксов
+        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkApplyBicubic.Checked)
+            {
+                chkApplyLanczos.Checked = false;
+            }
+            UpdateEffectControls();
+        }
+
+        // NEW: Обработчик для нового чекбокса
+        private void chkApplyLanczos_CheckedChanged(object sender, EventArgs e)
+        {
+            if (chkApplyLanczos.Checked)
+            {
+                chkApplyBicubic.Checked = false;
+            }
+            UpdateEffectControls();
+        }
+
         private void btnPreset720p_Click(object sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
         private void btnPresetFHD_Click(object sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
         private void btnPreset2K_Click(object sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
@@ -224,7 +254,10 @@ namespace FractalExplorer.Forms.Other
                     int targetHeight = (int)nudHeight.Value;
                     ImageFormat imageFormat = GetImageFormat(format);
                     int jpgQuality = trackBarJpgQuality.Value;
+
+                    // MODIFIED: Определяем, какой режим используется
                     bool useBicubicUpscale = chkApplyBicubic.Checked;
+                    bool useLanczos = chkApplyLanczos.Checked;
                     int renderWidth, renderHeight, ssaaFactor;
 
                     if (useBicubicUpscale)
@@ -234,6 +267,15 @@ namespace FractalExplorer.Forms.Other
                         renderWidth = (int)Math.Max(1, targetWidth / upscaleFactor);
                         renderHeight = (int)Math.Max(1, targetHeight / upscaleFactor);
                         ssaaFactor = 1; // SSAA не используется в этом режиме.
+                    }
+                    // NEW: Логика для режима Ланцоша
+                    else if (useLanczos)
+                    {
+                        // Режим с Ланцошем: рендерим в разрешении, зависящем от коэффициента.
+                        double scaleFactor = GetLanczosFactor();
+                        renderWidth = (int)Math.Max(1, Math.Round(targetWidth * scaleFactor));
+                        renderHeight = (int)Math.Max(1, Math.Round(targetHeight * scaleFactor));
+                        ssaaFactor = 1; // SSAA не используется, т.к. Ланцош выполняет свою форму суперсемплинга.
                     }
                     else
                     {
@@ -246,7 +288,8 @@ namespace FractalExplorer.Forms.Other
                     renderedBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, renderWidth, renderHeight, ssaaFactor, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    finalBitmap = await ApplyPostProcessingAsync(renderedBitmap, useBicubicUpscale, targetWidth, targetHeight, progress, _cts.Token);
+                    // MODIFIED: Передаем флаг useLanczos в постобработку
+                    finalBitmap = await ApplyPostProcessingAsync(renderedBitmap, useBicubicUpscale, useLanczos, targetWidth, targetHeight, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
                     if (renderedBitmap != finalBitmap)
@@ -294,25 +337,34 @@ namespace FractalExplorer.Forms.Other
 
         /// <summary>
         /// Применяет постобработку к отрендеренному изображению.
-        /// В данный момент используется для бикубического апскейла.
+        /// В данный момент используется для бикубического апскейла или масштабирования Ланцошем.
         /// </summary>
         /// <param name="sourceBitmap">Исходное изображение.</param>
         /// <param name="useBicubic">Флаг, указывающий, нужно ли применять апскейл.</param>
+        /// <param name="useLanczos">Флаг, указывающий, нужно ли применять масштабирование Ланцошем.</param>
         /// <param name="targetWidth">Целевая ширина изображения.</param>
         /// <param name="targetHeight">Целевая высота изображения.</param>
         /// <param name="progress">Объект для отчета о прогрессе.</param>
         /// <param name="token">Токен отмены.</param>
         /// <returns>Обработанное изображение. Если обработка не требовалась, возвращает исходное.</returns>
-        private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, bool useBicubic, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
+        private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, bool useBicubic, bool useLanczos, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
         {
-            if (!useBicubic || (sourceBitmap.Width == targetWidth && sourceBitmap.Height == targetHeight))
+            bool isResizeNeeded = sourceBitmap.Width != targetWidth || sourceBitmap.Height != targetHeight;
+
+            if (useBicubic && isResizeNeeded)
             {
-                return sourceBitmap;
+                progress.Report(new RenderProgress { Status = $"Бикубический апскейл до {targetWidth}x{targetHeight}...", Percentage = 95 });
+                var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
+                return await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
+            }
+            else if (useLanczos && isResizeNeeded)
+            {
+                progress.Report(new RenderProgress { Status = $"Масштабирование (Ланцош) до {targetWidth}x{targetHeight}...", Percentage = 95 });
+                var lanczosFilter = new LanczosResizeFilter(targetWidth, targetHeight); // a=3 по умолчанию
+                return await Task.Run(() => lanczosFilter.Apply(sourceBitmap), token);
             }
 
-            progress.Report(new RenderProgress { Status = $"Бикубический апскейл до {targetWidth}x{targetHeight}...", Percentage = 95 });
-            var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
-            return await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
+            return sourceBitmap; // Если обработка не нужна, возвращаем оригинал
         }
 
         /// <summary>
@@ -376,15 +428,24 @@ namespace FractalExplorer.Forms.Other
         }
 
         /// <summary>
-        /// Обновляет состояние элементов управления эффектами (SSAA / Bicubic).
+        /// Обновляет состояние элементов управления эффектами (SSAA / Bicubic / Lanczos).
         /// </summary>
         private void UpdateEffectControls()
         {
             bool bicubicMode = chkApplyBicubic.Checked;
-            lblSsaa.Enabled = !bicubicMode;
-            cbSSAA.Enabled = !bicubicMode;
+            bool lanczosMode = chkApplyLanczos.Checked;
+
+            // SSAA доступен только если не выбран ни один из фильтров
+            lblSsaa.Enabled = !bicubicMode && !lanczosMode;
+            cbSSAA.Enabled = !bicubicMode && !lanczosMode;
+
+            // Управление для бикубического фильтра
             lblBicubicFactor.Visible = bicubicMode;
             cbBicubicFactor.Visible = bicubicMode;
+
+            // NEW: Управление для фильтра Ланцоша
+            lblLanczosFactor.Visible = lanczosMode;
+            cbLanczosFactor.Visible = lanczosMode;
         }
 
         /// <summary>
@@ -419,6 +480,25 @@ namespace FractalExplorer.Forms.Other
                 5 => 2.0,
                 6 => 2.5,
                 _ => 1.5,
+            };
+        }
+
+        /// <summary>
+        /// NEW: Получает множитель для масштабирования методом Ланцоша.
+        /// > 1.0 - суперсемплинг (уменьшение), < 1.0 - апскейл (увеличение).
+        /// </summary>
+        /// <returns>Множитель масштабирования.</returns>
+        private double GetLanczosFactor()
+        {
+            return cbLanczosFactor.SelectedIndex switch
+            {
+                0 => 4.0,   // x4.0 (Суперсемплинг, Ultra)
+                1 => 2.0,   // x2.0 (Суперсемплинг, High)
+                2 => 1.5,   // x1.5 (Суперсемплинг, Medium)
+                3 => 0.75,  // x0.75 (Апскейл, Quality)
+                4 => 0.5,   // x0.5 (Апскейл, Balanced)
+                5 => 0.25,  // x0.25 (Апскейл, Performance)
+                _ => 1.0,   // По умолчанию без изменений
             };
         }
 

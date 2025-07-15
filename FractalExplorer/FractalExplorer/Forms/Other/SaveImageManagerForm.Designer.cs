@@ -19,6 +19,9 @@
         {
             this.pnlMain = new System.Windows.Forms.Panel();
             this.grpEffects = new System.Windows.Forms.GroupBox();
+            this.cbLanczosFactor = new System.Windows.Forms.ComboBox();
+            this.lblLanczosFactor = new System.Windows.Forms.Label();
+            this.chkApplyLanczos = new System.Windows.Forms.CheckBox();
             this.cbBicubicFactor = new System.Windows.Forms.ComboBox();
             this.lblBicubicFactor = new System.Windows.Forms.Label();
             this.chkApplyBicubic = new System.Windows.Forms.CheckBox();
@@ -67,6 +70,9 @@
             // 
             // grpEffects
             // 
+            this.grpEffects.Controls.Add(this.cbLanczosFactor);
+            this.grpEffects.Controls.Add(this.lblLanczosFactor);
+            this.grpEffects.Controls.Add(this.chkApplyLanczos);
             this.grpEffects.Controls.Add(this.cbBicubicFactor);
             this.grpEffects.Controls.Add(this.lblBicubicFactor);
             this.grpEffects.Controls.Add(this.chkApplyBicubic);
@@ -78,6 +84,42 @@
             this.grpEffects.TabIndex = 1;
             this.grpEffects.TabStop = false;
             this.grpEffects.Text = "Эффекты и качество";
+            // 
+            // cbLanczosFactor
+            // 
+            this.cbLanczosFactor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbLanczosFactor.FormattingEnabled = true;
+            this.cbLanczosFactor.Items.AddRange(new object[] {
+            "x4.0 (Суперсемплинг, Ultra)",
+            "x2.0 (Суперсемплинг, High)",
+            "x1.5 (Суперсемплинг, Medium)",
+            "x0.75 (Апскейл, Quality)",
+            "x0.5 (Апскейл, Balanced)",
+            "x0.25 (Апскейл, Performance)"});
+            this.cbLanczosFactor.Location = new System.Drawing.Point(271, 99);
+            this.cbLanczosFactor.Name = "cbLanczosFactor";
+            this.cbLanczosFactor.Size = new System.Drawing.Size(281, 23);
+            this.cbLanczosFactor.TabIndex = 7;
+            // 
+            // lblLanczosFactor
+            // 
+            this.lblLanczosFactor.AutoSize = true;
+            this.lblLanczosFactor.Location = new System.Drawing.Point(268, 81);
+            this.lblLanczosFactor.Name = "lblLanczosFactor";
+            this.lblLanczosFactor.Size = new System.Drawing.Size(130, 15);
+            this.lblLanczosFactor.TabIndex = 6;
+            this.lblLanczosFactor.Text = "Коэффициент Ланцоша:";
+            // 
+            // chkApplyLanczos
+            // 
+            this.chkApplyLanczos.AutoSize = true;
+            this.chkApplyLanczos.Location = new System.Drawing.Point(9, 81);
+            this.chkApplyLanczos.Name = "chkApplyLanczos";
+            this.chkApplyLanczos.Size = new System.Drawing.Size(199, 19);
+            this.chkApplyLanczos.TabIndex = 5;
+            this.chkApplyLanczos.Text = "Использовать фильтр Ланцоша";
+            this.chkApplyLanczos.UseVisualStyleBackColor = true;
+            this.chkApplyLanczos.CheckedChanged += new System.EventHandler(this.chkApplyLanczos_CheckedChanged);
             // 
             // cbBicubicFactor
             // 
@@ -91,7 +133,7 @@
             "x1.5 (стандартное)",
             "x2.0 (сильное)",
             "x2.5 (экстремальное)"});
-            this.cbBicubicFactor.Location = new System.Drawing.Point(271, 119);
+            this.cbBicubicFactor.Location = new System.Drawing.Point(271, 128);
             this.cbBicubicFactor.Name = "cbBicubicFactor";
             this.cbBicubicFactor.Size = new System.Drawing.Size(281, 23);
             this.cbBicubicFactor.TabIndex = 4;
@@ -99,7 +141,7 @@
             // lblBicubicFactor
             // 
             this.lblBicubicFactor.AutoSize = true;
-            this.lblBicubicFactor.Location = new System.Drawing.Point(268, 101);
+            this.lblBicubicFactor.Location = new System.Drawing.Point(268, 110);
             this.lblBicubicFactor.Name = "lblBicubicFactor";
             this.lblBicubicFactor.Size = new System.Drawing.Size(124, 15);
             this.lblBicubicFactor.TabIndex = 3;
@@ -108,7 +150,7 @@
             // chkApplyBicubic
             // 
             this.chkApplyBicubic.AutoSize = true;
-            this.chkApplyBicubic.Location = new System.Drawing.Point(9, 101);
+            this.chkApplyBicubic.Location = new System.Drawing.Point(9, 106);
             this.chkApplyBicubic.Name = "chkApplyBicubic";
             this.chkApplyBicubic.Size = new System.Drawing.Size(225, 19);
             this.chkApplyBicubic.TabIndex = 2;
@@ -455,5 +497,8 @@
         private System.Windows.Forms.Button btnPreset8K;
         private System.Windows.Forms.ComboBox cbBicubicFactor;
         private System.Windows.Forms.Label lblBicubicFactor;
+        private System.Windows.Forms.ComboBox cbLanczosFactor;
+        private System.Windows.Forms.Label lblLanczosFactor;
+        private System.Windows.Forms.CheckBox chkApplyLanczos;
     }
 }

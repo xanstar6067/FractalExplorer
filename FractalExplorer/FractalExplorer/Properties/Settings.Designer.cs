@@ -106,5 +106,29 @@ namespace FractalExplorer.Properties {
                 this["SaveForm_BicubicFactorIndex"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SaveForm_ApplyLanczos {
+            get {
+                return ((bool)(this["SaveForm_ApplyLanczos"]));
+            }
+            set {
+                this["SaveForm_ApplyLanczos"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int SaveForm_LanczosFactorIndex {
+            get {
+                return ((int)(this["SaveForm_LanczosFactorIndex"]));
+            }
+            set {
+                this["SaveForm_LanczosFactorIndex"] = value;
+            }
+        }
     }
 }
