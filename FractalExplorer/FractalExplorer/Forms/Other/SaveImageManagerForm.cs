@@ -1,6 +1,6 @@
 ﻿using FractalExplorer.Properties;
-using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.Imaging.Filters;
+using FractalExplorer.Utilities.RenderUtilities;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -12,16 +12,56 @@ using System.Windows.Forms;
 
 namespace FractalExplorer.Forms.Other
 {
+    /// <summary>
+    /// Форма для управления процессом сохранения изображения в высоком разрешении.
+    /// Предоставляет пользователю опции выбора разрешения, формата файла,
+    /// применения сглаживания (SSAA) или бикубического апскейла.
+    /// </summary>
     public partial class SaveImageManagerForm : Form
     {
+        #region Поля
+
+        /// <summary>
+        /// Источник для рендеринга изображения в высоком разрешении.
+        /// </summary>
         private readonly IHighResRenderable _renderSource;
+
+        /// <summary>
+        /// Состояние рендеринга (параметры фрактала), которое будет сохранено.
+        /// </summary>
         private readonly HighResRenderState _renderState;
+
+        /// <summary>
+        /// Источник токенов для отмены асинхронной операции рендеринга.
+        /// </summary>
         private CancellationTokenSource _cts;
+
+        /// <summary>
+        /// Флаг, указывающий, выполняется ли в данный момент процесс рендеринга.
+        /// </summary>
         private bool _isRendering = false;
+
+        /// <summary>
+        /// Секундомер для измерения времени, затраченного на рендеринг.
+        /// </summary>
         private readonly Stopwatch _renderStopwatch;
+
+        /// <summary>
+        /// Таймер для периодического обновления пользовательского интерфейса (например, времени рендеринга).
+        /// </summary>
         private readonly System.Windows.Forms.Timer _uiUpdateTimer;
+
+        /// <summary>
+        /// Последнее сообщение о статусе для отображения пользователю.
+        /// </summary>
         private string _lastStatusMessage;
 
+        #endregion
+
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="SaveImageManagerForm"/>.
+        /// </summary>
+        /// <param name="renderSource">Источник, предоставляющий данные и метод для рендеринга.</param>
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
             InitializeComponent();
@@ -32,17 +72,22 @@ namespace FractalExplorer.Forms.Other
             _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
         }
 
+        #region Обработчики событий формы и таймера
+
+        /// <summary>
+        /// Обрабатывает событие тика таймера для обновления статусной строки.
+        /// </summary>
         private void UiUpdateTimer_Tick(object sender, EventArgs e)
         {
-            this.Invoke((Action)(() =>
+            if (lblStatus.IsHandleCreated && !lblStatus.IsDisposed)
             {
-                if (lblStatus.IsHandleCreated && !lblStatus.IsDisposed)
-                {
-                    lblStatus.Text = $"{_lastStatusMessage} [{_renderStopwatch.Elapsed:mm\\:ss\\.f}]";
-                }
-            }));
+                this.Invoke((Action)(() => lblStatus.Text = $"{_lastStatusMessage} [{_renderStopwatch.Elapsed:mm\\:ss\\.f}]"));
+            }
         }
 
+        /// <summary>
+        /// Обрабатывает событие загрузки формы.
+        /// </summary>
         private void SaveImageManagerForm_Load(object sender, EventArgs e)
         {
             LoadSettings();
@@ -52,25 +97,31 @@ namespace FractalExplorer.Forms.Other
             lblStatus.Text = _lastStatusMessage;
         }
 
-        // <<< ИСПРАВЛЕНО: Сохранение настроек возвращено сюда.
+        /// <summary>
+        /// Обрабатывает событие закрытия формы.
+        /// Если рендеринг не выполняется, сохраняет настройки.
+        /// Если рендеринг активен, отменяет его.
+        /// </summary>
         private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Сохраняем настройки только если форма закрывается не в процессе рендеринга.
-            // Это покрывает все случаи: закрытие по кнопке, по крестику и после успешного рендера.
             if (!_isRendering)
             {
                 SaveSettings();
             }
             else
             {
-                // Если рендеринг идет, отменяем его.
                 _cts?.Cancel();
             }
             _uiUpdateTimer?.Dispose();
         }
 
-        #region Settings Management
+        #endregion
 
+        #region Управление настройками
+
+        /// <summary>
+        /// Загружает настройки формы из пользовательских настроек приложения.
+        /// </summary>
         private void LoadSettings()
         {
             var settings = Settings.Default;
@@ -84,6 +135,9 @@ namespace FractalExplorer.Forms.Other
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
+        /// <summary>
+        /// Сохраняет текущие настройки формы в пользовательские настройки приложения.
+        /// </summary>
         private void SaveSettings()
         {
             var settings = Settings.Default;
@@ -99,17 +153,22 @@ namespace FractalExplorer.Forms.Other
 
         #endregion
 
-        #region UI Event Handlers
+        #region Обработчики событий элементов UI
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e) => UpdateJpgQualityUI();
-        private void trackBarJpgQuality_Scroll(object sender, EventArgs e) { lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%"; }
-        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e) { UpdateEffectControls(); }
+        private void trackBarJpgQuality_Scroll(object sender, EventArgs e) => lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
+        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e) => UpdateEffectControls();
         private void btnPreset720p_Click(object sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
         private void btnPresetFHD_Click(object sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
         private void btnPreset2K_Click(object sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
         private void btnPreset4K_Click(object sender, EventArgs e) { nudWidth.Value = 3840; nudHeight.Value = 2160; }
         private void btnPreset8K_Click(object sender, EventArgs e) { nudWidth.Value = 7680; nudHeight.Value = 4320; }
-        private void btnRotate_Click(object sender, EventArgs e) { (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value); }
+        private void btnRotate_Click(object sender, EventArgs e) => (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value);
+
+        /// <summary>
+        /// Обрабатывает нажатие на кнопку "Отмена" или "Закрыть".
+        /// Если идет рендеринг, отменяет его. В противном случае закрывает форму.
+        /// </summary>
         private void btnCancel_Click(object sender, EventArgs e)
         {
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
@@ -118,12 +177,14 @@ namespace FractalExplorer.Forms.Other
             }
             else
             {
-                // Просто закрываем форму. FormClosing обработает сохранение.
                 this.DialogResult = DialogResult.Cancel;
                 this.Close();
             }
         }
 
+        /// <summary>
+        /// Запускает процесс рендеринга и сохранения изображения.
+        /// </summary>
         private async void btnSave_Click(object sender, EventArgs e)
         {
             string format = cbFormat.SelectedItem.ToString();
@@ -163,28 +224,25 @@ namespace FractalExplorer.Forms.Other
                     int targetHeight = (int)nudHeight.Value;
                     ImageFormat imageFormat = GetImageFormat(format);
                     int jpgQuality = trackBarJpgQuality.Value;
-
-                    int renderWidth, renderHeight, ssaaFactor;
                     bool useBicubicUpscale = chkApplyBicubic.Checked;
+                    int renderWidth, renderHeight, ssaaFactor;
 
-                    // <<< ИСПРАВЛЕНО: Четкое и корректное разделение логики.
                     if (useBicubicUpscale)
                     {
-                        // РЕЖИМ 1: БИКУБИЧЕСКИЙ АПСКЕЙЛ
+                        // Режим с бикубическим апскейлом: рендерим в меньшем разрешении.
                         double upscaleFactor = GetBicubicFactor();
                         renderWidth = (int)Math.Max(1, targetWidth / upscaleFactor);
                         renderHeight = (int)Math.Max(1, targetHeight / upscaleFactor);
-                        ssaaFactor = 1; // SSAA не используется
+                        ssaaFactor = 1; // SSAA не используется в этом режиме.
                     }
                     else
                     {
-                        // РЕЖИМ 2: СТАНДАРТНЫЙ SSAA
+                        // Стандартный режим с SSAA: рендерим в целевом разрешении.
                         renderWidth = targetWidth;
                         renderHeight = targetHeight;
-                        ssaaFactor = GetSsaaFactor(); // Получаем реальный множитель SSAA
+                        ssaaFactor = GetSsaaFactor();
                     }
 
-                    // Вызов рендера с корректными, зависящими от режима, параметрами.
                     renderedBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, renderWidth, renderHeight, ssaaFactor, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
@@ -207,20 +265,22 @@ namespace FractalExplorer.Forms.Other
 
                     string elapsedTimeString = totalTime.TotalMinutes >= 1 ? $"{totalTime:m' мин 's' сек'}" : $"{totalTime:s\\.fff' сек'}";
                     MessageBox.Show($"Изображение успешно сохранено!\n\nОбщее время: {elapsedTimeString}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    // Закрываем форму. FormClosing обработает сохранение. нихера он не сохраняет. просто удалить закрытие формы и нет проблем.
-                    //this.Close();
                 }
-                catch (AggregateException ae) when (ae.InnerException is OperationCanceledException) { lblStatus.Text = "Операция отменена."; }
-                catch (OperationCanceledException) { lblStatus.Text = "Операция отменена."; }
-                catch (Exception ex) { MessageBox.Show($"Произошла ошибка при сохранении: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                catch (OperationCanceledException)
+                {
+                    lblStatus.Text = "Операция отменена.";
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Произошла ошибка при сохранении: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
                 finally
                 {
                     renderedBitmap?.Dispose();
                     finalBitmap?.Dispose();
                     _renderStopwatch.Stop();
                     _uiUpdateTimer.Stop();
-                    _isRendering = false; // <<< Важно: устанавливаем флаг в false до закрытия
+                    _isRendering = false;
                     SetUiState(true);
                     _cts?.Dispose();
                     _cts = null;
@@ -230,16 +290,38 @@ namespace FractalExplorer.Forms.Other
 
         #endregion
 
-        #region Helper Methods
+        #region Вспомогательные методы
 
+        /// <summary>
+        /// Применяет постобработку к отрендеренному изображению.
+        /// В данный момент используется для бикубического апскейла.
+        /// </summary>
+        /// <param name="sourceBitmap">Исходное изображение.</param>
+        /// <param name="useBicubic">Флаг, указывающий, нужно ли применять апскейл.</param>
+        /// <param name="targetWidth">Целевая ширина изображения.</param>
+        /// <param name="targetHeight">Целевая высота изображения.</param>
+        /// <param name="progress">Объект для отчета о прогрессе.</param>
+        /// <param name="token">Токен отмены.</param>
+        /// <returns>Обработанное изображение. Если обработка не требовалась, возвращает исходное.</returns>
         private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, bool useBicubic, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
         {
-            if (!useBicubic || (sourceBitmap.Width == targetWidth && sourceBitmap.Height == targetHeight)) return sourceBitmap;
+            if (!useBicubic || (sourceBitmap.Width == targetWidth && sourceBitmap.Height == targetHeight))
+            {
+                return sourceBitmap;
+            }
+
             progress.Report(new RenderProgress { Status = $"Бикубический апскейл до {targetWidth}x{targetHeight}...", Percentage = 95 });
             var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
             return await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
         }
 
+        /// <summary>
+        /// Сохраняет изображение в файл с заданными параметрами.
+        /// </summary>
+        /// <param name="bitmap">Изображение для сохранения.</param>
+        /// <param name="filePath">Путь к файлу.</param>
+        /// <param name="format">Формат изображения.</param>
+        /// <param name="jpgQuality">Качество для формата JPG (0-100).</param>
         private void SaveBitmap(Bitmap bitmap, string filePath, ImageFormat format, int jpgQuality)
         {
             if (format == ImageFormat.Jpeg)
@@ -247,7 +329,11 @@ namespace FractalExplorer.Forms.Other
                 var qualityEncoder = Encoder.Quality;
                 var encoderParameters = new EncoderParameters(1) { Param = { [0] = new EncoderParameter(qualityEncoder, (long)jpgQuality) } };
                 ImageCodecInfo jpgEncoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
-                if (jpgEncoder != null) bitmap.Save(filePath, jpgEncoder, encoderParameters);
+
+                if (jpgEncoder != null)
+                {
+                    bitmap.Save(filePath, jpgEncoder, encoderParameters);
+                }
             }
             else
             {
@@ -255,6 +341,10 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
+        /// <summary>
+        /// Устанавливает состояние элементов UI в зависимости от того, идет ли рендеринг.
+        /// </summary>
+        /// <param name="enabled">True, если элементы должны быть активны; иначе False.</param>
         private void SetUiState(bool enabled)
         {
             if (this.IsDisposed) return;
@@ -264,10 +354,19 @@ namespace FractalExplorer.Forms.Other
                 pnlMain.Enabled = enabled;
                 btnSave.Enabled = enabled;
                 btnCancel.Text = enabled ? "Закрыть" : "Отмена";
-                if (enabled) { progressBar.Value = 0; _lastStatusMessage = "Готово"; lblStatus.Text = _lastStatusMessage; }
+
+                if (enabled)
+                {
+                    progressBar.Value = 0;
+                    _lastStatusMessage = "Готово";
+                    lblStatus.Text = _lastStatusMessage;
+                }
             }));
         }
 
+        /// <summary>
+        /// Обновляет видимость элементов управления качеством JPG.
+        /// </summary>
         private void UpdateJpgQualityUI()
         {
             bool isJpg = cbFormat.SelectedItem?.ToString() == "JPG";
@@ -276,6 +375,9 @@ namespace FractalExplorer.Forms.Other
             lblJpgQualityValue.Visible = isJpg;
         }
 
+        /// <summary>
+        /// Обновляет состояние элементов управления эффектами (SSAA / Bicubic).
+        /// </summary>
         private void UpdateEffectControls()
         {
             bool bicubicMode = chkApplyBicubic.Checked;
@@ -285,41 +387,54 @@ namespace FractalExplorer.Forms.Other
             cbBicubicFactor.Visible = bicubicMode;
         }
 
+        /// <summary>
+        /// Получает множитель SSAA из выбранного элемента ComboBox.
+        /// </summary>
+        /// <returns>Целочисленный множитель (1, 2, 4, 8, 10).</returns>
         private int GetSsaaFactor()
         {
-            switch (cbSSAA.SelectedIndex)
+            return cbSSAA.SelectedIndex switch
             {
-                case 1: return 2;
-                case 2: return 4;
-                case 3: return 8;
-                case 4: return 10;
-                default: return 1;
-            }
+                1 => 2,
+                2 => 4,
+                3 => 8,
+                4 => 10,
+                _ => 1,
+            };
         }
 
+        /// <summary>
+        /// Получает множитель для бикубического апскейла из ComboBox.
+        /// </summary>
+        /// <returns>Множитель апскейла (например, 1.5).</returns>
         private double GetBicubicFactor()
         {
-            switch (cbBicubicFactor.SelectedIndex)
+            return cbBicubicFactor.SelectedIndex switch
             {
-                case 0: return 1.1;
-                case 1: return 1.2;
-                case 2: return 1.3;
-                case 3: return 1.4;
-                case 4: return 1.5;
-                case 5: return 2.0;
-                case 6: return 2.5;
-                default: return 1.5;
-            }
+                0 => 1.1,
+                1 => 1.2,
+                2 => 1.3,
+                3 => 1.4,
+                4 => 1.5,
+                5 => 2.0,
+                6 => 2.5,
+                _ => 1.5,
+            };
         }
 
+        /// <summary>
+        /// Преобразует строковое представление формата в объект <see cref="ImageFormat"/>.
+        /// </summary>
+        /// <param name="format">Строка с названием формата ("JPG", "BMP", "PNG").</param>
+        /// <returns>Соответствующий объект ImageFormat. По умолчанию PNG.</returns>
         private ImageFormat GetImageFormat(string format)
         {
-            switch (format.ToUpper())
+            return format.ToUpper() switch
             {
-                case "JPG": return ImageFormat.Jpeg;
-                case "BMP": return ImageFormat.Bmp;
-                default: return ImageFormat.Png;
-            }
+                "JPG" => ImageFormat.Jpeg,
+                "BMP" => ImageFormat.Bmp,
+                _ => ImageFormat.Png,
+            };
         }
 
         #endregion
