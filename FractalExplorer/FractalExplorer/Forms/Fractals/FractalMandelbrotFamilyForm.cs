@@ -367,7 +367,7 @@ namespace FractalDraving
                 }
                 else
                 {
-                    newZoom = _zoom / zoomFactor;
+                    newZoom = _zoom * zoomFactor;
                 }
             }
 
