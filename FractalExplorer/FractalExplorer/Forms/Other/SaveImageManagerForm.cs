@@ -1,5 +1,5 @@
 ﻿using FractalExplorer.Utilities.RenderUtilities;
-using FractalExplorer.Utilities.Imaging.Filters; // <-- Добавлен using для фильтров
+using FractalExplorer.Utilities.Imaging.Filters;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using FractalExplorer.Properties;
 
 namespace FractalExplorer.Forms.Other
 {
@@ -44,12 +45,57 @@ namespace FractalExplorer.Forms.Other
 
         private void SaveImageManagerForm_Load(object sender, EventArgs e)
         {
-            cbFormat.SelectedIndex = 0;
-            cbSSAA.SelectedIndex = 1;
+            LoadSettings(); // Загружаем сохраненные настройки
             UpdateJpgQualityUI();
             _lastStatusMessage = "Готово";
             lblStatus.Text = _lastStatusMessage;
         }
+
+        private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (_isRendering)
+            {
+                _cts?.Cancel();
+            }
+            else
+            {
+                // Сохраняем настройки только если рендеринг не идет
+                SaveSettings();
+            }
+            _uiUpdateTimer?.Dispose();
+        }
+
+        #region Settings Management
+
+        private void LoadSettings()
+        {
+            var settings = Settings.Default;
+            nudWidth.Value = Math.Max(nudWidth.Minimum, Math.Min(nudWidth.Maximum, settings.SaveForm_Width));
+            nudHeight.Value = Math.Max(nudHeight.Minimum, Math.Min(nudHeight.Maximum, settings.SaveForm_Height));
+            cbFormat.SelectedIndex = Math.Max(0, Math.Min(cbFormat.Items.Count - 1, settings.SaveForm_FormatIndex));
+            cbSSAA.SelectedIndex = Math.Max(0, Math.Min(cbSSAA.Items.Count - 1, settings.SaveForm_SsaaIndex));
+            trackBarJpgQuality.Value = Math.Max(trackBarJpgQuality.Minimum, Math.Min(trackBarJpgQuality.Maximum, settings.SaveForm_JpgQuality));
+            chkApplyBicubic.Checked = settings.SaveForm_ApplyBicubic;
+
+            // Обновляем текст для ползунка качества JPG
+            lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
+        }
+
+        private void SaveSettings()
+        {
+            var settings = Settings.Default;
+            settings.SaveForm_Width = nudWidth.Value;
+            settings.SaveForm_Height = nudHeight.Value;
+            settings.SaveForm_FormatIndex = cbFormat.SelectedIndex;
+            settings.SaveForm_SsaaIndex = cbSSAA.SelectedIndex;
+            settings.SaveForm_JpgQuality = trackBarJpgQuality.Value;
+            settings.SaveForm_ApplyBicubic = chkApplyBicubic.Checked;
+            settings.Save();
+        }
+
+        #endregion
+
+        #region UI Event Handlers
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e) => UpdateJpgQualityUI();
 
@@ -66,16 +112,52 @@ namespace FractalExplorer.Forms.Other
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
+        // --- Новые обработчики событий для пресетов и поворота ---
+        private void btnPreset720p_Click(object sender, EventArgs e)
+        {
+            nudWidth.Value = 1280;
+            nudHeight.Value = 720;
+        }
         private void btnPresetFHD_Click(object sender, EventArgs e)
         {
             nudWidth.Value = 1920;
             nudHeight.Value = 1080;
         }
 
+        private void btnPreset2K_Click(object sender, EventArgs e)
+        {
+            nudWidth.Value = 2560;
+            nudHeight.Value = 1440;
+        }
+
         private void btnPreset4K_Click(object sender, EventArgs e)
         {
             nudWidth.Value = 3840;
             nudHeight.Value = 2160;
+        }
+
+        private void btnPreset8K_Click(object sender, EventArgs e)
+        {
+            nudWidth.Value = 7680;
+            nudHeight.Value = 4320;
+        }
+
+        private void btnRotate_Click(object sender, EventArgs e)
+        {
+            (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value);
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
+            {
+                _cts.Cancel();
+            }
+            else
+            {
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+            }
         }
 
         private async void btnSave_Click(object sender, EventArgs e)
@@ -121,15 +203,12 @@ namespace FractalExplorer.Forms.Other
                     ImageFormat imageFormat = GetImageFormat(format);
                     int jpgQuality = trackBarJpgQuality.Value;
 
-                    // 1. Основной рендеринг
                     renderedBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, width, height, ssaaFactor, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    // 2. Этап пост-обработки (применение фильтров)
                     finalBitmap = await ApplyPostProcessingAsync(renderedBitmap, width, height, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    // Если фильтр создал новый битмап, старый нужно освободить
                     if (renderedBitmap != finalBitmap)
                     {
                         renderedBitmap.Dispose();
@@ -143,7 +222,6 @@ namespace FractalExplorer.Forms.Other
                     lblStatus.Text = $"Сохранение файла... (Заняло {totalTime:mm\\:ss})";
                     progressBar.Value = 100;
 
-                    // 3. Сохранение итогового изображения
                     await Task.Run(() => SaveBitmap(finalBitmap, sfd.FileName, imageFormat, jpgQuality), _cts.Token);
 
                     string elapsedTimeString = totalTime.TotalMinutes >= 1 ?
@@ -169,7 +247,6 @@ namespace FractalExplorer.Forms.Other
                 {
                     renderedBitmap?.Dispose();
                     finalBitmap?.Dispose();
-
                     _renderStopwatch.Stop();
                     _uiUpdateTimer.Stop();
                     _isRendering = false;
@@ -180,33 +257,26 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
-        /// <summary>
-        /// Асинхронно применяет выбранные фильтры пост-обработки к изображению.
-        /// </summary>
+        #endregion
+
+        #region Helper Methods
+
         private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
         {
             Bitmap currentBitmap = sourceBitmap;
 
-            // Проверяем, нужно ли применять бикубическую интерполяцию
             if (chkApplyBicubic.Checked)
             {
                 progress.Report(new RenderProgress { Status = "Применение бикубической интерполяции...", Percentage = 95 });
-
                 var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
-
-                // Запускаем ресурсоемкую задачу в фоновом потоке, чтобы не блокировать UI
                 Bitmap filteredBitmap = await Task.Run(() => bicubicFilter.Apply(currentBitmap), token);
 
-                // Если currentBitmap не был исходным (вдруг будет цепочка фильтров), его нужно освободить
                 if (currentBitmap != sourceBitmap)
                 {
                     currentBitmap.Dispose();
                 }
                 currentBitmap = filteredBitmap;
             }
-
-            // Здесь можно будет добавить другие фильтры:
-            // if (chkSharpen.Checked) { ... }
 
             return currentBitmap;
         }
@@ -230,28 +300,6 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
-            {
-                _cts.Cancel();
-            }
-            else
-            {
-                this.DialogResult = DialogResult.Cancel;
-                this.Close();
-            }
-        }
-
-        private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
-            {
-                _cts.Cancel();
-            }
-            _uiUpdateTimer?.Dispose();
-        }
-
         private void SetUiState(bool enabled)
         {
             if (this.IsDisposed) return;
@@ -272,11 +320,13 @@ namespace FractalExplorer.Forms.Other
 
         private int GetSsaaFactor()
         {
+            // Обновленная логика для поддержки SSAA x10
             switch (cbSSAA.SelectedIndex)
             {
                 case 1: return 2;
                 case 2: return 4;
                 case 3: return 8;
+                case 4: return 10; // Новый пункт
                 default: return 1;
             }
         }
@@ -290,5 +340,7 @@ namespace FractalExplorer.Forms.Other
                 default: return ImageFormat.Png;
             }
         }
+
+        #endregion
     }
 }
