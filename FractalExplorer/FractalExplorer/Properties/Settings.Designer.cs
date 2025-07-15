@@ -94,5 +94,17 @@ namespace FractalExplorer.Properties {
                 this["SaveForm_ApplyBicubic"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int SaveForm_BicubicFactorIndex {
+            get {
+                return ((int)(this["SaveForm_BicubicFactorIndex"]));
+            }
+            set {
+                this["SaveForm_BicubicFactorIndex"] = value;
+            }
+        }
     }
 }

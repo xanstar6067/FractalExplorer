@@ -1,4 +1,5 @@
-﻿using FractalExplorer.Utilities.RenderUtilities;
+﻿using FractalExplorer.Properties;
+using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.Imaging.Filters;
 using System;
 using System.Diagnostics;
@@ -8,7 +9,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using FractalExplorer.Properties;
 
 namespace FractalExplorer.Forms.Other
 {
@@ -45,8 +45,9 @@ namespace FractalExplorer.Forms.Other
 
         private void SaveImageManagerForm_Load(object sender, EventArgs e)
         {
-            LoadSettings(); // Загружаем сохраненные настройки
+            LoadSettings();
             UpdateJpgQualityUI();
+            UpdateEffectControls(); // Обновляем видимость контролов эффектов
             _lastStatusMessage = "Готово";
             lblStatus.Text = _lastStatusMessage;
         }
@@ -59,7 +60,6 @@ namespace FractalExplorer.Forms.Other
             }
             else
             {
-                // Сохраняем настройки только если рендеринг не идет
                 SaveSettings();
             }
             _uiUpdateTimer?.Dispose();
@@ -73,11 +73,13 @@ namespace FractalExplorer.Forms.Other
             nudWidth.Value = Math.Max(nudWidth.Minimum, Math.Min(nudWidth.Maximum, settings.SaveForm_Width));
             nudHeight.Value = Math.Max(nudHeight.Minimum, Math.Min(nudHeight.Maximum, settings.SaveForm_Height));
             cbFormat.SelectedIndex = Math.Max(0, Math.Min(cbFormat.Items.Count - 1, settings.SaveForm_FormatIndex));
-            cbSSAA.SelectedIndex = Math.Max(0, Math.Min(cbSSAA.Items.Count - 1, settings.SaveForm_SsaaIndex));
             trackBarJpgQuality.Value = Math.Max(trackBarJpgQuality.Minimum, Math.Min(trackBarJpgQuality.Maximum, settings.SaveForm_JpgQuality));
-            chkApplyBicubic.Checked = settings.SaveForm_ApplyBicubic;
 
-            // Обновляем текст для ползунка качества JPG
+            // Загрузка настроек для новых режимов
+            chkApplyBicubic.Checked = settings.SaveForm_ApplyBicubic;
+            cbSSAA.SelectedIndex = Math.Max(0, Math.Min(cbSSAA.Items.Count - 1, settings.SaveForm_SsaaIndex));
+            cbBicubicFactor.SelectedIndex = Math.Max(0, Math.Min(cbBicubicFactor.Items.Count - 1, settings.SaveForm_BicubicFactorIndex));
+
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
@@ -87,9 +89,13 @@ namespace FractalExplorer.Forms.Other
             settings.SaveForm_Width = nudWidth.Value;
             settings.SaveForm_Height = nudHeight.Value;
             settings.SaveForm_FormatIndex = cbFormat.SelectedIndex;
-            settings.SaveForm_SsaaIndex = cbSSAA.SelectedIndex;
             settings.SaveForm_JpgQuality = trackBarJpgQuality.Value;
+
+            // Сохранение настроек для новых режимов
             settings.SaveForm_ApplyBicubic = chkApplyBicubic.Checked;
+            settings.SaveForm_SsaaIndex = cbSSAA.SelectedIndex;
+            settings.SaveForm_BicubicFactorIndex = cbBicubicFactor.SelectedIndex; // Добавлено сохранение нового индекса
+
             settings.Save();
         }
 
@@ -99,53 +105,23 @@ namespace FractalExplorer.Forms.Other
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e) => UpdateJpgQualityUI();
 
-        private void UpdateJpgQualityUI()
-        {
-            bool isJpg = cbFormat.SelectedItem?.ToString() == "JPG";
-            lblJpgQuality.Visible = isJpg;
-            trackBarJpgQuality.Visible = isJpg;
-            lblJpgQualityValue.Visible = isJpg;
-        }
-
         private void trackBarJpgQuality_Scroll(object sender, EventArgs e)
         {
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
-        // --- Новые обработчики событий для пресетов и поворота ---
-        private void btnPreset720p_Click(object sender, EventArgs e)
+        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e)
         {
-            nudWidth.Value = 1280;
-            nudHeight.Value = 720;
-        }
-        private void btnPresetFHD_Click(object sender, EventArgs e)
-        {
-            nudWidth.Value = 1920;
-            nudHeight.Value = 1080;
+            UpdateEffectControls();
         }
 
-        private void btnPreset2K_Click(object sender, EventArgs e)
-        {
-            nudWidth.Value = 2560;
-            nudHeight.Value = 1440;
-        }
-
-        private void btnPreset4K_Click(object sender, EventArgs e)
-        {
-            nudWidth.Value = 3840;
-            nudHeight.Value = 2160;
-        }
-
-        private void btnPreset8K_Click(object sender, EventArgs e)
-        {
-            nudWidth.Value = 7680;
-            nudHeight.Value = 4320;
-        }
-
-        private void btnRotate_Click(object sender, EventArgs e)
-        {
-            (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value);
-        }
+        // --- Обработчики событий для пресетов и поворота ---
+        private void btnPreset720p_Click(object sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
+        private void btnPresetFHD_Click(object sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
+        private void btnPreset2K_Click(object sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
+        private void btnPreset4K_Click(object sender, EventArgs e) { nudWidth.Value = 3840; nudHeight.Value = 2160; }
+        private void btnPreset8K_Click(object sender, EventArgs e) { nudWidth.Value = 7680; nudHeight.Value = 4320; }
+        private void btnRotate_Click(object sender, EventArgs e) { (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value); }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
@@ -199,14 +175,24 @@ namespace FractalExplorer.Forms.Other
                 {
                     int width = (int)nudWidth.Value;
                     int height = (int)nudHeight.Value;
-                    int ssaaFactor = GetSsaaFactor();
                     ImageFormat imageFormat = GetImageFormat(format);
                     int jpgQuality = trackBarJpgQuality.Value;
 
+                    // --- Новая логика выбора режима ---
+                    int ssaaFactor = 1;
+                    if (!chkApplyBicubic.Checked)
+                    {
+                        // Режим классического SSAA
+                        ssaaFactor = GetSsaaFactor();
+                    }
+                    // В режиме бикубического увеличения ssaaFactor остается 1
+
+                    // 1. Основной рендеринг
                     renderedBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, width, height, ssaaFactor, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    finalBitmap = await ApplyPostProcessingAsync(renderedBitmap, width, height, progress, _cts.Token);
+                    // 2. Этап пост-обработки (применение бикубического увеличения, если выбрано)
+                    finalBitmap = await ApplyPostProcessingAsync(renderedBitmap, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
                     if (renderedBitmap != finalBitmap)
@@ -222,6 +208,7 @@ namespace FractalExplorer.Forms.Other
                     lblStatus.Text = $"Сохранение файла... (Заняло {totalTime:mm\\:ss})";
                     progressBar.Value = 100;
 
+                    // 3. Сохранение итогового изображения
                     await Task.Run(() => SaveBitmap(finalBitmap, sfd.FileName, imageFormat, jpgQuality), _cts.Token);
 
                     string elapsedTimeString = totalTime.TotalMinutes >= 1 ?
@@ -261,24 +248,33 @@ namespace FractalExplorer.Forms.Other
 
         #region Helper Methods
 
-        private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
+        /// <summary>
+        /// Применяет пост-обработку. В данной версии отвечает за бикубическое увеличение.
+        /// </summary>
+        private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, IProgress<RenderProgress> progress, CancellationToken token)
         {
-            Bitmap currentBitmap = sourceBitmap;
-
-            if (chkApplyBicubic.Checked)
+            if (!chkApplyBicubic.Checked)
             {
-                progress.Report(new RenderProgress { Status = "Применение бикубической интерполяции...", Percentage = 95 });
-                var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
-                Bitmap filteredBitmap = await Task.Run(() => bicubicFilter.Apply(currentBitmap), token);
-
-                if (currentBitmap != sourceBitmap)
-                {
-                    currentBitmap.Dispose();
-                }
-                currentBitmap = filteredBitmap;
+                return sourceBitmap; // Если режим не выбран, просто возвращаем исходное изображение
             }
 
-            return currentBitmap;
+            double factor = GetBicubicFactor();
+            if (Math.Abs(factor - 1.0) < 0.01)
+            {
+                return sourceBitmap; // Если фактор равен 1, нет смысла в обработке
+            }
+
+            int newWidth = (int)Math.Round(sourceBitmap.Width * factor);
+            int newHeight = (int)Math.Round(sourceBitmap.Height * factor);
+
+            progress.Report(new RenderProgress { Status = $"Бикубическое увеличение (x{factor:F2})...", Percentage = 95 });
+
+            var bicubicFilter = new BicubicResizeFilter(newWidth, newHeight);
+
+            // Запускаем ресурсоемкую задачу в фоновом потоке
+            Bitmap filteredBitmap = await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
+
+            return filteredBitmap;
         }
 
         private void SaveBitmap(Bitmap bitmap, string filePath, ImageFormat format, int jpgQuality)
@@ -318,16 +314,50 @@ namespace FractalExplorer.Forms.Other
             }));
         }
 
+        private void UpdateJpgQualityUI()
+        {
+            bool isJpg = cbFormat.SelectedItem?.ToString() == "JPG";
+            lblJpgQuality.Visible = isJpg;
+            trackBarJpgQuality.Visible = isJpg;
+            lblJpgQualityValue.Visible = isJpg;
+        }
+
+        /// <summary>
+        /// Обновляет видимость элементов управления в зависимости от выбранного режима качества.
+        /// </summary>
+        private void UpdateEffectControls()
+        {
+            bool bicubicMode = chkApplyBicubic.Checked;
+
+            // Элементы для SSAA
+            lblSsaa.Visible = !bicubicMode;
+            cbSSAA.Visible = !bicubicMode;
+
+            // Элементы для бикубического увеличения
+            lblBicubicFactor.Visible = bicubicMode;
+            cbBicubicFactor.Visible = bicubicMode;
+        }
+
         private int GetSsaaFactor()
         {
-            // Обновленная логика для поддержки SSAA x10
             switch (cbSSAA.SelectedIndex)
             {
                 case 1: return 2;
                 case 2: return 4;
                 case 3: return 8;
-                case 4: return 10; // Новый пункт
+                case 4: return 10;
                 default: return 1;
+            }
+        }
+
+        private double GetBicubicFactor()
+        {
+            switch (cbBicubicFactor.SelectedIndex)
+            {
+                case 0: return 1.2; // Слабое
+                case 1: return 1.5; // Среднее
+                case 2: return 2.0; // Сильное
+                default: return 1.0;
             }
         }
 
