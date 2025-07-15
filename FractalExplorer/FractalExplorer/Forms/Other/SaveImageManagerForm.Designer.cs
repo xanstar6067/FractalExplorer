@@ -17,11 +17,9 @@
 
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SaveImageManagerForm));
             this.pnlMain = new System.Windows.Forms.Panel();
             this.grpEffects = new System.Windows.Forms.GroupBox();
-            this.cbBicubicFactor = new System.Windows.Forms.ComboBox();
-            this.lblBicubicFactor = new System.Windows.Forms.Label();
+            this.grpPostProcessing = new System.Windows.Forms.GroupBox();
             this.chkApplyBicubic = new System.Windows.Forms.CheckBox();
             this.lblSsaa = new System.Windows.Forms.Label();
             this.cbSSAA = new System.Windows.Forms.ComboBox();
@@ -48,6 +46,7 @@
             this.btnSave = new System.Windows.Forms.Button();
             this.pnlMain.SuspendLayout();
             this.grpEffects.SuspendLayout();
+            this.grpPostProcessing.SuspendLayout();
             this.grpOutput.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarJpgQuality)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudHeight)).BeginInit();
@@ -68,9 +67,7 @@
             // 
             // grpEffects
             // 
-            this.grpEffects.Controls.Add(this.cbBicubicFactor);
-            this.grpEffects.Controls.Add(this.lblBicubicFactor);
-            this.grpEffects.Controls.Add(this.chkApplyBicubic);
+            this.grpEffects.Controls.Add(this.grpPostProcessing);
             this.grpEffects.Controls.Add(this.lblSsaa);
             this.grpEffects.Controls.Add(this.cbSSAA);
             this.grpEffects.Location = new System.Drawing.Point(13, 239);
@@ -78,47 +75,35 @@
             this.grpEffects.Size = new System.Drawing.Size(558, 159);
             this.grpEffects.TabIndex = 1;
             this.grpEffects.TabStop = false;
-            this.grpEffects.Text = "Качество и пост-обработка";
+            this.grpEffects.Text = "Эффекты и качество";
             // 
-            // cbBicubicFactor
+            // grpPostProcessing
             // 
-            this.cbBicubicFactor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbBicubicFactor.FormattingEnabled = true;
-            this.cbBicubicFactor.Items.AddRange(new object[] {
-            "Слабое (x1.2)",
-            "Среднее (x1.5)",
-            "Сильное (x2.0)"});
-            this.cbBicubicFactor.Location = new System.Drawing.Point(9, 118);
-            this.cbBicubicFactor.Name = "cbBicubicFactor";
-            this.cbBicubicFactor.Size = new System.Drawing.Size(273, 23);
-            this.cbBicubicFactor.TabIndex = 4;
-            // 
-            // lblBicubicFactor
-            // 
-            this.lblBicubicFactor.AutoSize = true;
-            this.lblBicubicFactor.Location = new System.Drawing.Point(6, 100);
-            this.lblBicubicFactor.Name = "lblBicubicFactor";
-            this.lblBicubicFactor.Size = new System.Drawing.Size(155, 15);
-            this.lblBicubicFactor.TabIndex = 3;
-            this.lblBicubicFactor.Text = "Коэффициент увеличения:";
+            this.grpPostProcessing.Controls.Add(this.chkApplyBicubic);
+            this.grpPostProcessing.Location = new System.Drawing.Point(9, 81);
+            this.grpPostProcessing.Name = "grpPostProcessing";
+            this.grpPostProcessing.Size = new System.Drawing.Size(543, 68);
+            this.grpPostProcessing.TabIndex = 2;
+            this.grpPostProcessing.TabStop = false;
+            this.grpPostProcessing.Text = "Пост-обработка";
             // 
             // chkApplyBicubic
             // 
             this.chkApplyBicubic.AutoSize = true;
-            this.chkApplyBicubic.Location = new System.Drawing.Point(9, 27);
+            this.chkApplyBicubic.Location = new System.Drawing.Point(12, 25);
             this.chkApplyBicubic.Name = "chkApplyBicubic";
-            this.chkApplyBicubic.Size = new System.Drawing.Size(225, 19);
+            this.chkApplyBicubic.Size = new System.Drawing.Size(259, 19);
             this.chkApplyBicubic.TabIndex = 0;
-            this.chkApplyBicubic.Text = "Использовать бикубическое увеличение";
+            this.chkApplyBicubic.Text = "Применить бикубическую интерполяцию";
             this.chkApplyBicubic.UseVisualStyleBackColor = true;
             this.chkApplyBicubic.CheckedChanged += new System.EventHandler(this.chkApplyBicubic_CheckedChanged);
             // 
             // lblSsaa
             // 
             this.lblSsaa.AutoSize = true;
-            this.lblSsaa.Location = new System.Drawing.Point(6, 58);
+            this.lblSsaa.Location = new System.Drawing.Point(6, 28);
             this.lblSsaa.Name = "lblSsaa";
-            this.lblSsaa.Size = new System.Drawing.Size(126, 15);
+            this.lblSsaa.Size = new System.Drawing.Size(123, 15);
             this.lblSsaa.TabIndex = 1;
             this.lblSsaa.Text = "Сглаживание (SSAA):";
             // 
@@ -132,10 +117,10 @@
             "Высокое (4x)",
             "Ультра (8x)",
             "Экстрим (10x)"});
-            this.cbSSAA.Location = new System.Drawing.Point(9, 76);
+            this.cbSSAA.Location = new System.Drawing.Point(9, 46);
             this.cbSSAA.Name = "cbSSAA";
-            this.cbSSAA.Size = new System.Drawing.Size(273, 23);
-            this.cbSSAA.TabIndex = 2;
+            this.cbSSAA.Size = new System.Drawing.Size(249, 23);
+            this.cbSSAA.TabIndex = 0;
             // 
             // grpOutput
             // 
@@ -183,7 +168,7 @@
             // 
             // btnPreset720p
             // 
-            this.btnPreset720p.Location = new System.Drawing.Point(298, 51);
+            this.btnPreset720p.Location = new System.Drawing.Point(298, 20);
             this.btnPreset720p.Name = "btnPreset720p";
             this.btnPreset720p.Size = new System.Drawing.Size(130, 23);
             this.btnPreset720p.TabIndex = 12;
@@ -193,11 +178,11 @@
             // 
             // btnRotate
             // 
-            this.btnRotate.Image = ((System.Drawing.Image)(resources.GetObject("btnRotate.Image")));
-            this.btnRotate.Location = new System.Drawing.Point(253, 51);
+            this.btnRotate.Location = new System.Drawing.Point(219, 51);
             this.btnRotate.Name = "btnRotate";
-            this.btnRotate.Size = new System.Drawing.Size(29, 23);
+            this.btnRotate.Size = new System.Drawing.Size(70, 23);
             this.btnRotate.TabIndex = 11;
+            this.btnRotate.Text = "Вращать";
             this.btnRotate.UseVisualStyleBackColor = true;
             this.btnRotate.Click += new System.EventHandler(this.btnRotate_Click);
             // 
@@ -227,7 +212,7 @@
             this.lblJpgQuality.AutoSize = true;
             this.lblJpgQuality.Location = new System.Drawing.Point(6, 172);
             this.lblJpgQuality.Name = "lblJpgQuality";
-            this.lblJpgQuality.Size = new System.Drawing.Size(125, 15);
+            this.lblJpgQuality.Size = new System.Drawing.Size(82, 15);
             this.lblJpgQuality.TabIndex = 8;
             this.lblJpgQuality.Text = "Качество JPG:";
             // 
@@ -243,7 +228,7 @@
             // 
             // btnPresetFHD
             // 
-            this.btnPresetFHD.Location = new System.Drawing.Point(298, 22);
+            this.btnPresetFHD.Location = new System.Drawing.Point(298, 51);
             this.btnPresetFHD.Name = "btnPresetFHD";
             this.btnPresetFHD.Size = new System.Drawing.Size(130, 23);
             this.btnPresetFHD.TabIndex = 6;
@@ -256,7 +241,7 @@
             this.lblFormat.AutoSize = true;
             this.lblFormat.Location = new System.Drawing.Point(6, 117);
             this.lblFormat.Name = "lblFormat";
-            this.lblFormat.Size = new System.Drawing.Size(95, 15);
+            this.lblFormat.Size = new System.Drawing.Size(91, 15);
             this.lblFormat.TabIndex = 5;
             this.lblFormat.Text = "Формат файла:";
             // 
@@ -277,7 +262,7 @@
             // lblX
             // 
             this.lblX.AutoSize = true;
-            this.lblX.Location = new System.Drawing.Point(137, 55);
+            this.lblX.Location = new System.Drawing.Point(101, 53);
             this.lblX.Name = "lblX";
             this.lblX.Size = new System.Drawing.Size(13, 15);
             this.lblX.TabIndex = 3;
@@ -285,7 +270,7 @@
             // 
             // nudHeight
             // 
-            this.nudHeight.Location = new System.Drawing.Point(156, 51);
+            this.nudHeight.Location = new System.Drawing.Point(115, 51);
             this.nudHeight.Maximum = new decimal(new int[] {
             16384,
             0,
@@ -332,7 +317,7 @@
             this.lblResolution.AutoSize = true;
             this.lblResolution.Location = new System.Drawing.Point(6, 28);
             this.lblResolution.Name = "lblResolution";
-            this.lblResolution.Size = new System.Drawing.Size(147, 15);
+            this.lblResolution.Size = new System.Drawing.Size(155, 15);
             this.lblResolution.TabIndex = 0;
             this.lblResolution.Text = "Разрешение изображения:";
             // 
@@ -353,7 +338,7 @@
             this.lblStatus.AutoSize = true;
             this.lblStatus.Location = new System.Drawing.Point(13, 3);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(46, 15);
+            this.lblStatus.Size = new System.Drawing.Size(45, 15);
             this.lblStatus.TabIndex = 3;
             this.lblStatus.Text = "Готово";
             // 
@@ -411,6 +396,8 @@
             this.pnlMain.ResumeLayout(false);
             this.grpEffects.ResumeLayout(false);
             this.grpEffects.PerformLayout();
+            this.grpPostProcessing.ResumeLayout(false);
+            this.grpPostProcessing.PerformLayout();
             this.grpOutput.ResumeLayout(false);
             this.grpOutput.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarJpgQuality)).EndInit();
@@ -442,6 +429,7 @@
         private System.Windows.Forms.Label lblResolution;
         private System.Windows.Forms.Button btnPreset4K;
         private System.Windows.Forms.Button btnPresetFHD;
+        private System.Windows.Forms.GroupBox grpPostProcessing;
         private System.Windows.Forms.TrackBar trackBarJpgQuality;
         private System.Windows.Forms.Label lblJpgQuality;
         private System.Windows.Forms.Label lblJpgQualityValue;
@@ -450,7 +438,5 @@
         private System.Windows.Forms.Button btnPreset720p;
         private System.Windows.Forms.Button btnPreset2K;
         private System.Windows.Forms.Button btnPreset8K;
-        private System.Windows.Forms.ComboBox cbBicubicFactor;
-        private System.Windows.Forms.Label lblBicubicFactor;
     }
 }
