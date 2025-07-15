@@ -52,15 +52,19 @@ namespace FractalExplorer.Forms.Other
             lblStatus.Text = _lastStatusMessage;
         }
 
+        // <<< ИСПРАВЛЕНО: Сохранение настроек возвращено сюда.
         private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_isRendering)
+            // Сохраняем настройки только если форма закрывается не в процессе рендеринга.
+            // Это покрывает все случаи: закрытие по кнопке, по крестику и после успешного рендера.
+            if (!_isRendering)
             {
-                _cts?.Cancel();
+                SaveSettings();
             }
             else
             {
-                SaveSettings();
+                // Если рендеринг идет, отменяем его.
+                _cts?.Cancel();
             }
             _uiUpdateTimer?.Dispose();
         }
@@ -76,10 +80,7 @@ namespace FractalExplorer.Forms.Other
             cbSSAA.SelectedIndex = Math.Max(0, Math.Min(cbSSAA.Items.Count - 1, settings.SaveForm_SsaaIndex));
             trackBarJpgQuality.Value = Math.Max(trackBarJpgQuality.Minimum, Math.Min(trackBarJpgQuality.Maximum, settings.SaveForm_JpgQuality));
             chkApplyBicubic.Checked = settings.SaveForm_ApplyBicubic;
-
-            // Загрузка индекса для нового ComboBox с проверкой границ
             cbBicubicFactor.SelectedIndex = Math.Max(0, Math.Min(cbBicubicFactor.Items.Count - 1, settings.SaveForm_BicubicFactorIndex));
-
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
@@ -92,7 +93,7 @@ namespace FractalExplorer.Forms.Other
             settings.SaveForm_SsaaIndex = cbSSAA.SelectedIndex;
             settings.SaveForm_JpgQuality = trackBarJpgQuality.Value;
             settings.SaveForm_ApplyBicubic = chkApplyBicubic.Checked;
-            settings.SaveForm_BicubicFactorIndex = cbBicubicFactor.SelectedIndex; // Сохраняем новый индекс
+            settings.SaveForm_BicubicFactorIndex = cbBicubicFactor.SelectedIndex;
             settings.Save();
         }
 
@@ -101,24 +102,14 @@ namespace FractalExplorer.Forms.Other
         #region UI Event Handlers
 
         private void cbFormat_SelectedIndexChanged(object sender, EventArgs e) => UpdateJpgQualityUI();
-
-        private void trackBarJpgQuality_Scroll(object sender, EventArgs e)
-        {
-            lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
-        }
-
-        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateEffectControls();
-        }
-
+        private void trackBarJpgQuality_Scroll(object sender, EventArgs e) { lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%"; }
+        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e) { UpdateEffectControls(); }
         private void btnPreset720p_Click(object sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
         private void btnPresetFHD_Click(object sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
         private void btnPreset2K_Click(object sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
         private void btnPreset4K_Click(object sender, EventArgs e) { nudWidth.Value = 3840; nudHeight.Value = 2160; }
         private void btnPreset8K_Click(object sender, EventArgs e) { nudWidth.Value = 7680; nudHeight.Value = 4320; }
         private void btnRotate_Click(object sender, EventArgs e) { (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value); }
-
         private void btnCancel_Click(object sender, EventArgs e)
         {
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
@@ -127,6 +118,7 @@ namespace FractalExplorer.Forms.Other
             }
             else
             {
+                // Просто закрываем форму. FormClosing обработает сохранение.
                 this.DialogResult = DialogResult.Cancel;
                 this.Close();
             }
@@ -150,8 +142,6 @@ namespace FractalExplorer.Forms.Other
                 _isRendering = true;
                 SetUiState(false);
                 _cts = new CancellationTokenSource();
-
-                _lastStatusMessage = "Подготовка к рендерингу...";
                 _renderStopwatch.Restart();
                 _uiUpdateTimer.Start();
 
@@ -177,20 +167,24 @@ namespace FractalExplorer.Forms.Other
                     int renderWidth, renderHeight, ssaaFactor;
                     bool useBicubicUpscale = chkApplyBicubic.Checked;
 
+                    // <<< ИСПРАВЛЕНО: Четкое и корректное разделение логики.
                     if (useBicubicUpscale)
                     {
+                        // РЕЖИМ 1: БИКУБИЧЕСКИЙ АПСКЕЙЛ
                         double upscaleFactor = GetBicubicFactor();
                         renderWidth = (int)Math.Max(1, targetWidth / upscaleFactor);
                         renderHeight = (int)Math.Max(1, targetHeight / upscaleFactor);
-                        ssaaFactor = 1;
+                        ssaaFactor = 1; // SSAA не используется
                     }
                     else
                     {
+                        // РЕЖИМ 2: СТАНДАРТНЫЙ SSAA
                         renderWidth = targetWidth;
                         renderHeight = targetHeight;
-                        ssaaFactor = GetSsaaFactor();
+                        ssaaFactor = GetSsaaFactor(); // Получаем реальный множитель SSAA
                     }
 
+                    // Вызов рендера с корректными, зависящими от режима, параметрами.
                     renderedBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, renderWidth, renderHeight, ssaaFactor, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
@@ -206,38 +200,27 @@ namespace FractalExplorer.Forms.Other
                     _renderStopwatch.Stop();
                     _uiUpdateTimer.Stop();
                     TimeSpan totalTime = _renderStopwatch.Elapsed;
-
                     lblStatus.Text = $"Сохранение файла... (Заняло {totalTime:mm\\:ss})";
                     progressBar.Value = 100;
 
                     await Task.Run(() => SaveBitmap(finalBitmap, sfd.FileName, imageFormat, jpgQuality), _cts.Token);
 
-                    string elapsedTimeString = totalTime.TotalMinutes >= 1 ?
-                        $"{totalTime:m' мин 's' сек'}" :
-                        $"{totalTime:s\\.fff' сек'}";
-
+                    string elapsedTimeString = totalTime.TotalMinutes >= 1 ? $"{totalTime:m' мин 's' сек'}" : $"{totalTime:s\\.fff' сек'}";
                     MessageBox.Show($"Изображение успешно сохранено!\n\nОбщее время: {elapsedTimeString}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    this.Close();
+
+                    // Закрываем форму. FormClosing обработает сохранение.
+                    //this.Close();
                 }
-                catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
-                {
-                    lblStatus.Text = "Операция отменена.";
-                }
-                catch (OperationCanceledException)
-                {
-                    lblStatus.Text = "Операция отменена.";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Произошла ошибка при сохранении: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                catch (AggregateException ae) when (ae.InnerException is OperationCanceledException) { lblStatus.Text = "Операция отменена."; }
+                catch (OperationCanceledException) { lblStatus.Text = "Операция отменена."; }
+                catch (Exception ex) { MessageBox.Show($"Произошла ошибка при сохранении: {ex.Message}\n\n{ex.StackTrace}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 finally
                 {
                     renderedBitmap?.Dispose();
                     finalBitmap?.Dispose();
                     _renderStopwatch.Stop();
                     _uiUpdateTimer.Stop();
-                    _isRendering = false;
+                    _isRendering = false; // <<< Важно: устанавливаем флаг в false до закрытия
                     SetUiState(true);
                     _cts?.Dispose();
                     _cts = null;
@@ -251,16 +234,10 @@ namespace FractalExplorer.Forms.Other
 
         private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, bool useBicubic, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
         {
-            if (!useBicubic || (sourceBitmap.Width == targetWidth && sourceBitmap.Height == targetHeight))
-            {
-                return sourceBitmap;
-            }
-
+            if (!useBicubic || (sourceBitmap.Width == targetWidth && sourceBitmap.Height == targetHeight)) return sourceBitmap;
             progress.Report(new RenderProgress { Status = $"Бикубический апскейл до {targetWidth}x{targetHeight}...", Percentage = 95 });
-
             var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
-            Bitmap filteredBitmap = await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
-            return filteredBitmap;
+            return await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
         }
 
         private void SaveBitmap(Bitmap bitmap, string filePath, ImageFormat format, int jpgQuality)
@@ -268,13 +245,9 @@ namespace FractalExplorer.Forms.Other
             if (format == ImageFormat.Jpeg)
             {
                 var qualityEncoder = Encoder.Quality;
-                var encoderParameters = new EncoderParameters(1);
-                encoderParameters.Param[0] = new EncoderParameter(qualityEncoder, (long)jpgQuality);
+                var encoderParameters = new EncoderParameters(1) { Param = { [0] = new EncoderParameter(qualityEncoder, (long)jpgQuality) } };
                 ImageCodecInfo jpgEncoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
-                if (jpgEncoder != null)
-                {
-                    bitmap.Save(filePath, jpgEncoder, encoderParameters);
-                }
+                if (jpgEncoder != null) bitmap.Save(filePath, jpgEncoder, encoderParameters);
             }
             else
             {
@@ -291,12 +264,7 @@ namespace FractalExplorer.Forms.Other
                 pnlMain.Enabled = enabled;
                 btnSave.Enabled = enabled;
                 btnCancel.Text = enabled ? "Закрыть" : "Отмена";
-                if (enabled)
-                {
-                    progressBar.Value = 0;
-                    _lastStatusMessage = "Готово";
-                    lblStatus.Text = _lastStatusMessage;
-                }
+                if (enabled) { progressBar.Value = 0; _lastStatusMessage = "Готово"; lblStatus.Text = _lastStatusMessage; }
             }));
         }
 
@@ -311,17 +279,14 @@ namespace FractalExplorer.Forms.Other
         private void UpdateEffectControls()
         {
             bool bicubicMode = chkApplyBicubic.Checked;
-
             lblSsaa.Enabled = !bicubicMode;
             cbSSAA.Enabled = !bicubicMode;
-
             lblBicubicFactor.Visible = bicubicMode;
             cbBicubicFactor.Visible = bicubicMode;
         }
 
         private int GetSsaaFactor()
         {
-            if (!cbSSAA.Enabled) return 1;
             switch (cbSSAA.SelectedIndex)
             {
                 case 1: return 2;
@@ -340,12 +305,13 @@ namespace FractalExplorer.Forms.Other
                 case 1: return 1.2;
                 case 2: return 1.3;
                 case 3: return 1.4;
-                case 4: return 1.5; // Ранее "Мягкое"
-                case 5: return 2.0; // Ранее "Стандартное"
-                case 6: return 2.5; // Ранее "Сильное"
-                default: return 1.5; // Значение по умолчанию
+                case 4: return 1.5;
+                case 5: return 2.0;
+                case 6: return 2.5;
+                default: return 1.5;
             }
         }
+
         private ImageFormat GetImageFormat(string format)
         {
             switch (format.ToUpper())
