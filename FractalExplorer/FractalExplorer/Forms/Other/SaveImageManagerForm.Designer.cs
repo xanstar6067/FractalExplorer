@@ -84,13 +84,13 @@
             this.cbBicubicFactor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbBicubicFactor.FormattingEnabled = true;
             this.cbBicubicFactor.Items.AddRange(new object[] {
-"x1.1 (минимальное)",
-"x1.2 (очень мягкое)",
-"x1.3 (мягкое)",
-"x1.4 (умеренное)",
-"x1.5 (стандартное)",
-"x2.0 (сильное)",
-"x2.5 (экстремальное)"});
+            "x1.1 (минимальное)",
+            "x1.2 (очень мягкое)",
+            "x1.3 (мягкое)",
+            "x1.4 (умеренное)",
+            "x1.5 (стандартное)",
+            "x2.0 (сильное)",
+            "x2.5 (экстремальное)"});
             this.cbBicubicFactor.Location = new System.Drawing.Point(271, 119);
             this.cbBicubicFactor.Name = "cbBicubicFactor";
             this.cbBicubicFactor.Size = new System.Drawing.Size(281, 23);

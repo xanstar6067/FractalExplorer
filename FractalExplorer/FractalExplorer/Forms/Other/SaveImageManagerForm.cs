@@ -208,7 +208,7 @@ namespace FractalExplorer.Forms.Other
                     string elapsedTimeString = totalTime.TotalMinutes >= 1 ? $"{totalTime:m' мин 's' сек'}" : $"{totalTime:s\\.fff' сек'}";
                     MessageBox.Show($"Изображение успешно сохранено!\n\nОбщее время: {elapsedTimeString}", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // Закрываем форму. FormClosing обработает сохранение.
+                    // Закрываем форму. FormClosing обработает сохранение. нихера он не сохраняет. просто удалить закрытие формы и нет проблем.
                     //this.Close();
                 }
                 catch (AggregateException ae) when (ae.InnerException is OperationCanceledException) { lblStatus.Text = "Операция отменена."; }
