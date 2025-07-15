@@ -154,13 +154,5 @@ namespace FractalExplorer
         }
 
         #endregion
-
-        private void btnLaunchTestForm_Click(object sender, EventArgs e)
-        {
-            using (var testForm = new TestingFractalSystemForm())
-            {
-                testForm.ShowDialog(this);
-            }
-        }
     }
 }

@@ -47,15 +47,12 @@
             tabPagePhoenix = new TabPage();
             richTextBox5 = new RichTextBox();
             btnLaunchPhoenix = new Button();
-            tabPageSysTesting = new TabPage();
-            btnLaunchTestForm = new Button();
             tabPageJulia.SuspendLayout();
             tabPageMandelbrot.SuspendLayout();
             tabControlFractals.SuspendLayout();
             tabPageSerpinsky.SuspendLayout();
             tabPageNewtonPools.SuspendLayout();
             tabPagePhoenix.SuspendLayout();
-            tabPageSysTesting.SuspendLayout();
             SuspendLayout();
             // 
             // tabPageJulia
@@ -155,7 +152,6 @@
             tabControlFractals.Controls.Add(tabPageSerpinsky);
             tabControlFractals.Controls.Add(tabPageNewtonPools);
             tabControlFractals.Controls.Add(tabPagePhoenix);
-            tabControlFractals.Controls.Add(tabPageSysTesting);
             tabControlFractals.Dock = DockStyle.Right;
             tabControlFractals.Font = new Font("Segoe UI", 10F);
             tabControlFractals.Location = new Point(0, 0);
@@ -269,27 +265,6 @@
             btnLaunchPhoenix.UseVisualStyleBackColor = true;
             btnLaunchPhoenix.Click += btnLaunchPhoenix_Click;
             // 
-            // tabPageSysTesting
-            // 
-            tabPageSysTesting.Controls.Add(btnLaunchTestForm);
-            tabPageSysTesting.Location = new Point(4, 26);
-            tabPageSysTesting.Name = "tabPageSysTesting";
-            tabPageSysTesting.Padding = new Padding(3);
-            tabPageSysTesting.Size = new Size(792, 316);
-            tabPageSysTesting.TabIndex = 5;
-            tabPageSysTesting.Text = "Тесты";
-            tabPageSysTesting.UseVisualStyleBackColor = true;
-            // 
-            // btnLaunchTestForm
-            // 
-            btnLaunchTestForm.Location = new Point(72, 48);
-            btnLaunchTestForm.Name = "btnLaunchTestForm";
-            btnLaunchTestForm.Size = new Size(135, 86);
-            btnLaunchTestForm.TabIndex = 0;
-            btnLaunchTestForm.Text = "button2";
-            btnLaunchTestForm.UseVisualStyleBackColor = true;
-            btnLaunchTestForm.Click += btnLaunchTestForm_Click;
-            // 
             // LauncherHubForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -306,7 +281,6 @@
             tabPageSerpinsky.ResumeLayout(false);
             tabPageNewtonPools.ResumeLayout(false);
             tabPagePhoenix.ResumeLayout(false);
-            tabPageSysTesting.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -330,7 +304,5 @@
         private TabPage tabPagePhoenix;
         private RichTextBox richTextBox5;
         private Button btnLaunchPhoenix;
-        private TabPage tabPageSysTesting;
-        private Button btnLaunchTestForm;
     }
 }
