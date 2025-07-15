@@ -19,7 +19,8 @@
         {
             this.pnlMain = new System.Windows.Forms.Panel();
             this.grpEffects = new System.Windows.Forms.GroupBox();
-            this.grpPostProcessing = new System.Windows.Forms.GroupBox();
+            this.cbBicubicFactor = new System.Windows.Forms.ComboBox();
+            this.lblBicubicFactor = new System.Windows.Forms.Label();
             this.chkApplyBicubic = new System.Windows.Forms.CheckBox();
             this.lblSsaa = new System.Windows.Forms.Label();
             this.cbSSAA = new System.Windows.Forms.ComboBox();
@@ -46,7 +47,6 @@
             this.btnSave = new System.Windows.Forms.Button();
             this.pnlMain.SuspendLayout();
             this.grpEffects.SuspendLayout();
-            this.grpPostProcessing.SuspendLayout();
             this.grpOutput.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarJpgQuality)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudHeight)).BeginInit();
@@ -67,7 +67,9 @@
             // 
             // grpEffects
             // 
-            this.grpEffects.Controls.Add(this.grpPostProcessing);
+            this.grpEffects.Controls.Add(this.cbBicubicFactor);
+            this.grpEffects.Controls.Add(this.lblBicubicFactor);
+            this.grpEffects.Controls.Add(this.chkApplyBicubic);
             this.grpEffects.Controls.Add(this.lblSsaa);
             this.grpEffects.Controls.Add(this.cbSSAA);
             this.grpEffects.Location = new System.Drawing.Point(13, 239);
@@ -77,24 +79,40 @@
             this.grpEffects.TabStop = false;
             this.grpEffects.Text = "Эффекты и качество";
             // 
-            // grpPostProcessing
+            // cbBicubicFactor
             // 
-            this.grpPostProcessing.Controls.Add(this.chkApplyBicubic);
-            this.grpPostProcessing.Location = new System.Drawing.Point(9, 81);
-            this.grpPostProcessing.Name = "grpPostProcessing";
-            this.grpPostProcessing.Size = new System.Drawing.Size(543, 68);
-            this.grpPostProcessing.TabIndex = 2;
-            this.grpPostProcessing.TabStop = false;
-            this.grpPostProcessing.Text = "Пост-обработка";
+            this.cbBicubicFactor.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cbBicubicFactor.FormattingEnabled = true;
+            this.cbBicubicFactor.Items.AddRange(new object[] {
+"x1.1 (минимальное)",
+"x1.2 (очень мягкое)",
+"x1.3 (мягкое)",
+"x1.4 (умеренное)",
+"x1.5 (стандартное)",
+"x2.0 (сильное)",
+"x2.5 (экстремальное)"});
+            this.cbBicubicFactor.Location = new System.Drawing.Point(271, 119);
+            this.cbBicubicFactor.Name = "cbBicubicFactor";
+            this.cbBicubicFactor.Size = new System.Drawing.Size(281, 23);
+            this.cbBicubicFactor.TabIndex = 4;
+            // 
+            // lblBicubicFactor
+            // 
+            this.lblBicubicFactor.AutoSize = true;
+            this.lblBicubicFactor.Location = new System.Drawing.Point(268, 101);
+            this.lblBicubicFactor.Name = "lblBicubicFactor";
+            this.lblBicubicFactor.Size = new System.Drawing.Size(124, 15);
+            this.lblBicubicFactor.TabIndex = 3;
+            this.lblBicubicFactor.Text = "Коэффициент апскейла:";
             // 
             // chkApplyBicubic
             // 
             this.chkApplyBicubic.AutoSize = true;
-            this.chkApplyBicubic.Location = new System.Drawing.Point(12, 25);
+            this.chkApplyBicubic.Location = new System.Drawing.Point(9, 101);
             this.chkApplyBicubic.Name = "chkApplyBicubic";
-            this.chkApplyBicubic.Size = new System.Drawing.Size(259, 19);
-            this.chkApplyBicubic.TabIndex = 0;
-            this.chkApplyBicubic.Text = "Применить бикубическую интерполяцию";
+            this.chkApplyBicubic.Size = new System.Drawing.Size(225, 19);
+            this.chkApplyBicubic.TabIndex = 2;
+            this.chkApplyBicubic.Text = "Использовать бикубический апскейл";
             this.chkApplyBicubic.UseVisualStyleBackColor = true;
             this.chkApplyBicubic.CheckedChanged += new System.EventHandler(this.chkApplyBicubic_CheckedChanged);
             // 
@@ -396,8 +414,6 @@
             this.pnlMain.ResumeLayout(false);
             this.grpEffects.ResumeLayout(false);
             this.grpEffects.PerformLayout();
-            this.grpPostProcessing.ResumeLayout(false);
-            this.grpPostProcessing.PerformLayout();
             this.grpOutput.ResumeLayout(false);
             this.grpOutput.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarJpgQuality)).EndInit();
@@ -429,7 +445,6 @@
         private System.Windows.Forms.Label lblResolution;
         private System.Windows.Forms.Button btnPreset4K;
         private System.Windows.Forms.Button btnPresetFHD;
-        private System.Windows.Forms.GroupBox grpPostProcessing;
         private System.Windows.Forms.TrackBar trackBarJpgQuality;
         private System.Windows.Forms.Label lblJpgQuality;
         private System.Windows.Forms.Label lblJpgQualityValue;
@@ -438,5 +453,7 @@
         private System.Windows.Forms.Button btnPreset720p;
         private System.Windows.Forms.Button btnPreset2K;
         private System.Windows.Forms.Button btnPreset8K;
+        private System.Windows.Forms.ComboBox cbBicubicFactor;
+        private System.Windows.Forms.Label lblBicubicFactor;
     }
 }

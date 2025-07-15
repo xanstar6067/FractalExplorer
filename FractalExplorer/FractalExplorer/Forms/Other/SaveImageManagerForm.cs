@@ -22,10 +22,6 @@ namespace FractalExplorer.Forms.Other
         private readonly System.Windows.Forms.Timer _uiUpdateTimer;
         private string _lastStatusMessage;
 
-        // Коэффициент, на который уменьшается исходный рендер для последующего увеличения.
-        // 1.5 означает, что рендер будет в 1.5 раза меньше целевого разрешения.
-        private const double BICUBIC_UPSCALE_FACTOR = 1.5;
-
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
             InitializeComponent();
@@ -51,7 +47,7 @@ namespace FractalExplorer.Forms.Other
         {
             LoadSettings();
             UpdateJpgQualityUI();
-            UpdateEffectControls(); // Обновляем состояние элементов управления эффектами
+            UpdateEffectControls();
             _lastStatusMessage = "Готово";
             lblStatus.Text = _lastStatusMessage;
         }
@@ -81,6 +77,9 @@ namespace FractalExplorer.Forms.Other
             trackBarJpgQuality.Value = Math.Max(trackBarJpgQuality.Minimum, Math.Min(trackBarJpgQuality.Maximum, settings.SaveForm_JpgQuality));
             chkApplyBicubic.Checked = settings.SaveForm_ApplyBicubic;
 
+            // Загрузка индекса для нового ComboBox с проверкой границ
+            cbBicubicFactor.SelectedIndex = Math.Max(0, Math.Min(cbBicubicFactor.Items.Count - 1, settings.SaveForm_BicubicFactorIndex));
+
             lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
         }
 
@@ -93,6 +92,7 @@ namespace FractalExplorer.Forms.Other
             settings.SaveForm_SsaaIndex = cbSSAA.SelectedIndex;
             settings.SaveForm_JpgQuality = trackBarJpgQuality.Value;
             settings.SaveForm_ApplyBicubic = chkApplyBicubic.Checked;
+            settings.SaveForm_BicubicFactorIndex = cbBicubicFactor.SelectedIndex; // Сохраняем новый индекс
             settings.Save();
         }
 
@@ -112,7 +112,6 @@ namespace FractalExplorer.Forms.Other
             UpdateEffectControls();
         }
 
-        // --- Обработчики событий для пресетов и поворота ---
         private void btnPreset720p_Click(object sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
         private void btnPresetFHD_Click(object sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
         private void btnPreset2K_Click(object sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
@@ -180,24 +179,21 @@ namespace FractalExplorer.Forms.Other
 
                     if (useBicubicUpscale)
                     {
-                        // Режим апскейла: рендерим в меньшем разрешении
-                        renderWidth = (int)(targetWidth / BICUBIC_UPSCALE_FACTOR);
-                        renderHeight = (int)(targetHeight / BICUBIC_UPSCALE_FACTOR);
-                        ssaaFactor = 1; // SSAA не используется в этом режиме
+                        double upscaleFactor = GetBicubicFactor();
+                        renderWidth = (int)Math.Max(1, targetWidth / upscaleFactor);
+                        renderHeight = (int)Math.Max(1, targetHeight / upscaleFactor);
+                        ssaaFactor = 1;
                     }
                     else
                     {
-                        // Стандартный режим SSAA
                         renderWidth = targetWidth;
                         renderHeight = targetHeight;
                         ssaaFactor = GetSsaaFactor();
                     }
 
-                    // 1. Основной рендеринг (с параметрами, зависящими от режима)
                     renderedBitmap = await _renderSource.RenderHighResolutionAsync(_renderState, renderWidth, renderHeight, ssaaFactor, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    // 2. Этап пост-обработки (увеличиваем, если нужно)
                     finalBitmap = await ApplyPostProcessingAsync(renderedBitmap, useBicubicUpscale, targetWidth, targetHeight, progress, _cts.Token);
                     _cts.Token.ThrowIfCancellationRequested();
 
@@ -214,7 +210,6 @@ namespace FractalExplorer.Forms.Other
                     lblStatus.Text = $"Сохранение файла... (Заняло {totalTime:mm\\:ss})";
                     progressBar.Value = 100;
 
-                    // 3. Сохранение итогового изображения
                     await Task.Run(() => SaveBitmap(finalBitmap, sfd.FileName, imageFormat, jpgQuality), _cts.Token);
 
                     string elapsedTimeString = totalTime.TotalMinutes >= 1 ?
@@ -256,16 +251,15 @@ namespace FractalExplorer.Forms.Other
 
         private async Task<Bitmap> ApplyPostProcessingAsync(Bitmap sourceBitmap, bool useBicubic, int targetWidth, int targetHeight, IProgress<RenderProgress> progress, CancellationToken token)
         {
-            if (!useBicubic)
+            if (!useBicubic || (sourceBitmap.Width == targetWidth && sourceBitmap.Height == targetHeight))
             {
-                return sourceBitmap; // Если режим не выбран, просто возвращаем исходное изображение
+                return sourceBitmap;
             }
 
-            progress.Report(new RenderProgress { Status = $"Бикубическое увеличение до {targetWidth}x{targetHeight}...", Percentage = 95 });
+            progress.Report(new RenderProgress { Status = $"Бикубический апскейл до {targetWidth}x{targetHeight}...", Percentage = 95 });
 
             var bicubicFilter = new BicubicResizeFilter(targetWidth, targetHeight);
             Bitmap filteredBitmap = await Task.Run(() => bicubicFilter.Apply(sourceBitmap), token);
-
             return filteredBitmap;
         }
 
@@ -314,19 +308,20 @@ namespace FractalExplorer.Forms.Other
             lblJpgQualityValue.Visible = isJpg;
         }
 
-        /// <summary>
-        /// Включает/выключает контролы SSAA в зависимости от галочки бикубической интерполяции.
-        /// </summary>
         private void UpdateEffectControls()
         {
             bool bicubicMode = chkApplyBicubic.Checked;
-            // Просто делаем контролы SSAA неактивными, не меняя их значение
+
             lblSsaa.Enabled = !bicubicMode;
             cbSSAA.Enabled = !bicubicMode;
+
+            lblBicubicFactor.Visible = bicubicMode;
+            cbBicubicFactor.Visible = bicubicMode;
         }
 
         private int GetSsaaFactor()
         {
+            if (!cbSSAA.Enabled) return 1;
             switch (cbSSAA.SelectedIndex)
             {
                 case 1: return 2;
@@ -337,6 +332,20 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
+        private double GetBicubicFactor()
+        {
+            switch (cbBicubicFactor.SelectedIndex)
+            {
+                case 0: return 1.1;
+                case 1: return 1.2;
+                case 2: return 1.3;
+                case 3: return 1.4;
+                case 4: return 1.5; // Ранее "Мягкое"
+                case 5: return 2.0; // Ранее "Стандартное"
+                case 6: return 2.5; // Ранее "Сильное"
+                default: return 1.5; // Значение по умолчанию
+            }
+        }
         private ImageFormat GetImageFormat(string format)
         {
             switch (format.ToUpper())
