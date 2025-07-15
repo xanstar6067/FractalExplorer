@@ -9,7 +9,7 @@ namespace FractalExplorer.Utilities.Imaging.Filters
     /// Фильтр для изменения размера изображения с использованием интерполяции Ланцоша.
     /// Обеспечивает высокое качество, хорошо сохраняя детализацию.
     /// </summary>
-    public class LanczosResizeFilter : IImageFilter
+    public class Lanczos3ResizeFilter : IImageFilter
     {
         public int NewWidth { get; }
         public int NewHeight { get; }
@@ -26,7 +26,7 @@ namespace FractalExplorer.Utilities.Imaging.Filters
         /// <param name="newWidth">Новая ширина изображения.</param>
         /// <param name="newHeight">Новая высота изображения.</param>
         /// <param name="a">Параметр 'a' для ядра Ланцоша (рекомендуется 3 для лучшего качества).</param>
-        public LanczosResizeFilter(int newWidth, int newHeight, int a = 3)
+        public Lanczos3ResizeFilter(int newWidth, int newHeight, int a = 3)
         {
             if (newWidth <= 0 || newHeight <= 0)
                 throw new ArgumentException("Новые размеры должны быть положительными числами.");

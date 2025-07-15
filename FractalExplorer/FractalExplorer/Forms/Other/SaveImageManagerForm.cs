@@ -360,7 +360,7 @@ namespace FractalExplorer.Forms.Other
             else if (useLanczos && isResizeNeeded)
             {
                 progress.Report(new RenderProgress { Status = $"Масштабирование (Ланцош) до {targetWidth}x{targetHeight}...", Percentage = 95 });
-                var lanczosFilter = new LanczosResizeFilter(targetWidth, targetHeight); // a=3 по умолчанию
+                var lanczosFilter = new Lanczos3ResizeFilter(targetWidth, targetHeight); // a=3 по умолчанию
                 return await Task.Run(() => lanczosFilter.Apply(sourceBitmap), token);
             }
 
