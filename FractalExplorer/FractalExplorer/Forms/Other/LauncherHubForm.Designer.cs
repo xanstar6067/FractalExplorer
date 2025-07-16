@@ -2,15 +2,8 @@
 {
     partial class LauncherHubForm
     {
-        /// <summary>
-        ///  Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        ///  Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -22,301 +15,149 @@
 
         #region Windows Form Designer generated code
 
-        /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LauncherHubForm));
-            tabPageJulia = new TabPage();
-            btnLaunchBurningShipComplex = new Button();
-            richTextBox2 = new RichTextBox();
-            btnLaunchJulia = new Button();
-            tabPageMandelbrot = new TabPage();
-            btnLaunchGeneralizedMondelbrot = new Button();
-            btnLaunchMondelbrotShip = new Button();
-            richTextBox1 = new RichTextBox();
-            btnLaunchMondelbrot = new Button();
-            tabControlFractals = new TabControl();
-            tabPageSerpinsky = new TabPage();
-            richTextBox3 = new RichTextBox();
-            btnLaunchSerpinsky = new Button();
-            tabPageNewtonPools = new TabPage();
-            richTextBox4 = new RichTextBox();
-            btnLaunchNewton = new Button();
-            tabPagePhoenix = new TabPage();
-            richTextBox5 = new RichTextBox();
-            btnLaunchPhoenix = new Button();
-            tabPageJulia.SuspendLayout();
-            tabPageMandelbrot.SuspendLayout();
-            tabControlFractals.SuspendLayout();
-            tabPageSerpinsky.SuspendLayout();
-            tabPageNewtonPools.SuspendLayout();
-            tabPagePhoenix.SuspendLayout();
+            splitContainerMain = new SplitContainer();
+            treeViewFractals = new TreeView();
+            pnlDetails = new TableLayoutPanel();
+            lblFractalName = new Label();
+            pictureBoxPreview = new PictureBox();
+            richTextBoxDescription = new RichTextBox();
+            btnLaunchSelected = new Button();
+            ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
+            splitContainerMain.Panel1.SuspendLayout();
+            splitContainerMain.Panel2.SuspendLayout();
+            splitContainerMain.SuspendLayout();
+            pnlDetails.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).BeginInit();
             SuspendLayout();
             // 
-            // tabPageJulia
+            // splitContainerMain
             // 
-            tabPageJulia.Controls.Add(btnLaunchBurningShipComplex);
-            tabPageJulia.Controls.Add(richTextBox2);
-            tabPageJulia.Controls.Add(btnLaunchJulia);
-            tabPageJulia.Location = new Point(4, 26);
-            tabPageJulia.Name = "tabPageJulia";
-            tabPageJulia.Padding = new Padding(3);
-            tabPageJulia.Size = new Size(792, 316);
-            tabPageJulia.TabIndex = 1;
-            tabPageJulia.Text = "Множество Жюлиа";
-            tabPageJulia.UseVisualStyleBackColor = true;
+            splitContainerMain.Dock = DockStyle.Fill;
+            splitContainerMain.IsSplitterFixed = true;
+            splitContainerMain.Location = new Point(0, 0);
+            splitContainerMain.Name = "splitContainerMain";
             // 
-            // btnLaunchBurningShipComplex
+            // splitContainerMain.Panel1
             // 
-            btnLaunchBurningShipComplex.Location = new Point(8, 76);
-            btnLaunchBurningShipComplex.Name = "btnLaunchBurningShipComplex";
-            btnLaunchBurningShipComplex.Size = new Size(131, 54);
-            btnLaunchBurningShipComplex.TabIndex = 4;
-            btnLaunchBurningShipComplex.Text = "Запустить\r\nГорящий корабль";
-            btnLaunchBurningShipComplex.UseVisualStyleBackColor = true;
-            btnLaunchBurningShipComplex.Click += btnLaunchBurningShipJulia_Click;
+            splitContainerMain.Panel1.Controls.Add(treeViewFractals);
             // 
-            // richTextBox2
+            // splitContainerMain.Panel2
             // 
-            richTextBox2.BackColor = SystemColors.Window;
-            richTextBox2.BorderStyle = BorderStyle.None;
-            richTextBox2.Location = new Point(184, 3);
-            richTextBox2.Name = "richTextBox2";
-            richTextBox2.ReadOnly = true;
-            richTextBox2.Size = new Size(605, 157);
-            richTextBox2.TabIndex = 3;
-            richTextBox2.Text = resources.GetString("richTextBox2.Text");
+            splitContainerMain.Panel2.Controls.Add(pnlDetails);
+            splitContainerMain.Size = new Size(800, 450);
+            splitContainerMain.SplitterDistance = 270;
+            splitContainerMain.TabIndex = 0;
             // 
-            // btnLaunchJulia
+            // treeViewFractals
             // 
-            btnLaunchJulia.Location = new Point(8, 15);
-            btnLaunchJulia.Name = "btnLaunchJulia";
-            btnLaunchJulia.Size = new Size(131, 55);
-            btnLaunchJulia.TabIndex = 0;
-            btnLaunchJulia.Text = "Запустить\r\nЖюлиа";
-            btnLaunchJulia.UseVisualStyleBackColor = true;
-            btnLaunchJulia.Click += btnLaunchJulia_Click;
+            treeViewFractals.Dock = DockStyle.Fill;
+            treeViewFractals.Font = new Font("Segoe UI", 11F);
+            treeViewFractals.Location = new Point(0, 0);
+            treeViewFractals.Name = "treeViewFractals";
+            treeViewFractals.Size = new Size(270, 450);
+            treeViewFractals.TabIndex = 0;
+            treeViewFractals.AfterSelect += treeViewFractals_AfterSelect;
             // 
-            // tabPageMandelbrot
+            // pnlDetails
             // 
-            tabPageMandelbrot.Controls.Add(btnLaunchGeneralizedMondelbrot);
-            tabPageMandelbrot.Controls.Add(btnLaunchMondelbrotShip);
-            tabPageMandelbrot.Controls.Add(richTextBox1);
-            tabPageMandelbrot.Controls.Add(btnLaunchMondelbrot);
-            tabPageMandelbrot.Location = new Point(4, 26);
-            tabPageMandelbrot.Name = "tabPageMandelbrot";
-            tabPageMandelbrot.Padding = new Padding(3);
-            tabPageMandelbrot.Size = new Size(792, 316);
-            tabPageMandelbrot.TabIndex = 0;
-            tabPageMandelbrot.Text = "Множество Мандельброта";
-            tabPageMandelbrot.UseVisualStyleBackColor = true;
+            pnlDetails.ColumnCount = 1;
+            pnlDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            pnlDetails.Controls.Add(lblFractalName, 0, 0);
+            pnlDetails.Controls.Add(pictureBoxPreview, 0, 1);
+            pnlDetails.Controls.Add(richTextBoxDescription, 0, 2);
+            pnlDetails.Controls.Add(btnLaunchSelected, 0, 3);
+            pnlDetails.Dock = DockStyle.Fill;
+            pnlDetails.Location = new Point(0, 0);
+            pnlDetails.Name = "pnlDetails";
+            pnlDetails.Padding = new Padding(5);
+            pnlDetails.RowCount = 4;
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
+            pnlDetails.Size = new Size(526, 450);
+            pnlDetails.TabIndex = 0;
             // 
-            // btnLaunchGeneralizedMondelbrot
+            // lblFractalName
             // 
-            btnLaunchGeneralizedMondelbrot.Location = new Point(8, 91);
-            btnLaunchGeneralizedMondelbrot.Name = "btnLaunchGeneralizedMondelbrot";
-            btnLaunchGeneralizedMondelbrot.Size = new Size(131, 48);
-            btnLaunchGeneralizedMondelbrot.TabIndex = 4;
-            btnLaunchGeneralizedMondelbrot.Text = "Обобщенный Мандельброт";
-            btnLaunchGeneralizedMondelbrot.UseVisualStyleBackColor = true;
-            btnLaunchGeneralizedMondelbrot.Click += btnLaunchGeneralizedMondelbrot_Click;
+            lblFractalName.AutoSize = true;
+            lblFractalName.Dock = DockStyle.Fill;
+            lblFractalName.Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold);
+            lblFractalName.Location = new Point(8, 5);
+            lblFractalName.Name = "lblFractalName";
+            lblFractalName.Size = new Size(510, 40);
+            lblFractalName.TabIndex = 0;
+            lblFractalName.Text = "Выберите фрактал";
+            lblFractalName.TextAlign = ContentAlignment.MiddleCenter;
             // 
-            // btnLaunchMondelbrotShip
+            // pictureBoxPreview
             // 
-            btnLaunchMondelbrotShip.Location = new Point(8, 53);
-            btnLaunchMondelbrotShip.Name = "btnLaunchMondelbrotShip";
-            btnLaunchMondelbrotShip.Size = new Size(131, 32);
-            btnLaunchMondelbrotShip.TabIndex = 3;
-            btnLaunchMondelbrotShip.Text = "Горящий корабль";
-            btnLaunchMondelbrotShip.UseVisualStyleBackColor = true;
-            btnLaunchMondelbrotShip.Click += btnLaunchBurningShipMandelbrot_Click;
+            pictureBoxPreview.BorderStyle = BorderStyle.FixedSingle;
+            pictureBoxPreview.Dock = DockStyle.Fill;
+            pictureBoxPreview.Location = new Point(8, 48);
+            pictureBoxPreview.Name = "pictureBoxPreview";
+            pictureBoxPreview.Size = new Size(510, 169);
+            pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBoxPreview.TabIndex = 1;
+            pictureBoxPreview.TabStop = false;
             // 
-            // richTextBox1
+            // richTextBoxDescription
             // 
-            richTextBox1.BackColor = SystemColors.Window;
-            richTextBox1.BorderStyle = BorderStyle.None;
-            richTextBox1.Dock = DockStyle.Right;
-            richTextBox1.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            richTextBox1.Location = new Point(184, 3);
-            richTextBox1.Name = "richTextBox1";
-            richTextBox1.ReadOnly = true;
-            richTextBox1.Size = new Size(605, 310);
-            richTextBox1.TabIndex = 2;
-            richTextBox1.Text = resources.GetString("richTextBox1.Text");
+            richTextBoxDescription.BackColor = SystemColors.Control;
+            richTextBoxDescription.BorderStyle = BorderStyle.None;
+            richTextBoxDescription.Dock = DockStyle.Fill;
+            richTextBoxDescription.Font = new Font("Segoe UI", 10F);
+            richTextBoxDescription.Location = new Point(8, 223);
+            richTextBoxDescription.Name = "richTextBoxDescription";
+            richTextBoxDescription.ReadOnly = true;
+            richTextBoxDescription.Size = new Size(510, 169);
+            richTextBoxDescription.TabIndex = 2;
+            richTextBoxDescription.Text = "";
             // 
-            // btnLaunchMondelbrot
+            // btnLaunchSelected
             // 
-            btnLaunchMondelbrot.Location = new Point(8, 15);
-            btnLaunchMondelbrot.Name = "btnLaunchMondelbrot";
-            btnLaunchMondelbrot.Size = new Size(131, 32);
-            btnLaunchMondelbrot.TabIndex = 0;
-            btnLaunchMondelbrot.Text = "Мандельброт";
-            btnLaunchMondelbrot.UseVisualStyleBackColor = true;
-            btnLaunchMondelbrot.Click += btnLaunchMondelbrot_Click;
-            // 
-            // tabControlFractals
-            // 
-            tabControlFractals.Controls.Add(tabPageMandelbrot);
-            tabControlFractals.Controls.Add(tabPageJulia);
-            tabControlFractals.Controls.Add(tabPageSerpinsky);
-            tabControlFractals.Controls.Add(tabPageNewtonPools);
-            tabControlFractals.Controls.Add(tabPagePhoenix);
-            tabControlFractals.Dock = DockStyle.Right;
-            tabControlFractals.Font = new Font("Segoe UI", 10F);
-            tabControlFractals.Location = new Point(0, 0);
-            tabControlFractals.Name = "tabControlFractals";
-            tabControlFractals.SelectedIndex = 0;
-            tabControlFractals.Size = new Size(800, 346);
-            tabControlFractals.TabIndex = 0;
-            // 
-            // tabPageSerpinsky
-            // 
-            tabPageSerpinsky.Controls.Add(richTextBox3);
-            tabPageSerpinsky.Controls.Add(btnLaunchSerpinsky);
-            tabPageSerpinsky.Location = new Point(4, 26);
-            tabPageSerpinsky.Name = "tabPageSerpinsky";
-            tabPageSerpinsky.Padding = new Padding(3);
-            tabPageSerpinsky.Size = new Size(792, 316);
-            tabPageSerpinsky.TabIndex = 2;
-            tabPageSerpinsky.Text = "Треугольник Серпинского";
-            tabPageSerpinsky.UseVisualStyleBackColor = true;
-            // 
-            // richTextBox3
-            // 
-            richTextBox3.BackColor = SystemColors.Window;
-            richTextBox3.BorderStyle = BorderStyle.None;
-            richTextBox3.Dock = DockStyle.Right;
-            richTextBox3.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            richTextBox3.Location = new Point(184, 3);
-            richTextBox3.Name = "richTextBox3";
-            richTextBox3.ReadOnly = true;
-            richTextBox3.Size = new Size(605, 310);
-            richTextBox3.TabIndex = 4;
-            richTextBox3.Text = resources.GetString("richTextBox3.Text");
-            // 
-            // btnLaunchSerpinsky
-            // 
-            btnLaunchSerpinsky.Location = new Point(8, 15);
-            btnLaunchSerpinsky.Name = "btnLaunchSerpinsky";
-            btnLaunchSerpinsky.Size = new Size(131, 44);
-            btnLaunchSerpinsky.TabIndex = 3;
-            btnLaunchSerpinsky.Text = "Запустить";
-            btnLaunchSerpinsky.UseVisualStyleBackColor = true;
-            btnLaunchSerpinsky.Click += btnLaunchSerpinsky_Click;
-            // 
-            // tabPageNewtonPools
-            // 
-            tabPageNewtonPools.Controls.Add(richTextBox4);
-            tabPageNewtonPools.Controls.Add(btnLaunchNewton);
-            tabPageNewtonPools.Location = new Point(4, 26);
-            tabPageNewtonPools.Name = "tabPageNewtonPools";
-            tabPageNewtonPools.Padding = new Padding(3);
-            tabPageNewtonPools.Size = new Size(792, 316);
-            tabPageNewtonPools.TabIndex = 3;
-            tabPageNewtonPools.Text = "Бассейны Ньютона";
-            tabPageNewtonPools.UseVisualStyleBackColor = true;
-            // 
-            // richTextBox4
-            // 
-            richTextBox4.BackColor = SystemColors.Window;
-            richTextBox4.BorderStyle = BorderStyle.None;
-            richTextBox4.Dock = DockStyle.Right;
-            richTextBox4.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            richTextBox4.Location = new Point(184, 3);
-            richTextBox4.Name = "richTextBox4";
-            richTextBox4.ReadOnly = true;
-            richTextBox4.Size = new Size(605, 310);
-            richTextBox4.TabIndex = 6;
-            richTextBox4.Text = resources.GetString("richTextBox4.Text");
-            // 
-            // btnLaunchNewton
-            // 
-            btnLaunchNewton.Location = new Point(8, 15);
-            btnLaunchNewton.Name = "btnLaunchNewton";
-            btnLaunchNewton.Size = new Size(131, 44);
-            btnLaunchNewton.TabIndex = 5;
-            btnLaunchNewton.Text = "Запустить";
-            btnLaunchNewton.UseVisualStyleBackColor = true;
-            btnLaunchNewton.Click += btnLaunchNewton_Click;
-            // 
-            // tabPagePhoenix
-            // 
-            tabPagePhoenix.Controls.Add(richTextBox5);
-            tabPagePhoenix.Controls.Add(btnLaunchPhoenix);
-            tabPagePhoenix.Location = new Point(4, 26);
-            tabPagePhoenix.Name = "tabPagePhoenix";
-            tabPagePhoenix.Padding = new Padding(3);
-            tabPagePhoenix.Size = new Size(792, 316);
-            tabPagePhoenix.TabIndex = 4;
-            tabPagePhoenix.Text = "Феникс";
-            tabPagePhoenix.UseVisualStyleBackColor = true;
-            // 
-            // richTextBox5
-            // 
-            richTextBox5.BackColor = SystemColors.Window;
-            richTextBox5.BorderStyle = BorderStyle.None;
-            richTextBox5.Dock = DockStyle.Right;
-            richTextBox5.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            richTextBox5.Location = new Point(184, 3);
-            richTextBox5.Name = "richTextBox5";
-            richTextBox5.ReadOnly = true;
-            richTextBox5.Size = new Size(605, 310);
-            richTextBox5.TabIndex = 8;
-            richTextBox5.Text = resources.GetString("richTextBox5.Text");
-            // 
-            // btnLaunchPhoenix
-            // 
-            btnLaunchPhoenix.Location = new Point(8, 15);
-            btnLaunchPhoenix.Name = "btnLaunchPhoenix";
-            btnLaunchPhoenix.Size = new Size(131, 44);
-            btnLaunchPhoenix.TabIndex = 7;
-            btnLaunchPhoenix.Text = "Запустить";
-            btnLaunchPhoenix.UseVisualStyleBackColor = true;
-            btnLaunchPhoenix.Click += btnLaunchPhoenix_Click;
+            btnLaunchSelected.Dock = DockStyle.Fill;
+            btnLaunchSelected.Enabled = false;
+            btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnLaunchSelected.Location = new Point(8, 398);
+            btnLaunchSelected.Name = "btnLaunchSelected";
+            btnLaunchSelected.Size = new Size(510, 44);
+            btnLaunchSelected.TabIndex = 3;
+            btnLaunchSelected.Text = "Запустить";
+            btnLaunchSelected.UseVisualStyleBackColor = true;
+            btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 
             // LauncherHubForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 346);
-            Controls.Add(tabControlFractals);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
+            ClientSize = new Size(800, 450);
+            Controls.Add(splitContainerMain);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MaximizeBox = false;
+            MinimumSize = new Size(720, 480);
             Name = "LauncherHubForm";
             Text = "Менеджер фракталов";
-            tabPageJulia.ResumeLayout(false);
-            tabPageMandelbrot.ResumeLayout(false);
-            tabControlFractals.ResumeLayout(false);
-            tabPageSerpinsky.ResumeLayout(false);
-            tabPageNewtonPools.ResumeLayout(false);
-            tabPagePhoenix.ResumeLayout(false);
+            splitContainerMain.Panel1.ResumeLayout(false);
+            splitContainerMain.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainerMain).EndInit();
+            splitContainerMain.ResumeLayout(false);
+            pnlDetails.ResumeLayout(false);
+            pnlDetails.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).EndInit();
             ResumeLayout(false);
         }
 
         #endregion
 
-        private TabPage tabPageJulia;
-        private Button btnLaunchJulia;
-        private TabPage tabPageMandelbrot;
-        private Button btnLaunchMondelbrot;
-        private TabControl tabControlFractals;
-        private RichTextBox richTextBox1;
-        private RichTextBox richTextBox2;
-        private TabPage tabPageSerpinsky;
-        private RichTextBox richTextBox3;
-        private Button btnLaunchSerpinsky;
-        private TabPage tabPageNewtonPools;
-        private RichTextBox richTextBox4;
-        private Button btnLaunchNewton;
-        private Button btnLaunchBurningShipComplex;
-        private Button btnLaunchMondelbrotShip;
-        private TabPage tabPagePhoenix;
-        private RichTextBox richTextBox5;
-        private Button btnLaunchPhoenix;
-        private Button btnLaunchGeneralizedMondelbrot;
+        private System.Windows.Forms.SplitContainer splitContainerMain;
+        private System.Windows.Forms.TreeView treeViewFractals;
+        private System.Windows.Forms.TableLayoutPanel pnlDetails;
+        private System.Windows.Forms.Label lblFractalName;
+        private System.Windows.Forms.PictureBox pictureBoxPreview;
+        private System.Windows.Forms.RichTextBox richTextBoxDescription;
+        private System.Windows.Forms.Button btnLaunchSelected;
     }
 }
