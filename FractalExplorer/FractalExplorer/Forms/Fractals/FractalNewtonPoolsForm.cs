@@ -696,20 +696,6 @@ namespace FractalExplorer
             }
         }
 
-        /// <summary>
-        /// Включает или отключает основные элементы управления на форме.
-        /// </summary>
-        /// <param name="enabled">True для включения, false для отключения.</param>
-        private void SetMainControlsEnabled(bool enabled)
-        {
-            Action action = () =>
-            {
-                //panel1.Enabled = enabled;
-            };
-            if (InvokeRequired) Invoke(action);
-            else action();
-        }
-
         #endregion
 
         #region Form Lifecycle
