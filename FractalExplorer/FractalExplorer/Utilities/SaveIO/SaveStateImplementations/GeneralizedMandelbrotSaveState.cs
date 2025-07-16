@@ -8,7 +8,8 @@ namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
 {
     /// <summary>
     /// Представляет состояние сохранения для Обобщенного множества Мандельброта,
-    /// добавляя к базовым параметрам настраиваемую степень 'p'.
+    /// которое расширяет базовое семейство фракталов Мандельброта, 
+    /// добавляя настраиваемую степень 'p' в итерационную формулу.
     /// </summary>
     public class GeneralizedMandelbrotSaveState : MandelbrotFamilySaveState
     {
@@ -17,8 +18,21 @@ namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
         /// </summary>
         public decimal Power { get; set; }
 
-        public GeneralizedMandelbrotSaveState() : base() { }
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="GeneralizedMandelbrotSaveState"/>
+        /// с использованием значений по умолчанию.
+        /// </summary>
+        public GeneralizedMandelbrotSaveState() : base()
+        {
+        }
 
-        public GeneralizedMandelbrotSaveState(string fractalType) : base(fractalType) { }
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="GeneralizedMandelbrotSaveState"/>
+        /// с указанием типа фрактала.
+        /// </summary>
+        /// <param name="fractalType">Строка, идентифицирующая тип фрактала.</param>
+        public GeneralizedMandelbrotSaveState(string fractalType) : base(fractalType)
+        {
+        }
     }
 }
