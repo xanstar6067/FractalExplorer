@@ -19,9 +19,9 @@ namespace FractalDraving
 {
     /// <summary>
     /// Базовый абстрактный класс для форм, отображающих фракталы семейства Мандельброта.
-    /// Предоставляет общую логику для управления движком рендеринга,
-    /// палитрой, масштабированием, панорамированием и сохранением изображений.
-    /// Включает исправления для предотвращения сбоев при сворачивании окна.
+    /// Предоставляет общую логику для управления движком рендеринга, палитрой,
+    /// масштабированием, панорамированием, сохранением изображений и состояний.
+    /// Включает логику для корректной обработки изменения размеров и сворачивания окна.
     /// </summary>
     public abstract partial class FractalMandelbrotFamilyForm : Form, IFractalForm, ISaveLoadCapableFractal, IHighResRenderable
     {
@@ -164,12 +164,13 @@ namespace FractalDraving
 
         /// <summary>
         /// Создает конкретный экземпляр движка фрактала.
+        /// Этот метод должен быть переопределен в дочерних классах.
         /// </summary>
         /// <returns>Новый экземпляр движка, унаследованного от <see cref="FractalMandelbrotFamilyEngine"/>.</returns>
         protected abstract FractalMandelbrotFamilyEngine CreateEngine();
 
         /// <summary>
-        /// Получает базовый масштаб для фрактала.
+        /// Получает базовый масштаб для фрактала, определяющий ширину комплексной плоскости при масштабе 1.0.
         /// </summary>
         protected virtual decimal BaseScale => 3.0m;
 
@@ -185,11 +186,13 @@ namespace FractalDraving
 
         /// <summary>
         /// Обновляет специфические параметры движка, характерные для конкретной реализации фрактала.
+        /// Может быть переопределен в дочерних классах для установки уникальных параметров (например, степени в обобщенном фрактале).
         /// </summary>
         protected virtual void UpdateEngineSpecificParameters() { }
 
         /// <summary>
-        /// Вызывается после завершения основной инициализации формы в методе `FormBase_Load`.
+        /// Вызывается после завершения основной инициализации формы в методе <see cref="FormBase_Load"/>.
+        /// Позволяет дочерним классам выполнять дополнительную настройку.
         /// </summary>
         protected virtual void OnPostInitialize() { }
 
@@ -960,6 +963,12 @@ namespace FractalDraving
 
         #region Palette Management
 
+        /// <summary>
+        /// Генерирует функцию для плавной окраски на основе заданной палитры.
+        /// </summary>
+        /// <param name="palette">Палитра цветов.</param>
+        /// <param name="effectiveMaxColorIterations">Эффективное максимальное количество итераций для цикла палитры.</param>
+        /// <returns>Функция, принимающая значение итерации и возвращающая цвет.</returns>
         protected Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
             // Получаем общие свойства палитры
@@ -1071,6 +1080,11 @@ namespace FractalDraving
                 (int)(a.B + (b.B - a.B) * t));
         }
 
+        /// <summary>
+        /// Генерирует функцию для дискретной окраски на основе заданной палитры.
+        /// </summary>
+        /// <param name="palette">Палитра цветов.</param>
+        /// <returns>Функция, принимающая номер итерации, макс. итераций и макс. итераций цвета и возвращающая цвет.</returns>
         protected Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
@@ -1222,10 +1236,14 @@ namespace FractalDraving
 
         #region ISaveLoadCapableFractal Implementation
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Получает строковый идентификатор типа фрактала (например, "Mandelbrot", "Julia").
+        /// </summary>
         public abstract string FractalTypeIdentifier { get; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Получает тип конкретного класса состояния сохранения, используемого этим фракталом.
+        /// </summary>
         public abstract Type ConcreteSaveStateType { get; }
 
         /// <summary>
@@ -1509,7 +1527,7 @@ namespace FractalDraving
                 CenterY = _centerY,
                 Zoom = _zoom,
                 BaseScale = this.BaseScale,
-                Scale = this.BaseScale / _zoom, // ИСПРАВЛЕНИЕ: Добавляем Scale в состояние
+                Scale = this.BaseScale / _zoom,
                 Iterations = (int)nudIterations.Value,
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
@@ -1562,7 +1580,7 @@ namespace FractalDraving
             engine.ThresholdSquared = state.Threshold * state.Threshold;
             engine.CenterX = state.CenterX;
             engine.CenterY = state.CenterY;
-            engine.Scale = state.Scale; // ИСПРАВЛЕНИЕ: Используем Scale напрямую из состояния
+            engine.Scale = state.Scale;
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
 
             engine.UseSmoothColoring = state.UseSmoothColoring;
@@ -1581,24 +1599,22 @@ namespace FractalDraving
             _isHighResRendering = true;
             try
             {
-                // --- НАЧАЛО ИСПРАВЛЕНИЯ: Адаптация Scale к соотношению сторон ---
-
-                // 1. Получаем соотношение сторон текущего окна просмотра (на форме).
-                //    Проверяем, что canvas не нулевого размера, чтобы избежать деления на ноль.
+                // Получаем соотношение сторон текущего окна просмотра (на форме).
+                // Проверяем, что canvas не нулевого размера, чтобы избежать деления на ноль.
                 decimal canvasAspectRatio = (this.canvas.Height > 0)
                     ? (decimal)this.canvas.Width / this.canvas.Height
                     : 16.0m / 9.0m; // Запасное значение
 
-                // 2. Получаем соотношение сторон целевого изображения для сохранения.
+                // Получаем соотношение сторон целевого изображения для сохранения.
                 decimal targetAspectRatio = (height > 0)
                     ? (decimal)width / height
                     : 16.0m / 9.0m; // Запасное значение
 
-                // 3. Создаем копию состояния, чтобы не изменять оригинал.
+                // Создаем копию состояния, чтобы не изменять оригинал.
                 var adjustedState = state.Clone();
 
-                // 4. Сравниваем соотношения и корректируем Scale.
-                //    Scale в движке определяет ШИРИНУ видимой области.
+                // Сравниваем соотношения и корректируем Scale.
+                // Scale в движке определяет ШИРИНУ видимой области.
                 if (targetAspectRatio > canvasAspectRatio)
                 {
                     // Если целевое изображение "шире" чем окно просмотра,
@@ -1609,8 +1625,6 @@ namespace FractalDraving
                 }
                 // Если целевое изображение "выше" или такое же, мы не меняем Scale.
                 // Исходная ширина обзора сохраняется, а движок добавит пространство сверху/снизу.
-
-                // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
                 // Используем скорректированное состояние для создания движка.
                 FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(adjustedState, forPreview: false);
@@ -1642,6 +1656,5 @@ namespace FractalDraving
         }
 
         #endregion
-
     }
 }
