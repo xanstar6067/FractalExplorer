@@ -100,7 +100,6 @@
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
-            // ИЗМЕНЕНИЕ 1: Увеличиваем высоту строк для кнопок с 38 до 45 пикселей.
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
@@ -306,8 +305,7 @@
             // 
             pnlControls.SetColumnSpan(btnSaveHighRes, 2);
             btnSaveHighRes.Dock = DockStyle.Fill;
-            btnSaveHighRes.Location = new Point(6, 287);
-            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            btnSaveHighRes.Location = new Point(6, 284);
             btnSaveHighRes.Margin = new Padding(6, 3, 6, 3);
             btnSaveHighRes.Name = "btnSaveHighRes";
             btnSaveHighRes.Size = new Size(219, 39);
@@ -320,8 +318,7 @@
             // 
             pnlControls.SetColumnSpan(color_configurations, 2);
             color_configurations.Dock = DockStyle.Fill;
-            color_configurations.Location = new Point(6, 332);
-            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            color_configurations.Location = new Point(6, 329);
             color_configurations.Margin = new Padding(6, 3, 6, 3);
             color_configurations.Name = "color_configurations";
             color_configurations.Size = new Size(219, 39);
@@ -333,8 +330,7 @@
             // 
             pnlControls.SetColumnSpan(btnRender, 2);
             btnRender.Dock = DockStyle.Fill;
-            btnRender.Location = new Point(6, 377);
-            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            btnRender.Location = new Point(6, 374);
             btnRender.Margin = new Padding(6, 3, 6, 3);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(219, 39);
@@ -346,8 +342,7 @@
             // 
             pnlControls.SetColumnSpan(btnStateManager, 2);
             btnStateManager.Dock = DockStyle.Fill;
-            btnStateManager.Location = new Point(6, 422);
-            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            btnStateManager.Location = new Point(6, 419);
             btnStateManager.Margin = new Padding(6, 3, 6, 3);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(219, 39);
@@ -361,7 +356,7 @@
             lblProgress.AutoSize = true;
             pnlControls.SetColumnSpan(lblProgress, 2);
             lblProgress.Dock = DockStyle.Fill;
-            lblProgress.Location = new Point(3, 464);
+            lblProgress.Location = new Point(3, 461);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(225, 20);
             lblProgress.TabIndex = 19;
@@ -372,7 +367,7 @@
             // 
             pnlControls.SetColumnSpan(pbRenderProgress, 2);
             pbRenderProgress.Dock = DockStyle.Fill;
-            pbRenderProgress.Location = new Point(6, 487);
+            pbRenderProgress.Location = new Point(6, 484);
             pbRenderProgress.Margin = new Padding(6, 3, 6, 3);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(219, 24);
@@ -383,7 +378,7 @@
             pnlControls.SetColumnSpan(mandelbrotPreviewPanel, 2);
             mandelbrotPreviewPanel.Controls.Add(mandelbrotPreviewCanvas);
             mandelbrotPreviewPanel.Dock = DockStyle.Fill;
-            mandelbrotPreviewPanel.Location = new Point(3, 517);
+            mandelbrotPreviewPanel.Location = new Point(3, 514);
             mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
             mandelbrotPreviewPanel.Size = new Size(225, 129);
             mandelbrotPreviewPanel.TabIndex = 21;
@@ -400,7 +395,7 @@
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(130, 652);
+            nudBaseScale.Location = new Point(130, 649);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
             nudBaseScale.Size = new Size(98, 23);
