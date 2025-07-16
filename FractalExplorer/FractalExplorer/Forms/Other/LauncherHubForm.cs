@@ -50,7 +50,7 @@ namespace FractalExplorer
                 DisplayName = "Классический Мандельброт",
                 FormToLaunch = typeof(FractalMondelbrot),
                 Description = "Иконическое множество, определяемое простой рекуррентной формулой. Является картой всех множеств Жюлиа.",
-                //PreviewImage = Properties.Resources.mandelbrot_preview // Убедитесь, что у вас есть этот ресурс
+                PreviewImage = Properties.Resources.mandelbrot_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -59,7 +59,7 @@ namespace FractalExplorer
                 DisplayName = "Горящий Корабль",
                 FormToLaunch = typeof(FractalMondelbrotBurningShip),
                 Description = "Модификация классического алгоритма, где используется модуль комплексного числа. Создает структуры, похожие на горящий корабль в дыму.",
-                //PreviewImage = Properties.Resources.burningship_preview // И этот
+                PreviewImage = Properties.Resources.burningship_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -68,7 +68,7 @@ namespace FractalExplorer
                 DisplayName = "Обобщенный Мандельброт",
                 FormToLaunch = typeof(FractalGeneralizedMandelbrot),
                 Description = "Вариация множества Мандельброта, где используется произвольная степень Z, а не только квадрат. Позволяет исследовать бесконечное разнообразие форм.",
-                //PreviewImage = Properties.Resources.mandelbrot_preview
+                PreviewImage = Properties.Resources.general_mandelbrot_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -77,7 +77,7 @@ namespace FractalExplorer
                 DisplayName = "Классическое Жюлиа",
                 FormToLaunch = typeof(FractalJulia),
                 Description = "Множества, тесно связанные с множеством Мандельброта. Для каждой точки C из множества Мандельброта существует своё уникальное множество Жюлиа.",
-                //PreviewImage = Properties.Resources.julia_preview
+                PreviewImage = Properties.Resources.julia_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -86,7 +86,7 @@ namespace FractalExplorer
                 DisplayName = "Горящий Корабль (Жюлиа)",
                 FormToLaunch = typeof(FractalJuliaBurningShip),
                 Description = "Соответствующее множество Жюлиа для фрактала 'Горящий корабль'. Также использует модуль компонент комплексного числа.",
-                //PreviewImage = Properties.Resources.burningship_preview
+                PreviewImage = Properties.Resources.julia_burningship_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -95,7 +95,7 @@ namespace FractalExplorer
                 DisplayName = "Бассейны Ньютона",
                 FormToLaunch = typeof(NewtonPools),
                 Description = "Фрактал, получаемый применением метода Ньютона для нахождения корней комплексного многочлена. Разные цвета показывают, к какому корню сходится точка.",
-                //PreviewImage = Properties.Resources.newton_preview
+                PreviewImage = Properties.Resources.newton_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -104,7 +104,7 @@ namespace FractalExplorer
                 DisplayName = "Фрактал Феникс",
                 FormToLaunch = typeof(FractalPhoenixForm),
                 Description = "Обобщение множества Жюлиа, включающее в рекуррентную формулу предыдущее значение Z. Создает уникальные, похожие на вихри структуры.",
-                //PreviewImage = Properties.Resources.phoenix_preview
+                PreviewImage = Properties.Resources.phoenix_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
@@ -113,7 +113,7 @@ namespace FractalExplorer
                 DisplayName = "Треугольник Серпинского",
                 FormToLaunch = typeof(FractalSerpinski),
                 Description = "Классический геометрический фрактал, который можно построить как рекурсивным удалением треугольников, так и методом 'игры в хаос'.",
-                //PreviewImage = Properties.Resources.serpinski_preview
+                PreviewImage = Properties.Resources.serpinski_preview
             });
         }
 
