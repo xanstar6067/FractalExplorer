@@ -165,73 +165,8 @@ namespace FractalExplorer.Projects
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
-        // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ НАХОДИТСЯ ЗДЕСЬ ---
-        // Мы переопределяем метод, чтобы предоставить свою, специальную логику
-        public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
-        {
-            return Task.Run(() =>
-            {
-                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
-                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
 
-                GeneralizedMandelbrotPreviewParams previewParams;
-                try { previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson); }
-                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
-
-                // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-                // 1. Создаем наш специальный движок БЕЗ инициализатора
-                var previewEngine = new GeneralizedMandelbrotEngine();
-
-                // 2. УСТАНАВЛИВАЕМ ПОТЕРЯННЫЙ ПАРАМЕТР ЯВНО И ОТДЕЛЬНОЙ СТРОКОЙ!
-                previewEngine.Power = previewParams.Power;
-
-                // 3. Настраиваем остальные параметры
-                previewEngine.MaxIterations = previewParams.Iterations;
-                previewEngine.CenterX = previewParams.CenterX;
-                previewEngine.CenterY = previewParams.CenterY;
-                if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
-                previewEngine.Scale = this.BaseScale / previewParams.Zoom;
-                previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
-
-                var paletteManager = new PaletteManager();
-                var paletteForPreview = paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? paletteManager.Palettes.First();
-                int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
-
-                previewEngine.UseSmoothColoring = false;
-                previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-                previewEngine.Palette = base.GenerateDiscretePaletteFunction(paletteForPreview);
-                previewEngine.SmoothPalette = base.GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
-
-                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
-            });
-        }
-
-        public override Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
-        {
-            // Этот метод теперь просто вызывает наш исправленный асинхронный метод
-            var tile = new TileInfo(0, 0, previewWidth, previewHeight);
-            var buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
-
-            var bmp = new Bitmap(previewWidth, previewHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-            var bmpData = bmp.LockBits(new Rectangle(0, 0, previewWidth, previewHeight), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
-
-            IntPtr ptr = bmpData.Scan0;
-            byte[] rgbValues = new byte[bmpData.Stride * previewHeight];
-
-            for (int i = 0; i < previewWidth * previewHeight; i++)
-            {
-                int srcIdx = i * 4;
-                int destIdx = i * 3;
-                rgbValues[destIdx] = buffer[srcIdx];         // Blue
-                rgbValues[destIdx + 1] = buffer[srcIdx + 1]; // Green
-                rgbValues[destIdx + 2] = buffer[srcIdx + 2]; // Red
-            }
-
-            System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, rgbValues.Length);
-            bmp.UnlockBits(bmpData);
-
-            return bmp;
-        }
+        
 
         //public override HighResRenderState GetRenderState()
         public virtual HighResRenderState GetRenderState()
