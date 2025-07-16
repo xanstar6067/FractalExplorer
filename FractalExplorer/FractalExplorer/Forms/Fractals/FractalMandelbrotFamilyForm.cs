@@ -1510,7 +1510,7 @@ namespace FractalDraving
         #region IHighResRenderable Implementation
 
         /// <inheritdoc/>
-        public HighResRenderState GetRenderState()
+        public virtual HighResRenderState GetRenderState()
         {
             var state = new HighResRenderState
             {
@@ -1549,6 +1549,7 @@ namespace FractalDraving
                 case "Julia": engine = new JuliaEngine { C = state.JuliaC.Value }; break;
                 case "MandelbrotBurningShip": engine = new MandelbrotBurningShipEngine(); break;
                 case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC.Value }; break;
+                // --- НАЧАЛО ИСПРАВЛЕНИЯ: Добавлена логика для GeneralizedMandelbrot ---
                 case "GeneralizedMandelbrot":
                     engine = new GeneralizedMandelbrotEngine();
                     // Проверяем, есть ли параметр Power в состоянии, и устанавливаем его
@@ -1557,6 +1558,7 @@ namespace FractalDraving
                         genEngine.Power = state.Power.Value;
                     }
                     break;
+                // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
                 default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
             }
 
