@@ -1,6 +1,6 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
-using FractalExplorer.Resources; // ИСПРАВЛЕНИЕ 1: Добавлена эта строка для TileInfo
+using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.SaveIO;
@@ -12,15 +12,25 @@ using System.Text.Json;
 namespace FractalExplorer.Projects
 {
     /// <summary>
-    /// Форма для отображения и взаимодействия с Обобщенным множеством Мандельброта (z -> z^p + c).
+    /// Представляет форму для отображения и взаимодействия с Обобщенным множеством Мандельброта (z -> z^p + c).
     /// </summary>
     public partial class FractalGeneralizedMandelbrot : FractalMandelbrotFamilyForm
     {
+        /// <summary>
+        /// Поле для ввода степени p.
+        /// </summary>
         private NumericUpDown nudPower;
+
+        /// <summary>
+        /// Метка для поля ввода степени.
+        /// </summary>
         private Label lblPower;
 
         #region Constructor
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="FractalGeneralizedMandelbrot"/>.
+        /// </summary>
         public FractalGeneralizedMandelbrot()
         {
             Text = "Обобщённое множество Мандельброта (z^p + c)";
@@ -30,26 +40,32 @@ namespace FractalExplorer.Projects
 
         #region Fractal Engine Overrides
 
+        /// <summary>
+        /// Создает и возвращает экземпляр движка для рендеринга обобщенного множества Мандельброта.
+        /// </summary>
+        /// <returns>Экземпляр <see cref="GeneralizedMandelbrotEngine"/>.</returns>
         protected override FractalMandelbrotFamilyEngine CreateEngine()
         {
             return new GeneralizedMandelbrotEngine();
         }
 
+        /// <summary>
+        /// Выполняется после основной инициализации формы для настройки пользовательского интерфейса.
+        /// Добавляет элементы управления для параметра "степень" (p).
+        /// </summary>
         protected override void OnPostInitialize()
         {
-            // Скрываем элементы, которые не нужны для множеств типа Мандельброта
+            // Скрываем стандартные элементы управления для константы c (Re, Im), так как они не используются.
             lblRe.Visible = false;
             nudRe.Visible = false;
             lblIm.Visible = false;
             nudIm.Visible = false;
             mandelbrotPreviewPanel.Visible = false;
 
-            // --- ИСПОЛЬЗУЕМ ЗАГОТОВЛЕННЫЙ КОНТЕЙНЕР ---
-
-            // 1. Делаем наш специальный контейнер видимым
+            // Отображаем панель для пользовательских элементов управления.
             pnlCustomControls.Visible = true;
 
-            // 2. Создаем маленькую внутреннюю таблицу для красивого расположения наших контролов
+            // Создаем внутреннюю таблицу для компоновки элементов управления.
             var innerTable = new TableLayoutPanel
             {
                 ColumnCount = 2,
@@ -59,7 +75,7 @@ namespace FractalExplorer.Projects
             innerTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
             innerTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
 
-            // 3. Создаем сами контролы
+            // Создаем и настраиваем элементы управления для параметра "степень".
             lblPower = new Label
             {
                 Text = "Степень (p)",
@@ -78,14 +94,15 @@ namespace FractalExplorer.Projects
             };
             nudPower.ValueChanged += ParamControl_Changed;
 
-            // 4. Добавляем контролы во внутреннюю таблицу
+            // Добавляем созданные элементы управления на панель.
             innerTable.Controls.Add(nudPower, 0, 0);
             innerTable.Controls.Add(lblPower, 1, 0);
-
-            // 5. Добавляем нашу маленькую таблицу в большой контейнер-заполнитель
             pnlCustomControls.Controls.Add(innerTable);
         }
 
+        /// <summary>
+        /// Обновляет специфичные для этого фрактала параметры в движке рендеринга.
+        /// </summary>
         protected override void UpdateEngineSpecificParameters()
         {
             if (_fractalEngine is GeneralizedMandelbrotEngine engine)
@@ -94,6 +111,10 @@ namespace FractalExplorer.Projects
             }
         }
 
+        /// <summary>
+        /// Формирует уникальную часть имени файла для сохранения, основанную на текущем значении степени.
+        /// </summary>
+        /// <returns>Строка с деталями для имени файла.</returns>
         protected override string GetSaveFileNameDetails()
         {
             string powerString = nudPower.Value.ToString("F2", CultureInfo.InvariantCulture).Replace(".", "_");
@@ -104,17 +125,35 @@ namespace FractalExplorer.Projects
 
         #region ISaveLoadCapableFractal Overrides
 
+        /// <summary>
+        /// Получает уникальный идентификатор типа фрактала для системы сохранения/загрузки.
+        /// </summary>
         public override string FractalTypeIdentifier => "GeneralizedMandelbrot";
+
+        /// <summary>
+        /// Получает тип конкретного класса состояния сохранения для этого фрактала.
+        /// </summary>
         public override Type ConcreteSaveStateType => typeof(GeneralizedMandelbrotSaveState);
 
+        /// <summary>
+        /// Содержит параметры, необходимые для рендеринга превью обобщенного множества Мандельброта.
+        /// </summary>
         public class GeneralizedMandelbrotPreviewParams : PreviewParams
         {
+            /// <summary>
+            /// Степень (p) для формулы фрактала.
+            /// </summary>
             public decimal Power { get; set; }
         }
 
+        /// <summary>
+        /// Собирает текущее состояние фрактала в объект для последующего сохранения.
+        /// </summary>
+        /// <param name="saveName">Имя сохранения.</param>
+        /// <returns>Объект состояния <see cref="FractalSaveStateBase"/>, готовый к сохранению.</returns>
         public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
-            var state = new GeneralizedMandelbrotSaveState(this.FractalTypeIdentifier)
+            var state = new GeneralizedMandelbrotSaveState(FractalTypeIdentifier)
             {
                 SaveName = saveName,
                 Timestamp = DateTime.Now,
@@ -124,7 +163,7 @@ namespace FractalExplorer.Projects
                 Threshold = nudThreshold.Value,
                 Iterations = (int)nudIterations.Value,
                 PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
-                PreviewEngineType = this.FractalTypeIdentifier,
+                PreviewEngineType = FractalTypeIdentifier,
                 Power = nudPower.Value
             };
 
@@ -133,7 +172,7 @@ namespace FractalExplorer.Projects
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = Math.Min(state.Iterations, 1000),
+                Iterations = Math.Min(state.Iterations, 1000), // Ограничение для скорости превью
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 PreviewEngineType = state.PreviewEngineType,
@@ -144,6 +183,10 @@ namespace FractalExplorer.Projects
             return state;
         }
 
+        /// <summary>
+        /// Загружает состояние фрактала из предоставленного объекта сохранения.
+        /// </summary>
+        /// <param name="stateBase">Объект состояния для загрузки.</param>
         public override void LoadState(FractalSaveStateBase stateBase)
         {
             base.LoadState(stateBase);
@@ -153,20 +196,35 @@ namespace FractalExplorer.Projects
             }
         }
 
+        /// <summary>
+        /// Загружает все сохранения, относящиеся к данному типу фрактала.
+        /// </summary>
+        /// <returns>Список объектов состояний.</returns>
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
-            var specificSaves = SaveFileManager.LoadSaves<GeneralizedMandelbrotSaveState>(this.FractalTypeIdentifier);
+            var specificSaves = SaveFileManager.LoadSaves<GeneralizedMandelbrotSaveState>(FractalTypeIdentifier);
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <summary>
+        /// Сохраняет все состояния для данного типа фрактала.
+        /// </summary>
+        /// <param name="saves">Список состояний для сохранения.</param>
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<GeneralizedMandelbrotSaveState>().ToList();
-            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
+            SaveFileManager.SaveSaves(FractalTypeIdentifier, specificSaves);
         }
 
-        // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ НАХОДИТСЯ ЗДЕСЬ ---
-        // Мы переопределяем метод, чтобы предоставить свою, специальную логику
+        /// <summary>
+        /// Асинхронно рендерит один тайл превью изображения на основе данных из состояния сохранения.
+        /// </summary>
+        /// <param name="stateBase">Состояние сохранения, содержащее параметры для рендеринга.</param>
+        /// <param name="tile">Информация о тайле для рендеринга.</param>
+        /// <param name="totalWidth">Общая ширина превью.</param>
+        /// <param name="totalHeight">Общая высота превью.</param>
+        /// <param name="tileSize">Размер тайла.</param>
+        /// <returns>Массив байт (BGRA) с пиксельными данными тайла.</returns>
         public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return Task.Run(() =>
@@ -175,22 +233,24 @@ namespace FractalExplorer.Projects
                     return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
 
                 GeneralizedMandelbrotPreviewParams previewParams;
-                try { previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson); }
-                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
+                }
+                catch
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; // Возврат пустого буфера в случае ошибки
+                }
 
-                // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-                // 1. Создаем наш специальный движок БЕЗ инициализатора
                 var previewEngine = new GeneralizedMandelbrotEngine();
 
-                // 2. УСТАНАВЛИВАЕМ ПОТЕРЯННЫЙ ПАРАМЕТР ЯВНО И ОТДЕЛЬНОЙ СТРОКОЙ!
+                // Установка специфичных для этого фрактала и общих параметров для движка
                 previewEngine.Power = previewParams.Power;
-
-                // 3. Настраиваем остальные параметры
                 previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
-                previewEngine.Scale = this.BaseScale / previewParams.Zoom;
+                previewEngine.Scale = BaseScale / previewParams.Zoom;
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
 
                 var paletteManager = new PaletteManager();
@@ -199,18 +259,24 @@ namespace FractalExplorer.Projects
 
                 previewEngine.UseSmoothColoring = false;
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-                previewEngine.Palette = base.GenerateDiscretePaletteFunction(paletteForPreview);
-                previewEngine.SmoothPalette = base.GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
 
+        /// <summary>
+        /// Рендерит полное превью-изображение для заданного состояния сохранения.
+        /// </summary>
+        /// <param name="stateBase">Состояние сохранения.</param>
+        /// <param name="previewWidth">Ширина превью.</param>
+        /// <param name="previewHeight">Высота превью.</param>
+        /// <returns>Объект <see cref="Bitmap"/> с превью фрактала.</returns>
         public override Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
-            // Этот метод теперь просто вызывает наш исправленный асинхронный метод
             var tile = new TileInfo(0, 0, previewWidth, previewHeight);
-            var buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
+            byte[] buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
 
             var bmp = new Bitmap(previewWidth, previewHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             var bmpData = bmp.LockBits(new Rectangle(0, 0, previewWidth, previewHeight), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -218,6 +284,7 @@ namespace FractalExplorer.Projects
             IntPtr ptr = bmpData.Scan0;
             byte[] rgbValues = new byte[bmpData.Stride * previewHeight];
 
+            // Конвертация из 32-битного буфера (BGRA) в 24-битный (BGR) для Bitmap
             for (int i = 0; i < previewWidth * previewHeight; i++)
             {
                 int srcIdx = i * 4;
@@ -233,16 +300,14 @@ namespace FractalExplorer.Projects
             return bmp;
         }
 
-        //public override HighResRenderState GetRenderState()
+        /// <summary>
+        /// Получает состояние для рендеринга в высоком разрешении, дополняя его специфичными параметрами.
+        /// </summary>
+        /// <returns>Объект <see cref="HighResRenderState"/> с параметрами рендеринга.</returns>
         public override HighResRenderState GetRenderState()
         {
-            // 1. Сначала получаем базовое состояние от родительского класса
             var state = base.GetRenderState();
-
-            // 2. Добавляем наш уникальный параметр
-            state.Power = this.nudPower.Value;
-
-            // 3. Возвращаем дополненное состояние
+            state.Power = nudPower.Value;
             return state;
         }
 

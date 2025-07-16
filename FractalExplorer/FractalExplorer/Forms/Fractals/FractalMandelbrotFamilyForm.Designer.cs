@@ -465,8 +465,6 @@
         private System.Windows.Forms.ComboBox cbSSAA;
         protected System.Windows.Forms.Label lbSSAA;
         private System.Windows.Forms.CheckBox cbSmooth;
-
-        // --- НОВОЕ ПОЛЕ ДЛЯ КОНТЕЙНЕРА ---
         protected System.Windows.Forms.Panel pnlCustomControls;
     }
 }
