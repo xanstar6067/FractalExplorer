@@ -958,7 +958,7 @@ namespace FractalDraving
 
         #region Palette Management
 
-        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
+        protected Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
             // Получаем общие свойства палитры
             double gamma = palette.Gamma;
@@ -1069,7 +1069,7 @@ namespace FractalDraving
                 (int)(a.B + (b.B - a.B) * t));
         }
 
-        private Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
+        protected Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);

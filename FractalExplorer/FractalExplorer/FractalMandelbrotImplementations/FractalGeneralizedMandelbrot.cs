@@ -1,6 +1,6 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
-using FractalExplorer.Resources;
+using FractalExplorer.Resources; // ИСПРАВЛЕНИЕ 1: Добавлена эта строка для TileInfo
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
@@ -43,14 +43,13 @@ namespace FractalExplorer.Projects
             nudIm.Visible = false;
             mandelbrotPreviewPanel.Visible = false;
 
-            // --- Создаем новые контролы для степени 'p' ---
+            // --- ИСПРАВЛЕНИЕ 2: Правильное добавление контролов в TableLayoutPanel ---
             lblPower = new Label
             {
                 Name = "lblPower",
                 Text = "Степень (p)",
-                TextAlign = ContentAlignment.MiddleLeft,
                 Dock = DockStyle.Fill,
-                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleLeft,
             };
 
             nudPower = new NumericUpDown
@@ -67,10 +66,12 @@ namespace FractalExplorer.Projects
 
             nudPower.ValueChanged += ParamControl_Changed;
 
-            // Добавляем контролы в таблицу на свои места
-            // Индекс 8 - это строка сразу после "Сглаживание"
-            pnlControls.Controls.Add(nudPower, 0, 8);
-            pnlControls.Controls.Add(lblPower, 1, 8);
+            // Динамически вставляем новую строку для наших контролов
+            int rowIndex = 8; // Индекс строки, куда мы хотим вставить новый контрол (после SSAA)
+            pnlControls.RowCount++;
+            pnlControls.RowStyles.Insert(rowIndex, new RowStyle(SizeType.AutoSize));
+            pnlControls.Controls.Add(nudPower, 0, rowIndex);
+            pnlControls.Controls.Add(lblPower, 1, rowIndex);
         }
 
         protected override void UpdateEngineSpecificParameters()
@@ -159,7 +160,8 @@ namespace FractalExplorer.Projects
         {
             return Task.Run(() =>
             {
-                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
 
                 GeneralizedMandelbrotPreviewParams previewParams;
                 try { previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson); }
@@ -178,34 +180,12 @@ namespace FractalExplorer.Projects
                 var paletteForPreview = paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? paletteManager.Palettes.First();
                 int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
 
+                // --- ИСПРАВЛЕНИЕ 3: Используем правильную архитектуру для палитр ---
+                // Вызываем защищенный метод из базового класса, который умеет работать со всеми палитрами
                 previewEngine.UseSmoothColoring = false;
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-
-                // --- ИСПРАВЛЕНИЕ: Добавляем специальную обработку для серой палитры ---
-                if (paletteForPreview.Name == "Стандартный серый")
-                {
-                    double gamma = paletteForPreview.Gamma;
-                    previewEngine.Palette = (iter, maxIter, maxColorIter) =>
-                    {
-                        if (iter == maxIter) return Color.Black;
-                        double logMax = Math.Log(maxColorIter + 1);
-                        if (logMax <= 0) return Color.Black;
-                        double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
-                        int cVal = (int)(255.0 * (1 - tLog));
-                        return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
-                    };
-                }
-                else
-                {
-                    // Стандартная логика для всех остальных палитр на основе списка цветов
-                    previewEngine.Palette = (iter, maxIter, maxColorIter) =>
-                    {
-                        if (iter == maxIter) return Color.Black;
-                        if (paletteForPreview.Colors.Count == 0) return Color.Black;
-                        int colorIndex = (iter % effectiveMaxColorIterations) * paletteForPreview.Colors.Count / effectiveMaxColorIterations;
-                        return paletteForPreview.Colors[colorIndex];
-                    };
-                }
+                previewEngine.Palette = base.GenerateDiscretePaletteFunction(paletteForPreview);
+                previewEngine.SmoothPalette = base.GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
@@ -219,9 +199,26 @@ namespace FractalExplorer.Projects
             var tile = new TileInfo(0, 0, previewWidth, previewHeight);
             var buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
 
-            var bmp = new Bitmap(previewWidth, previewHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            // Конвертируем наш ARGB буфер в совместимый с UI RGB битмап
+            var bmp = new Bitmap(previewWidth, previewHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             var bmpData = bmp.LockBits(new Rectangle(0, 0, previewWidth, previewHeight), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
-            System.Runtime.InteropServices.Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+
+            IntPtr ptr = bmpData.Scan0;
+            byte[] rgbValues = new byte[bmpData.Stride * previewHeight];
+
+            for (int i = 0; i < previewWidth * previewHeight; i++)
+            {
+                // Source (buffer) is BGRA
+                // Destination (rgbValues) is BGR
+                int srcIdx = i * 4;
+                int destIdx = i * 3;
+
+                rgbValues[destIdx] = buffer[srcIdx];         // Blue
+                rgbValues[destIdx + 1] = buffer[srcIdx + 1]; // Green
+                rgbValues[destIdx + 2] = buffer[srcIdx + 2]; // Red
+            }
+
+            System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, rgbValues.Length);
             bmp.UnlockBits(bmpData);
 
             return bmp;
