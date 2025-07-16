@@ -48,9 +48,9 @@ namespace FractalExplorer.Projects
             {
                 Name = "lblPower",
                 Text = "Степень (p)",
+                TextAlign = ContentAlignment.MiddleLeft,
+                Dock = DockStyle.Fill,
                 AutoSize = true,
-                // Устанавливаем отступ слева, чтобы выровнять по другим надписям
-                Margin = new Padding(125, 10, 3, 0)
             };
 
             nudPower = new NumericUpDown
@@ -61,22 +61,16 @@ namespace FractalExplorer.Projects
                 DecimalPlaces = 2,
                 Increment = 0.1m,
                 Value = 3.0m,
-                // Ширина и отступы как у других полей ввода
-                Size = new Size(195, 23),
-                Margin = new Padding(12, 3, 3, 3)
+                Dock = DockStyle.Fill,
+                Margin = new Padding(6, 3, 3, 3)
             };
 
             nudPower.ValueChanged += ParamControl_Changed;
 
-            // Просто добавляем контролы на панель. FlowLayoutPanel сама их разместит.
-            // Мы хотим вставить их после ComboBox'а для выбора потоков.
-            // Посчитаем индекс: у нас 12 контролов до cbThreads (6 пар label+control).
-            // Значит, вставляем на позицию 12.
-            pnlControls.Controls.Add(lblPower);
-            pnlControls.Controls.SetChildIndex(lblPower, 12);
-
-            pnlControls.Controls.Add(nudPower);
-            pnlControls.Controls.SetChildIndex(nudPower, 13);
+            // Добавляем контролы в таблицу на свои места
+            // Индекс 8 - это строка сразу после "Сглаживание"
+            pnlControls.Controls.Add(nudPower, 0, 8);
+            pnlControls.Controls.Add(lblPower, 1, 8);
         }
 
         protected override void UpdateEngineSpecificParameters()
@@ -158,9 +152,8 @@ namespace FractalExplorer.Projects
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
-        // ---------- НОВЫЙ ПЕРЕОПРЕДЕЛЕННЫЙ МЕТОД 1 ----------
         /// <summary>
-        /// Асинхронно рендерит плитку превью, учитывая параметр Power.
+        /// Асинхронно рендерит плитку превью, корректно обрабатывая все типы палитр.
         /// </summary>
         public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
@@ -169,19 +162,10 @@ namespace FractalExplorer.Projects
                 if (string.IsNullOrEmpty(stateBase.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
 
                 GeneralizedMandelbrotPreviewParams previewParams;
-                try
-                {
-                    previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
-                }
-                catch
-                {
-                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-                }
+                try { previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson); }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
-                var previewEngine = new GeneralizedMandelbrotEngine
-                {
-                    Power = previewParams.Power // <-- Ключевой момент!
-                };
+                var previewEngine = new GeneralizedMandelbrotEngine { Power = previewParams.Power };
 
                 previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
@@ -190,36 +174,48 @@ namespace FractalExplorer.Projects
                 previewEngine.Scale = this.BaseScale / previewParams.Zoom;
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
 
-                // Логика палитры скопирована из базового класса, т.к. доступ к ней private
-                var paletteManager = new PaletteManager(); // Создаем временный менеджер для доступа к палитрам
+                var paletteManager = new PaletteManager();
                 var paletteForPreview = paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? paletteManager.Palettes.First();
                 int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
 
                 previewEngine.UseSmoothColoring = false;
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-                // Мы не можем получить доступ к private методу GenerateDiscretePaletteFunction, поэтому придется создать его "локальную" версию.
-                // Для простоты, мы можем воспользоваться тем, что движок уже умеет это делать, если мы передадим ему палитру.
-                // Но так как у нас нет доступа к оригинальному методу, воссоздадим его здесь упрощенно для превью.
-                previewEngine.Palette = (iter, maxIter, maxColorIter) =>
+
+                // --- ИСПРАВЛЕНИЕ: Добавляем специальную обработку для серой палитры ---
+                if (paletteForPreview.Name == "Стандартный серый")
                 {
-                    if (iter == maxIter) return Color.Black;
-                    if (paletteForPreview.Colors.Count == 0) return Color.Black;
-                    int colorIndex = (iter % effectiveMaxColorIterations) * paletteForPreview.Colors.Count / effectiveMaxColorIterations;
-                    return paletteForPreview.Colors[colorIndex];
-                };
+                    double gamma = paletteForPreview.Gamma;
+                    previewEngine.Palette = (iter, maxIter, maxColorIter) =>
+                    {
+                        if (iter == maxIter) return Color.Black;
+                        double logMax = Math.Log(maxColorIter + 1);
+                        if (logMax <= 0) return Color.Black;
+                        double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
+                        int cVal = (int)(255.0 * (1 - tLog));
+                        return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
+                    };
+                }
+                else
+                {
+                    // Стандартная логика для всех остальных палитр на основе списка цветов
+                    previewEngine.Palette = (iter, maxIter, maxColorIter) =>
+                    {
+                        if (iter == maxIter) return Color.Black;
+                        if (paletteForPreview.Colors.Count == 0) return Color.Black;
+                        int colorIndex = (iter % effectiveMaxColorIterations) * paletteForPreview.Colors.Count / effectiveMaxColorIterations;
+                        return paletteForPreview.Colors[colorIndex];
+                    };
+                }
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
 
-        // ---------- НОВЫЙ ПЕРЕОПРЕДЕЛЕННЫЙ МЕТОД 2 ----------
         /// <summary>
-        /// Рендерит полное превью, учитывая параметр Power.
+        /// Рендерит полное превью, используя исправленный асинхронный метод.
         /// </summary>
         public override Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
-            // Этот метод менее критичен, но для полноты картины его тоже стоит переопределить
-            // Здесь мы можем схитрить и вызвать наш уже исправленный асинхронный метод
             var tile = new TileInfo(0, 0, previewWidth, previewHeight);
             var buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
 
