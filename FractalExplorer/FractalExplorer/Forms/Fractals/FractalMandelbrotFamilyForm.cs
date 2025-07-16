@@ -1540,6 +1540,14 @@ namespace FractalDraving
                 case "Julia": engine = new JuliaEngine { C = state.JuliaC.Value }; break;
                 case "MandelbrotBurningShip": engine = new MandelbrotBurningShipEngine(); break;
                 case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC.Value }; break;
+                case "GeneralizedMandelbrot":
+                    engine = new GeneralizedMandelbrotEngine();
+                    // Проверяем, есть ли параметр Power в состоянии, и устанавливаем его
+                    if (state.Power.HasValue && engine is GeneralizedMandelbrotEngine genEngine)
+                    {
+                        genEngine.Power = state.Power.Value;
+                    }
+                    break;
                 default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
             }
 

@@ -2,6 +2,7 @@
 using FractalExplorer.Engines;
 using FractalExplorer.Resources; // ИСПРАВЛЕНИЕ 1: Добавлена эта строка для TileInfo
 using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
@@ -233,6 +234,18 @@ namespace FractalExplorer.Projects
             bmp.UnlockBits(bmpData);
 
             return bmp;
+        }
+
+        public virtual HighResRenderState GetRenderState()
+        {
+            // 1. Сначала получаем базовое состояние от родительского класса
+            var state = base.GetRenderState();
+
+            // 2. Добавляем наш уникальный параметр
+            state.Power = this.nudPower.Value;
+
+            // 3. Возвращаем дополненное состояние
+            return state;
         }
 
         #endregion

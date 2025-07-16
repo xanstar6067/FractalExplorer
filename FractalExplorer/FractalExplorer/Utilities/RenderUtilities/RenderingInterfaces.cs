@@ -23,6 +23,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public ComplexDecimal? JuliaC { get; set; }
         public string FileNameDetails { get; set; }
         public bool UseSmoothColoring { get; set; }
+        public decimal? Power { get; set; } // Степень 'p' для Обобщенного Мандельброта
     }
 
     /// <summary>
@@ -39,6 +40,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
     /// </summary>
     public interface IHighResRenderable
     {
+
         /// <summary>
         /// Получает текущее состояние фрактала для рендеринга.
         /// </summary>
