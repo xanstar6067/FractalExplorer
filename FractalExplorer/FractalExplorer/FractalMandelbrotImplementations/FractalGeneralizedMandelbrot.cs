@@ -36,18 +36,21 @@ namespace FractalExplorer.Projects
 
         protected override void OnPostInitialize()
         {
+            // Скрываем элементы, которые не нужны для множеств типа Мандельброта
             lblRe.Visible = false;
             nudRe.Visible = false;
             lblIm.Visible = false;
             nudIm.Visible = false;
             mandelbrotPreviewPanel.Visible = false;
 
+            // --- Создаем новые контролы для степени 'p' ---
             lblPower = new Label
             {
                 Name = "lblPower",
                 Text = "Степень (p)",
-                Location = new Point(138, 222),
-                AutoSize = true
+                AutoSize = true,
+                // Устанавливаем отступ слева, чтобы выровнять по другим надписям
+                Margin = new Padding(125, 10, 3, 0)
             };
 
             nudPower = new NumericUpDown
@@ -58,14 +61,22 @@ namespace FractalExplorer.Projects
                 DecimalPlaces = 2,
                 Increment = 0.1m,
                 Value = 3.0m,
-                Location = new Point(12, 220),
-                Size = new Size(120, 23)
+                // Ширина и отступы как у других полей ввода
+                Size = new Size(195, 23),
+                Margin = new Padding(12, 3, 3, 3)
             };
 
             nudPower.ValueChanged += ParamControl_Changed;
 
+            // Просто добавляем контролы на панель. FlowLayoutPanel сама их разместит.
+            // Мы хотим вставить их после ComboBox'а для выбора потоков.
+            // Посчитаем индекс: у нас 12 контролов до cbThreads (6 пар label+control).
+            // Значит, вставляем на позицию 12.
             pnlControls.Controls.Add(lblPower);
+            pnlControls.Controls.SetChildIndex(lblPower, 12);
+
             pnlControls.Controls.Add(nudPower);
+            pnlControls.Controls.SetChildIndex(nudPower, 13);
         }
 
         protected override void UpdateEngineSpecificParameters()

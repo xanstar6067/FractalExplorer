@@ -23,344 +23,335 @@
         protected void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalMandelbrotFamilyForm));
-            pnlControls = new Panel();
-            cbSmooth = new CheckBox();
-            lbSSAA = new Label();
-            cbSSAA = new ComboBox();
-            btnStateManager = new Button();
-            color_configurations = new Button();
-            mandelbrotPreviewPanel = new Panel();
-            mandelbrotPreviewCanvas = new PictureBox();
-            lblProgress = new Label();
-            lblZoom = new Label();
-            nudZoom = new NumericUpDown();
-            btnRender = new Button();
-            pbRenderProgress = new ProgressBar();
-            lblThreads = new Label();
-            cbThreads = new ComboBox();
-            btnSaveHighRes = new Button();
-            lblThreshold = new Label();
-            lblIterations = new Label();
-            lblIm = new Label();
-            lblRe = new Label();
-            nudThreshold = new NumericUpDown();
-            nudIterations = new NumericUpDown();
-            nudIm = new NumericUpDown();
-            nudRe = new NumericUpDown();
-            nudBaseScale = new NumericUpDown();
-            canvas = new PictureBox();
+
+            // --- ГЛОБАЛЬНЫЙ РЕДИЗАЙН: ИСПОЛЬЗУЕМ FLOWLAYOUTPANEL ---
+            pnlControls = new System.Windows.Forms.FlowLayoutPanel();
+
+            cbSmooth = new System.Windows.Forms.CheckBox();
+            lbSSAA = new System.Windows.Forms.Label();
+            cbSSAA = new System.Windows.Forms.ComboBox();
+            btnStateManager = new System.Windows.Forms.Button();
+            color_configurations = new System.Windows.Forms.Button();
+            mandelbrotPreviewPanel = new System.Windows.Forms.Panel();
+            mandelbrotPreviewCanvas = new System.Windows.Forms.PictureBox();
+            lblProgress = new System.Windows.Forms.Label();
+            lblZoom = new System.Windows.Forms.Label();
+            nudZoom = new System.Windows.Forms.NumericUpDown();
+            btnRender = new System.Windows.Forms.Button();
+            pbRenderProgress = new System.Windows.Forms.ProgressBar();
+            lblThreads = new System.Windows.Forms.Label();
+            cbThreads = new System.Windows.Forms.ComboBox();
+            btnSaveHighRes = new System.Windows.Forms.Button();
+            lblThreshold = new System.Windows.Forms.Label();
+            lblIterations = new System.Windows.Forms.Label();
+            lblIm = new System.Windows.Forms.Label();
+            lblRe = new System.Windows.Forms.Label();
+            nudThreshold = new System.Windows.Forms.NumericUpDown();
+            nudIterations = new System.Windows.Forms.NumericUpDown();
+            nudIm = new System.Windows.Forms.NumericUpDown();
+            nudRe = new System.Windows.Forms.NumericUpDown();
+            nudBaseScale = new System.Windows.Forms.NumericUpDown();
+            canvas = new System.Windows.Forms.PictureBox();
+
             pnlControls.SuspendLayout();
             mandelbrotPreviewPanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudThreshold).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudIm).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudRe).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudBaseScale).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)canvas).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(mandelbrotPreviewCanvas)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(nudZoom)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(nudThreshold)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(nudIterations)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(nudIm)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(nudRe)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(nudBaseScale)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(canvas)).BeginInit();
             SuspendLayout();
+
             // 
-            // pnlControls
+            // pnlControls (теперь FlowLayoutPanel)
             // 
-            pnlControls.Controls.Add(cbSmooth);
-            pnlControls.Controls.Add(lbSSAA);
-            pnlControls.Controls.Add(cbSSAA);
-            pnlControls.Controls.Add(btnStateManager);
-            pnlControls.Controls.Add(color_configurations);
-            pnlControls.Controls.Add(mandelbrotPreviewPanel);
-            pnlControls.Controls.Add(lblProgress);
+            pnlControls.AutoScroll = true;
+            pnlControls.Dock = System.Windows.Forms.DockStyle.Left;
+            pnlControls.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
+            pnlControls.Location = new System.Drawing.Point(0, 0);
+            pnlControls.Name = "pnlControls";
+            pnlControls.Size = new System.Drawing.Size(231, 636);
+            pnlControls.TabIndex = 0;
+            pnlControls.WrapContents = false;
+
+            // --- Добавляем все контролы на FlowLayoutPanel в нужном порядке ---
+            // Порядок добавления определяет их визуальный порядок сверху вниз
+            pnlControls.Controls.Add(lblRe);
+            pnlControls.Controls.Add(nudRe);
+            pnlControls.Controls.Add(lblIm);
+            pnlControls.Controls.Add(nudIm);
+            pnlControls.Controls.Add(lblIterations);
+            pnlControls.Controls.Add(nudIterations);
+            pnlControls.Controls.Add(lblThreshold);
+            pnlControls.Controls.Add(nudThreshold);
             pnlControls.Controls.Add(lblZoom);
             pnlControls.Controls.Add(nudZoom);
-            pnlControls.Controls.Add(btnRender);
-            pnlControls.Controls.Add(pbRenderProgress);
             pnlControls.Controls.Add(lblThreads);
             pnlControls.Controls.Add(cbThreads);
+            pnlControls.Controls.Add(lbSSAA);
+            pnlControls.Controls.Add(cbSSAA);
+            pnlControls.Controls.Add(cbSmooth);
             pnlControls.Controls.Add(btnSaveHighRes);
-            pnlControls.Controls.Add(lblThreshold);
-            pnlControls.Controls.Add(lblIterations);
-            pnlControls.Controls.Add(lblIm);
-            pnlControls.Controls.Add(lblRe);
-            pnlControls.Controls.Add(nudThreshold);
-            pnlControls.Controls.Add(nudIterations);
-            pnlControls.Controls.Add(nudIm);
-            pnlControls.Controls.Add(nudRe);
+            pnlControls.Controls.Add(color_configurations);
+            pnlControls.Controls.Add(btnRender);
+            pnlControls.Controls.Add(btnStateManager);
+            pnlControls.Controls.Add(lblProgress);
+            pnlControls.Controls.Add(pbRenderProgress);
+            pnlControls.Controls.Add(mandelbrotPreviewPanel);
             pnlControls.Controls.Add(nudBaseScale);
-            pnlControls.Dock = DockStyle.Left;
-            pnlControls.Location = new Point(0, 0);
-            pnlControls.Name = "pnlControls";
-            pnlControls.Size = new Size(231, 636);
-            pnlControls.TabIndex = 0;
+
+            // --- Настройка каждого контрола с отступами (Margin) вместо координат (Location) ---
+
             // 
-            // cbSmooth
+            // lblRe
             // 
-            cbSmooth.AutoSize = true;
-            cbSmooth.Checked = true;
-            cbSmooth.CheckState = CheckState.Checked;
-            cbSmooth.Location = new Point(6, 249);
-            cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(153, 19);
-            cbSmooth.TabIndex = 2;
-            cbSmooth.Text = "Плавное окрашивание";
-            cbSmooth.UseVisualStyleBackColor = true;
+            lblRe.AutoSize = true;
+            lblRe.Margin = new System.Windows.Forms.Padding(125, 10, 3, 0); // Отступ слева для "выравнивания по правому краю"
+            lblRe.Name = "lblRe";
+            lblRe.Size = new System.Drawing.Size(96, 15);
+            lblRe.Text = "Действительное";
             // 
-            // lbSSAA
+            // nudRe
             // 
-            lbSSAA.AutoSize = true;
-            lbSSAA.Location = new Point(5, 219);
-            lbSSAA.Name = "lbSSAA";
-            lbSSAA.Size = new Size(112, 15);
-            lbSSAA.TabIndex = 36;
-            lbSSAA.Text = "Сглаживание SSAA";
+            nudRe.DecimalPlaces = 15;
+            nudRe.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
+            nudRe.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            nudRe.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
+            nudRe.Minimum = new decimal(new int[] { 2, 0, 0, -2147483648 });
+            nudRe.Name = "nudRe";
+            nudRe.Size = new System.Drawing.Size(195, 23);
+            nudRe.Value = new decimal(new int[] { 8, 0, 0, -2147418112 });
             // 
-            // cbSSAA
+            // lblIm
             // 
-            cbSSAA.FormattingEnabled = true;
-            cbSSAA.Location = new Point(123, 216);
-            cbSSAA.Name = "cbSSAA";
-            cbSSAA.Size = new Size(95, 23);
-            cbSSAA.TabIndex = 35;
+            lblIm.AutoSize = true;
+            lblIm.Margin = new System.Windows.Forms.Padding(125, 10, 3, 0);
+            lblIm.Name = "lblIm";
+            lblIm.Size = new System.Drawing.Size(54, 15);
+            lblIm.Text = "Мнимое";
             // 
-            // btnStateManager
+            // nudIm
             // 
-            btnStateManager.Location = new Point(6, 388);
-            btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(218, 32);
-            btnStateManager.TabIndex = 34;
-            btnStateManager.Text = "Менеджер сохранений";
-            btnStateManager.UseVisualStyleBackColor = true;
-            btnStateManager.Click += btnStateManager_Click;
+            nudIm.DecimalPlaces = 15;
+            nudIm.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
+            nudIm.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            nudIm.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
+            nudIm.Minimum = new decimal(new int[] { 2, 0, 0, -2147483648 });
+            nudIm.Name = "nudIm";
+            nudIm.Size = new System.Drawing.Size(195, 23);
+            nudIm.Value = new decimal(new int[] { 156, 0, 0, 196608 });
             // 
-            // color_configurations
+            // lblIterations
             // 
-            color_configurations.Location = new Point(6, 312);
-            color_configurations.Name = "color_configurations";
-            color_configurations.Size = new Size(218, 32);
-            color_configurations.TabIndex = 33;
-            color_configurations.Text = "Настроить палитру";
-            color_configurations.UseVisualStyleBackColor = true;
+            lblIterations.AutoSize = true;
+            lblIterations.Margin = new System.Windows.Forms.Padding(125, 10, 3, 0);
+            lblIterations.Name = "lblIterations";
+            lblIterations.Size = new System.Drawing.Size(61, 15);
+            lblIterations.Text = "Итерации";
             // 
-            // mandelbrotPreviewPanel
+            // nudIterations
             // 
-            mandelbrotPreviewPanel.Controls.Add(mandelbrotPreviewCanvas);
-            mandelbrotPreviewPanel.Dock = DockStyle.Bottom;
-            mandelbrotPreviewPanel.Location = new Point(0, 470);
-            mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
-            mandelbrotPreviewPanel.Size = new Size(231, 166);
-            mandelbrotPreviewPanel.TabIndex = 31;
+            nudIterations.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            nudIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
+            nudIterations.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
+            nudIterations.Name = "nudIterations";
+            nudIterations.Size = new System.Drawing.Size(195, 23);
+            nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
-            // mandelbrotPreviewCanvas
+            // lblThreshold
             // 
-            mandelbrotPreviewCanvas.BorderStyle = BorderStyle.FixedSingle;
-            mandelbrotPreviewCanvas.Dock = DockStyle.Fill;
-            mandelbrotPreviewCanvas.Location = new Point(0, 0);
-            mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
-            mandelbrotPreviewCanvas.Size = new Size(231, 166);
-            mandelbrotPreviewCanvas.TabIndex = 30;
-            mandelbrotPreviewCanvas.TabStop = false;
+            lblThreshold.AutoSize = true;
+            lblThreshold.Margin = new System.Windows.Forms.Padding(125, 10, 3, 0);
+            lblThreshold.Name = "lblThreshold";
+            lblThreshold.Size = new System.Drawing.Size(85, 15);
+            lblThreshold.Text = "Порог выхода";
             // 
-            // lblProgress
+            // nudThreshold
             // 
-            lblProgress.AutoSize = true;
-            lblProgress.Location = new Point(80, 423);
-            lblProgress.Name = "lblProgress";
-            lblProgress.Size = new Size(67, 15);
-            lblProgress.TabIndex = 20;
-            lblProgress.Text = "Обработка";
+            nudThreshold.DecimalPlaces = 1;
+            nudThreshold.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
+            nudThreshold.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            nudThreshold.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+            nudThreshold.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
+            nudThreshold.Name = "nudThreshold";
+            nudThreshold.Size = new System.Drawing.Size(195, 23);
+            nudThreshold.Value = new decimal(new int[] { 2, 0, 0, 0 });
             // 
             // lblZoom
             // 
             lblZoom.AutoSize = true;
-            lblZoom.Location = new Point(12, 125);
+            lblZoom.Margin = new System.Windows.Forms.Padding(12, 10, 3, 0);
             lblZoom.Name = "lblZoom";
-            lblZoom.Size = new Size(86, 15);
-            lblZoom.TabIndex = 16;
+            lblZoom.Size = new System.Drawing.Size(86, 15);
             lblZoom.Text = "Приближение";
             // 
             // nudZoom
             // 
             nudZoom.DecimalPlaces = 4;
             nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
-            nudZoom.Location = new Point(11, 143);
+            nudZoom.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
             nudZoom.Maximum = new decimal(new int[] { -1, -1, -1, 0 });
             nudZoom.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             nudZoom.Name = "nudZoom";
-            nudZoom.Size = new Size(196, 23);
-            nudZoom.TabIndex = 2;
+            nudZoom.Size = new System.Drawing.Size(195, 23);
             nudZoom.Value = new decimal(new int[] { 1, 0, 0, 0 });
-            // 
-            // btnRender
-            // 
-            btnRender.Location = new Point(6, 350);
-            btnRender.Name = "btnRender";
-            btnRender.Size = new Size(218, 32);
-            btnRender.TabIndex = 2;
-            btnRender.Text = "Запустить рендер";
-            btnRender.UseVisualStyleBackColor = true;
-            // 
-            // pbRenderProgress
-            // 
-            pbRenderProgress.Location = new Point(6, 441);
-            pbRenderProgress.Name = "pbRenderProgress";
-            pbRenderProgress.Size = new Size(218, 23);
-            pbRenderProgress.TabIndex = 14;
             // 
             // lblThreads
             // 
             lblThreads.AutoSize = true;
-            lblThreads.Location = new Point(12, 169);
+            lblThreads.Margin = new System.Windows.Forms.Padding(12, 10, 3, 0);
             lblThreads.Name = "lblThreads";
-            lblThreads.Size = new Size(69, 15);
-            lblThreads.TabIndex = 13;
+            lblThreads.Size = new System.Drawing.Size(69, 15);
             lblThreads.Text = "Потоки ЦП";
             // 
             // cbThreads
             // 
             cbThreads.FormattingEnabled = true;
-            cbThreads.Location = new Point(12, 187);
+            cbThreads.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
             cbThreads.Name = "cbThreads";
-            cbThreads.Size = new Size(195, 23);
-            cbThreads.TabIndex = 12;
+            cbThreads.Size = new System.Drawing.Size(195, 23);
+            // 
+            // lbSSAA
+            // 
+            lbSSAA.AutoSize = true;
+            lbSSAA.Margin = new System.Windows.Forms.Padding(12, 10, 3, 0);
+            lbSSAA.Name = "lbSSAA";
+            lbSSAA.Size = new System.Drawing.Size(112, 15);
+            lbSSAA.Text = "Сглаживание SSAA";
+            // 
+            // cbSSAA
+            // 
+            cbSSAA.FormattingEnabled = true;
+            cbSSAA.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            cbSSAA.Name = "cbSSAA";
+            cbSSAA.Size = new System.Drawing.Size(195, 23);
+            // 
+            // cbSmooth
+            // 
+            cbSmooth.AutoSize = true;
+            cbSmooth.Checked = true;
+            cbSmooth.CheckState = System.Windows.Forms.CheckState.Checked;
+            cbSmooth.Margin = new System.Windows.Forms.Padding(12, 10, 3, 10);
+            cbSmooth.Name = "cbSmooth";
+            cbSmooth.Size = new System.Drawing.Size(153, 19);
+            cbSmooth.Text = "Плавное окрашивание";
+            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // btnSaveHighRes
             // 
-            btnSaveHighRes.Location = new Point(6, 274);
+            btnSaveHighRes.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(218, 32);
-            btnSaveHighRes.TabIndex = 11;
+            btnSaveHighRes.Size = new System.Drawing.Size(195, 32);
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
             btnSaveHighRes.Click += btnOpenSaveManager_Click;
             // 
-            // lblThreshold
+            // color_configurations
             // 
-            lblThreshold.AutoSize = true;
-            lblThreshold.Location = new Point(138, 101);
-            lblThreshold.Name = "lblThreshold";
-            lblThreshold.Size = new Size(85, 15);
-            lblThreshold.TabIndex = 7;
-            lblThreshold.Text = "Порог выхода";
+            color_configurations.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            color_configurations.Name = "color_configurations";
+            color_configurations.Size = new System.Drawing.Size(195, 32);
+            color_configurations.Text = "Настроить палитру";
+            color_configurations.UseVisualStyleBackColor = true;
             // 
-            // lblIterations
+            // btnRender
             // 
-            lblIterations.AutoSize = true;
-            lblIterations.Location = new Point(138, 72);
-            lblIterations.Name = "lblIterations";
-            lblIterations.Size = new Size(61, 15);
-            lblIterations.TabIndex = 6;
-            lblIterations.Text = "Итерации";
+            btnRender.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            btnRender.Name = "btnRender";
+            btnRender.Size = new System.Drawing.Size(195, 32);
+            btnRender.Text = "Запустить рендер";
+            btnRender.UseVisualStyleBackColor = true;
             // 
-            // lblIm
+            // btnStateManager
             // 
-            lblIm.AutoSize = true;
-            lblIm.Location = new Point(138, 43);
-            lblIm.Name = "lblIm";
-            lblIm.Size = new Size(54, 15);
-            lblIm.TabIndex = 5;
-            lblIm.Text = "Мнимое";
+            btnStateManager.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new System.Drawing.Size(195, 32);
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
             // 
-            // lblRe
+            // lblProgress
             // 
-            lblRe.AutoSize = true;
-            lblRe.Location = new Point(131, 14);
-            lblRe.Name = "lblRe";
-            lblRe.Size = new Size(96, 15);
-            lblRe.TabIndex = 4;
-            lblRe.Text = "Действительное";
+            lblProgress.AutoSize = true;
+            lblProgress.Margin = new System.Windows.Forms.Padding(75, 10, 3, 0); // Центрируем надпись
+            lblProgress.Name = "lblProgress";
+            lblProgress.Size = new System.Drawing.Size(67, 15);
+            lblProgress.Text = "Обработка";
             // 
-            // nudThreshold
+            // pbRenderProgress
             // 
-            nudThreshold.DecimalPlaces = 1;
-            nudThreshold.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            nudThreshold.Location = new Point(12, 99);
-            nudThreshold.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
-            nudThreshold.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
-            nudThreshold.Name = "nudThreshold";
-            nudThreshold.Size = new Size(120, 23);
-            nudThreshold.TabIndex = 3;
-            nudThreshold.Value = new decimal(new int[] { 2, 0, 0, 0 });
+            pbRenderProgress.Margin = new System.Windows.Forms.Padding(12, 3, 3, 3);
+            pbRenderProgress.Name = "pbRenderProgress";
+            pbRenderProgress.Size = new System.Drawing.Size(195, 23);
             // 
-            // nudIterations
+            // mandelbrotPreviewPanel
             // 
-            nudIterations.Location = new Point(12, 70);
-            nudIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
-            nudIterations.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
-            nudIterations.Name = "nudIterations";
-            nudIterations.Size = new Size(120, 23);
-            nudIterations.TabIndex = 2;
-            nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
+            mandelbrotPreviewPanel.Controls.Add(mandelbrotPreviewCanvas);
+            mandelbrotPreviewPanel.Margin = new System.Windows.Forms.Padding(12, 10, 3, 3);
+            mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
+            mandelbrotPreviewPanel.Size = new System.Drawing.Size(195, 166);
             // 
-            // nudIm
+            // mandelbrotPreviewCanvas
             // 
-            nudIm.DecimalPlaces = 15;
-            nudIm.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
-            nudIm.Location = new Point(12, 41);
-            nudIm.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
-            nudIm.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
-            nudIm.Name = "nudIm";
-            nudIm.Size = new Size(120, 23);
-            nudIm.TabIndex = 1;
-            nudIm.Value = new decimal(new int[] { 156, 0, 0, 196608 });
+            mandelbrotPreviewCanvas.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            mandelbrotPreviewCanvas.Dock = System.Windows.Forms.DockStyle.Fill;
+            mandelbrotPreviewCanvas.Location = new System.Drawing.Point(0, 0);
+            mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
+            mandelbrotPreviewCanvas.Size = new System.Drawing.Size(195, 166);
+            mandelbrotPreviewCanvas.TabStop = false;
             // 
-            // nudRe
+            // nudBaseScale (Скрытый контрол)
             // 
-            nudRe.DecimalPlaces = 15;
-            nudRe.Increment = new decimal(new int[] { 1, 0, 0, 196608 });
-            nudRe.Location = new Point(12, 12);
-            nudRe.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
-            nudRe.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
-            nudRe.Name = "nudRe";
-            nudRe.Size = new Size(120, 23);
-            nudRe.TabIndex = 0;
-            nudRe.Value = new decimal(new int[] { 8, 0, 0, -2147418112 });
-            // 
-            // nudBaseScale
-            // 
-            nudBaseScale.Location = new Point(195, 46);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
-            nudBaseScale.Size = new Size(26, 23);
-            nudBaseScale.TabIndex = 18;
+            nudBaseScale.Size = new System.Drawing.Size(26, 23);
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
+
             // 
             // canvas
             // 
-            canvas.Dock = DockStyle.Fill;
-            canvas.Location = new Point(231, 0);
+            canvas.Dock = System.Windows.Forms.DockStyle.Fill;
+            canvas.Location = new System.Drawing.Point(231, 0);
             canvas.Name = "canvas";
-            canvas.Size = new Size(853, 636);
+            canvas.Size = new System.Drawing.Size(853, 636);
             canvas.TabIndex = 1;
             canvas.TabStop = false;
+
             // 
             // FractalMandelbrotFamilyForm
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1084, 636);
+            AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            ClientSize = new System.Drawing.Size(1084, 636);
             Controls.Add(canvas);
             Controls.Add(pnlControls);
-            Icon = (Icon)resources.GetObject("$this.Icon");
-            MinimumSize = new Size(1100, 675);
+            Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            MinimumSize = new System.Drawing.Size(1100, 675);
             Name = "FractalMandelbrotFamilyForm";
             Text = "FractalFormBase";
             Load += FormBase_Load;
+
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
             mandelbrotPreviewPanel.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudThreshold).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudIm).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudRe).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudBaseScale).EndInit();
-            ((System.ComponentModel.ISupportInitialize)canvas).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(mandelbrotPreviewCanvas)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(nudZoom)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(nudThreshold)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(nudIterations)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(nudIm)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(nudRe)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(nudBaseScale)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(canvas)).EndInit();
             ResumeLayout(false);
         }
         #endregion
 
-        protected System.Windows.Forms.Panel pnlControls;
+        protected System.Windows.Forms.FlowLayoutPanel pnlControls;
         protected System.Windows.Forms.PictureBox canvas;
         protected System.Windows.Forms.Label lblThreshold;
         protected System.Windows.Forms.Label lblIterations;
@@ -381,11 +372,10 @@
         protected System.Windows.Forms.NumericUpDown nudIm;
         protected System.Windows.Forms.NumericUpDown nudRe;
         protected System.Windows.Forms.Button color_configurations;
-        // Этот контрол нужен для IFractalForm, но он невидимый.
         protected System.Windows.Forms.NumericUpDown nudBaseScale;
-        private Button btnStateManager;
-        private ComboBox cbSSAA;
-        protected Label lbSSAA;
-        private CheckBox cbSmooth;
+        private System.Windows.Forms.Button btnStateManager;
+        private System.Windows.Forms.ComboBox cbSSAA;
+        protected System.Windows.Forms.Label lbSSAA;
+        private System.Windows.Forms.CheckBox cbSmooth;
     }
 }
