@@ -100,15 +100,14 @@
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
+            // ИЗМЕНЕНИЕ 1: Увеличиваем высоту строк для кнопок с 38 до 45 пикселей.
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            // ИЗМЕНЕНИЕ 1: Задаем абсолютную (фиксированную) высоту для панели предпросмотра.
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 135F));
-            // ИЗМЕНЕНИЕ 2: Эта строка будет занимать все оставшееся пространство, чтобы другие элементы не "прыгали".
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
@@ -308,9 +307,10 @@
             pnlControls.SetColumnSpan(btnSaveHighRes, 2);
             btnSaveHighRes.Dock = DockStyle.Fill;
             btnSaveHighRes.Location = new Point(6, 287);
-            btnSaveHighRes.Margin = new Padding(6);
+            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            btnSaveHighRes.Margin = new Padding(6, 3, 6, 3);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(219, 26);
+            btnSaveHighRes.Size = new Size(219, 39);
             btnSaveHighRes.TabIndex = 15;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
@@ -320,10 +320,11 @@
             // 
             pnlControls.SetColumnSpan(color_configurations, 2);
             color_configurations.Dock = DockStyle.Fill;
-            color_configurations.Location = new Point(6, 325);
-            color_configurations.Margin = new Padding(6);
+            color_configurations.Location = new Point(6, 332);
+            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            color_configurations.Margin = new Padding(6, 3, 6, 3);
             color_configurations.Name = "color_configurations";
-            color_configurations.Size = new Size(219, 26);
+            color_configurations.Size = new Size(219, 39);
             color_configurations.TabIndex = 16;
             color_configurations.Text = "Настроить палитру";
             color_configurations.UseVisualStyleBackColor = true;
@@ -332,10 +333,11 @@
             // 
             pnlControls.SetColumnSpan(btnRender, 2);
             btnRender.Dock = DockStyle.Fill;
-            btnRender.Location = new Point(6, 363);
-            btnRender.Margin = new Padding(6);
+            btnRender.Location = new Point(6, 377);
+            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            btnRender.Margin = new Padding(6, 3, 6, 3);
             btnRender.Name = "btnRender";
-            btnRender.Size = new Size(219, 26);
+            btnRender.Size = new Size(219, 39);
             btnRender.TabIndex = 17;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
@@ -344,10 +346,11 @@
             // 
             pnlControls.SetColumnSpan(btnStateManager, 2);
             btnStateManager.Dock = DockStyle.Fill;
-            btnStateManager.Location = new Point(6, 401);
-            btnStateManager.Margin = new Padding(6);
+            btnStateManager.Location = new Point(6, 422);
+            // ИЗМЕНЕНИЕ 2: Уменьшаем вертикальные отступы (сверху и снизу) с 6 до 3.
+            btnStateManager.Margin = new Padding(6, 3, 6, 3);
             btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(219, 26);
+            btnStateManager.Size = new Size(219, 39);
             btnStateManager.TabIndex = 18;
             btnStateManager.Text = "Менеджер сохранений";
             btnStateManager.UseVisualStyleBackColor = true;
@@ -358,7 +361,7 @@
             lblProgress.AutoSize = true;
             pnlControls.SetColumnSpan(lblProgress, 2);
             lblProgress.Dock = DockStyle.Fill;
-            lblProgress.Location = new Point(3, 433);
+            lblProgress.Location = new Point(3, 464);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(225, 20);
             lblProgress.TabIndex = 19;
@@ -369,7 +372,7 @@
             // 
             pnlControls.SetColumnSpan(pbRenderProgress, 2);
             pbRenderProgress.Dock = DockStyle.Fill;
-            pbRenderProgress.Location = new Point(6, 456);
+            pbRenderProgress.Location = new Point(6, 487);
             pbRenderProgress.Margin = new Padding(6, 3, 6, 3);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(219, 24);
@@ -380,7 +383,7 @@
             pnlControls.SetColumnSpan(mandelbrotPreviewPanel, 2);
             mandelbrotPreviewPanel.Controls.Add(mandelbrotPreviewCanvas);
             mandelbrotPreviewPanel.Dock = DockStyle.Fill;
-            mandelbrotPreviewPanel.Location = new Point(3, 486);
+            mandelbrotPreviewPanel.Location = new Point(3, 517);
             mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
             mandelbrotPreviewPanel.Size = new Size(225, 129);
             mandelbrotPreviewPanel.TabIndex = 21;
@@ -397,7 +400,7 @@
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(130, 621);
+            nudBaseScale.Location = new Point(130, 652);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
             nudBaseScale.Size = new Size(98, 23);
