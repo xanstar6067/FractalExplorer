@@ -85,6 +85,7 @@ namespace FractalExplorer.Engines
 
         #endregion
 
+
         #region Core Calculation Logic (Abstract Methods for Both Precisions)
 
         // --- DECIMAL (ВЫСОКАЯ ТОЧНОСТЬ) ---
@@ -110,6 +111,12 @@ namespace FractalExplorer.Engines
         /// Определяет параметры для расчета в режиме СТАНДАРТНОЙ ТОЧНОСТИ.
         /// </summary>
         protected abstract void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC);
+
+        /// <summary>
+        /// Копирует специфичные для конкретного движка параметры из исходного экземпляра.
+        /// </summary>
+        /// <param name="source">Исходный движок, из которого копируются параметры.</param>
+        public abstract void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source);
 
         #endregion
 
@@ -559,6 +566,10 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class MandelbrotEngine : FractalMandelbrotFamilyEngine
     {
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            // Для этого движка нет специфичных параметров для копирования.
+        }
         // Decimal path
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
@@ -600,6 +611,11 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class JuliaEngine : FractalMandelbrotFamilyEngine
     {
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            // Для этого движка нет специфичных параметров для копирования.
+        }
+
         // Decimal path
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
@@ -641,6 +657,11 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class MandelbrotBurningShipEngine : FractalMandelbrotFamilyEngine
     {
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            // Для этого движка нет специфичных параметров для копирования.
+        }
+
         // Decimal path
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
@@ -684,6 +705,11 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class JuliaBurningShipEngine : FractalMandelbrotFamilyEngine
     {
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            // Для этого движка нет специфичных параметров для копирования.
+        }
+
         // Decimal path
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
@@ -727,6 +753,14 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class GeneralizedMandelbrotEngine : FractalMandelbrotFamilyEngine
     {
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            if (source is GeneralizedMandelbrotEngine sourceEngine)
+            {
+                this.Power = sourceEngine.Power;
+            }
+        }
+
         /// <summary>
         /// Степень 'p', в которую возводится z.
         /// </summary>

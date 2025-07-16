@@ -165,9 +165,8 @@ namespace FractalExplorer.Projects
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
-        /// <summary>
-        /// Асинхронно рендерит плитку превью, корректно обрабатывая все типы палитр.
-        /// </summary>
+        // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ НАХОДИТСЯ ЗДЕСЬ ---
+        // Мы переопределяем метод, чтобы предоставить свою, специальную логику
         public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return Task.Run(() =>
@@ -179,8 +178,14 @@ namespace FractalExplorer.Projects
                 try { previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson); }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
-                var previewEngine = new GeneralizedMandelbrotEngine { Power = previewParams.Power };
+                // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+                // 1. Создаем наш специальный движок БЕЗ инициализатора
+                var previewEngine = new GeneralizedMandelbrotEngine();
 
+                // 2. УСТАНАВЛИВАЕМ ПОТЕРЯННЫЙ ПАРАМЕТР ЯВНО И ОТДЕЛЬНОЙ СТРОКОЙ!
+                previewEngine.Power = previewParams.Power;
+
+                // 3. Настраиваем остальные параметры
                 previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
@@ -192,8 +197,6 @@ namespace FractalExplorer.Projects
                 var paletteForPreview = paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? paletteManager.Palettes.First();
                 int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
 
-                // --- ИСПРАВЛЕНИЕ 3: Используем правильную архитектуру для палитр ---
-                // Вызываем защищенный метод из базового класса, который умеет работать со всеми палитрами
                 previewEngine.UseSmoothColoring = false;
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
                 previewEngine.Palette = base.GenerateDiscretePaletteFunction(paletteForPreview);
@@ -203,15 +206,12 @@ namespace FractalExplorer.Projects
             });
         }
 
-        /// <summary>
-        /// Рендерит полное превью, используя исправленный асинхронный метод.
-        /// </summary>
         public override Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
+            // Этот метод теперь просто вызывает наш исправленный асинхронный метод
             var tile = new TileInfo(0, 0, previewWidth, previewHeight);
             var buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
 
-            // Конвертируем наш ARGB буфер в совместимый с UI RGB битмап
             var bmp = new Bitmap(previewWidth, previewHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
             var bmpData = bmp.LockBits(new Rectangle(0, 0, previewWidth, previewHeight), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
 
@@ -220,11 +220,8 @@ namespace FractalExplorer.Projects
 
             for (int i = 0; i < previewWidth * previewHeight; i++)
             {
-                // Source (buffer) is BGRA
-                // Destination (rgbValues) is BGR
                 int srcIdx = i * 4;
                 int destIdx = i * 3;
-
                 rgbValues[destIdx] = buffer[srcIdx];         // Blue
                 rgbValues[destIdx + 1] = buffer[srcIdx + 1]; // Green
                 rgbValues[destIdx + 2] = buffer[srcIdx + 2]; // Red
@@ -236,6 +233,7 @@ namespace FractalExplorer.Projects
             return bmp;
         }
 
+        //public override HighResRenderState GetRenderState()
         public virtual HighResRenderState GetRenderState()
         {
             // 1. Сначала получаем базовое состояние от родительского класса
@@ -243,6 +241,7 @@ namespace FractalExplorer.Projects
 
             // 2. Добавляем наш уникальный параметр
             state.Power = this.nudPower.Value;
+            state.EngineType = this.FractalTypeIdentifier; // Убедимся, что тип движка правильный
 
             // 3. Возвращаем дополненное состояние
             return state;

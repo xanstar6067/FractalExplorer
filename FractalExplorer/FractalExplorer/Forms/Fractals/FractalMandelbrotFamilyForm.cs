@@ -534,6 +534,7 @@ namespace FractalDraving
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
+            renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
@@ -659,6 +660,7 @@ namespace FractalDraving
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
+            renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
@@ -1385,6 +1387,13 @@ namespace FractalDraving
                     case "Julia": previewEngine = new JuliaEngine { C = new ComplexDecimal(previewParams.CRe, previewParams.CIm) }; break;
                     case "MandelbrotBurningShip": previewEngine = new MandelbrotBurningShipEngine(); break;
                     case "JuliaBurningShip": previewEngine = new JuliaBurningShipEngine { C = new ComplexDecimal(previewParams.CRe, previewParams.CIm) }; break;
+                    case "GeneralizedMandelbrot":
+                        var genMandelbrotParams = JsonSerializer.Deserialize<FractalGeneralizedMandelbrot.GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
+                        previewEngine = new GeneralizedMandelbrotEngine
+                        {
+                            Power = genMandelbrotParams.Power
+                        };
+                        break;
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
