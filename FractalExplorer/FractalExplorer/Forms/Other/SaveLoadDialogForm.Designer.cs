@@ -171,7 +171,9 @@
             Controls.Add(textBoxSaveName);
             Controls.Add(pictureBoxPreview);
             Controls.Add(listBoxSaves);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
+            MaximizeBox = false;
             MinimumSize = new Size(550, 350);
             Name = "SaveLoadDialogForm";
             StartPosition = FormStartPosition.CenterParent;

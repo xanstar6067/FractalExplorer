@@ -398,12 +398,12 @@
             ClientSize = new Size(584, 461);
             Controls.Add(pnlMain);
             Controls.Add(pnlBottom);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimizeBox = false;
             Name = "SaveImageManagerForm";
-            ShowIcon = false;
+            ShowIcon = true;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
             Text = "Менеджер сохранения изображений";
