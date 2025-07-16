@@ -43,18 +43,30 @@ namespace FractalExplorer.Projects
             nudIm.Visible = false;
             mandelbrotPreviewPanel.Visible = false;
 
-            // --- ИСПРАВЛЕНИЕ 2: Правильное добавление контролов в TableLayoutPanel ---
+            // --- ИСПОЛЬЗУЕМ ЗАГОТОВЛЕННЫЙ КОНТЕЙНЕР ---
+
+            // 1. Делаем наш специальный контейнер видимым
+            pnlCustomControls.Visible = true;
+
+            // 2. Создаем маленькую внутреннюю таблицу для красивого расположения наших контролов
+            var innerTable = new TableLayoutPanel
+            {
+                ColumnCount = 2,
+                RowCount = 1,
+                Dock = DockStyle.Fill,
+            };
+            innerTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
+            innerTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
+
+            // 3. Создаем сами контролы
             lblPower = new Label
             {
-                Name = "lblPower",
                 Text = "Степень (p)",
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
             };
-
             nudPower = new NumericUpDown
             {
-                Name = "nudPower",
                 Minimum = 2,
                 Maximum = 10,
                 DecimalPlaces = 2,
@@ -63,15 +75,14 @@ namespace FractalExplorer.Projects
                 Dock = DockStyle.Fill,
                 Margin = new Padding(6, 3, 3, 3)
             };
-
             nudPower.ValueChanged += ParamControl_Changed;
 
-            // Динамически вставляем новую строку для наших контролов
-            int rowIndex = 8; // Индекс строки, куда мы хотим вставить новый контрол (после SSAA)
-            pnlControls.RowCount++;
-            pnlControls.RowStyles.Insert(rowIndex, new RowStyle(SizeType.AutoSize));
-            pnlControls.Controls.Add(nudPower, 0, rowIndex);
-            pnlControls.Controls.Add(lblPower, 1, rowIndex);
+            // 4. Добавляем контролы во внутреннюю таблицу
+            innerTable.Controls.Add(nudPower, 0, 0);
+            innerTable.Controls.Add(lblPower, 1, 0);
+
+            // 5. Добавляем нашу маленькую таблицу в большой контейнер-заполнитель
+            pnlCustomControls.Controls.Add(innerTable);
         }
 
         protected override void UpdateEngineSpecificParameters()

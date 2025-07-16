@@ -15,10 +15,6 @@
 
         #region Windows Form Designer generated code
 
-        /// <summary>
-        /// Обязательный метод для поддержки конструктора - не изменяйте
-        /// содержимое этого метода с помощью редактора кода.
-        /// </summary>
         protected void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalMandelbrotFamilyForm));
@@ -38,6 +34,7 @@
             cbSSAA = new ComboBox();
             lbSSAA = new Label();
             cbSmooth = new CheckBox();
+            pnlCustomControls = new Panel();
             btnSaveHighRes = new Button();
             color_configurations = new Button();
             btnRender = new Button();
@@ -80,18 +77,20 @@
             pnlControls.Controls.Add(cbSSAA, 0, 7);
             pnlControls.Controls.Add(lbSSAA, 1, 7);
             pnlControls.Controls.Add(cbSmooth, 0, 8);
-            pnlControls.Controls.Add(btnSaveHighRes, 0, 9);
-            pnlControls.Controls.Add(color_configurations, 0, 10);
-            pnlControls.Controls.Add(btnRender, 0, 11);
-            pnlControls.Controls.Add(btnStateManager, 0, 12);
-            pnlControls.Controls.Add(lblProgress, 0, 13);
-            pnlControls.Controls.Add(pbRenderProgress, 0, 14);
-            pnlControls.Controls.Add(mandelbrotPreviewPanel, 0, 15);
-            pnlControls.Controls.Add(nudBaseScale, 1, 16);
+            pnlControls.Controls.Add(pnlCustomControls, 0, 9);
+            pnlControls.Controls.Add(btnSaveHighRes, 0, 10);
+            pnlControls.Controls.Add(color_configurations, 0, 11);
+            pnlControls.Controls.Add(btnRender, 0, 12);
+            pnlControls.Controls.Add(btnStateManager, 0, 13);
+            pnlControls.Controls.Add(lblProgress, 0, 14);
+            pnlControls.Controls.Add(pbRenderProgress, 0, 15);
+            pnlControls.Controls.Add(mandelbrotPreviewPanel, 0, 16);
+            pnlControls.Controls.Add(nudBaseScale, 1, 17);
             pnlControls.Dock = DockStyle.Left;
             pnlControls.Location = new Point(0, 0);
             pnlControls.Name = "pnlControls";
-            pnlControls.RowCount = 17;
+            pnlControls.RowCount = 18;
+            pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
@@ -292,11 +291,21 @@
             cbSmooth.Text = "Плавное окрашивание";
             cbSmooth.UseVisualStyleBackColor = true;
             // 
+            // pnlCustomControls
+            // 
+            pnlControls.SetColumnSpan(pnlCustomControls, 2);
+            pnlCustomControls.Dock = DockStyle.Fill;
+            pnlCustomControls.Location = new Point(3, 249);
+            pnlCustomControls.Name = "pnlCustomControls";
+            pnlCustomControls.Size = new Size(225, 29);
+            pnlCustomControls.TabIndex = 10;
+            pnlCustomControls.Visible = false;
+            // 
             // btnSaveHighRes
             // 
             pnlControls.SetColumnSpan(btnSaveHighRes, 2);
             btnSaveHighRes.Dock = DockStyle.Fill;
-            btnSaveHighRes.Location = new Point(6, 252);
+            btnSaveHighRes.Location = new Point(6, 287);
             btnSaveHighRes.Margin = new Padding(6);
             btnSaveHighRes.Name = "btnSaveHighRes";
             btnSaveHighRes.Size = new Size(219, 26);
@@ -309,7 +318,7 @@
             // 
             pnlControls.SetColumnSpan(color_configurations, 2);
             color_configurations.Dock = DockStyle.Fill;
-            color_configurations.Location = new Point(6, 290);
+            color_configurations.Location = new Point(6, 325);
             color_configurations.Margin = new Padding(6);
             color_configurations.Name = "color_configurations";
             color_configurations.Size = new Size(219, 26);
@@ -321,7 +330,7 @@
             // 
             pnlControls.SetColumnSpan(btnRender, 2);
             btnRender.Dock = DockStyle.Fill;
-            btnRender.Location = new Point(6, 328);
+            btnRender.Location = new Point(6, 363);
             btnRender.Margin = new Padding(6);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(219, 26);
@@ -333,7 +342,7 @@
             // 
             pnlControls.SetColumnSpan(btnStateManager, 2);
             btnStateManager.Dock = DockStyle.Fill;
-            btnStateManager.Location = new Point(6, 366);
+            btnStateManager.Location = new Point(6, 401);
             btnStateManager.Margin = new Padding(6);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(219, 26);
@@ -347,7 +356,7 @@
             lblProgress.AutoSize = true;
             pnlControls.SetColumnSpan(lblProgress, 2);
             lblProgress.Dock = DockStyle.Fill;
-            lblProgress.Location = new Point(3, 398);
+            lblProgress.Location = new Point(3, 433);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(225, 20);
             lblProgress.TabIndex = 19;
@@ -358,7 +367,7 @@
             // 
             pnlControls.SetColumnSpan(pbRenderProgress, 2);
             pbRenderProgress.Dock = DockStyle.Fill;
-            pbRenderProgress.Location = new Point(6, 421);
+            pbRenderProgress.Location = new Point(6, 456);
             pbRenderProgress.Margin = new Padding(6, 3, 6, 3);
             pbRenderProgress.Name = "pbRenderProgress";
             pbRenderProgress.Size = new Size(219, 24);
@@ -369,9 +378,9 @@
             pnlControls.SetColumnSpan(mandelbrotPreviewPanel, 2);
             mandelbrotPreviewPanel.Controls.Add(mandelbrotPreviewCanvas);
             mandelbrotPreviewPanel.Dock = DockStyle.Fill;
-            mandelbrotPreviewPanel.Location = new Point(3, 451);
+            mandelbrotPreviewPanel.Location = new Point(3, 486);
             mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
-            mandelbrotPreviewPanel.Size = new Size(225, 162);
+            mandelbrotPreviewPanel.Size = new Size(225, 127);
             mandelbrotPreviewPanel.TabIndex = 21;
             // 
             // mandelbrotPreviewCanvas
@@ -380,7 +389,7 @@
             mandelbrotPreviewCanvas.Dock = DockStyle.Fill;
             mandelbrotPreviewCanvas.Location = new Point(0, 0);
             mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
-            mandelbrotPreviewCanvas.Size = new Size(225, 162);
+            mandelbrotPreviewCanvas.Size = new Size(225, 127);
             mandelbrotPreviewCanvas.TabIndex = 0;
             mandelbrotPreviewCanvas.TabStop = false;
             // 
@@ -430,9 +439,7 @@
         }
         #endregion
 
-        // Изменение типа панели на TableLayoutPanel
         protected System.Windows.Forms.TableLayoutPanel pnlControls;
-
         protected System.Windows.Forms.PictureBox canvas;
         protected System.Windows.Forms.Label lblThreshold;
         protected System.Windows.Forms.Label lblIterations;
@@ -458,5 +465,8 @@
         private System.Windows.Forms.ComboBox cbSSAA;
         protected System.Windows.Forms.Label lbSSAA;
         private System.Windows.Forms.CheckBox cbSmooth;
+
+        // --- НОВОЕ ПОЛЕ ДЛЯ КОНТЕЙНЕРА ---
+        protected System.Windows.Forms.Panel pnlCustomControls;
     }
 }
