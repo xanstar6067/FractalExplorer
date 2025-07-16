@@ -85,7 +85,6 @@
             pnlControls.Controls.Add(lblProgress, 0, 14);
             pnlControls.Controls.Add(pbRenderProgress, 0, 15);
             pnlControls.Controls.Add(mandelbrotPreviewPanel, 0, 16);
-            pnlControls.Controls.Add(nudBaseScale, 1, 17);
             pnlControls.Dock = DockStyle.Left;
             pnlControls.Location = new Point(0, 0);
             pnlControls.Name = "pnlControls";
@@ -106,8 +105,9 @@
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 135F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 161F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
             // 
@@ -380,7 +380,7 @@
             mandelbrotPreviewPanel.Dock = DockStyle.Fill;
             mandelbrotPreviewPanel.Location = new Point(3, 514);
             mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
-            mandelbrotPreviewPanel.Size = new Size(225, 129);
+            mandelbrotPreviewPanel.Size = new Size(225, 155);
             mandelbrotPreviewPanel.TabIndex = 21;
             // 
             // mandelbrotPreviewCanvas
@@ -389,16 +389,16 @@
             mandelbrotPreviewCanvas.Dock = DockStyle.Fill;
             mandelbrotPreviewCanvas.Location = new Point(0, 0);
             mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
-            mandelbrotPreviewCanvas.Size = new Size(225, 129);
+            mandelbrotPreviewCanvas.Size = new Size(225, 155);
             mandelbrotPreviewCanvas.TabIndex = 0;
             mandelbrotPreviewCanvas.TabStop = false;
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(130, 649);
+            nudBaseScale.Location = new Point(219, 645);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
-            nudBaseScale.Size = new Size(98, 23);
+            nudBaseScale.Size = new Size(87, 23);
             nudBaseScale.TabIndex = 22;
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
@@ -419,6 +419,7 @@
             ClientSize = new Size(1084, 636);
             Controls.Add(canvas);
             Controls.Add(pnlControls);
+            Controls.Add(nudBaseScale);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 675);
             Name = "FractalMandelbrotFamilyForm";
