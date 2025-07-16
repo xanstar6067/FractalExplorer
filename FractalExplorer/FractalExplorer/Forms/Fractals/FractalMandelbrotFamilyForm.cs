@@ -1306,7 +1306,6 @@ namespace FractalDraving
                 CenterX = _centerX,
                 CenterY = _centerY,
                 Zoom = _zoom,
-                // --- ИСПРАВЛЕНИЕ: Ограничение Math.Min убрано. Теперь в превью записывается ПОЛНОЕ количество итераций. ---
                 Iterations = (int)nudIterations.Value,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
@@ -1397,7 +1396,6 @@ namespace FractalDraving
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                // --- ИСПРАВЛЕНИЕ: Убрано жесткое значение 400. Теперь движок использует количество итераций из параметров превью. ---
                 previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
@@ -1410,8 +1408,6 @@ namespace FractalDraving
                         ? previewEngine.MaxIterations
                         : paletteForPreview.MaxColorIterations;
 
-                // Проверяем, включено ли сглаживание в основной форме
-                previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
                 previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
                 if (previewEngine.UseSmoothColoring)
                 {
@@ -1471,21 +1467,15 @@ namespace FractalDraving
                     ? previewEngine.MaxIterations
                     : paletteForPreview.MaxColorIterations;
 
-            // Проверяем, включено ли сглаживание в основной форме
-            previewEngine.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
             previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
             if (previewEngine.UseSmoothColoring)
             {
-                // 1. Включаем флаг
                 previewEngine.UseSmoothColoring = true;
-                // 2. ОБЯЗАТЕЛЬНО присваиваем функцию сглаженной палитры
                 previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
             }
             else
             {
-                // 1. Выключаем флаг
                 previewEngine.UseSmoothColoring = false;
-                // 2. Настраиваем и присваиваем функцию дискретной палитры
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
             }
@@ -1519,11 +1509,12 @@ namespace FractalDraving
                 CenterY = _centerY,
                 Zoom = _zoom,
                 BaseScale = this.BaseScale,
+                Scale = this.BaseScale / _zoom, // ИСПРАВЛЕНИЕ: Добавляем Scale в состояние
                 Iterations = (int)nudIterations.Value,
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = this.GetSaveFileNameDetails(),
-                UseSmoothColoring = cbSmooth.Checked // <-- Передаем актуальное состояние сглаживания
+                UseSmoothColoring = cbSmooth.Checked
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
@@ -1549,16 +1540,13 @@ namespace FractalDraving
                 case "Julia": engine = new JuliaEngine { C = state.JuliaC.Value }; break;
                 case "MandelbrotBurningShip": engine = new MandelbrotBurningShipEngine(); break;
                 case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC.Value }; break;
-                // --- НАЧАЛО ИСПРАВЛЕНИЯ: Добавлена логика для GeneralizedMandelbrot ---
                 case "GeneralizedMandelbrot":
                     engine = new GeneralizedMandelbrotEngine();
-                    // Проверяем, есть ли параметр Power в состоянии, и устанавливаем его
                     if (state.Power.HasValue && engine is GeneralizedMandelbrotEngine genEngine)
                     {
                         genEngine.Power = state.Power.Value;
                     }
                     break;
-                // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
                 default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
             }
 
@@ -1574,10 +1562,9 @@ namespace FractalDraving
             engine.ThresholdSquared = state.Threshold * state.Threshold;
             engine.CenterX = state.CenterX;
             engine.CenterY = state.CenterY;
-            engine.Scale = state.BaseScale / state.Zoom;
+            engine.Scale = state.Scale; // ИСПРАВЛЕНИЕ: Используем Scale напрямую из состояния
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
 
-            // Настраиваем обе палитры для рендера высокого разрешения
             engine.UseSmoothColoring = state.UseSmoothColoring;
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
             engine.MaxColorIterations = effectiveMaxColorIterations;
@@ -1594,12 +1581,42 @@ namespace FractalDraving
             _isHighResRendering = true;
             try
             {
-                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
+                // --- НАЧАЛО ИСПРАВЛЕНИЯ: Адаптация Scale к соотношению сторон ---
+
+                // 1. Получаем соотношение сторон текущего окна просмотра (на форме).
+                //    Проверяем, что canvas не нулевого размера, чтобы избежать деления на ноль.
+                decimal canvasAspectRatio = (this.canvas.Height > 0)
+                    ? (decimal)this.canvas.Width / this.canvas.Height
+                    : 16.0m / 9.0m; // Запасное значение
+
+                // 2. Получаем соотношение сторон целевого изображения для сохранения.
+                decimal targetAspectRatio = (height > 0)
+                    ? (decimal)width / height
+                    : 16.0m / 9.0m; // Запасное значение
+
+                // 3. Создаем копию состояния, чтобы не изменять оригинал.
+                var adjustedState = state.Clone();
+
+                // 4. Сравниваем соотношения и корректируем Scale.
+                //    Scale в движке определяет ШИРИНУ видимой области.
+                if (targetAspectRatio > canvasAspectRatio)
+                {
+                    // Если целевое изображение "шире" чем окно просмотра,
+                    // нам нужно увеличить видимую ширину (Scale), чтобы по вертикали все влезло.
+                    // Высота обзора остается той же, ширина подстраивается.
+                    decimal originalComplexHeight = adjustedState.Scale / canvasAspectRatio;
+                    adjustedState.Scale = originalComplexHeight * targetAspectRatio;
+                }
+                // Если целевое изображение "выше" или такое же, мы не меняем Scale.
+                // Исходная ширина обзора сохраняется, а движок добавит пространство сверху/снизу.
+
+                // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+                // Используем скорректированное состояние для создания движка.
+                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(adjustedState, forPreview: false);
                 int threadCount = GetThreadCount();
                 Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
 
-                // Теперь форма просто делегирует рендеринг движку,
-                // передавая ему фактор SSAA. Движок сам разберется, что делать.
                 Bitmap finalBitmap = await renderEngine.RenderToBitmapSSAA(
                     width,
                     height,
