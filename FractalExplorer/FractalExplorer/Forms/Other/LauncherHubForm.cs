@@ -154,5 +154,11 @@ namespace FractalExplorer
         }
 
         #endregion
+
+        private void btnLaunchGeneralizedMondelbrot_Click(object sender, EventArgs e)
+        {
+            var form = new FractalGeneralizedMandelbrot();
+            form.Show();
+        }
     }
 }

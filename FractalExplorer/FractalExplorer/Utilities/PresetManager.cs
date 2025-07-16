@@ -1,6 +1,7 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
 using FractalExplorer.Forms;
+using FractalExplorer.Projects;
 using FractalExplorer.Utilities.JsonConverters;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
@@ -71,6 +72,8 @@ namespace FractalExplorer.Utilities
                     return GetSerpinskyPresets();
                 case "NewtonPools":
                     return GetNewtonPoolsPresets();
+                case "GeneralizedMandelbrot":
+                    return GetGeneralizedMandelbrotPresets();
                 default:
                     return new List<FractalSaveStateBase>();
             }
@@ -79,6 +82,68 @@ namespace FractalExplorer.Utilities
         #endregion
 
         #region Mandelbrot-Julia Family Presets
+
+        private static List<FractalSaveStateBase> GetGeneralizedMandelbrotPresets()
+        {
+            var presets = new List<FractalSaveStateBase>();
+            var jsonOptions = new JsonSerializerOptions();
+
+            // Пресет 1: "Трилистник" (p=3)
+            var preset1 = new GeneralizedMandelbrotSaveState("GeneralizedMandelbrot")
+            {
+                SaveName = "Трилистник (p=3.0)",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 0.8m,
+                Iterations = 500,
+                Threshold = 2.0m,
+                PaletteName = "Ультрафиолет",
+                Timestamp = DateTime.MinValue,
+                Power = 3.0m
+            };
+            var previewParams1 = new FractalGeneralizedMandelbrot.GeneralizedMandelbrotPreviewParams
+            {
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                Zoom = preset1.Zoom,
+                Iterations = Math.Min(preset1.Iterations, 500),
+                PaletteName = preset1.PaletteName,
+                Threshold = preset1.Threshold,
+                PreviewEngineType = preset1.PreviewEngineType,
+                Power = preset1.Power
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1, jsonOptions);
+            presets.Add(preset1);
+
+            // Пресет 2: "Астероид" (p=4)
+            var preset2 = new GeneralizedMandelbrotSaveState("GeneralizedMandelbrot")
+            {
+                SaveName = "Астероид (p=4.0)",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 0.8m,
+                Iterations = 500,
+                Threshold = 2.0m,
+                PaletteName = "Огонь",
+                Timestamp = DateTime.MinValue,
+                Power = 4.0m
+            };
+            var previewParams2 = new FractalGeneralizedMandelbrot.GeneralizedMandelbrotPreviewParams
+            {
+                CenterX = preset2.CenterX,
+                CenterY = preset2.CenterY,
+                Zoom = preset2.Zoom,
+                Iterations = Math.Min(preset2.Iterations, 500),
+                PaletteName = preset2.PaletteName,
+                Threshold = preset2.Threshold,
+                PreviewEngineType = preset2.PreviewEngineType,
+                Power = preset2.Power
+            };
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2, jsonOptions);
+            presets.Add(preset2);
+
+            return presets;
+        }
 
         /// <summary>
         /// Создает и возвращает список предустановленных состояний для фрактала Мандельброта.

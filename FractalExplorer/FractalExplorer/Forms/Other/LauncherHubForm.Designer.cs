@@ -34,7 +34,8 @@
             richTextBox2 = new RichTextBox();
             btnLaunchJulia = new Button();
             tabPageMandelbrot = new TabPage();
-            button1 = new Button();
+            btnLaunchGeneralizedMondelbrot = new Button();
+            btnLaunchMondelbrotShip = new Button();
             richTextBox1 = new RichTextBox();
             btnLaunchMondelbrot = new Button();
             tabControlFractals = new TabControl();
@@ -101,7 +102,8 @@
             // 
             // tabPageMandelbrot
             // 
-            tabPageMandelbrot.Controls.Add(button1);
+            tabPageMandelbrot.Controls.Add(btnLaunchGeneralizedMondelbrot);
+            tabPageMandelbrot.Controls.Add(btnLaunchMondelbrotShip);
             tabPageMandelbrot.Controls.Add(richTextBox1);
             tabPageMandelbrot.Controls.Add(btnLaunchMondelbrot);
             tabPageMandelbrot.Location = new Point(4, 26);
@@ -112,15 +114,25 @@
             tabPageMandelbrot.Text = "Множество Мандельброта";
             tabPageMandelbrot.UseVisualStyleBackColor = true;
             // 
-            // button1
+            // btnLaunchGeneralizedMondelbrot
             // 
-            button1.Location = new Point(8, 76);
-            button1.Name = "button1";
-            button1.Size = new Size(131, 55);
-            button1.TabIndex = 3;
-            button1.Text = "Запустить\r\nГорящий корабль";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += btnLaunchBurningShipMandelbrot_Click;
+            btnLaunchGeneralizedMondelbrot.Location = new Point(8, 91);
+            btnLaunchGeneralizedMondelbrot.Name = "btnLaunchGeneralizedMondelbrot";
+            btnLaunchGeneralizedMondelbrot.Size = new Size(131, 48);
+            btnLaunchGeneralizedMondelbrot.TabIndex = 4;
+            btnLaunchGeneralizedMondelbrot.Text = "Обобщенный Мандельброт";
+            btnLaunchGeneralizedMondelbrot.UseVisualStyleBackColor = true;
+            btnLaunchGeneralizedMondelbrot.Click += btnLaunchGeneralizedMondelbrot_Click;
+            // 
+            // btnLaunchMondelbrotShip
+            // 
+            btnLaunchMondelbrotShip.Location = new Point(8, 53);
+            btnLaunchMondelbrotShip.Name = "btnLaunchMondelbrotShip";
+            btnLaunchMondelbrotShip.Size = new Size(131, 32);
+            btnLaunchMondelbrotShip.TabIndex = 3;
+            btnLaunchMondelbrotShip.Text = "Горящий корабль";
+            btnLaunchMondelbrotShip.UseVisualStyleBackColor = true;
+            btnLaunchMondelbrotShip.Click += btnLaunchBurningShipMandelbrot_Click;
             // 
             // richTextBox1
             // 
@@ -139,9 +151,9 @@
             // 
             btnLaunchMondelbrot.Location = new Point(8, 15);
             btnLaunchMondelbrot.Name = "btnLaunchMondelbrot";
-            btnLaunchMondelbrot.Size = new Size(131, 55);
+            btnLaunchMondelbrot.Size = new Size(131, 32);
             btnLaunchMondelbrot.TabIndex = 0;
-            btnLaunchMondelbrot.Text = "Запустить\r\nМандельброта";
+            btnLaunchMondelbrot.Text = "Мандельброт";
             btnLaunchMondelbrot.UseVisualStyleBackColor = true;
             btnLaunchMondelbrot.Click += btnLaunchMondelbrot_Click;
             // 
@@ -301,9 +313,10 @@
         private RichTextBox richTextBox4;
         private Button btnLaunchNewton;
         private Button btnLaunchBurningShipComplex;
-        private Button button1;
+        private Button btnLaunchMondelbrotShip;
         private TabPage tabPagePhoenix;
         private RichTextBox richTextBox5;
         private Button btnLaunchPhoenix;
+        private Button btnLaunchGeneralizedMondelbrot;
     }
 }

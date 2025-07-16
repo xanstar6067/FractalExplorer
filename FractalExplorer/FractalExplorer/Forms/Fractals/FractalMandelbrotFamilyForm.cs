@@ -35,7 +35,7 @@ namespace FractalDraving
         /// <summary>
         /// Менеджер палитр, используемый этой формой для управления цветовыми схемами.
         /// </summary>
-        private PaletteManager _paletteManager;
+        protected PaletteManager _paletteManager;
 
         /// <summary>
         /// Кэш для цветов палитры с уже примененной гамма-коррекцией (для дискретного режима).
@@ -319,7 +319,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void ParamControl_Changed(object sender, EventArgs e)
+        protected void ParamControl_Changed(object sender, EventArgs e)
         {
             if (_isHighResRendering) return;
             if (sender == nudZoom && nudZoom.Value != _zoom)
