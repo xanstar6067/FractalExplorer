@@ -537,10 +537,29 @@ namespace FractalExplorer
         /// <param name="enabled">True, чтобы включить; false, чтобы отключить.</param>
         private void SetMainControlsEnabled(bool enabled)
         {
-            foreach (Control ctrl in panel1.Controls)
+            if (InvokeRequired)
             {
-                if (ctrl != abortRender) ctrl.Enabled = enabled;
+                Invoke((Action)(() => SetMainControlsEnabled(enabled)));
+                return;
             }
+
+            // Перебираем все контролы ВЕРХНЕГО УРОВНЯ на главной панели
+            foreach (Control ctrl in pnlControls.Controls)
+            {
+                // Мы НЕ трогаем контейнер, в котором лежат кнопки рендера,
+                // так как его нужно обработать отдельно.
+                if (ctrl != pnlRenderButtons)
+                {
+                    ctrl.Enabled = enabled;
+                }
+            }
+
+            // Теперь обрабатываем кнопки рендера отдельно.
+            // Кнопка "Запустить рендер" должна быть выключена во время рендеринга.
+            btnRender.Enabled = enabled;
+
+            // А состояние кнопки "Отмена" определяется тем, запущен ли рендер.
+            // Вызов этой функции гарантирует, что она будет включена, когда нужно.
             UpdateAbortButtonState();
         }
 
