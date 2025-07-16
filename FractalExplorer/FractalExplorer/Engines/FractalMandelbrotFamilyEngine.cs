@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Numerics;
 
 namespace FractalExplorer.Engines
 {
@@ -717,6 +718,78 @@ namespace FractalExplorer.Engines
                 z = z * z + c;
                 iter++;
             }
+            return iter;
+        }
+    }
+
+    /// <summary>
+    /// Движок для Обобщенного множества Мандельброта (z -> z^p + c) с адаптивной точностью.
+    /// </summary>
+    public class GeneralizedMandelbrotEngine : FractalMandelbrotFamilyEngine
+    {
+        /// <summary>
+        /// Степень 'p', в которую возводится z.
+        /// </summary>
+        public decimal Power { get; set; } = 3m;
+
+        // Вспомогательный метод для возведения в степень для ComplexDecimal
+           private ComplexDecimal ComplexDecimalPow(ComplexDecimal z, decimal power)
+        {
+            // ИСПРАВЛЕНИЕ: Используем оператор '==' для сравнения с ComplexDecimal.Zero
+            if (z == ComplexDecimal.Zero) return ComplexDecimal.Zero;
+
+            double r = z.Magnitude; // У вас уже есть свойство Magnitude, которое возвращает double
+            double theta = Math.Atan2((double)z.Imaginary, (double)z.Real);
+            double p = (double)power;
+
+            double newR = Math.Pow(r, p);
+            double newTheta = theta * p;
+
+            // Используем ваш статический метод для создания из полярных координат
+            return ComplexDecimal.FromPolarCoordinates(newR, newTheta);
+        }
+
+        // Decimal path
+        protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
+        {
+            initialZ = ComplexDecimal.Zero;
+            constantC = new ComplexDecimal(re, im);
+        }
+        public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
+        {
+            int iter = 0;
+            while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
+            {
+                z = ComplexDecimalPow(z, this.Power) + c;
+                iter++;
+            }
+            return iter;
+        }
+
+        // Double path
+        protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
+        {
+            initialZ = ComplexDouble.Zero;
+            constantC = new ComplexDouble(re, im);
+        }
+        public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
+        {
+            int iter = 0;
+            double thresholdSq = (double)this.ThresholdSquared;
+            double power_d = (double)this.Power;
+
+            // ИСПРАВЛЕНИЕ: Преобразуем ваши типы в стандартный System.Numerics.Complex
+            Complex z_numerics = new Complex(z.Real, z.Imaginary);
+            Complex c_numerics = new Complex(c.Real, c.Imaginary);
+
+            while (iter < MaxIterations && z_numerics.Magnitude * z_numerics.Magnitude <= thresholdSq)
+            {
+                // Выполняем вычисления с использованием стандартного типа
+                z_numerics = Complex.Pow(z_numerics, power_d) + c_numerics;
+                iter++;
+            }
+            // Обновляем исходную переменную z (которая передана по ссылке 'ref')
+            z = new ComplexDouble(z_numerics.Real, z_numerics.Imaginary);
             return iter;
         }
     }
