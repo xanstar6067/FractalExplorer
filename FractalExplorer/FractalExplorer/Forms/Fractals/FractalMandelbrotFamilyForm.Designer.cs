@@ -106,8 +106,10 @@
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+            // ИЗМЕНЕНИЕ 1: Задаем абсолютную (фиксированную) высоту для панели предпросмотра.
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 135F));
+            // ИЗМЕНЕНИЕ 2: Эта строка будет занимать все оставшееся пространство, чтобы другие элементы не "прыгали".
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
             // 
@@ -380,7 +382,7 @@
             mandelbrotPreviewPanel.Dock = DockStyle.Fill;
             mandelbrotPreviewPanel.Location = new Point(3, 486);
             mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
-            mandelbrotPreviewPanel.Size = new Size(225, 127);
+            mandelbrotPreviewPanel.Size = new Size(225, 129);
             mandelbrotPreviewPanel.TabIndex = 21;
             // 
             // mandelbrotPreviewCanvas
@@ -389,16 +391,16 @@
             mandelbrotPreviewCanvas.Dock = DockStyle.Fill;
             mandelbrotPreviewCanvas.Location = new Point(0, 0);
             mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
-            mandelbrotPreviewCanvas.Size = new Size(225, 127);
+            mandelbrotPreviewCanvas.Size = new Size(225, 129);
             mandelbrotPreviewCanvas.TabIndex = 0;
             mandelbrotPreviewCanvas.TabStop = false;
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(130, 619);
+            nudBaseScale.Location = new Point(130, 621);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
-            nudBaseScale.Size = new Size(26, 23);
+            nudBaseScale.Size = new Size(98, 23);
             nudBaseScale.TabIndex = 22;
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
