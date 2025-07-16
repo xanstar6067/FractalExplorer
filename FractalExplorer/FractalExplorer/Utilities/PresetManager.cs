@@ -97,7 +97,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 0.8m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Зеленый",
+                PaletteName = "Ультрафиолет",
                 Timestamp = DateTime.MinValue,
                 Power = 3.0m
             };
@@ -124,7 +124,7 @@ namespace FractalExplorer.Utilities
                 Zoom = 0.8m,
                 Iterations = 500,
                 Threshold = 2.0m,
-                PaletteName = "Зеленый",
+                PaletteName = "Огонь",
                 Timestamp = DateTime.MinValue,
                 Power = 4.0m
             };
