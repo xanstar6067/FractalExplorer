@@ -704,7 +704,7 @@ namespace FractalExplorer
         {
             Action action = () =>
             {
-                panel1.Enabled = enabled;
+                //panel1.Enabled = enabled;
             };
             if (InvokeRequired) Invoke(action);
             else action();
