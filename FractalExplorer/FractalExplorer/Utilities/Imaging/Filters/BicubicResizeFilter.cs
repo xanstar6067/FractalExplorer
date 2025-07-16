@@ -6,31 +6,50 @@ using System.Threading.Tasks;
 namespace FractalExplorer.Utilities.Imaging.Filters
 {
     /// <summary>
-    /// Фильтр для изменения размера изображения с использованием бикубической интерполяции.
+    /// Применяет фильтр для изменения размера изображения с использованием бикубической интерполяции.
     /// </summary>
     public class BicubicResizeFilter : IImageFilter
     {
+        /// <summary>
+        /// Получает целевую ширину изображения.
+        /// </summary>
         public int NewWidth { get; }
+
+        /// <summary>
+        /// Получает целевую высоту изображения.
+        /// </summary>
         public int NewHeight { get; }
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="BicubicResizeFilter"/>.
+        /// </summary>
+        /// <param name="newWidth">Новая ширина изображения в пикселях.</param>
+        /// <param name="newHeight">Новая высота изображения в пикселях.</param>
         public BicubicResizeFilter(int newWidth, int newHeight)
         {
             NewWidth = newWidth;
             NewHeight = newHeight;
         }
 
+        /// <summary>
+        /// Применяет фильтр к исходному изображению.
+        /// </summary>
+        /// <param name="sourceImage">Исходное изображение для изменения размера.</param>
+        /// <returns>Новое изображение с измененным размером.</returns>
+        /// <exception cref="ArgumentNullException">Вызывается, если sourceImage равен null.</exception>
         public unsafe Bitmap Apply(Bitmap sourceImage)
         {
-            if (sourceImage == null) throw new ArgumentNullException(nameof(sourceImage));
+            if (sourceImage == null)
+            {
+                throw new ArgumentNullException(nameof(sourceImage));
+            }
 
             var newBitmap = new Bitmap(NewWidth, NewHeight, sourceImage.PixelFormat);
-
-            // ИСПРАВЛЕНИЕ: Считываем размеры ДО блокировки и цикла.
             int sourceWidth = sourceImage.Width;
             int sourceHeight = sourceImage.Height;
 
             BitmapData sourceData = sourceImage.LockBits(
-                new Rectangle(0, 0, sourceWidth, sourceHeight), // Используем локальную переменную
+                new Rectangle(0, 0, sourceWidth, sourceHeight),
                 ImageLockMode.ReadOnly, sourceImage.PixelFormat);
 
             BitmapData destData = newBitmap.LockBits(
@@ -44,7 +63,6 @@ namespace FractalExplorer.Utilities.Imaging.Filters
             IntPtr sourceScan0 = sourceData.Scan0;
             IntPtr destScan0 = destData.Scan0;
 
-            // ИСПРАВЛЕНИЕ: Используем локальные переменные
             float xRatio = (float)sourceWidth / NewWidth;
             float yRatio = (float)sourceHeight / NewHeight;
 
@@ -63,17 +81,18 @@ namespace FractalExplorer.Utilities.Imaging.Filters
                     float fx = sourceX - ix;
                     float fy = sourceY - iy;
 
-                    // ИСПРАВЛЕНИЕ: Передаем в метод локальные переменные, а не свойства объекта
                     byte b = InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 0, ix, iy, fx, fy);
                     byte g = InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 1, ix, iy, fx, fy);
                     byte r = InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 2, ix, iy, fx, fy);
-                    byte a = (bytesPerPixel == 4) ?
-                             InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 3, ix, iy, fx, fy)
-                             : (byte)255;
+
+                    byte a = (bytesPerPixel == 4)
+                           ? InterpolateChannel(sourceScan0, sourceWidth, sourceHeight, sourceStride, bytesPerPixel, 3, ix, iy, fx, fy)
+                           : (byte)255;
 
                     destRow[x * bytesPerPixel] = b;
                     destRow[x * bytesPerPixel + 1] = g;
                     destRow[x * bytesPerPixel + 2] = r;
+
                     if (bytesPerPixel == 4)
                     {
                         destRow[x * bytesPerPixel + 3] = a;
@@ -87,6 +106,20 @@ namespace FractalExplorer.Utilities.Imaging.Filters
             return newBitmap;
         }
 
+        /// <summary>
+        /// Выполняет бикубическую интерполяцию для одного цветового канала.
+        /// </summary>
+        /// <param name="sourceScan0">Указатель на начало данных исходного изображения.</param>
+        /// <param name="width">Ширина исходного изображения.</param>
+        /// <param name="height">Высота исходного изображения.</param>
+        /// <param name="stride">Stride (ширина строки в байтах) исходного изображения.</param>
+        /// <param name="bpp">Количество байт на пиксель.</param>
+        /// <param name="offset">Смещение цветового канала (0 - Blue, 1 - Green, 2 - Red, 3 - Alpha).</param>
+        /// <param name="ix">Целая часть координаты X в исходном изображении.</param>
+        /// <param name="iy">Целая часть координаты Y в исходном изображении.</param>
+        /// <param name="fx">Дробная часть координаты X.</param>
+        /// <param name="fy">Дробная часть координаты Y.</param>
+        /// <returns>Интерполированное значение для канала в диапазоне от 0 до 255.</returns>
         private unsafe byte InterpolateChannel(IntPtr sourceScan0, int width, int height, int stride, int bpp, int offset, int ix, int iy, float fx, float fy)
         {
             byte* p = (byte*)sourceScan0;
@@ -107,16 +140,26 @@ namespace FractalExplorer.Utilities.Imaging.Filters
 
                     row[i] = p[neighborY * stride + neighborX * bpp + offset];
                 }
-
                 col[j] = CubicHermite(row[0], row[1], row[2], row[3], fx);
             }
 
             float value = CubicHermite(col[0], col[1], col[2], col[3], fy);
+
             if (value > 255) return 255;
             if (value < 0) return 0;
+
             return (byte)value;
         }
 
+        /// <summary>
+        /// Вычисляет значение кубического сплайна Эрмита (в данном случае, сплайна Катмулла-Рома) для 1D интерполяции.
+        /// </summary>
+        /// <param name="p0">Первая контрольная точка.</param>
+        /// <param name="p1">Вторая контрольная точка (начало интервала).</param>
+        /// <param name="p2">Третья контрольная точка (конец интервала).</param>
+        /// <param name="p3">Четвертая контрольная точка.</param>
+        /// <param name="t">Вес интерполяции (от 0 до 1).</param>
+        /// <returns>Интерполированное значение.</returns>
         private float CubicHermite(float p0, float p1, float p2, float p3, float t)
         {
             float t2 = t * t;
