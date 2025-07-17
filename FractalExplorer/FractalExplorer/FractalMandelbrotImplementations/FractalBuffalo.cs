@@ -91,8 +91,6 @@ namespace FractalExplorer.Projects
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
-        // --- НОВЫЙ КОД: Переопределение для корректного рендера превью ---
-
         /// <summary>
         /// Асинхронно рендерит плитку превью, создавая правильный движок для Буффало.
         /// </summary>

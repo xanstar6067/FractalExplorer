@@ -63,6 +63,16 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap buffalo_preview {
+            get {
+                object obj = ResourceManager.GetObject("buffalo_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap burningship_preview {
             get {
                 object obj = ResourceManager.GetObject("burningship_preview", resourceCulture);
@@ -136,6 +146,16 @@ namespace FractalExplorer.Properties {
         internal static System.Drawing.Bitmap serpinski_preview {
             get {
                 object obj = ResourceManager.GetObject("serpinski_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap simonobrot_preview {
+            get {
+                object obj = ResourceManager.GetObject("simonobrot_preview", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
