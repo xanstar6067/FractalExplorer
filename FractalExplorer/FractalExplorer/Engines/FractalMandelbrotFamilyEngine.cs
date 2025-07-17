@@ -631,12 +631,14 @@ namespace FractalExplorer.Engines
     public class SimonobrotEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
-        /// Степень 'p', в которую возводится z.
+        /// Степень 'p', в которую возводится z и |z|.
         /// </summary>
         public decimal Power { get; set; } = 2m;
 
         /// <summary>
-        /// Флаг, указывающий, нужно ли инвертировать (отражать) фрактал по горизонтальной оси.
+        /// Флаг, указывающий, нужно ли использовать инвертированную формулу.
+        /// false: z^p * |z|^p + c
+        /// true: z^p * |z^p| + c
         /// </summary>
         public bool UseInversion { get; set; } = false;
 
@@ -652,8 +654,7 @@ namespace FractalExplorer.Engines
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
             initialZ = ComplexDecimal.Zero;
-            // Для инверсии мы просто используем сопряженную константу c.
-            constantC = UseInversion ? new ComplexDecimal(re, -im) : new ComplexDecimal(re, im);
+            constantC = new ComplexDecimal(re, im);
         }
 
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
@@ -670,25 +671,32 @@ namespace FractalExplorer.Engines
                     break;
                 }
 
-                // Правильное возведение в степень комплексного числа
-                // z^p = |z|^p * e^(i*p*arg(z))
-                decimal magnitude = (decimal)z.Magnitude;
-                decimal argument = (decimal)z.Argument;
-
-                if (magnitude == 0)
+                if (UseInversion)
                 {
-                    z = c; // z^p = 0 при p > 0
+                    // Инвертированная формула: z^p * |z^p| + c
+                    // Сначала вычисляем z^p
+                    ComplexDecimal zPower = PowerComplex(z, powerD);
+
+                    // Затем вычисляем |z^p| (модуль от z^p)
+                    decimal modulusOfZPower = (decimal)zPower.Magnitude;
+
+                    // Результат: z^p * |z^p| + c
+                    z = new ComplexDecimal(zPower.Real * (decimal)modulusOfZPower + c.Real,
+                                         zPower.Imaginary * (decimal)modulusOfZPower + c.Imaginary);
                 }
                 else
                 {
-                    decimal newMagnitude = (decimal)Math.Pow((double)magnitude, (double)powerD);
-                    decimal newArgument = powerD * argument;
+                    // Обычная формула: z^p * |z|^p + c
+                    // Вычисляем z^p
+                    ComplexDecimal zPower = PowerComplex(z, powerD);
 
-                    // Преобразование обратно в декартовы координаты
-                    decimal newReal = newMagnitude * (decimal)Math.Cos((double)newArgument) + c.Real;
-                    decimal newImaginary = newMagnitude * (decimal)Math.Sin((double)newArgument) + c.Imaginary;
+                    // Вычисляем |z|^p
+                    decimal magnitude = (decimal)z.Magnitude;
+                    decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)powerD);
 
-                    z = new ComplexDecimal(newReal, newImaginary);
+                    // Результат: z^p * |z|^p + c
+                    z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
+                                         zPower.Imaginary * magnitudePower + c.Imaginary);
                 }
 
                 iter++;
@@ -700,7 +708,7 @@ namespace FractalExplorer.Engines
         protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
         {
             initialZ = ComplexDouble.Zero;
-            constantC = UseInversion ? new ComplexDouble(re, -im) : new ComplexDouble(re, im);
+            constantC = new ComplexDouble(re, im);
         }
 
         public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
@@ -718,30 +726,82 @@ namespace FractalExplorer.Engines
                     break;
                 }
 
-                // Правильное возведение в степень комплексного числа
-                double magnitude = z.Magnitude;
-                double argument = z.Argument;
-
-                if (magnitude == 0)
+                if (UseInversion)
                 {
-                    z = c; // z^p = 0 при p > 0
+                    // Инвертированная формула: z^p * |z^p| + c
+                    // Сначала вычисляем z^p
+                    ComplexDouble zPower = PowerComplexDouble(z, powerD);
+
+                    // Затем вычисляем |z^p| (модуль от z^p)
+                    double modulusOfZPower = zPower.Magnitude;
+
+                    // Результат: z^p * |z^p| + c
+                    z = new ComplexDouble(zPower.Real * modulusOfZPower + c.Real,
+                                        zPower.Imaginary * modulusOfZPower + c.Imaginary);
                 }
                 else
                 {
-                    double newMagnitude = Math.Pow(magnitude, powerD);
-                    double newArgument = powerD * argument;
+                    // Обычная формула: z^p * |z|^p + c
+                    // Вычисляем z^p
+                    ComplexDouble zPower = PowerComplexDouble(z, powerD);
 
-                    // Преобразование обратно в декартовы координаты
-                    double newReal = newMagnitude * Math.Cos(newArgument) + c.Real;
-                    double newImaginary = newMagnitude * Math.Sin(newArgument) + c.Imaginary;
+                    // Вычисляем |z|^p
+                    double magnitude = z.Magnitude;
+                    double magnitudePower = Math.Pow(magnitude, powerD);
 
-                    z = new ComplexDouble(newReal, newImaginary);
+                    // Результат: z^p * |z|^p + c
+                    z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
+                                        zPower.Imaginary * magnitudePower + c.Imaginary);
                 }
 
                 iter++;
             }
 
             return iter;
+        }
+
+        /// <summary>
+        /// Возводит комплексное число в степень (decimal версия).
+        /// </summary>
+        private ComplexDecimal PowerComplex(ComplexDecimal z, decimal power)
+        {
+            if (z.MagnitudeSquared == 0)
+            {
+                return ComplexDecimal.Zero;
+            }
+
+            decimal magnitude = (decimal)z.Magnitude;
+            decimal argument = (decimal)z.Argument;
+
+            decimal newMagnitude = (decimal)Math.Pow((double)magnitude, (double)power);
+            decimal newArgument = power * argument;
+
+            decimal newReal = newMagnitude * (decimal)Math.Cos((double)newArgument);
+            decimal newImaginary = newMagnitude * (decimal)Math.Sin((double)newArgument);
+
+            return new ComplexDecimal(newReal, newImaginary);
+        }
+
+        /// <summary>
+        /// Возводит комплексное число в степень (double версия).
+        /// </summary>
+        private ComplexDouble PowerComplexDouble(ComplexDouble z, double power)
+        {
+            if (z.MagnitudeSquared == 0)
+            {
+                return ComplexDouble.Zero;
+            }
+
+            double magnitude = z.Magnitude;
+            double argument = z.Argument;
+
+            double newMagnitude = Math.Pow(magnitude, power);
+            double newArgument = power * argument;
+
+            double newReal = newMagnitude * Math.Cos(newArgument);
+            double newImaginary = newMagnitude * Math.Sin(newArgument);
+
+            return new ComplexDouble(newReal, newImaginary);
         }
     }
 
