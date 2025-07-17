@@ -1,11 +1,4 @@
-﻿using FractalDraving;
-using FractalExplorer.Engines;
-using FractalExplorer.Resources;
-using FractalExplorer.Utilities;
-using FractalExplorer.Utilities.SaveIO;
-using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -14,13 +7,19 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using FractalExplorer.Resources;
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using FractalExplorer.Projects; // Добавлено для доступа к классам превью-параметров
+using System.Text.Json; // Добавлено для десериализации
 
 namespace FractalExplorer.Forms
 {
     /// <summary>
     /// Представляет диалоговое окно для сохранения и загрузки состояний фракталов.
     /// Предоставляет функциональность для управления пользовательскими сохранениями и предустановками,
-    /// используя централизованную фабрику движков для асинхронного рендера превью.
+    /// включая асинхронный, мозаичный рендер предварительного просмотра с прогрессивным кэшированием.
     /// </summary>
     public partial class SaveLoadDialogForm : Form
     {
@@ -36,6 +35,35 @@ namespace FractalExplorer.Forms
         private const int TILE_SIZE = 16;
         private bool _isRenderingPreview = false;
 
+        // --- Поля для прогрессивного кэширования превью ---
+
+        /// <summary>
+        /// Кешированный битмап полного превью. Заполняется по мере рендеринга плиток.
+        /// Является статическим для сохранения между открытиями диалогового окна.
+        /// </summary>
+        private static Bitmap _cachedFullPreviewBitmap;
+
+        /// <summary>
+        /// Уникальный идентификатор состояния, для которого был создан текущий кеш.
+        /// </summary>
+        private static string _cachedPreviewStateIdentifier;
+
+        /// <summary>
+        /// Набор для отслеживания уже отрендеренных плиток в кеше, чтобы избежать повторной работы.
+        /// Использует Point(X, Y) плитки в качестве ключа.
+        /// </summary>
+        private static HashSet<Point> _renderedTilesCache;
+
+        /// <summary>
+        /// Объект для синхронизации доступа к статическим полям кеша из разных потоков.
+        /// </summary>
+        private static readonly object _previewCacheLock = new object();
+
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="SaveLoadDialogForm"/>.
+        /// </summary>
+        /// <param name="ownerFractalForm">Экземпляр формы фрактала, поддерживающий сохранение и загрузку.</param>
+        /// <exception cref="ArgumentNullException">Вызывается, если <paramref name="ownerFractalForm"/> равен null.</exception>
         public SaveLoadDialogForm(ISaveLoadCapableFractal ownerFractalForm)
         {
             InitializeComponent();
@@ -59,15 +87,22 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Обрабатывает событие загрузки формы. Инициализирует список сохранений.
+        /// </summary>
         private void SaveLoadDialogForm_Load(object sender, EventArgs e)
         {
             PopulateList(false);
             UpdateButtonsState();
         }
 
+        /// <summary>
+        /// Заполняет список в ListBox сохранениями или предустановками.
+        /// </summary>
+        /// <param name="showPresets">Если true, отображаются предустановки; иначе — пользовательские сохранения.</param>
         private void PopulateList(bool showPresets)
         {
-            _previewRenderCts?.Cancel();
+            _previewRenderCts?.Cancel(); // Отменяем текущий рендер, так как список обновляется.
 
             if (showPresets)
             {
@@ -99,6 +134,9 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Обрабатывает изменение выбранного элемента в списке. Запускает рендер нового превью.
+        /// </summary>
         private void listBoxSaves_SelectedIndexChanged(object sender, EventArgs e)
         {
             _previewRenderCts?.Cancel();
@@ -117,12 +155,13 @@ namespace FractalExplorer.Forms
         }
 
         /// <summary>
-        /// Запускает асинхронный мозаичный рендер превью для указанного состояния фрактала,
-        /// используя централизованную фабрику движков.
+        /// Запускает асинхронный мозаичный рендер превью для указанного состояния фрактала.
+        /// Управляет жизненным циклом рендеринга, включая отмену, обработку ошибок и обновление UI.
         /// </summary>
+        /// <param name="state">Состояние фрактала для рендера превью.</param>
         private async void StartTiledPreviewRender(FractalSaveStateBase state)
         {
-            if (state == null || pictureBoxPreview.Width <= 0 || pictureBoxPreview.Height <= 0 || string.IsNullOrEmpty(state.PreviewParametersJson))
+            if (state == null || pictureBoxPreview.Width <= 0 || pictureBoxPreview.Height <= 0)
             {
                 ClearPreview();
                 return;
@@ -147,10 +186,6 @@ namespace FractalExplorer.Forms
 
             try
             {
-                // ИСПОЛЬЗУЕМ ФАБРИКУ ДЛЯ СОЗДАНИЯ ДВИЖКА
-                var paletteManager = new PaletteManager(); // Нужен для фабрики
-                var previewEngine = FractalEngineFactory.CreateEngine(state, paletteManager, (_ownerFractalForm as FractalMandelbrotFamilyForm).BaseScale);
-
                 var tiles = GenerateTiles(pictureBoxPreview.Width, pictureBoxPreview.Height);
                 var dispatcher = new TileRenderDispatcher(tiles, Environment.ProcessorCount);
 
@@ -159,11 +194,11 @@ namespace FractalExplorer.Forms
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer.NotifyTileRenderStart(tile.Bounds);
 
-                    // Рендерим плитку с помощью созданного движка
-                    byte[] tileBuffer = await Task.Run(() => previewEngine.RenderSingleTile(tile, pictureBoxPreview.Width, pictureBoxPreview.Height, out _), ct);
+                    byte[] tileBuffer = await GetOrRenderPreviewTileAsync(state, tile, pictureBoxPreview.Width, pictureBoxPreview.Height, TILE_SIZE);
 
                     ct.ThrowIfCancellationRequested();
 
+                    // Потокобезопасно обновляем часть растрового изображения данными из отрендеренной плитки.
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
@@ -171,6 +206,7 @@ namespace FractalExplorer.Forms
                         BitmapData bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
                         int tileRowWidthInBytes = tile.Bounds.Width * 4;
 
+                        // Копируем данные построчно, чтобы учесть возможную разницу между Stride и шириной строки.
                         for (int y = 0; y < tile.Bounds.Height; y++)
                         {
                             IntPtr currentDestPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
@@ -179,11 +215,14 @@ namespace FractalExplorer.Forms
                         }
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
+
                     _renderVisualizer.NotifyTileRenderComplete(tile.Bounds);
+
                 }, token);
 
                 token.ThrowIfCancellationRequested();
 
+                // Если рендер завершился успешно, делаем временный битмап основным.
                 lock (_bitmapLock)
                 {
                     if (_currentRenderingBitmap == newRenderingBitmap)
@@ -196,6 +235,7 @@ namespace FractalExplorer.Forms
             }
             catch (OperationCanceledException)
             {
+                // Отмена — это штатное поведение, игнорируем исключение.
                 lock (_bitmapLock)
                 {
                     if (_currentRenderingBitmap == newRenderingBitmap)
@@ -220,6 +260,87 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Асинхронно получает плитку для превью из кеша или рендерит её, если в кеше её нет.
+        /// Использует статический прогрессивный кеш для ускорения повторного отображения.
+        /// </summary>
+        /// <param name="state">Состояние фрактала для рендеринга.</param>
+        /// <param name="tile">Информация о запрашиваемой плитке.</param>
+        /// <param name="totalWidth">Общая ширина изображения превью.</param>
+        /// <param name="totalHeight">Общая высота изображения превью.</param>
+        /// <param name="tileSize">Размер одной плитки.</param>
+        /// <returns>Массив байтов с пиксельными данными для запрошенной плитки (формат 32bpp ARGB).</returns>
+        private async Task<byte[]> GetOrRenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            string currentStateIdentifier = $"{state.FractalType}_{state.SaveName}_{state.Timestamp.Ticks}";
+            var tileCoord = new Point(tile.Bounds.X, tile.Bounds.Y);
+
+            lock (_previewCacheLock)
+            {
+                // Если кеш не соответствует текущему состоянию, сбрасываем его.
+                if (_cachedPreviewStateIdentifier != currentStateIdentifier)
+                {
+                    _cachedFullPreviewBitmap?.Dispose();
+                    _cachedFullPreviewBitmap = new Bitmap(totalWidth, totalHeight, PixelFormat.Format32bppArgb);
+                    _renderedTilesCache = new HashSet<Point>();
+                    _cachedPreviewStateIdentifier = currentStateIdentifier;
+                }
+            }
+
+            bool needsRender;
+            lock (_previewCacheLock)
+            {
+                needsRender = !_renderedTilesCache.Contains(tileCoord);
+            }
+
+            byte[] tileBuffer;
+            if (needsRender)
+            {
+                // Делегируем вызов рендеринга соответствующей реализации фрактала.
+                tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize);
+
+                lock (_previewCacheLock)
+                {
+                    // Повторная проверка на случай, если другой поток уже отрендерил эту плитку.
+                    if (!_renderedTilesCache.Contains(tileCoord))
+                    {
+                        // Построчно копируем отрендеренную плитку в общий кеш-битмап.
+                        BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
+                        int tileRowBytes = tile.Bounds.Width * 4;
+                        for (int y = 0; y < tile.Bounds.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            Marshal.Copy(tileBuffer, y * tileRowBytes, destPtr, tileRowBytes);
+                        }
+                        _cachedFullPreviewBitmap.UnlockBits(bmpData);
+                        _renderedTilesCache.Add(tileCoord);
+                    }
+                }
+            }
+            else
+            {
+                // Если плитка уже есть в кеше, извлекаем ее данные.
+                tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                lock (_previewCacheLock)
+                {
+                    // Построчно читаем данные плитки из общего кеш-битмапа.
+                    BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.ReadOnly, _cachedFullPreviewBitmap.PixelFormat);
+                    int tileRowBytes = tile.Bounds.Width * 4;
+                    for (int y = 0; y < tile.Bounds.Height; y++)
+                    {
+                        IntPtr sourcePtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                        Marshal.Copy(sourcePtr, tileBuffer, y * tileRowBytes, tileRowBytes);
+                    }
+                    _cachedFullPreviewBitmap.UnlockBits(bmpData);
+                }
+            }
+
+            return tileBuffer;
+        }
+
+        /// <summary>
+        /// Обрабатывает событие Paint для PictureBox. Отображает текущее превью и/или процесс рендеринга.
+        /// </summary>
         private void PictureBoxPreview_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
@@ -240,6 +361,9 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Очищает текущее изображение превью и отменяет активный процесс рендеринга.
+        /// </summary>
         private void ClearPreview()
         {
             _previewRenderCts?.Cancel();
@@ -256,6 +380,11 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Генерирует и сортирует список плиток для мозаичного рендеринга.
+        /// Сортировка по удаленности от центра создает более естественный эффект появления изображения.
+        /// </summary>
+        /// <returns>Список объектов <see cref="TileInfo"/>, отсортированный от центра к краям.</returns>
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
@@ -272,12 +401,18 @@ namespace FractalExplorer.Forms
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 
+        /// <summary>
+        /// Обрабатывает событие закрытия формы, освобождая ресурсы.
+        /// </summary>
         private void SaveLoadDialogForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             ClearPreview();
             _renderVisualizer?.Dispose();
         }
 
+        /// <summary>
+        /// Обрабатывает нажатие кнопки "Загрузить".
+        /// </summary>
         private void btnLoad_Click(object sender, EventArgs e)
         {
             if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
@@ -288,6 +423,9 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Обрабатывает нажатие кнопки "Сохранить как новую".
+        /// </summary>
         private void btnSaveAsNew_Click(object sender, EventArgs e)
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
@@ -327,6 +465,9 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Обрабатывает нажатие кнопки "Удалить".
+        /// </summary>
         private void btnDelete_Click(object sender, EventArgs e)
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
@@ -349,6 +490,9 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Обновляет состояние доступности кнопок в зависимости от контекста.
+        /// </summary>
         private void UpdateButtonsState()
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
@@ -361,6 +505,9 @@ namespace FractalExplorer.Forms
             textBoxSaveName.Enabled = !presetsMode;
         }
 
+        /// <summary>
+        /// Обрабатывает изменение состояния чекбокса "Показать пресеты".
+        /// </summary>
         private void cbPresets_CheckedChanged(object sender, EventArgs e)
         {
             if (sender is CheckBox presetsCheckBox)
@@ -370,6 +517,9 @@ namespace FractalExplorer.Forms
             }
         }
 
+        /// <summary>
+        /// Обрабатывает нажатие кнопки "Отмена".
+        /// </summary>
         private void btnCancel_Click(object sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
