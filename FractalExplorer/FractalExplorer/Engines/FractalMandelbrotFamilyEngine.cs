@@ -574,6 +574,127 @@ namespace FractalExplorer.Engines
     #region Concrete Engines Implementations
 
     /// <summary>
+    /// Реализует движок для рендеринга фрактала "Буффало".
+    /// Формула является вариацией Мандельброта, где z = (|Re(z)| + i|Im(z)|)² + c.
+    /// </summary>
+    public class BuffaloEngine : FractalMandelbrotFamilyEngine
+    {
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            // Для этого движка нет специфичных параметров.
+        }
+
+        protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
+        {
+            initialZ = ComplexDecimal.Zero;
+            constantC = new ComplexDecimal(re, im);
+        }
+
+        public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
+        {
+            int iter = 0;
+            while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
+            {
+                // Применяем модуль к каждой компоненте перед возведением в квадрат
+                z = new ComplexDecimal(Math.Abs(z.Real), Math.Abs(z.Imaginary));
+                z = z * z + c;
+                iter++;
+            }
+            return iter;
+        }
+
+        protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
+        {
+            initialZ = ComplexDouble.Zero;
+            constantC = new ComplexDouble(re, im);
+        }
+
+        public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
+        {
+            int iter = 0;
+            double thresholdSq = (double)ThresholdSquared;
+            while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
+            {
+                // Применяем модуль к каждой компоненте перед возведением в квадрат
+                z = new ComplexDouble(Math.Abs(z.Real), Math.Abs(z.Imaginary));
+                z = z * z + c;
+                iter++;
+            }
+            return iter;
+        }
+    }
+
+    /// <summary>
+    /// Реализует движок для рендеринга фрактала Симоноброт.
+    /// Формула итерации: z -> |z|^p + c.
+    /// </summary>
+    public class SimonobrotEngine : FractalMandelbrotFamilyEngine
+    {
+        /// <summary>
+        /// Степень 'p', в которую возводится модуль z.
+        /// </summary>
+        public decimal Power { get; set; } = 2m;
+
+        /// <summary>
+        /// Флаг, указывающий, нужно ли инвертировать (отражать) фрактал по горизонтальной оси.
+        /// </summary>
+        public bool UseInversion { get; set; } = false;
+
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            if (source is SimonobrotEngine sourceEngine)
+            {
+                this.Power = sourceEngine.Power;
+                this.UseInversion = sourceEngine.UseInversion;
+            }
+        }
+
+        protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
+        {
+            initialZ = ComplexDecimal.Zero;
+            // Для инверсии мы просто используем сопряженную константу c.
+            constantC = UseInversion ? new ComplexDecimal(re, -im) : new ComplexDecimal(re, im);
+        }
+
+        public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
+        {
+            int iter = 0;
+            while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
+            {
+                double magnitude = z.Magnitude;
+                // Math.Pow работает с double, что может привести к потере точности при очень больших/малых числах,
+                // но это соответствует реализации в GeneralizedMandelbrotEngine.
+                decimal newReal = (decimal)Math.Pow(magnitude, (double)Power) + c.Real;
+                z = new ComplexDecimal(newReal, c.Imaginary);
+                iter++;
+            }
+            return iter;
+        }
+
+        protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
+        {
+            initialZ = ComplexDouble.Zero;
+            constantC = UseInversion ? new ComplexDouble(re, -im) : new ComplexDouble(re, im);
+        }
+
+        public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
+        {
+            int iter = 0;
+            double thresholdSq = (double)ThresholdSquared;
+            double powerD = (double)Power;
+            while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
+            {
+                double magnitude = z.Magnitude;
+                double newReal = Math.Pow(magnitude, powerD) + c.Real;
+                z = new ComplexDouble(newReal, c.Imaginary);
+                iter++;
+            }
+            return iter;
+        }
+    }
+
+
+    /// <summary>
     /// Реализует движок для рендеринга классического множества Мандельброта (z = z^2 + c).
     /// </summary>
     public class MandelbrotEngine : FractalMandelbrotFamilyEngine
