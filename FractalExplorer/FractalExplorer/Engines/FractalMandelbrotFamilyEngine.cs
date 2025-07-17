@@ -20,7 +20,7 @@ namespace FractalExplorer.Engines
         #region Constants
 
         /// <summary>
-        /// Порог масштабирования для переключения на высокоточные вычисления (decimal).
+        /// Порог масштабирования для переключения на высокоточные вычисления (<see langword="decimal"/>).
         /// При значениях <see cref="Scale"/> МЕНЬШЕ этого порога будет использоваться <see langword="decimal"/>.
         /// </summary>
         private const decimal SCALE_THRESHOLD_FOR_DECIMAL = 4.0m / 2000000000.0m;
@@ -30,54 +30,54 @@ namespace FractalExplorer.Engines
         #region Properties
 
         /// <summary>
-        /// Максимальное количество итераций для вычисления фрактала.
+        /// Получает или задает максимальное количество итераций для вычисления фрактала.
         /// </summary>
         public int MaxIterations { get; set; }
 
         /// <summary>
-        /// Квадрат порога (bailout value), используемый для определения, вышла ли точка за пределы множества.
+        /// Получает или задает квадрат порога (bailout value), используемый для определения, вышла ли точка за пределы множества.
         /// </summary>
         public decimal ThresholdSquared { get; set; }
 
         /// <summary>
-        /// Комплексная константа 'C' для фракталов семейства Жюлиа.
+        /// Получает или задает комплексную константу 'C' для фракталов семейства Жюлиа.
         /// </summary>
         public ComplexDecimal C { get; set; }
 
         /// <summary>
-        /// Координата X центра видимой области фрактала.
+        /// Получает или задает координату X центра видимой области фрактала.
         /// </summary>
         public decimal CenterX { get; set; }
 
         /// <summary>
-        /// Координата Y центра видимой области фрактала.
+        /// Получает или задает координату Y центра видимой области фрактала.
         /// </summary>
         public decimal CenterY { get; set; }
 
         /// <summary>
-        /// Текущий масштаб рендеринга (ширина комплексной плоскости, отображаемая на экране).
+        /// Получает или задает текущий масштаб рендеринга (ширина комплексной плоскости, отображаемая на экране).
         /// </summary>
         public decimal Scale { get; set; }
 
         /// <summary>
-        /// Флаг, указывающий, нужно ли использовать непрерывное (сглаженное) окрашивание.
+        /// Получает или задает флаг, указывающий, нужно ли использовать непрерывное (сглаженное) окрашивание.
         /// </summary>
         public bool UseSmoothColoring { get; set; } = false;
 
         /// <summary>
-        /// Функция палитры для дискретного окрашивания.
+        /// Получает или задает функцию палитры для дискретного окрашивания.
         /// Принимает (текущая итерация, макс. итераций, макс. итераций для цвета) и возвращает цвет.
         /// </summary>
         public Func<int, int, int, Color> Palette { get; set; }
 
         /// <summary>
-        /// Функция палитры для непрерывного (сглаженного) окрашивания.
+        /// Получает или задает функцию палитры для непрерывного (сглаженного) окрашивания.
         /// Принимает дробное значение итерации и возвращает цвет.
         /// </summary>
         public Func<double, Color> SmoothPalette { get; set; }
 
         /// <summary>
-        /// Максимальное количество итераций для нормализации цвета в палитре (для дискретного режима).
+        /// Получает или задает максимальное количество итераций для нормализации цвета в палитре (для дискретного режима).
         /// </summary>
         public int MaxColorIterations { get; set; } = 1000;
 
@@ -96,7 +96,7 @@ namespace FractalExplorer.Engines
         /// </summary>
         /// <param name="z">Начальное комплексное число (передается по ссылке и изменяется в процессе).</param>
         /// <param name="c">Комплексная константа.</param>
-        /// <returns>Количество итераций.</returns>
+        /// <returns>Количество итераций до выхода за пределы порога или <see cref="MaxIterations"/>.</returns>
         public abstract int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c);
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace FractalExplorer.Engines
         /// </summary>
         /// <param name="z">Начальное комплексное число (передается по ссылке и изменяется в процессе).</param>
         /// <param name="c">Комплексная константа.</param>
-        /// <returns>Количество итераций.</returns>
+        /// <returns>Количество итераций до выхода за пределы порога или <see cref="MaxIterations"/>.</returns>
         public abstract int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c);
 
         /// <summary>
@@ -168,7 +168,7 @@ namespace FractalExplorer.Engines
         /// <param name="canvasWidth">Общая ширина холста.</param>
         /// <param name="canvasHeight">Общая высота холста.</param>
         /// <param name="bytesPerPixel">Выходной параметр: количество байт на пиксель (BGRA).</param>
-        /// <returns>Массив байт с пиксельными данными плитки.</returns>
+        /// <returns>Массив байт с пиксельными данными плитки в формате BGRA.</returns>
         public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
@@ -195,7 +195,7 @@ namespace FractalExplorer.Engines
         /// <param name="canvasHeight">Общая высота холста.</param>
         /// <param name="supersamplingFactor">Фактор суперсэмплинга (например, 2 для 2x2 SSAA).</param>
         /// <param name="bytesPerPixel">Выходной параметр: количество байт на пиксель (BGRA).</param>
-        /// <returns>Массив байт с пиксельными данными плитки.</returns>
+        /// <returns>Массив байт с пиксельными данными плитки в формате BGRA.</returns>
         public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
@@ -368,6 +368,11 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Вспомогательный метод для рендеринга тайла с высокой точностью (<see cref="decimal"/>).
         /// </summary>
+        /// <param name="buffer">Буфер для записи пиксельных данных.</param>
+        /// <param name="tile">Информация о плитке.</param>
+        /// <param name="canvasWidth">Ширина холста.</param>
+        /// <param name="canvasHeight">Высота холста.</param>
+        /// <param name="bytesPerPixel">Количество байт на пиксель.</param>
         private void RenderTileDecimal(byte[] buffer, TileInfo tile, int canvasWidth, int canvasHeight, int bytesPerPixel)
         {
             decimal halfWidthPixels = canvasWidth / 2.0m;
@@ -406,6 +411,11 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Вспомогательный метод для рендеринга тайла со стандартной точностью (<see cref="double"/>).
         /// </summary>
+        /// <param name="buffer">Буфер для записи пиксельных данных.</param>
+        /// <param name="tile">Информация о плитке.</param>
+        /// <param name="canvasWidth">Ширина холста.</param>
+        /// <param name="canvasHeight">Высота холста.</param>
+        /// <param name="bytesPerPixel">Количество байт на пиксель.</param>
         private void RenderTileDouble(byte[] buffer, TileInfo tile, int canvasWidth, int canvasHeight, int bytesPerPixel)
         {
             double centerX_d = (double)CenterX;
@@ -448,6 +458,12 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Вспомогательный метод для SSAA рендеринга тайла с высокой точностью (<see cref="decimal"/>).
         /// </summary>
+        /// <param name="finalTileBuffer">Буфер для итогового изображения тайла.</param>
+        /// <param name="tile">Информация о плитке.</param>
+        /// <param name="canvasWidth">Ширина холста.</param>
+        /// <param name="canvasHeight">Высота холста.</param>
+        /// <param name="supersamplingFactor">Фактор суперсэмплинга.</param>
+        /// <param name="bytesPerPixel">Количество байт на пиксель.</param>
         private void RenderTileSSAA_Decimal(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int bytesPerPixel)
         {
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
@@ -509,6 +525,12 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Вспомогательный метод для SSAA рендеринга тайла со стандартной точностью (<see cref="double"/>).
         /// </summary>
+        /// <param name="finalTileBuffer">Буфер для итогового изображения тайла.</param>
+        /// <param name="tile">Информация о плитке.</param>
+        /// <param name="canvasWidth">Ширина холста.</param>
+        /// <param name="canvasHeight">Высота холста.</param>
+        /// <param name="supersamplingFactor">Фактор суперсэмплинга.</param>
+        /// <param name="bytesPerPixel">Количество байт на пиксель.</param>
         private void RenderTileSSAA_Double(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int bytesPerPixel)
         {
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
@@ -575,21 +597,24 @@ namespace FractalExplorer.Engines
 
     /// <summary>
     /// Реализует движок для рендеринга фрактала "Буффало".
-    /// Формула является вариацией Мандельброта, где z = (|Re(z)| + i|Im(z)|)² + c.
+    /// Итерационная формула: z -> (|Re(z)| + i|Im(z)|)² + c.
     /// </summary>
     public class BuffaloEngine : FractalMandelbrotFamilyEngine
     {
+        /// <inheritdoc />
         public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
         {
             // Для этого движка нет специфичных параметров.
         }
 
+        /// <inheritdoc />
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
             initialZ = ComplexDecimal.Zero;
             constantC = new ComplexDecimal(re, im);
         }
 
+        /// <inheritdoc />
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
@@ -603,12 +628,14 @@ namespace FractalExplorer.Engines
             return iter;
         }
 
+        /// <inheritdoc />
         protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
         {
             initialZ = ComplexDouble.Zero;
             constantC = new ComplexDouble(re, im);
         }
 
+        /// <inheritdoc />
         public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
         {
             int iter = 0;
@@ -625,26 +652,24 @@ namespace FractalExplorer.Engines
     }
 
     /// <summary>
-    /// Реализует движок для рендеринга фрактала Симоноброт.
-    /// Формула итерации: z -> |z|^p + c.
-    /// </summary>
-    /// <summary>
     /// Реализует движок для рендеринга фрактала Симоноброт (пользовательская версия).
+    /// Итерационная формула: z -> (z^p * |z|^p) + c.
     /// </summary>
     public class SimonobrotEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
-        /// Степень 'p', в которую возводится z и |z|.
+        /// Получает или задает степень 'p', в которую возводится z и |z|.
         /// </summary>
         public decimal Power { get; set; } = 2m;
 
         /// <summary>
-        /// Определяет зеркальное отражение фрактала относительно вертикальной оси.
-        /// false: обычное отображение
-        /// true:  зеркальное отражение (инверсия по горизонтали)
+        /// Получает или задает флаг, определяющий зеркальное отражение фрактала относительно вертикальной оси.
+        /// <see langword="false"/>: обычное отображение;
+        /// <see langword="true"/>: зеркальное отражение (инверсия по горизонтали).
         /// </summary>
         public bool UseInversion { get; set; } = false;
 
+        /// <inheritdoc />
         public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
         {
             if (source is SimonobrotEngine sourceEngine)
@@ -654,6 +679,7 @@ namespace FractalExplorer.Engines
             }
         }
 
+        /// <inheritdoc />
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
             initialZ = ComplexDecimal.Zero;
@@ -669,6 +695,7 @@ namespace FractalExplorer.Engines
             }
         }
 
+        /// <inheritdoc />
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
@@ -687,7 +714,7 @@ namespace FractalExplorer.Engines
                     // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
                     ComplexDecimal zPower = PowerComplex(z, p);
 
-                    // Используем стандартную формулу Simonobrot: z^p * |z|^p + c
+                    // Используем стандартную формулу Simonobrot: (z^p * |z|^p) + c
                     decimal magnitude = (decimal)z.Magnitude;
                     decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)p);
                     z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
@@ -700,6 +727,7 @@ namespace FractalExplorer.Engines
             return iter;
         }
 
+        /// <inheritdoc />
         protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
         {
             initialZ = ComplexDouble.Zero;
@@ -715,6 +743,7 @@ namespace FractalExplorer.Engines
             }
         }
 
+        /// <inheritdoc />
         public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
         {
             int iter = 0;
@@ -734,7 +763,7 @@ namespace FractalExplorer.Engines
                     // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
                     ComplexDouble zPower = PowerComplexDouble(z, p);
 
-                    // Используем стандартную формулу Simonobrot: z^p * |z|^p + c
+                    // Используем стандартную формулу Simonobrot: (z^p * |z|^p) + c
                     double magnitude = z.Magnitude;
                     double magnitudePower = Math.Pow(magnitude, p);
                     z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
@@ -748,8 +777,11 @@ namespace FractalExplorer.Engines
         }
 
         /// <summary>
-        /// Возводит комплексное число в степень (decimal версия).
+        /// Возводит комплексное число в степень (<see langword="decimal"/> версия).
         /// </summary>
+        /// <param name="z">Комплексное число.</param>
+        /// <param name="power">Степень.</param>
+        /// <returns>Результат возведения в степень.</returns>
         private ComplexDecimal PowerComplex(ComplexDecimal z, decimal power)
         {
             // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
@@ -764,8 +796,11 @@ namespace FractalExplorer.Engines
         }
 
         /// <summary>
-        /// Возводит комплексное число в степень (double версия).
+        /// Возводит комплексное число в степень (<see langword="double"/> версия).
         /// </summary>
+        /// <param name="z">Комплексное число.</param>
+        /// <param name="power">Степень.</param>
+        /// <returns>Результат возведения в степень.</returns>
         private ComplexDouble PowerComplexDouble(ComplexDouble z, double power)
         {
             // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
@@ -879,6 +914,7 @@ namespace FractalExplorer.Engines
 
     /// <summary>
     /// Реализует движок для рендеринга фрактала "Пылающий Корабль" (Mandelbrot-like).
+    /// Итерационная формула: z' = |Re(z)| - i*|Im(z)|, z_next = (z')^2 + c.
     /// </summary>
     public class MandelbrotBurningShipEngine : FractalMandelbrotFamilyEngine
     {
@@ -932,6 +968,7 @@ namespace FractalExplorer.Engines
 
     /// <summary>
     /// Реализует движок для рендеринга фрактала "Пылающий Корабль" (Julia-like).
+    /// Итерационная формула: z' = |Re(z)| - i*|Im(z)|, z_next = (z')^2 + c.
     /// </summary>
     public class JuliaBurningShipEngine : FractalMandelbrotFamilyEngine
     {
@@ -989,7 +1026,7 @@ namespace FractalExplorer.Engines
     public class GeneralizedMandelbrotEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
-        /// Степень 'p', в которую возводится z.
+        /// Получает или задает степень 'p', в которую возводится z.
         /// </summary>
         public decimal Power { get; set; } = 3m;
 
@@ -1053,6 +1090,9 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Возводит комплексное число высокой точности в указанную степень.
         /// </summary>
+        /// <param name="z">Комплексное число для возведения в степень.</param>
+        /// <param name="power">Степень.</param>
+        /// <returns>Результат <paramref name="z"/> в степени <paramref name="power"/>.</returns>
         private ComplexDecimal ComplexDecimalPow(ComplexDecimal z, decimal power)
         {
             if (z == ComplexDecimal.Zero) return ComplexDecimal.Zero;
