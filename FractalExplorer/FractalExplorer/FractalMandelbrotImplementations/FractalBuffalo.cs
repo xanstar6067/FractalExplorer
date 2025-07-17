@@ -1,6 +1,10 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
+using FractalExplorer.Resources;
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Text.Json;
 
@@ -43,7 +47,6 @@ namespace FractalExplorer.Projects
 
         public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
-            // Используем базовый класс состояния, так как у Buffalo нет доп. параметров
             var state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
@@ -57,7 +60,6 @@ namespace FractalExplorer.Projects
                 PreviewEngineType = this.FractalTypeIdentifier
             };
 
-            // Параметры для рендера превью
             var previewParams = new PreviewParams
             {
                 CenterX = state.CenterX,
@@ -74,7 +76,6 @@ namespace FractalExplorer.Projects
 
         public override void LoadState(FractalSaveStateBase stateBase)
         {
-            // Просто вызываем базовую реализацию, так как нет специфичных параметров
             base.LoadState(stateBase);
         }
 
@@ -88,6 +89,70 @@ namespace FractalExplorer.Projects
         {
             var specificSaves = saves.Cast<MandelbrotFamilySaveState>().ToList();
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
+        }
+
+        // --- НОВЫЙ КОД: Переопределение для корректного рендера превью ---
+
+        /// <summary>
+        /// Асинхронно рендерит плитку превью, создавая правильный движок для Буффало.
+        /// </summary>
+        public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+
+                PreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+
+                // Создаем правильный движок
+                var previewEngine = new BuffaloEngine();
+
+                // Настраиваем его из параметров
+                previewEngine.MaxIterations = previewParams.Iterations;
+                previewEngine.CenterX = previewParams.CenterX;
+                previewEngine.CenterY = previewParams.CenterY;
+                if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
+                previewEngine.Scale = BaseScale / previewParams.Zoom;
+                previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+
+                var paletteManager = new PaletteManager();
+                var paletteForPreview = paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? paletteManager.Palettes.First();
+                int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
+
+                previewEngine.UseSmoothColoring = false;
+                previewEngine.MaxColorIterations = effectiveMaxColorIterations;
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
+
+        /// <summary>
+        /// Рендерит полное превью (используется в редких случаях, но лучше реализовать).
+        /// </summary>
+        public override Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
+        {
+            var tile = new TileInfo(0, 0, previewWidth, previewHeight);
+            byte[] buffer = RenderPreviewTileAsync(stateBase, tile, previewWidth, previewHeight, previewWidth).Result;
+
+            var bmp = new Bitmap(previewWidth, previewHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            var bmpData = bmp.LockBits(new Rectangle(0, 0, previewWidth, previewHeight), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
+
+            System.Runtime.InteropServices.Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+            bmp.UnlockBits(bmpData);
+
+            // Для совместимости с некоторыми элементами UI, конвертируем в 24bppRgb
+            Bitmap finalBmp = new Bitmap(bmp);
+            bmp.Dispose();
+
+            return finalBmp;
         }
 
         #endregion
