@@ -172,7 +172,7 @@ namespace FractalDraving
         /// <summary>
         /// Получает базовый масштаб для фрактала, определяющий ширину комплексной плоскости при масштабе 1.0.
         /// </summary>
-        protected virtual decimal BaseScale => 3.0m;
+        public virtual decimal BaseScale => 3.0m;
 
         /// <summary>
         /// Получает начальную координату X центра.
@@ -1085,7 +1085,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="palette">Палитра цветов.</param>
         /// <returns>Функция, принимающая номер итерации, макс. итераций и макс. итераций цвета и возвращающая цвет.</returns>
-        protected Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
+        public Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
@@ -1550,55 +1550,31 @@ namespace FractalDraving
         /// <returns>Настроенный экземпляр движка фрактала.</returns>
         private FractalMandelbrotFamilyEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
-            FractalMandelbrotFamilyEngine engine;
-            switch (state.EngineType)
+            // Создаем временное состояние для передачи в фабрику
+            var tempSaveState = new GeneralizedMandelbrotSaveState
             {
-                case "Mandelbrot": engine = new MandelbrotEngine(); break;
-                case "Julia": engine = new JuliaEngine { C = state.JuliaC.Value }; break;
-                case "MandelbrotBurningShip": engine = new MandelbrotBurningShipEngine(); break;
-                case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC.Value }; break;
-                case "GeneralizedMandelbrot":
-                    engine = new GeneralizedMandelbrotEngine();
-                    if (state.Power.HasValue && engine is GeneralizedMandelbrotEngine genEngine)
-                    {
-                        genEngine.Power = state.Power.Value;
-                    }
-                    break;
-                case "Buffalo":
-                    engine = new BuffaloEngine();
-                    break;
-                case "Simonobrot":
-                    engine = new SimonobrotEngine();
-                    if (engine is SimonobrotEngine simonEngine)
-                    {
-                        if (state.Power.HasValue) simonEngine.Power = state.Power.Value;
-                        simonEngine.UseInversion = state.UseInversion;
-                    }
-                    break;
-                default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
-            }
+                PreviewEngineType = state.EngineType,
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = forPreview ? Math.Min(state.Iterations, 150) : state.Iterations,
+                Threshold = state.Threshold,
+                PaletteName = state.ActivePaletteName,
+                Power = state.Power ?? 2.0m, // Значение по умолчанию, если null
+                UseInversion = state.UseInversion
+            };
+            tempSaveState.PreviewParametersJson = JsonSerializer.Serialize(tempSaveState);
 
-            if (forPreview)
-            {
-                engine.MaxIterations = Math.Min(state.Iterations, 150);
-            }
-            else
-            {
-                engine.MaxIterations = state.Iterations;
-            }
+            var engine = FractalEngineFactory.CreateEngine(tempSaveState, _paletteManager, state.BaseScale);
 
-            engine.ThresholdSquared = state.Threshold * state.Threshold;
-            engine.CenterX = state.CenterX;
-            engine.CenterY = state.CenterY;
-            engine.Scale = state.BaseScale / state.Zoom;
-            var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
-
+            // Для рендера в высоком разрешении может понадобиться сглаживание
             engine.UseSmoothColoring = state.UseSmoothColoring;
-            int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
-            engine.MaxColorIterations = effectiveMaxColorIterations;
-
-            engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender, effectiveMaxColorIterations);
-            engine.Palette = GenerateDiscretePaletteFunction(paletteForRender);
+            if (state.UseSmoothColoring)
+            {
+                var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
+                int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
+                engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender, effectiveMaxColorIterations);
+            }
 
             return engine;
         }

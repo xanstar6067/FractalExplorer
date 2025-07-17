@@ -76,7 +76,7 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Получает базовый масштаб для фрактала Жюлиа.
         /// </summary>
-        protected override decimal BaseScale => 4.0m;
+        public override decimal BaseScale => 4.0m;
 
         /// <summary>
         /// Получает начальную координату X центра для фрактала Жюлиа.
