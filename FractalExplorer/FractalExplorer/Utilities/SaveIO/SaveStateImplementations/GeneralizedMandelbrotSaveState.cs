@@ -10,6 +10,7 @@ namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
     /// Представляет состояние сохранения для Обобщенного множества Мандельброта,
     /// которое расширяет базовое семейство фракталов Мандельброта, 
     /// добавляя настраиваемую степень 'p' в итерационную формулу.
+    /// Также используется для фрактала Симоноброт.
     /// </summary>
     public class GeneralizedMandelbrotSaveState : MandelbrotFamilySaveState
     {
@@ -17,6 +18,11 @@ namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
         /// Получает или задает степень 'p' в итерационной формуле z -> z^p + c.
         /// </summary>
         public decimal Power { get; set; }
+
+        /// <summary>
+        /// Получает или задает флаг инверсии. Используется фракталом Симоноброт.
+        /// </summary>
+        public bool UseInversion { get; set; } = false;
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="GeneralizedMandelbrotSaveState"/>
