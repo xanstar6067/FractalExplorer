@@ -639,9 +639,9 @@ namespace FractalExplorer.Engines
         public decimal Power { get; set; } = 2m;
 
         /// <summary>
-        /// Определяет используемую формулу.
-        /// false: z_next = z^p * |z|^p + c
-        /// true:  z_next = z^p * |z^p| + c
+        /// Определяет зеркальное отражение фрактала относительно вертикальной оси.
+        /// false: обычное отображение
+        /// true:  зеркальное отражение (инверсия по горизонтали)
         /// </summary>
         public bool UseInversion { get; set; } = false;
 
@@ -657,7 +657,16 @@ namespace FractalExplorer.Engines
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
             initialZ = ComplexDecimal.Zero;
-            constantC = new ComplexDecimal(re, im);
+
+            // Применяем зеркальное отражение относительно вертикальной оси
+            if (UseInversion)
+            {
+                constantC = new ComplexDecimal(-re, im);
+            }
+            else
+            {
+                constantC = new ComplexDecimal(re, im);
+            }
         }
 
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
@@ -667,7 +676,7 @@ namespace FractalExplorer.Engines
 
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                // ПРАВИЛЬНОЕ РЕШЕНИЕ: Обрабатываем сингулярность z=0 в первую очередь.
+                // Обрабатываем сингулярность z=0 в первую очередь.
                 if (z.MagnitudeSquared == 0)
                 {
                     // Для первой итерации z_next всегда равно c, чтобы избежать 0^(-p).
@@ -678,21 +687,11 @@ namespace FractalExplorer.Engines
                     // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
                     ComplexDecimal zPower = PowerComplex(z, p);
 
-                    if (UseInversion)
-                    {
-                        // Формула: z^p * |z^p| + c
-                        decimal modulusOfZPower = (decimal)zPower.Magnitude;
-                        z = new ComplexDecimal(zPower.Real * modulusOfZPower + c.Real,
-                                             zPower.Imaginary * modulusOfZPower + c.Imaginary);
-                    }
-                    else
-                    {
-                        // Формула: z^p * |z|^p + c
-                        decimal magnitude = (decimal)z.Magnitude;
-                        decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)p);
-                        z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
-                                             zPower.Imaginary * magnitudePower + c.Imaginary);
-                    }
+                    // Используем стандартную формулу Simonobrot: z^p * |z|^p + c
+                    decimal magnitude = (decimal)z.Magnitude;
+                    decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)p);
+                    z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
+                                         zPower.Imaginary * magnitudePower + c.Imaginary);
                 }
 
                 iter++;
@@ -704,7 +703,16 @@ namespace FractalExplorer.Engines
         protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
         {
             initialZ = ComplexDouble.Zero;
-            constantC = new ComplexDouble(re, im);
+
+            // Применяем зеркальное отражение относительно вертикальной оси
+            if (UseInversion)
+            {
+                constantC = new ComplexDouble(-re, im);
+            }
+            else
+            {
+                constantC = new ComplexDouble(re, im);
+            }
         }
 
         public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
@@ -715,7 +723,7 @@ namespace FractalExplorer.Engines
 
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                // ПРАВИЛЬНОЕ РЕШЕНИЕ: Обрабатываем сингулярность z=0 в первую очередь.
+                // Обрабатываем сингулярность z=0 в первую очередь.
                 if (z.MagnitudeSquared == 0)
                 {
                     // Для первой итерации z_next всегда равно c, чтобы избежать 0^(-p).
@@ -726,21 +734,11 @@ namespace FractalExplorer.Engines
                     // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
                     ComplexDouble zPower = PowerComplexDouble(z, p);
 
-                    if (UseInversion)
-                    {
-                        // Формула: z^p * |z^p| + c
-                        double modulusOfZPower = zPower.Magnitude;
-                        z = new ComplexDouble(zPower.Real * modulusOfZPower + c.Real,
-                                            zPower.Imaginary * modulusOfZPower + c.Imaginary);
-                    }
-                    else
-                    {
-                        // Формула: z^p * |z|^p + c
-                        double magnitude = z.Magnitude;
-                        double magnitudePower = Math.Pow(magnitude, p);
-                        z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
-                                            zPower.Imaginary * magnitudePower + c.Imaginary);
-                    }
+                    // Используем стандартную формулу Simonobrot: z^p * |z|^p + c
+                    double magnitude = z.Magnitude;
+                    double magnitudePower = Math.Pow(magnitude, p);
+                    z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
+                                        zPower.Imaginary * magnitudePower + c.Imaginary);
                 }
 
                 iter++;
