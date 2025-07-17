@@ -1527,7 +1527,6 @@ namespace FractalDraving
                 CenterY = _centerY,
                 Zoom = _zoom,
                 BaseScale = this.BaseScale,
-                Scale = this.BaseScale / _zoom,
                 Iterations = (int)nudIterations.Value,
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
@@ -1580,7 +1579,7 @@ namespace FractalDraving
             engine.ThresholdSquared = state.Threshold * state.Threshold;
             engine.CenterX = state.CenterX;
             engine.CenterY = state.CenterY;
-            engine.Scale = state.Scale;
+            engine.Scale = state.BaseScale / state.Zoom;
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
 
             engine.UseSmoothColoring = state.UseSmoothColoring;
@@ -1599,35 +1598,7 @@ namespace FractalDraving
             _isHighResRendering = true;
             try
             {
-                // Получаем соотношение сторон текущего окна просмотра (на форме).
-                // Проверяем, что canvas не нулевого размера, чтобы избежать деления на ноль.
-                decimal canvasAspectRatio = (this.canvas.Height > 0)
-                    ? (decimal)this.canvas.Width / this.canvas.Height
-                    : 16.0m / 9.0m; // Запасное значение
-
-                // Получаем соотношение сторон целевого изображения для сохранения.
-                decimal targetAspectRatio = (height > 0)
-                    ? (decimal)width / height
-                    : 16.0m / 9.0m; // Запасное значение
-
-                // Создаем копию состояния, чтобы не изменять оригинал.
-                var adjustedState = state.Clone();
-
-                // Сравниваем соотношения и корректируем Scale.
-                // Scale в движке определяет ШИРИНУ видимой области.
-                if (targetAspectRatio > canvasAspectRatio)
-                {
-                    // Если целевое изображение "шире" чем окно просмотра,
-                    // нам нужно увеличить видимую ширину (Scale), чтобы по вертикали все влезло.
-                    // Высота обзора остается той же, ширина подстраивается.
-                    decimal originalComplexHeight = adjustedState.Scale / canvasAspectRatio;
-                    adjustedState.Scale = originalComplexHeight * targetAspectRatio;
-                }
-                // Если целевое изображение "выше" или такое же, мы не меняем Scale.
-                // Исходная ширина обзора сохраняется, а движок добавит пространство сверху/снизу.
-
-                // Используем скорректированное состояние для создания движка.
-                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(adjustedState, forPreview: false);
+                FractalMandelbrotFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
                 int threadCount = GetThreadCount();
                 Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
 
