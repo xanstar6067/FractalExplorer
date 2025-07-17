@@ -628,6 +628,9 @@ namespace FractalExplorer.Engines
     /// Реализует движок для рендеринга фрактала Симоноброт.
     /// Формула итерации: z -> |z|^p + c.
     /// </summary>
+    /// <summary>
+    /// Реализует движок для рендеринга фрактала Симоноброт (пользовательская версия).
+    /// </summary>
     public class SimonobrotEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
@@ -636,9 +639,9 @@ namespace FractalExplorer.Engines
         public decimal Power { get; set; } = 2m;
 
         /// <summary>
-        /// Флаг, указывающий, нужно ли использовать инвертированную формулу.
-        /// false: z^p * |z|^p + c
-        /// true: z^p * |z^p| + c
+        /// Определяет используемую формулу.
+        /// false: z_next = z^p * |z|^p + c
+        /// true:  z_next = z^p * |z^p| + c
         /// </summary>
         public bool UseInversion { get; set; } = false;
 
@@ -660,58 +663,36 @@ namespace FractalExplorer.Engines
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
-            decimal powerD = Power;
+            decimal p = Power;
 
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                // Проверка на деление на ноль при отрицательной степени
-                if (z.MagnitudeSquared == 0 && powerD < 0)
+                // ПРАВИЛЬНОЕ РЕШЕНИЕ: Обрабатываем сингулярность z=0 в первую очередь.
+                if (z.MagnitudeSquared == 0)
                 {
-                    iter = MaxIterations;
-                    break;
-                }
-
-                if (UseInversion)
-                {
-                    // Инвертированная формула: z^p * |z^p| + c
-                    // Сначала вычисляем z^p
-                    ComplexDecimal zPower = PowerComplex(z, powerD);
-
-                    // Затем вычисляем |z^p| (модуль от z^p)
-                    decimal modulusOfZPower = (decimal)zPower.Magnitude;
-
-                    // Дополнительная проверка для отрицательных степеней
-                    if (modulusOfZPower == 0 && powerD < 0)
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    // Результат: z^p * |z^p| + c
-                    z = new ComplexDecimal(zPower.Real * modulusOfZPower + c.Real,
-                                         zPower.Imaginary * modulusOfZPower + c.Imaginary);
+                    // Для первой итерации z_next всегда равно c, чтобы избежать 0^(-p).
+                    z = c;
                 }
                 else
                 {
-                    // Обычная формула: z^p * |z|^p + c
-                    // Вычисляем z^p
-                    ComplexDecimal zPower = PowerComplex(z, powerD);
+                    // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
+                    ComplexDecimal zPower = PowerComplex(z, p);
 
-                    // Вычисляем |z|^p
-                    decimal magnitude = (decimal)z.Magnitude;
-
-                    // Дополнительная проверка для отрицательных степеней
-                    if (magnitude == 0 && powerD < 0)
+                    if (UseInversion)
                     {
-                        iter = MaxIterations;
-                        break;
+                        // Формула: z^p * |z^p| + c
+                        decimal modulusOfZPower = (decimal)zPower.Magnitude;
+                        z = new ComplexDecimal(zPower.Real * modulusOfZPower + c.Real,
+                                             zPower.Imaginary * modulusOfZPower + c.Imaginary);
                     }
-
-                    decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)powerD);
-
-                    // Результат: z^p * |z|^p + c
-                    z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
-                                         zPower.Imaginary * magnitudePower + c.Imaginary);
+                    else
+                    {
+                        // Формула: z^p * |z|^p + c
+                        decimal magnitude = (decimal)z.Magnitude;
+                        decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)p);
+                        z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
+                                             zPower.Imaginary * magnitudePower + c.Imaginary);
+                    }
                 }
 
                 iter++;
@@ -730,58 +711,36 @@ namespace FractalExplorer.Engines
         {
             int iter = 0;
             double thresholdSq = (double)ThresholdSquared;
-            double powerD = (double)Power;
+            double p = (double)Power;
 
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                // Проверка на деление на ноль при отрицательной степени
-                if (z.MagnitudeSquared == 0 && powerD < 0)
+                // ПРАВИЛЬНОЕ РЕШЕНИЕ: Обрабатываем сингулярность z=0 в первую очередь.
+                if (z.MagnitudeSquared == 0)
                 {
-                    iter = MaxIterations;
-                    break;
-                }
-
-                if (UseInversion)
-                {
-                    // Инвертированная формула: z^p * |z^p| + c
-                    // Сначала вычисляем z^p
-                    ComplexDouble zPower = PowerComplexDouble(z, powerD);
-
-                    // Затем вычисляем |z^p| (модуль от z^p)
-                    double modulusOfZPower = zPower.Magnitude;
-
-                    // Дополнительная проверка для отрицательных степеней
-                    if (modulusOfZPower == 0 && powerD < 0)
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    // Результат: z^p * |z^p| + c
-                    z = new ComplexDouble(zPower.Real * modulusOfZPower + c.Real,
-                                        zPower.Imaginary * modulusOfZPower + c.Imaginary);
+                    // Для первой итерации z_next всегда равно c, чтобы избежать 0^(-p).
+                    z = c;
                 }
                 else
                 {
-                    // Обычная формула: z^p * |z|^p + c
-                    // Вычисляем z^p
-                    ComplexDouble zPower = PowerComplexDouble(z, powerD);
+                    // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
+                    ComplexDouble zPower = PowerComplexDouble(z, p);
 
-                    // Вычисляем |z|^p
-                    double magnitude = z.Magnitude;
-
-                    // Дополнительная проверка для отрицательных степеней
-                    if (magnitude == 0 && powerD < 0)
+                    if (UseInversion)
                     {
-                        iter = MaxIterations;
-                        break;
+                        // Формула: z^p * |z^p| + c
+                        double modulusOfZPower = zPower.Magnitude;
+                        z = new ComplexDouble(zPower.Real * modulusOfZPower + c.Real,
+                                            zPower.Imaginary * modulusOfZPower + c.Imaginary);
                     }
-
-                    double magnitudePower = Math.Pow(magnitude, powerD);
-
-                    // Результат: z^p * |z|^p + c
-                    z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
-                                        zPower.Imaginary * magnitudePower + c.Imaginary);
+                    else
+                    {
+                        // Формула: z^p * |z|^p + c
+                        double magnitude = z.Magnitude;
+                        double magnitudePower = Math.Pow(magnitude, p);
+                        z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
+                                            zPower.Imaginary * magnitudePower + c.Imaginary);
+                    }
                 }
 
                 iter++;
@@ -795,21 +754,15 @@ namespace FractalExplorer.Engines
         /// </summary>
         private ComplexDecimal PowerComplex(ComplexDecimal z, decimal power)
         {
-            if (z.MagnitudeSquared == 0)
-            {
-                return ComplexDecimal.Zero;
-            }
+            // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
+            double r = z.Magnitude;
+            double theta = Math.Atan2((double)z.Imaginary, (double)z.Real);
+            double p = (double)power;
 
-            decimal magnitude = (decimal)z.Magnitude;
-            decimal argument = (decimal)z.Argument;
+            double newR = Math.Pow(r, p);
+            double newTheta = theta * p;
 
-            decimal newMagnitude = (decimal)Math.Pow((double)magnitude, (double)power);
-            decimal newArgument = power * argument;
-
-            decimal newReal = newMagnitude * (decimal)Math.Cos((double)newArgument);
-            decimal newImaginary = newMagnitude * (decimal)Math.Sin((double)newArgument);
-
-            return new ComplexDecimal(newReal, newImaginary);
+            return ComplexDecimal.FromPolarCoordinates(newR, newTheta);
         }
 
         /// <summary>
@@ -817,21 +770,10 @@ namespace FractalExplorer.Engines
         /// </summary>
         private ComplexDouble PowerComplexDouble(ComplexDouble z, double power)
         {
-            if (z.MagnitudeSquared == 0)
-            {
-                return ComplexDouble.Zero;
-            }
-
-            double magnitude = z.Magnitude;
-            double argument = z.Argument;
-
-            double newMagnitude = Math.Pow(magnitude, power);
-            double newArgument = power * argument;
-
-            double newReal = newMagnitude * Math.Cos(newArgument);
-            double newImaginary = newMagnitude * Math.Sin(newArgument);
-
-            return new ComplexDouble(newReal, newImaginary);
+            // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
+            // Используем стандартную быструю реализацию.
+            System.Numerics.Complex result = System.Numerics.Complex.Pow(new System.Numerics.Complex(z.Real, z.Imaginary), power);
+            return new ComplexDouble(result.Real, result.Imaginary);
         }
     }
 
