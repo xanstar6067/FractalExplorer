@@ -680,9 +680,16 @@ namespace FractalExplorer.Engines
                     // Затем вычисляем |z^p| (модуль от z^p)
                     decimal modulusOfZPower = (decimal)zPower.Magnitude;
 
+                    // Дополнительная проверка для отрицательных степеней
+                    if (modulusOfZPower == 0 && powerD < 0)
+                    {
+                        iter = MaxIterations;
+                        break;
+                    }
+
                     // Результат: z^p * |z^p| + c
-                    z = new ComplexDecimal(zPower.Real * (decimal)modulusOfZPower + c.Real,
-                                         zPower.Imaginary * (decimal)modulusOfZPower + c.Imaginary);
+                    z = new ComplexDecimal(zPower.Real * modulusOfZPower + c.Real,
+                                         zPower.Imaginary * modulusOfZPower + c.Imaginary);
                 }
                 else
                 {
@@ -692,6 +699,14 @@ namespace FractalExplorer.Engines
 
                     // Вычисляем |z|^p
                     decimal magnitude = (decimal)z.Magnitude;
+
+                    // Дополнительная проверка для отрицательных степеней
+                    if (magnitude == 0 && powerD < 0)
+                    {
+                        iter = MaxIterations;
+                        break;
+                    }
+
                     decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)powerD);
 
                     // Результат: z^p * |z|^p + c
@@ -735,6 +750,13 @@ namespace FractalExplorer.Engines
                     // Затем вычисляем |z^p| (модуль от z^p)
                     double modulusOfZPower = zPower.Magnitude;
 
+                    // Дополнительная проверка для отрицательных степеней
+                    if (modulusOfZPower == 0 && powerD < 0)
+                    {
+                        iter = MaxIterations;
+                        break;
+                    }
+
                     // Результат: z^p * |z^p| + c
                     z = new ComplexDouble(zPower.Real * modulusOfZPower + c.Real,
                                         zPower.Imaginary * modulusOfZPower + c.Imaginary);
@@ -747,6 +769,14 @@ namespace FractalExplorer.Engines
 
                     // Вычисляем |z|^p
                     double magnitude = z.Magnitude;
+
+                    // Дополнительная проверка для отрицательных степеней
+                    if (magnitude == 0 && powerD < 0)
+                    {
+                        iter = MaxIterations;
+                        break;
+                    }
+
                     double magnitudePower = Math.Pow(magnitude, powerD);
 
                     // Результат: z^p * |z|^p + c
