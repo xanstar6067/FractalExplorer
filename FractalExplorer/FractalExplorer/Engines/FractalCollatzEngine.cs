@@ -21,15 +21,15 @@ namespace FractalExplorer.Engines
         /// <returns>Косинус от z.</returns>
         private ComplexDecimal ComplexCos(ComplexDecimal z)
         {
-            // Для вычислений тригонометрических функций используем double,
-            // так как в стандартной библиотеке нет аналогов для decimal.
-            double x = (double)z.Real;
-            double y = (double)z.Imaginary;
+            // Теперь все вычисления производятся с точностью decimal!
+            decimal x = z.Real;
+            decimal y = z.Imaginary;
 
-            decimal cos_x = (decimal)Math.Cos(x);
-            decimal sin_x = (decimal)Math.Sin(x);
-            decimal cosh_y = (decimal)Math.Cosh(y);
-            decimal sinh_y = (decimal)Math.Sinh(y);
+            // Используем нашу новую реализацию
+            decimal cos_x = DecimalMath.Cos(x);
+            decimal sin_x = DecimalMath.Sin(x);
+            decimal cosh_y = DecimalMath.Cosh(y);
+            decimal sinh_y = DecimalMath.Sinh(y);
 
             decimal realPart = cos_x * cosh_y;
             decimal imaginaryPart = -sin_x * sinh_y;
