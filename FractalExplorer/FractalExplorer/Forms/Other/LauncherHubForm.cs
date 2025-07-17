@@ -69,6 +69,28 @@ namespace FractalExplorer
             _fractalCatalog.Add(new FractalInfo
             {
                 Family = "Множество Мандельброта",
+                DisplayName = "Буффало",
+                FormToLaunch = typeof(FractalBuffalo),
+                Description = "Вариация множества Мандельброта, которая использует абсолютные значения компонент Z перед возведением в квадрат: Z = (|Re(Z)| + i|Im(Z)|)² + C.\n\n" +
+                             "Результатом является симметричный фрактал, напоминающий жука или быка, с уникальными и менее 'шумными' структурами по сравнению с 'Горящим Кораблем'.\n\n" +
+                             "Особенности: Исследуйте гладкие, органические формы этого фрактала. Все возможности по настройке палитры и сохранению также доступны.",
+                // PreviewImage = Properties.Resources.buffalo_preview
+            });
+
+            _fractalCatalog.Add(new FractalInfo
+            {
+                Family = "Множество Мандельброта",
+                DisplayName = "Симоноброт",
+                FormToLaunch = typeof(FractalSimonobrot),
+                Description = "Необычный фрактал, определяемый формулой Z = |Z|^p + C, где |Z| - это модуль комплексного числа (действительное число).\n\n" +
+                              "Это приводит к совершенно другим структурам, часто с радиальной симметрией и интересными 'лучами'.\n\n" +
+                              "Особенности: Экспериментируйте со степенью 'p' (включая отрицательные значения) и используйте опцию инверсии для получения зеркального отражения фрактала.",
+                // PreviewImage = Properties.Resources.simonobrot_preview
+            });
+
+            _fractalCatalog.Add(new FractalInfo
+            {
+                Family = "Множество Мандельброта",
                 DisplayName = "Обобщенный Мандельброт",
                 FormToLaunch = typeof(FractalGeneralizedMandelbrot),
                 Description = "Вариация множества Мандельброта, где используется произвольная степень 'p', а не только квадрат: Z = Z^p + C.\n\n" +

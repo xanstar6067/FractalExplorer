@@ -693,7 +693,6 @@ namespace FractalExplorer.Engines
         }
     }
 
-
     /// <summary>
     /// Реализует движок для рендеринга классического множества Мандельброта (z = z^2 + c).
     /// </summary>
