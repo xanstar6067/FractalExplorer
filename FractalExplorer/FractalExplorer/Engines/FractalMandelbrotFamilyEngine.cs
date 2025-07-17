@@ -635,15 +635,13 @@ namespace FractalExplorer.Engines
     {
         /// <summary>
         /// Степень 'p', в которую возводится z и |z|.
-        /// ВАЖНО: В текущей реализации это свойство игнорируется.
-        /// Расчет жестко закодирован для p=2 для соответствия формулам и производительности.
         /// </summary>
         public decimal Power { get; set; } = 2m;
 
         /// <summary>
         /// Определяет используемую формулу.
-        /// false: z_next = z^2 * |z|^2 + c
-        /// true:  z_next = z^2 * |z^2| + c
+        /// false: z_next = z^p * |z|^p + c
+        /// true:  z_next = z^p * |z^p| + c
         /// </summary>
         public bool UseInversion { get; set; } = false;
 
@@ -665,38 +663,38 @@ namespace FractalExplorer.Engines
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
-            // p = 2 жестко закодировано для производительности и точности.
+            decimal p = Power;
 
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                // Для первой итерации (когда z_0 = 0), следующий z (z_1) всегда равен c.
-                // Это также корректно обрабатывает математическое выражение при z=0.
-                if (iter == 0)
+                // ПРАВИЛЬНОЕ РЕШЕНИЕ: Обрабатываем сингулярность z=0 в первую очередь.
+                if (z.MagnitudeSquared == 0)
                 {
+                    // Для первой итерации z_next всегда равно c, чтобы избежать 0^(-p).
                     z = c;
                 }
                 else
                 {
-                    // Вычисляем z^2 через прямое умножение - это намного быстрее и точнее,
-                    // чем через полярные координаты (PowerComplex).
-                    ComplexDecimal z_squared = z * z;
+                    // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
+                    ComplexDecimal zPower = PowerComplex(z, p);
 
                     if (UseInversion)
                     {
-                        // Формула: z_next = z^2 * |z^2| + c
-                        decimal modulus_of_z_squared = (decimal)z_squared.Magnitude;
-                        z = z_squared * modulus_of_z_squared + c;
+                        // Формула: z^p * |z^p| + c
+                        decimal modulusOfZPower = (decimal)zPower.Magnitude;
+                        z = new ComplexDecimal(zPower.Real * modulusOfZPower + c.Real,
+                                             zPower.Imaginary * modulusOfZPower + c.Imaginary);
                     }
                     else
                     {
-                        // Формула: z_next = z^2 * |z|^2 + c
-                        // |z|^2 - это просто z.MagnitudeSquared.
-                        // Это намного эффективнее, чем Math.Pow(z.Magnitude, 2),
-                        // так как избегает операций Sqrt() и Pow().
-                        decimal z_magnitude_sq = z.MagnitudeSquared;
-                        z = z_squared * z_magnitude_sq + c;
+                        // Формула: z^p * |z|^p + c
+                        decimal magnitude = (decimal)z.Magnitude;
+                        decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)p);
+                        z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
+                                             zPower.Imaginary * magnitudePower + c.Imaginary);
                     }
                 }
+
                 iter++;
             }
 
@@ -713,41 +711,70 @@ namespace FractalExplorer.Engines
         {
             int iter = 0;
             double thresholdSq = (double)ThresholdSquared;
-            // p = 2 жестко закодировано для производительности и точности.
+            double p = (double)Power;
 
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
-                // Для первой итерации (когда z_0 = 0), следующий z (z_1) всегда равен c.
-                if (iter == 0)
+                // ПРАВИЛЬНОЕ РЕШЕНИЕ: Обрабатываем сингулярность z=0 в первую очередь.
+                if (z.MagnitudeSquared == 0)
                 {
+                    // Для первой итерации z_next всегда равно c, чтобы избежать 0^(-p).
                     z = c;
                 }
                 else
                 {
-                    // Вычисляем z^2 через прямое умножение.
-                    ComplexDouble z_squared = z * z;
+                    // Теперь, когда z != 0, можно безопасно выполнять основные расчеты.
+                    ComplexDouble zPower = PowerComplexDouble(z, p);
 
                     if (UseInversion)
                     {
-                        // Формула: z_next = z^2 * |z^2| + c
-                        double modulus_of_z_squared = z_squared.Magnitude;
-                        z = z_squared * modulus_of_z_squared + c;
+                        // Формула: z^p * |z^p| + c
+                        double modulusOfZPower = zPower.Magnitude;
+                        z = new ComplexDouble(zPower.Real * modulusOfZPower + c.Real,
+                                            zPower.Imaginary * modulusOfZPower + c.Imaginary);
                     }
                     else
                     {
-                        // Формула: z_next = z^2 * |z|^2 + c
-                        // Используем z.MagnitudeSquared для вычисления |z|^2.
-                        double z_magnitude_sq = z.MagnitudeSquared;
-                        z = z_squared * z_magnitude_sq + c;
+                        // Формула: z^p * |z|^p + c
+                        double magnitude = z.Magnitude;
+                        double magnitudePower = Math.Pow(magnitude, p);
+                        z = new ComplexDouble(zPower.Real * magnitudePower + c.Real,
+                                            zPower.Imaginary * magnitudePower + c.Imaginary);
                     }
                 }
+
                 iter++;
             }
+
             return iter;
         }
 
-        // Вспомогательные функции PowerComplex и PowerComplexDouble больше не нужны для расчета,
-        // так как мы используем прямое умножение. Их можно удалить, если они не используются где-то еще.
+        /// <summary>
+        /// Возводит комплексное число в степень (decimal версия).
+        /// </summary>
+        private ComplexDecimal PowerComplex(ComplexDecimal z, decimal power)
+        {
+            // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
+            double r = z.Magnitude;
+            double theta = Math.Atan2((double)z.Imaginary, (double)z.Real);
+            double p = (double)power;
+
+            double newR = Math.Pow(r, p);
+            double newTheta = theta * p;
+
+            return ComplexDecimal.FromPolarCoordinates(newR, newTheta);
+        }
+
+        /// <summary>
+        /// Возводит комплексное число в степень (double версия).
+        /// </summary>
+        private ComplexDouble PowerComplexDouble(ComplexDouble z, double power)
+        {
+            // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
+            // Используем стандартную быструю реализацию.
+            System.Numerics.Complex result = System.Numerics.Complex.Pow(new System.Numerics.Complex(z.Real, z.Imaginary), power);
+            return new ComplexDouble(result.Real, result.Imaginary);
+        }
     }
 
     /// <summary>
