@@ -95,7 +95,6 @@
             // 
             // pictureBoxPreview
             // 
-            pictureBoxPreview.BorderStyle = BorderStyle.FixedSingle;
             pictureBoxPreview.Dock = DockStyle.Fill;
             pictureBoxPreview.Location = new Point(8, 48);
             pictureBoxPreview.Name = "pictureBoxPreview";
