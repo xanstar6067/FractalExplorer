@@ -15,19 +15,29 @@ namespace FractalExplorer.Projects
     /// </summary>
     public partial class FractalBuffalo : FractalMandelbrotFamilyForm
     {
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="FractalBuffalo"/>.
+        /// </summary>
         public FractalBuffalo()
         {
             Text = "Фрактал Буффало";
         }
 
+        /// <summary>
+        /// Создает и возвращает экземпляр движка, специфичного для фрактала Буффало.
+        /// </summary>
+        /// <returns>Экземпляр <see cref="BuffaloEngine"/>.</returns>
         protected override FractalMandelbrotFamilyEngine CreateEngine()
         {
             return new BuffaloEngine();
         }
 
+        /// <summary>
+        /// Выполняет действия после основной инициализации формы.
+        /// Скрывает элементы управления, нерелевантные для фрактала Буффало.
+        /// </summary>
         protected override void OnPostInitialize()
         {
-            // Скрываем ненужные для этого фрактала элементы управления.
             lblRe.Visible = false;
             nudRe.Visible = false;
             lblIm.Visible = false;
@@ -35,6 +45,10 @@ namespace FractalExplorer.Projects
             mandelbrotPreviewPanel.Visible = false;
         }
 
+        /// <summary>
+        /// Возвращает строку, используемую для формирования имени файла сохранения.
+        /// </summary>
+        /// <returns>Строка "buffalo", идентифицирующая тип фрактала в имени файла.</returns>
         protected override string GetSaveFileNameDetails()
         {
             return "buffalo";
@@ -42,9 +56,21 @@ namespace FractalExplorer.Projects
 
         #region ISaveLoadCapableFractal Implementation
 
+        /// <summary>
+        /// Получает строковый идентификатор для типа фрактала "Буффало".
+        /// </summary>
         public override string FractalTypeIdentifier => "Buffalo";
+
+        /// <summary>
+        /// Получает тип конкретного класса состояния сохранения для фракталов семейства Мандельброта.
+        /// </summary>
         public override Type ConcreteSaveStateType => typeof(MandelbrotFamilySaveState);
 
+        /// <summary>
+        /// Собирает текущее состояние фрактала в объект для последующего сохранения.
+        /// </summary>
+        /// <param name="saveName">Имя, присваиваемое сохранению.</param>
+        /// <returns>Объект <see cref="FractalSaveStateBase"/>, содержащий все параметры текущего вида фрактала.</returns>
         public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             var state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier)
@@ -74,17 +100,29 @@ namespace FractalExplorer.Projects
             return state;
         }
 
+        /// <summary>
+        /// Загружает состояние фрактала из указанного объекта сохранения.
+        /// </summary>
+        /// <param name="stateBase">Состояние для загрузки.</param>
         public override void LoadState(FractalSaveStateBase stateBase)
         {
             base.LoadState(stateBase);
         }
 
+        /// <summary>
+        /// Загружает все сохранения, относящиеся к типу фрактала "Буффало".
+        /// </summary>
+        /// <returns>Список объектов состояний сохранения.</returns>
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             var specificSaves = SaveFileManager.LoadSaves<MandelbrotFamilySaveState>(this.FractalTypeIdentifier);
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <summary>
+        /// Сохраняет список состояний для фрактала "Буффало".
+        /// </summary>
+        /// <param name="saves">Список состояний для сохранения.</param>
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<MandelbrotFamilySaveState>().ToList();
@@ -92,8 +130,14 @@ namespace FractalExplorer.Projects
         }
 
         /// <summary>
-        /// Асинхронно рендерит плитку превью, создавая правильный движок для Буффало.
+        /// Асинхронно рендерит плитку (часть) изображения для предварительного просмотра.
         /// </summary>
+        /// <param name="stateBase">Состояние фрактала для рендеринга.</param>
+        /// <param name="tile">Информация о плитке (координаты и размер).</param>
+        /// <param name="totalWidth">Общая ширина изображения предварительного просмотра.</param>
+        /// <param name="totalHeight">Общая высота изображения предварительного просмотра.</param>
+        /// <param name="tileSize">Размер плитки (не используется в данной реализации, но является частью интерфейса).</param>
+        /// <returns>Задача, возвращающая массив байтов (пиксели в формате BGRA) для указанной плитки.</returns>
         public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return Task.Run(() =>
@@ -108,10 +152,8 @@ namespace FractalExplorer.Projects
                 }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
-                // Создаем правильный движок
                 var previewEngine = new BuffaloEngine();
 
-                // Настраиваем его из параметров
                 previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
@@ -133,8 +175,12 @@ namespace FractalExplorer.Projects
         }
 
         /// <summary>
-        /// Рендерит полное превью (используется в редких случаях, но лучше реализовать).
+        /// Рендерит полное изображение для предварительного просмотра на основе состояния сохранения.
         /// </summary>
+        /// <param name="stateBase">Состояние фрактала для рендеринга.</param>
+        /// <param name="previewWidth">Ширина изображения предварительного просмотра.</param>
+        /// <param name="previewHeight">Высота изображения предварительного просмотра.</param>
+        /// <returns>Объект <see cref="Bitmap"/> с полным изображением предварительного просмотра.</returns>
         public override Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
             var tile = new TileInfo(0, 0, previewWidth, previewHeight);
@@ -146,7 +192,6 @@ namespace FractalExplorer.Projects
             System.Runtime.InteropServices.Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
             bmp.UnlockBits(bmpData);
 
-            // Для совместимости с некоторыми элементами UI, конвертируем в 24bppRgb
             Bitmap finalBmp = new Bitmap(bmp);
             bmp.Dispose();
 
