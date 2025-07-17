@@ -25,6 +25,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public bool UseSmoothColoring { get; set; }
         public decimal? Power { get; set; } // Степень 'p' для Обобщенного Мандельброта
         public decimal Scale { get; set; }
+        public bool UseInversion { get; set; }
         public HighResRenderState Clone()
         {
             return (HighResRenderState)this.MemberwiseClone();

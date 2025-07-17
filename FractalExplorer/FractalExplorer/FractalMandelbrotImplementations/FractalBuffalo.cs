@@ -2,6 +2,7 @@
 using FractalExplorer.Engines;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System.Text.Json;
 
 namespace FractalExplorer.Projects
 {
@@ -35,19 +36,60 @@ namespace FractalExplorer.Projects
             return "buffalo";
         }
 
-        // --- Временная реализация для запуска (позже будет дополнена) ---
+        #region ISaveLoadCapableFractal Implementation
+
         public override string FractalTypeIdentifier => "Buffalo";
         public override Type ConcreteSaveStateType => typeof(MandelbrotFamilySaveState);
 
+        public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            // Используем базовый класс состояния, так как у Buffalo нет доп. параметров
+            var state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                Threshold = nudThreshold.Value,
+                Iterations = (int)nudIterations.Value,
+                PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+                PreviewEngineType = this.FractalTypeIdentifier
+            };
+
+            // Параметры для рендера превью
+            var previewParams = new PreviewParams
+            {
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = state.Iterations,
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold,
+                PreviewEngineType = state.PreviewEngineType
+            };
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, new JsonSerializerOptions());
+            return state;
+        }
+
+        public override void LoadState(FractalSaveStateBase stateBase)
+        {
+            // Просто вызываем базовую реализацию, так как нет специфичных параметров
+            base.LoadState(stateBase);
+        }
+
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
-            // TODO: Будет реализовано на следующем этапе
-            return new List<FractalSaveStateBase>();
+            var specificSaves = SaveFileManager.LoadSaves<MandelbrotFamilySaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
-            // TODO: Будет реализовано на следующем этапе
+            var specificSaves = saves.Cast<MandelbrotFamilySaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
+
+        #endregion
     }
 }

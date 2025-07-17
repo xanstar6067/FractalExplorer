@@ -1,8 +1,13 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
+using FractalExplorer.Resources;
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System.Globalization;
+using System.Text.Json;
 
 namespace FractalExplorer.Projects
 {
@@ -27,7 +32,6 @@ namespace FractalExplorer.Projects
 
         protected override void OnPostInitialize()
         {
-            // Скрываем стандартные элементы управления для константы C.
             lblRe.Visible = false;
             nudRe.Visible = false;
             lblIm.Visible = false;
@@ -39,7 +43,7 @@ namespace FractalExplorer.Projects
             var innerTable = new TableLayoutPanel
             {
                 ColumnCount = 2,
-                RowCount = 2, // Добавляем строку для инверсии
+                RowCount = 2,
                 Dock = DockStyle.Fill,
             };
             innerTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
@@ -47,7 +51,6 @@ namespace FractalExplorer.Projects
             innerTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 29F));
             innerTable.RowStyles.Add(new RowStyle(SizeType.Absolute, 29F));
 
-            // Элементы управления для степени
             lblPower = new Label { Text = "Степень (p)", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
             nudPower = new NumericUpDown
             {
@@ -61,7 +64,6 @@ namespace FractalExplorer.Projects
             };
             nudPower.ValueChanged += ParamControl_Changed;
 
-            // Элемент управления для инверсии
             chkInversion = new CheckBox
             {
                 Text = "Инверсия",
@@ -73,9 +75,9 @@ namespace FractalExplorer.Projects
             innerTable.Controls.Add(nudPower, 0, 0);
             innerTable.Controls.Add(lblPower, 1, 0);
             innerTable.Controls.Add(chkInversion, 0, 1);
-            innerTable.SetColumnSpan(chkInversion, 2); // Растягиваем на две колонки
+            innerTable.SetColumnSpan(chkInversion, 2);
 
-            pnlCustomControls.Height = 60; // Увеличиваем высоту панели
+            pnlCustomControls.Height = 60;
             pnlCustomControls.Controls.Add(innerTable);
         }
 
@@ -91,22 +93,128 @@ namespace FractalExplorer.Projects
         protected override string GetSaveFileNameDetails()
         {
             string powerString = nudPower.Value.ToString("F2", CultureInfo.InvariantCulture).Replace(".", "_");
-            return $"simonobrot_p{powerString}";
+            string inversionString = (_fractalEngine as SimonobrotEngine)?.UseInversion == true ? "_inv" : "";
+            return $"simonobrot_p{powerString}{inversionString}";
         }
 
-        // --- Временная реализация для запуска (позже будет дополнена) ---
+        #region ISaveLoadCapableFractal Implementation
+
         public override string FractalTypeIdentifier => "Simonobrot";
-        public override Type ConcreteSaveStateType => typeof(GeneralizedMandelbrotSaveState); // Можно переиспользовать
+        public override Type ConcreteSaveStateType => typeof(GeneralizedMandelbrotSaveState);
+
+        public class SimonobrotPreviewParams : PreviewParams
+        {
+            public decimal Power { get; set; }
+            public bool UseInversion { get; set; }
+        }
+
+        public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            var state = new GeneralizedMandelbrotSaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                Threshold = nudThreshold.Value,
+                Iterations = (int)nudIterations.Value,
+                PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+                PreviewEngineType = this.FractalTypeIdentifier,
+                Power = nudPower.Value,
+                UseInversion = chkInversion.Checked
+            };
+
+            var previewParams = new SimonobrotPreviewParams
+            {
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = Math.Min(state.Iterations, 1000),
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold,
+                PreviewEngineType = state.PreviewEngineType,
+                Power = state.Power,
+                UseInversion = state.UseInversion
+            };
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, new JsonSerializerOptions());
+            return state;
+        }
+
+        public override void LoadState(FractalSaveStateBase stateBase)
+        {
+            base.LoadState(stateBase);
+            if (stateBase is GeneralizedMandelbrotSaveState state)
+            {
+                nudPower.Value = Math.Max(nudPower.Minimum, Math.Min(nudPower.Maximum, state.Power));
+                chkInversion.Checked = state.UseInversion;
+            }
+        }
 
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
-            // TODO: Будет реализовано на следующем этапе
-            return new List<FractalSaveStateBase>();
+            var specificSaves = SaveFileManager.LoadSaves<GeneralizedMandelbrotSaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
-            // TODO: Будет реализовано на следующем этапе
+            var specificSaves = saves.Cast<GeneralizedMandelbrotSaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
+
+        public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+
+                SimonobrotPreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<SimonobrotPreviewParams>(stateBase.PreviewParametersJson);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+
+                var previewEngine = new SimonobrotEngine
+                {
+                    Power = previewParams.Power,
+                    UseInversion = previewParams.UseInversion
+                };
+
+                previewEngine.MaxIterations = previewParams.Iterations;
+                previewEngine.CenterX = previewParams.CenterX;
+                previewEngine.CenterY = previewParams.CenterY;
+                if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
+                previewEngine.Scale = BaseScale / previewParams.Zoom;
+                previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+
+                var paletteManager = new PaletteManager();
+                var paletteForPreview = paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? paletteManager.Palettes.First();
+                int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
+
+                previewEngine.UseSmoothColoring = false;
+                previewEngine.MaxColorIterations = effectiveMaxColorIterations;
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
+
+        public override HighResRenderState GetRenderState()
+        {
+            var state = base.GetRenderState();
+            state.Power = nudPower.Value;
+            // Важно также передать UseInversion в состояние рендера
+            if (_fractalEngine is SimonobrotEngine engine)
+            {
+                state.UseInversion = engine.UseInversion;
+            }
+            return state;
+        }
+
+        #endregion
     }
 }
