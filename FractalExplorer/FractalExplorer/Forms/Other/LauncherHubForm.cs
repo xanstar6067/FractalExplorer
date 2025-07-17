@@ -9,20 +9,41 @@ namespace FractalExplorer
     /// </summary>
     public partial class LauncherHubForm : Form
     {
-        // Вспомогательный класс для хранения информации о каждом фрактале.
+        /// <summary>
+        /// Вспомогательный класс для хранения информации о каждом фрактале, доступном в приложении.
+        /// </summary>
         private class FractalInfo
         {
+            /// <summary>
+            /// Отображаемое имя фрактала.
+            /// </summary>
             public string DisplayName { get; set; }
+            /// <summary>
+            /// Категория или семейство, к которому принадлежит фрактал.
+            /// </summary>
             public string Family { get; set; }
+            /// <summary>
+            /// Тип формы (<see cref="Form"/>), которую нужно запустить для этого фрактала.
+            /// </summary>
             public Type FormToLaunch { get; set; }
+            /// <summary>
+            /// Подробное описание фрактала, его особенностей и математической основы.
+            /// </summary>
             public string Description { get; set; }
-            // Имя картинки-превью из ресурсов проекта (Properties.Resources)
+            /// <summary>
+            /// Изображение для предпросмотра, загруженное из ресурсов проекта.
+            /// </summary>
             public Image PreviewImage { get; set; }
         }
 
-        // Каталог всех доступных фракталов.
+        /// <summary>
+        /// Каталог всех доступных в приложении фракталов.
+        /// </summary>
         private readonly List<FractalInfo> _fractalCatalog;
-        // Текущий выбранный фрактал.
+
+        /// <summary>
+        /// Текущий фрактал, выбранный пользователем в дереве.
+        /// </summary>
         private FractalInfo _selectedFractal;
 
         /// <summary>
@@ -33,14 +54,14 @@ namespace FractalExplorer
             InitializeComponent();
             _fractalCatalog = new List<FractalInfo>();
 
-            InitializeFractalCatalog(); // Заполняем наш каталог
-            PopulateTreeView();         // Заполняем дерево на основе каталога
+            InitializeFractalCatalog();
+            PopulateTreeView();
             DisplayAppVersionInTitle();
         }
 
         /// <summary>
-        /// Здесь мы определяем все наши фракталы.
-        /// !!! ЧТОБЫ ДОБАВИТЬ НОВЫЙ ФРАКТАЛ, НУЖНО ДОБАВИТЬ СТРОЧКУ ТОЛЬКО СЮДА !!!
+        /// Инициализирует каталог фракталов, добавляя информацию о каждом из них.
+        /// <br/><b>Чтобы добавить новый фрактал, необходимо добавить новую запись только в этот метод.</b>
         /// </summary>
         private void InitializeFractalCatalog()
         {
@@ -156,7 +177,7 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Заполняет TreeView на основе каталога фракталов.
+        /// Заполняет элемент управления <see cref="TreeView"/> на основе каталога фракталов, группируя их по семействам.
         /// </summary>
         private void PopulateTreeView()
         {
@@ -188,11 +209,13 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Обновляет правую панель при выборе узла в дереве.
+        /// Обрабатывает событие выбора узла в дереве фракталов и обновляет панель информации.
         /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void treeViewFractals_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            // Если выбран узел фрактала (а не семейства)
+            // Если выбран узел фрактала (а не семейства), его Tag будет содержать объект FractalInfo.
             if (e.Node.Tag is FractalInfo selected)
             {
                 _selectedFractal = selected;
@@ -201,7 +224,7 @@ namespace FractalExplorer
                 pictureBoxPreview.Image = selected.PreviewImage;
                 btnLaunchSelected.Enabled = true;
             }
-            else // Выбрана категория
+            else // Выбран узел категории.
             {
                 _selectedFractal = null;
                 lblFractalName.Text = "Выберите фрактал";
@@ -212,8 +235,10 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Запускает форму для выбранного фрактала.
+        /// Обрабатывает нажатие на кнопку "Запустить" и открывает форму для выбранного фрактала.
         /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Данные события.</param>
         private void btnLaunchSelected_Click(object sender, EventArgs e)
         {
             if (_selectedFractal?.FormToLaunch == null) return;
@@ -226,25 +251,39 @@ namespace FractalExplorer
         }
 
         #region Version Display
+
+        /// <summary>
+        /// Отображает версию приложения в заголовке главной формы.
+        /// </summary>
         private void DisplayAppVersionInTitle()
         {
             string appVersion = GetAppVersion();
             this.Text = $"{this.Text} - Версия: {appVersion}";
         }
 
+        /// <summary>
+        /// Получает версию приложения из атрибутов сборки.
+        /// </summary>
+        /// <returns>Строка с версией приложения или "неизвестно", если версия не найдена.</returns>
         private string GetAppVersion()
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
+
+            // Предпочтительно использовать InformationalVersion, так как он может содержать семантическую версию (например, "1.2.3-beta").
             var informationalVersionAttribute = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             if (informationalVersionAttribute != null && !string.IsNullOrWhiteSpace(informationalVersionAttribute.InformationalVersion))
             {
                 return informationalVersionAttribute.InformationalVersion;
             }
+
+            // В качестве запасного варианта используется FileVersion.
             var fileVersionAttribute = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
             if (fileVersionAttribute != null && !string.IsNullOrWhiteSpace(fileVersionAttribute.Version))
             {
                 return fileVersionAttribute.Version;
             }
+
+            // Самый крайний случай - версия сборки.
             Version version = assembly.GetName().Version;
             return version?.ToString() ?? "неизвестно";
         }
