@@ -50,5 +50,16 @@ namespace FractalExplorer.Utilities
         {
             return $"{Real} + {Imaginary}i";
         }
+        public static ComplexDouble operator *(ComplexDouble a, double scalar)
+        {
+            return new ComplexDouble(a.Real * scalar, a.Imaginary * scalar);
+        }
+
+        // Для удобства можно добавить и обратный оператор, чтобы можно было писать `2.0 * complexNumber`
+        public static ComplexDouble operator *(double scalar, ComplexDouble a)
+        {
+            return new ComplexDouble(a.Real * scalar, a.Imaginary * scalar);
+        }
+
     }
 }
