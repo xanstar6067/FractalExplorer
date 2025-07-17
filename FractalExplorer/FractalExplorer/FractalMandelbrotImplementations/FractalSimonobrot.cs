@@ -12,24 +12,43 @@ using System.Text.Json;
 namespace FractalExplorer.Projects
 {
     /// <summary>
-    /// Форма для отображения и взаимодействия с фракталом Симоноброт (z -> |z|^p + c).
+    /// Представляет форму для отображения и взаимодействия с фракталом Симоноброт.
+    /// Эта форма настраивает пользовательский интерфейс для параметров, специфичных для Simonobrot,
+    /// таких как 'Степень' и 'Инверсия', и управляет сохранением/загрузкой состояния фрактала.
+    /// Итерационная формула: z -> (z^p * |z|^p) + c.
     /// </summary>
     public partial class FractalSimonobrot : FractalMandelbrotFamilyForm
     {
+        /// <summary>
+        /// Поле для ввода числового значения степени 'p'.
+        /// </summary>
         private NumericUpDown nudPower;
+
+        /// <summary>
+        /// Метка для поля ввода степени 'p'.
+        /// </summary>
         private Label lblPower;
+
+        /// <summary>
+        /// Флажок для включения/отключения инверсии по горизонтали.
+        /// </summary>
         private CheckBox chkInversion;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса <see cref="FractalSimonobrot"/>.
+        /// </summary>
         public FractalSimonobrot()
         {
             Text = "Фрактал Симоноброт";
         }
 
+        /// <inheritdoc />
         protected override FractalMandelbrotFamilyEngine CreateEngine()
         {
             return new SimonobrotEngine();
         }
 
+        /// <inheritdoc />
         protected override void OnPostInitialize()
         {
             lblRe.Visible = false;
@@ -81,6 +100,7 @@ namespace FractalExplorer.Projects
             pnlCustomControls.Controls.Add(innerTable);
         }
 
+        /// <inheritdoc />
         protected override void UpdateEngineSpecificParameters()
         {
             if (_fractalEngine is SimonobrotEngine engine)
@@ -90,6 +110,7 @@ namespace FractalExplorer.Projects
             }
         }
 
+        /// <inheritdoc />
         protected override string GetSaveFileNameDetails()
         {
             string powerString = nudPower.Value.ToString("F2", CultureInfo.InvariantCulture).Replace(".", "_");
@@ -99,15 +120,28 @@ namespace FractalExplorer.Projects
 
         #region ISaveLoadCapableFractal Implementation
 
+        /// <inheritdoc />
         public override string FractalTypeIdentifier => "Simonobrot";
+
+        /// <inheritdoc />
         public override Type ConcreteSaveStateType => typeof(GeneralizedMandelbrotSaveState);
 
+        /// <summary>
+        /// Содержит параметры, необходимые для рендеринга предпросмотра фрактала Симоноброт.
+        /// </summary>
         public class SimonobrotPreviewParams : PreviewParams
         {
+            /// <summary>
+            /// Степень 'p' для предпросмотра.
+            /// </summary>
             public decimal Power { get; set; }
+            /// <summary>
+            /// Флаг инверсии для предпросмотра.
+            /// </summary>
             public bool UseInversion { get; set; }
         }
 
+        /// <inheritdoc />
         public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             var state = new GeneralizedMandelbrotSaveState(this.FractalTypeIdentifier)
@@ -141,6 +175,7 @@ namespace FractalExplorer.Projects
             return state;
         }
 
+        /// <inheritdoc />
         public override void LoadState(FractalSaveStateBase stateBase)
         {
             base.LoadState(stateBase);
@@ -151,18 +186,21 @@ namespace FractalExplorer.Projects
             }
         }
 
+        /// <inheritdoc />
         public override List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
             var specificSaves = SaveFileManager.LoadSaves<GeneralizedMandelbrotSaveState>(this.FractalTypeIdentifier);
             return specificSaves.Cast<FractalSaveStateBase>().ToList();
         }
 
+        /// <inheritdoc />
         public override void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<GeneralizedMandelbrotSaveState>().ToList();
             SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
 
+        /// <inheritdoc />
         public override Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase stateBase, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return Task.Run(() =>
@@ -203,11 +241,11 @@ namespace FractalExplorer.Projects
             });
         }
 
+        /// <inheritdoc />
         public override HighResRenderState GetRenderState()
         {
             var state = base.GetRenderState();
             state.Power = nudPower.Value;
-            // Важно также передать UseInversion в состояние рендера
             if (_fractalEngine is SimonobrotEngine engine)
             {
                 state.UseInversion = engine.UseInversion;
