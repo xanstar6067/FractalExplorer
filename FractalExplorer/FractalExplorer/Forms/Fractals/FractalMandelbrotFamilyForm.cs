@@ -1637,7 +1637,7 @@ namespace FractalDraving
                     threadCount,
                     progressCallback,
                     ssaaFactor,
-                    cancellationToken /**/
+                    cancellationToken
                 );
 
                 return finalBitmap;
