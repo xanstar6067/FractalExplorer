@@ -1564,6 +1564,17 @@ namespace FractalDraving
                         genEngine.Power = state.Power.Value;
                     }
                     break;
+                case "Buffalo":
+                    engine = new BuffaloEngine();
+                    break;
+                case "Simonobrot":
+                    engine = new SimonobrotEngine();
+                    if (engine is SimonobrotEngine simonEngine)
+                    {
+                        if (state.Power.HasValue) simonEngine.Power = state.Power.Value;
+                        simonEngine.UseInversion = state.UseInversion;
+                    }
+                    break;
                 default: throw new NotSupportedException($"Тип движка '{state.EngineType}' не поддерживается.");
             }
 

@@ -74,6 +74,10 @@ namespace FractalExplorer.Utilities
                     return GetNewtonPoolsPresets();
                 case "GeneralizedMandelbrot":
                     return GetGeneralizedMandelbrotPresets();
+                case "Buffalo":
+                    return GetBuffaloPresets();
+                case "Simonobrot":
+                    return GetSimonobrotPresets();
                 default:
                     return new List<FractalSaveStateBase>();
             }
@@ -579,6 +583,155 @@ namespace FractalExplorer.Utilities
                 PreviewEngineType = "JuliaBurningShip"
             };
             preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3JBS);
+            presets.Add(preset3);
+
+            return presets;
+        }
+
+        private static List<FractalSaveStateBase> GetBuffaloPresets()
+        {
+            var presets = new List<FractalSaveStateBase>();
+
+            var preset1 = new MandelbrotFamilySaveState("Buffalo")
+            {
+                SaveName = "Классический Буффало",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 0.8m,
+                Iterations = 500,
+                Threshold = 2.0m,
+                PaletteName = "Ультрафиолет",
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams1 = new FractalMandelbrotFamilyForm.PreviewParams
+            {
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                Zoom = preset1.Zoom,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
+                PaletteName = preset1.PaletteName,
+                Threshold = preset1.Threshold,
+                PreviewEngineType = "Buffalo" // Указываем правильный тип движка
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
+            presets.Add(preset1);
+
+            var preset2 = new MandelbrotFamilySaveState("Buffalo")
+            {
+                SaveName = "Глаз Жука",
+                CenterX = -1.25066m,
+                CenterY = 0.3837m,
+                Zoom = 1500m,
+                Iterations = 800,
+                Threshold = 2.0m,
+                PaletteName = "Огонь",
+                Timestamp = DateTime.MinValue
+            };
+            var previewParams2 = new FractalMandelbrotFamilyForm.PreviewParams
+            {
+                CenterX = preset2.CenterX,
+                CenterY = preset2.CenterY,
+                Zoom = preset2.Zoom,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
+                PaletteName = preset2.PaletteName,
+                Threshold = preset2.Threshold,
+                PreviewEngineType = "Buffalo" // Указываем правильный тип движка
+            };
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
+            presets.Add(preset2);
+
+            return presets;
+        }
+
+        private static List<FractalSaveStateBase> GetSimonobrotPresets()
+        {
+            var presets = new List<FractalSaveStateBase>();
+
+            var preset1 = new GeneralizedMandelbrotSaveState("Simonobrot")
+            {
+                SaveName = "Кристальная пещера (p=5)",
+                CenterX = 0.334m,
+                CenterY = 0m,
+                Zoom = 2.7m,
+                Iterations = 500,
+                Threshold = 2.0m,
+                PaletteName = "Лёд",
+                Timestamp = DateTime.MinValue,
+                Power = 5.0m,
+                UseInversion = false,
+                PreviewEngineType = "Simonobrot" // Указываем правильный тип движка
+            };
+            var previewParams1 = new FractalSimonobrot.SimonobrotPreviewParams
+            {
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                Zoom = preset1.Zoom,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
+                PaletteName = preset1.PaletteName,
+                Threshold = preset1.Threshold,
+                PreviewEngineType = preset1.PreviewEngineType,
+                Power = preset1.Power,
+                UseInversion = preset1.UseInversion
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1);
+            presets.Add(preset1);
+
+            var preset2 = new GeneralizedMandelbrotSaveState("Simonobrot")
+            {
+                SaveName = "Звезда (p=-2)",
+                CenterX = -0.43m,
+                CenterY = 0m,
+                Zoom = 1.5m,
+                Iterations = 500,
+                Threshold = 2.0m,
+                PaletteName = "Ультрафиолет",
+                Timestamp = DateTime.MinValue,
+                Power = -2.0m,
+                UseInversion = false,
+                PreviewEngineType = "Simonobrot" // Указываем правильный тип движка
+            };
+            var previewParams2 = new FractalSimonobrot.SimonobrotPreviewParams
+            {
+                CenterX = preset2.CenterX,
+                CenterY = preset2.CenterY,
+                Zoom = preset2.Zoom,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
+                PaletteName = preset2.PaletteName,
+                Threshold = preset2.Threshold,
+                PreviewEngineType = preset2.PreviewEngineType,
+                Power = preset2.Power,
+                UseInversion = preset2.UseInversion
+            };
+            preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2);
+            presets.Add(preset2);
+
+            var preset3 = new GeneralizedMandelbrotSaveState("Simonobrot")
+            {
+                SaveName = "Колючка (p=-3, инверсия)",
+                CenterX = 0.413m,
+                CenterY = 0m,
+                Zoom = 23.0m,
+                Iterations = 500,
+                Threshold = 2.0m,
+                PaletteName = "Психоделика",
+                Timestamp = DateTime.MinValue,
+                Power = -3.0m,
+                UseInversion = true,
+                PreviewEngineType = "Simonobrot" // Указываем правильный тип движка
+            };
+            var previewParams3 = new FractalSimonobrot.SimonobrotPreviewParams
+            {
+                CenterX = preset3.CenterX,
+                CenterY = preset3.CenterY,
+                Zoom = preset3.Zoom,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
+                PaletteName = preset3.PaletteName,
+                Threshold = preset3.Threshold,
+                PreviewEngineType = preset3.PreviewEngineType,
+                Power = preset3.Power,
+                UseInversion = preset3.UseInversion
+            };
+            preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3);
             presets.Add(preset3);
 
             return presets;

@@ -11,6 +11,8 @@ using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using FractalExplorer.Projects; // Добавлено для доступа к классам превью-параметров
+using System.Text.Json; // Добавлено для десериализации
 
 namespace FractalExplorer.Forms
 {
@@ -294,6 +296,7 @@ namespace FractalExplorer.Forms
             byte[] tileBuffer;
             if (needsRender)
             {
+                // Делегируем вызов рендеринга соответствующей реализации фрактала.
                 tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize);
 
                 lock (_previewCacheLock)
