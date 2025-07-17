@@ -21,6 +21,11 @@
         #endregion
 
         #region Properties
+        /// <summary>
+        /// Получает аргумент (угол) комплексного числа в радианах.
+        /// Возвращает значение от -π до π.
+        /// </summary>
+        public double Argument => Math.Atan2((double)Imaginary, (double)Real);
 
         /// <summary>
         /// Получает квадрат модуля (длины) комплексного числа.

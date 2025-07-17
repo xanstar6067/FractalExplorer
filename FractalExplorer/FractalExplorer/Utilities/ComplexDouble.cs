@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace FractalExplorer.Utilities
 {
+
+
     /// <summary>
     /// Представляет комплексное число, используя тип double для высокой производительности.
     /// Эта структура является неизменяемой (immutable).
@@ -14,6 +16,12 @@ namespace FractalExplorer.Utilities
     {
         public readonly double Real;
         public readonly double Imaginary;
+
+        /// <summary>
+        /// Получает аргумент (угол) комплексного числа в радианах.
+        /// Возвращает значение от -π до π.
+        /// </summary>
+        public double Argument => Math.Atan2(Imaginary, Real);
 
         public double MagnitudeSquared => Real * Real + Imaginary * Imaginary;
         public double Magnitude => Math.Sqrt(MagnitudeSquared);

@@ -631,7 +631,7 @@ namespace FractalExplorer.Engines
     public class SimonobrotEngine : FractalMandelbrotFamilyEngine
     {
         /// <summary>
-        /// Степень 'p', в которую возводится модуль z.
+        /// Степень 'p', в которую возводится z.
         /// </summary>
         public decimal Power { get; set; } = 2m;
 
@@ -659,15 +659,41 @@ namespace FractalExplorer.Engines
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
+            decimal powerD = Power;
+
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
-                double magnitude = z.Magnitude;
-                // Math.Pow работает с double, что может привести к потере точности при очень больших/малых числах,
-                // но это соответствует реализации в GeneralizedMandelbrotEngine.
-                decimal newReal = (decimal)Math.Pow(magnitude, (double)Power) + c.Real;
-                z = new ComplexDecimal(newReal, c.Imaginary);
+                // Проверка на деление на ноль при отрицательной степени
+                if (z.MagnitudeSquared == 0 && powerD < 0)
+                {
+                    iter = MaxIterations;
+                    break;
+                }
+
+                // Правильное возведение в степень комплексного числа
+                // z^p = |z|^p * e^(i*p*arg(z))
+                decimal magnitude = (decimal)z.Magnitude;
+                decimal argument = (decimal)z.Argument;
+
+                if (magnitude == 0)
+                {
+                    z = c; // z^p = 0 при p > 0
+                }
+                else
+                {
+                    decimal newMagnitude = (decimal)Math.Pow((double)magnitude, (double)powerD);
+                    decimal newArgument = powerD * argument;
+
+                    // Преобразование обратно в декартовы координаты
+                    decimal newReal = newMagnitude * (decimal)Math.Cos((double)newArgument) + c.Real;
+                    decimal newImaginary = newMagnitude * (decimal)Math.Sin((double)newArgument) + c.Imaginary;
+
+                    z = new ComplexDecimal(newReal, newImaginary);
+                }
+
                 iter++;
             }
+
             return iter;
         }
 
@@ -682,13 +708,39 @@ namespace FractalExplorer.Engines
             int iter = 0;
             double thresholdSq = (double)ThresholdSquared;
             double powerD = (double)Power;
+
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
             {
+                // Проверка на деление на ноль при отрицательной степени
+                if (z.MagnitudeSquared == 0 && powerD < 0)
+                {
+                    iter = MaxIterations;
+                    break;
+                }
+
+                // Правильное возведение в степень комплексного числа
                 double magnitude = z.Magnitude;
-                double newReal = Math.Pow(magnitude, powerD) + c.Real;
-                z = new ComplexDouble(newReal, c.Imaginary);
+                double argument = z.Argument;
+
+                if (magnitude == 0)
+                {
+                    z = c; // z^p = 0 при p > 0
+                }
+                else
+                {
+                    double newMagnitude = Math.Pow(magnitude, powerD);
+                    double newArgument = powerD * argument;
+
+                    // Преобразование обратно в декартовы координаты
+                    double newReal = newMagnitude * Math.Cos(newArgument) + c.Real;
+                    double newImaginary = newMagnitude * Math.Sin(newArgument) + c.Imaginary;
+
+                    z = new ComplexDouble(newReal, newImaginary);
+                }
+
                 iter++;
             }
+
             return iter;
         }
     }
