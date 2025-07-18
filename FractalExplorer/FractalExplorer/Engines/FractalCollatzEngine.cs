@@ -116,4 +116,4 @@ namespace FractalExplorer.Engines
 
         #endregion
     }
-}
+}//
