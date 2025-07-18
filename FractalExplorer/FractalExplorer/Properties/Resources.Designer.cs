@@ -83,6 +83,16 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap collatz_preview {
+            get {
+                object obj = ResourceManager.GetObject("collatz_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap general_mandelbrot_preview {
             get {
                 object obj = ResourceManager.GetObject("general_mandelbrot_preview", resourceCulture);
