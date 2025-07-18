@@ -47,8 +47,8 @@
             // splitContainerMain.Panel2
             // 
             splitContainerMain.Panel2.Controls.Add(pnlDetails);
-            splitContainerMain.Size = new Size(800, 450);
-            splitContainerMain.SplitterDistance = 270;
+            splitContainerMain.Size = new Size(844, 453);
+            splitContainerMain.SplitterDistance = 284;
             splitContainerMain.TabIndex = 0;
             // 
             // treeViewFractals
@@ -57,7 +57,7 @@
             treeViewFractals.Font = new Font("Segoe UI", 11F);
             treeViewFractals.Location = new Point(0, 0);
             treeViewFractals.Name = "treeViewFractals";
-            treeViewFractals.Size = new Size(270, 450);
+            treeViewFractals.Size = new Size(284, 453);
             treeViewFractals.TabIndex = 0;
             treeViewFractals.AfterSelect += treeViewFractals_AfterSelect;
             // 
@@ -78,7 +78,7 @@
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
-            pnlDetails.Size = new Size(526, 450);
+            pnlDetails.Size = new Size(556, 453);
             pnlDetails.TabIndex = 0;
             // 
             // lblFractalName
@@ -88,7 +88,7 @@
             lblFractalName.Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold);
             lblFractalName.Location = new Point(8, 5);
             lblFractalName.Name = "lblFractalName";
-            lblFractalName.Size = new Size(510, 40);
+            lblFractalName.Size = new Size(540, 40);
             lblFractalName.TabIndex = 0;
             lblFractalName.Text = "Выберите фрактал";
             lblFractalName.TextAlign = ContentAlignment.MiddleCenter;
@@ -98,7 +98,7 @@
             pictureBoxPreview.Dock = DockStyle.Fill;
             pictureBoxPreview.Location = new Point(8, 48);
             pictureBoxPreview.Name = "pictureBoxPreview";
-            pictureBoxPreview.Size = new Size(510, 169);
+            pictureBoxPreview.Size = new Size(540, 170);
             pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBoxPreview.TabIndex = 1;
             pictureBoxPreview.TabStop = false;
@@ -109,10 +109,10 @@
             richTextBoxDescription.BorderStyle = BorderStyle.None;
             richTextBoxDescription.Dock = DockStyle.Fill;
             richTextBoxDescription.Font = new Font("Segoe UI", 10F);
-            richTextBoxDescription.Location = new Point(8, 223);
+            richTextBoxDescription.Location = new Point(8, 224);
             richTextBoxDescription.Name = "richTextBoxDescription";
             richTextBoxDescription.ReadOnly = true;
-            richTextBoxDescription.Size = new Size(510, 169);
+            richTextBoxDescription.Size = new Size(540, 170);
             richTextBoxDescription.TabIndex = 2;
             richTextBoxDescription.Text = "";
             // 
@@ -121,9 +121,9 @@
             btnLaunchSelected.Dock = DockStyle.Fill;
             btnLaunchSelected.Enabled = false;
             btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            btnLaunchSelected.Location = new Point(8, 398);
+            btnLaunchSelected.Location = new Point(8, 400);
             btnLaunchSelected.Name = "btnLaunchSelected";
-            btnLaunchSelected.Size = new Size(510, 44);
+            btnLaunchSelected.Size = new Size(540, 45);
             btnLaunchSelected.TabIndex = 3;
             btnLaunchSelected.Text = "Запустить";
             btnLaunchSelected.UseVisualStyleBackColor = true;
@@ -133,9 +133,11 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(844, 453);
             Controls.Add(splitContainerMain);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
+            MaximizeBox = false;
             MinimumSize = new Size(720, 480);
             Name = "LauncherHubForm";
             Text = "Менеджер фракталов";
