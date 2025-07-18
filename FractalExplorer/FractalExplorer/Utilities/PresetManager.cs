@@ -1,6 +1,7 @@
 ﻿using FractalDraving;
 using FractalExplorer.Engines;
 using FractalExplorer.Forms;
+using FractalExplorer.Forms.Fractals;
 using FractalExplorer.Projects;
 using FractalExplorer.Utilities.JsonConverters;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
@@ -54,6 +55,12 @@ namespace FractalExplorer.Utilities
         /// <param name="fractalTypeIdentifier">Идентификатор типа фрактала (например, "Mandelbrot", "Julia", "Phoenix").</param>
         /// <returns>Список объектов <see cref="FractalSaveStateBase"/>, представляющих пресеты,
         /// или пустой список, если для данного типа пресетов нет.</returns>
+        /// <summary>
+        /// Возвращает список предустановленных точек интереса (пресетов) для указанного типа фрактала.
+        /// </summary>
+        /// <param name="fractalTypeIdentifier">Идентификатор типа фрактала (например, "Mandelbrot", "Julia", "Phoenix").</param>
+        /// <returns>Список объектов <see cref="FractalSaveStateBase"/>, представляющих пресеты,
+        /// или пустой список, если для данного типа пресетов нет.</returns>
         public static List<FractalSaveStateBase> GetPresetsFor(string fractalTypeIdentifier)
         {
             switch (fractalTypeIdentifier)
@@ -78,6 +85,8 @@ namespace FractalExplorer.Utilities
                     return GetBuffaloPresets();
                 case "Simonobrot":
                     return GetSimonobrotPresets();
+                case "Collatz": // <-- ДОБАВЛЕННЫЙ CASE
+                    return GetCollatzPresets();
                 default:
                     return new List<FractalSaveStateBase>();
             }
@@ -1069,6 +1078,49 @@ namespace FractalExplorer.Utilities
             };
             preset4.PreviewParametersJson = JsonSerializer.Serialize(previewParams4N, jsonOptions);
             presets.Add(preset4);
+
+            return presets;
+        }
+
+        #endregion
+
+        #region Collatz Presets
+
+        /// <summary>
+        /// Создает и возвращает список предустановленных состояний для фрактала Коллатца.
+        /// </summary>
+        /// <returns>Список пресетов Коллатца.</returns>
+        private static List<FractalSaveStateBase> GetCollatzPresets()
+        {
+            var presets = new List<FractalSaveStateBase>();
+            var jsonOptions = new JsonSerializerOptions();
+
+            // Пресет 1: "Стандартный Коллатц"
+            // Демонстрирует базовый вид фрактала с параметрами по умолчанию и стандартной серой палитрой.
+            var preset1 = new CollatzSaveState("Collatz")
+            {
+                SaveName = "Стандартный Коллатц",
+                CenterX = 0m,
+                CenterY = 0m,
+                Zoom = 1.0m,
+                Iterations = 150,
+                Threshold = 100.0m,
+                PaletteName = "Стандартный серый",
+                Timestamp = DateTime.MinValue,
+                PreviewEngineType = "Collatz"
+            };
+            var previewParams1 = new FractalCollatzForm.CollatzPreviewParams
+            {
+                CenterX = preset1.CenterX,
+                CenterY = preset1.CenterY,
+                Zoom = preset1.Zoom,
+                Iterations = Math.Min(preset1.Iterations, 150), // Ограничение для быстрого рендера превью
+                PaletteName = preset1.PaletteName,
+                Threshold = preset1.Threshold,
+                UseSmoothColoring = false
+            };
+            preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1, jsonOptions);
+            presets.Add(preset1);
 
             return presets;
         }

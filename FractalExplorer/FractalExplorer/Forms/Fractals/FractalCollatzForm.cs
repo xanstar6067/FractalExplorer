@@ -8,14 +8,18 @@ using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 
 namespace FractalExplorer.Forms.Fractals
 {
     /// <summary>
     /// Форма для отображения и взаимодействия с фракталом, основанным на гипотезе Коллатца.
     /// Реализует интерфейс <see cref="IHighResRenderable"/> для сохранения изображений в высоком разрешении.
+    /// Реализует интерфейс <see cref="ISaveLoadCapableFractal"/> для сохранения и загрузки состояний фрактала.
     /// </summary>
-    public partial class FractalCollatzForm : Form, IHighResRenderable
+    public partial class FractalCollatzForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
         #region Fields
 
@@ -262,11 +266,14 @@ namespace FractalExplorer.Forms.Fractals
         }
 
         /// <summary>
-        /// Заглушка для будущего функционала сохранения состояний.
+        /// Обрабатывает нажатие кнопки, открывая диалог сохранения/загрузки состояний.
         /// </summary>
         private void btnStateManager_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Функция сохранения/загрузки состояний будет добавлена на следующем шаге.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var dialog = new SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
         }
 
         #endregion
@@ -1105,6 +1112,225 @@ namespace FractalExplorer.Forms.Fractals
         {
             var engine = CreateEngineFromState(state, forPreview: true);
             return engine.RenderToBitmap(previewWidth, previewHeight, 1, _ => { }, CancellationToken.None);
+        }
+        #endregion
+
+        #region ISaveLoadCapableFractal Implementation
+        /// <summary>
+        /// Уникальный идентификатор типа фрактала.
+        /// </summary>
+        public string FractalTypeIdentifier => "Collatz";
+
+        /// <summary>
+        /// Тип конкретного класса состояния сохранения для этого фрактала.
+        /// </summary>
+        public Type ConcreteSaveStateType => typeof(CollatzSaveState);
+
+        /// <summary>
+        /// Класс для хранения параметров предпросмотра фрактала Коллатца.
+        /// </summary>
+        public class CollatzPreviewParams
+        {
+            public decimal CenterX { get; set; }
+            public decimal CenterY { get; set; }
+            public decimal Zoom { get; set; }
+            public int Iterations { get; set; }
+            public string PaletteName { get; set; }
+            public decimal Threshold { get; set; }
+            public bool UseSmoothColoring { get; set; }
+        }
+
+        /// <summary>
+        /// Собирает текущее состояние фрактала для сохранения.
+        /// </summary>
+        /// <param name="saveName">Имя, присвоенное сохранению.</param>
+        /// <returns>Объект состояния фрактала, готовый к сериализации.</returns>
+        public FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            var state = new CollatzSaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                Threshold = nudThreshold.Value,
+                Iterations = (int)nudIterations.Value,
+                PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+                PreviewEngineType = this.FractalTypeIdentifier
+            };
+
+            var previewParams = new CollatzPreviewParams
+            {
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = state.Iterations,
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold,
+                UseSmoothColoring = cbSmooth.Checked
+            };
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams);
+            return state;
+        }
+
+        /// <summary>
+        /// Загружает состояние фрактала из объекта сохранения.
+        /// </summary>
+        /// <param name="stateBase">Базовый объект состояния для загрузки.</param>
+        public void LoadState(FractalSaveStateBase stateBase)
+        {
+            if (stateBase is CollatzSaveState state)
+            {
+                _isRenderingPreview = false;
+                _previewRenderCts?.Cancel();
+                _renderDebounceTimer.Stop();
+
+                _centerX = state.CenterX;
+                _centerY = state.CenterY;
+                _zoom = state.Zoom;
+                if (nudZoom.Value != state.Zoom) nudZoom.Value = state.Zoom;
+                if (nudThreshold.Value != state.Threshold) nudThreshold.Value = state.Threshold;
+                if (nudIterations.Value != state.Iterations) nudIterations.Value = state.Iterations;
+
+                var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
+                if (paletteToLoad != null)
+                {
+                    _paletteManager.ActivePalette = paletteToLoad;
+                }
+
+                lock (_bitmapLock)
+                {
+                    _previewBitmap?.Dispose();
+                    _previewBitmap = null;
+                    _currentRenderingBitmap?.Dispose();
+                    _currentRenderingBitmap = null;
+                }
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
+                UpdateEngineParameters();
+                ScheduleRender();
+            }
+            else
+            {
+                MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Создает и настраивает экземпляр движка Collatz на основе параметров для превью.
+        /// </summary>
+        /// <param name="previewParams">Параметры для создания движка превью.</param>
+        /// <returns>Настроенный экземпляр <see cref="FractalCollatzEngine"/>.</returns>
+        private FractalCollatzEngine CreateEngineFromPreviewParams(CollatzPreviewParams previewParams)
+        {
+            var engine = new FractalCollatzEngine();
+            engine.MaxIterations = previewParams.Iterations;
+            engine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
+            engine.CenterX = previewParams.CenterX;
+            engine.CenterY = previewParams.CenterY;
+            if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
+            engine.Scale = BASE_SCALE / previewParams.Zoom;
+            engine.UseSmoothColoring = previewParams.UseSmoothColoring;
+
+            var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
+            int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? engine.MaxIterations : paletteForPreview.MaxColorIterations;
+            engine.MaxColorIterations = effectiveMaxColorIterations;
+
+            if (engine.UseSmoothColoring)
+            {
+                engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+            }
+            else
+            {
+                engine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+            }
+            return engine;
+        }
+
+        /// <summary>
+        /// Асинхронно рендерит тайл предпросмотра для заданного состояния.
+        /// </summary>
+        /// <param name="state">Состояние фрактала.</param>
+        /// <param name="tile">Информация о тайле.</param>
+        /// <param name="totalWidth">Общая ширина превью.</param>
+        /// <param name="totalHeight">Общая высота превью.</param>
+        /// <param name="tileSize">Размер тайла.</param>
+        /// <returns>Массив байтов с данными тайла.</returns>
+        public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return await Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(state.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                CollatzPreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<CollatzPreviewParams>(state.PreviewParametersJson);
+                }
+                catch
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
+
+                var previewEngine = CreateEngineFromPreviewParams(previewParams);
+                previewEngine.UseSmoothColoring = false; // Упрощение для превью
+                var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
+
+        /// <summary>
+        /// Рендерит полное изображение предпросмотра для заданного состояния.
+        /// </summary>
+        /// <param name="state">Состояние фрактала.</param>
+        /// <param name="previewWidth">Ширина превью.</param>
+        /// <param name="previewHeight">Высота превью.</param>
+        /// <returns>Bitmap с изображением превью.</returns>
+        public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
+        {
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+            CollatzPreviewParams previewParams;
+            try
+            {
+                previewParams = JsonSerializer.Deserialize<CollatzPreviewParams>(state.PreviewParametersJson);
+            }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            var previewEngine = CreateEngineFromPreviewParams(previewParams);
+            return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
+        }
+
+        /// <summary>
+        /// Загружает все сохранения для данного типа фрактала.
+        /// </summary>
+        /// <returns>Список загруженных состояний.</returns>
+        public List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<CollatzSaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        /// <summary>
+        /// Сохраняет все состояния для данного типа фрактала.
+        /// </summary>
+        /// <param name="saves">Список состояний для сохранения.</param>
+        public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            var specificSaves = saves.Cast<CollatzSaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
         #endregion
     }
