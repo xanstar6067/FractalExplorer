@@ -11,6 +11,13 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace FractalExplorer.Forms.Fractals
 {
@@ -24,9 +31,9 @@ namespace FractalExplorer.Forms.Fractals
         #region Fields
 
         /// <summary>
-        /// Движок для рендеринга фрактала. Используется базовый тип для гибкости.
+        /// Движок для рендеринга фрактала Коллатца.
         /// </summary>
-        private FractalMandelbrotFamilyEngine _fractalEngine;
+        private FractalCollatzEngine _fractalEngine;
 
         /// <summary>
         /// Компонент для визуализации процесса рендеринга (например, отображения тайлов).
@@ -405,19 +412,21 @@ namespace FractalExplorer.Forms.Fractals
         /// <summary>
         /// Создает копию движка рендеринга с текущими параметрами.
         /// </summary>
-        /// <returns>Новый экземпляр <see cref="FractalMandelbrotFamilyEngine"/> с скопированными параметрами.</returns>
-        private FractalMandelbrotFamilyEngine CreateEngineCopy()
+        /// <returns>Новый экземпляр <see cref="FractalCollatzEngine"/> с скопированными параметрами.</returns>
+        private FractalCollatzEngine CreateEngineCopy()
         {
-            var engineCopy = new FractalCollatzEngine();
-            engineCopy.MaxIterations = _fractalEngine.MaxIterations;
-            engineCopy.ThresholdSquared = _fractalEngine.ThresholdSquared;
-            engineCopy.CenterX = _fractalEngine.CenterX;
-            engineCopy.CenterY = _fractalEngine.CenterY;
-            engineCopy.Scale = _fractalEngine.Scale;
-            engineCopy.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
-            engineCopy.Palette = _fractalEngine.Palette;
-            engineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
-            engineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
+            var engineCopy = new FractalCollatzEngine
+            {
+                MaxIterations = _fractalEngine.MaxIterations,
+                ThresholdSquared = _fractalEngine.ThresholdSquared,
+                CenterX = _fractalEngine.CenterX,
+                CenterY = _fractalEngine.CenterY,
+                Scale = _fractalEngine.Scale,
+                UseSmoothColoring = _fractalEngine.UseSmoothColoring,
+                Palette = _fractalEngine.Palette,
+                SmoothPalette = _fractalEngine.SmoothPalette,
+                MaxColorIterations = _fractalEngine.MaxColorIterations
+            };
             return engineCopy;
         }
 
@@ -1051,14 +1060,15 @@ namespace FractalExplorer.Forms.Fractals
         /// <returns>Настроенный экземпляр <see cref="FractalCollatzEngine"/>.</returns>
         private FractalCollatzEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
-            var engine = new FractalCollatzEngine();
-
-            engine.MaxIterations = forPreview ? Math.Min(state.Iterations, 150) : state.Iterations;
-            engine.ThresholdSquared = state.Threshold * state.Threshold;
-            engine.CenterX = state.CenterX;
-            engine.CenterY = state.CenterY;
-            engine.Scale = state.BaseScale / state.Zoom;
-            engine.UseSmoothColoring = state.UseSmoothColoring;
+            var engine = new FractalCollatzEngine
+            {
+                MaxIterations = forPreview ? Math.Min(state.Iterations, 150) : state.Iterations,
+                ThresholdSquared = state.Threshold * state.Threshold,
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Scale = state.BaseScale / state.Zoom,
+                UseSmoothColoring = state.UseSmoothColoring
+            };
 
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
@@ -1225,11 +1235,13 @@ namespace FractalExplorer.Forms.Fractals
         /// <returns>Настроенный экземпляр <see cref="FractalCollatzEngine"/>.</returns>
         private FractalCollatzEngine CreateEngineFromPreviewParams(CollatzPreviewParams previewParams)
         {
-            var engine = new FractalCollatzEngine();
-            engine.MaxIterations = previewParams.Iterations;
-            engine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
-            engine.CenterX = previewParams.CenterX;
-            engine.CenterY = previewParams.CenterY;
+            var engine = new FractalCollatzEngine
+            {
+                MaxIterations = previewParams.Iterations,
+                ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
+                CenterX = previewParams.CenterX,
+                CenterY = previewParams.CenterY
+            };
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             engine.Scale = BASE_SCALE / previewParams.Zoom;
             engine.UseSmoothColoring = previewParams.UseSmoothColoring;
