@@ -227,140 +227,48 @@ namespace FractalExplorer.Forms.Fractals
         }
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
-            if (canvas.Width <= 0 || canvas.Height <= 0)
-            {
-                e.Graphics.Clear(Color.Black);
-                return;
-            }
-
+            if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
             e.Graphics.Clear(Color.Black);
-
             lock (_bitmapLock)
             {
-                // Безопасное рисование preview bitmap
                 if (_previewBitmap != null)
                 {
-                    try
+                    if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
                     {
-                        // Проверяем, что bitmap не был disposed
-                        if (_previewBitmap.Width > 0 && _previewBitmap.Height > 0)
+                        e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                    }
+                    else
+                    {
+                        try
                         {
-                            if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
+                            decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
+                            decimal currentComplexWidth = BASE_SCALE / _zoom;
+                            if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
                             {
-                                // Простое рисование без трансформации
-                                e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
-                            }
-                            else
-                            {
-                                // Рисование с трансформацией
-                                DrawTransformedPreview(e.Graphics);
+                                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
+                                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
+                                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
+                                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
+                                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
+                                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
+                                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
+                                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
+                                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                                e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
+                                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
+                                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
+                                e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
                             }
                         }
-                    }
-                    catch (ArgumentException)
-                    {
-                        // Bitmap был disposed или поврежден - игнорируем
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // Bitmap находится в недействительном состоянии
-                    }
-                    catch (ExternalException)
-                    {
-                        // Ошибка GDI+ - игнорируем
+                        catch (Exception) { }
                     }
                 }
-
-                // Безопасное рисование current rendering bitmap
-                if (_currentRenderingBitmap != null)
-                {
-                    try
-                    {
-                        // Проверяем, что bitmap не был disposed
-                        if (_currentRenderingBitmap.Width > 0 && _currentRenderingBitmap.Height > 0)
-                        {
-                            e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
-                        }
-                    }
-                    catch (ArgumentException)
-                    {
-                        // Bitmap был disposed или поврежден - игнорируем
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // Bitmap находится в недействительном состоянии
-                    }
-                    catch (ExternalException)
-                    {
-                        // Ошибка GDI+ - игнорируем
-                    }
-                }
+                if (_currentRenderingBitmap != null) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
             }
-
-            // Рисование визуализатора рендеринга
-            if (_renderVisualizer != null && _isRenderingPreview)
-            {
-                try
-                {
-                    _renderVisualizer.DrawVisualization(e.Graphics);
-                }
-                catch (Exception)
-                {
-                    // Игнорируем ошибки визуализатора
-                }
-            }
+            if (_renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
         }
-
-        private void DrawTransformedPreview(Graphics graphics)
-        {
-            try
-            {
-                decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
-                decimal currentComplexWidth = BASE_SCALE / _zoom;
-
-                // Дополнительные проверки на валидность данных
-                if (_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0)
-                    return;
-
-                // Проверяем, что bitmap всё еще валиден
-                if (_previewBitmap == null || _previewBitmap.Width <= 0 || _previewBitmap.Height <= 0)
-                    return;
-
-                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
-                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
-
-                // Проверяем на деление на ноль
-                if (unitsPerPixelCurrent == 0)
-                    return;
-
-                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
-                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
-                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
-                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
-
-                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
-                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
-                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
-
-                // Проверяем разумность размеров
-                if (Math.Abs(newWidthPixels) > 50000 || Math.Abs(newHeightPixels) > 50000)
-                    return;
-
-                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-
-                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
-                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
-                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
-
-                graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
-            }
-            catch (Exception)
-            {
-                // Любая ошибка при трансформации - игнорируем
-            }
-        }
-
         #endregion
 
         #region Rendering Logic
@@ -663,146 +571,51 @@ namespace FractalExplorer.Forms.Fractals
         // без каких-либо изменений.
         private void CommitAndBakePreview()
         {
-            lock (_bitmapLock)
-            {
-                if (!_isRenderingPreview || _currentRenderingBitmap == null)
-                    return;
-            }
-
+            lock (_bitmapLock) { if (!_isRenderingPreview || _currentRenderingBitmap == null) return; }
             _previewRenderCts?.Cancel();
-
             lock (_bitmapLock)
             {
-                if (_currentRenderingBitmap == null || canvas.Width <= 0 || canvas.Height <= 0)
-                    return;
-
-                try
+                if (_currentRenderingBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return;
+                var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+                using (var g = Graphics.FromImage(bakedBitmap))
                 {
-                    // Проверяем, что current bitmap валиден
-                    if (_currentRenderingBitmap.Width <= 0 || _currentRenderingBitmap.Height <= 0)
-                        return;
-
-                    var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
-
-                    try
+                    g.Clear(Color.Black);
+                    g.InterpolationMode = InterpolationMode.Bilinear;
+                    if (_previewBitmap != null)
                     {
-                        using (var g = Graphics.FromImage(bakedBitmap))
+                        try
                         {
-                            g.Clear(Color.Black);
-                            g.InterpolationMode = InterpolationMode.Bilinear;
-
-                            if (_previewBitmap != null)
+                            decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
+                            decimal currentComplexWidth = BASE_SCALE / _zoom;
+                            if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
                             {
-                                try
-                                {
-                                    // Проверяем валидность preview bitmap
-                                    if (_previewBitmap.Width > 0 && _previewBitmap.Height > 0)
-                                    {
-                                        DrawTransformedPreviewToBitmap(g);
-                                    }
-                                }
-                                catch (ArgumentException)
-                                {
-                                    // _previewBitmap поврежден - игнорируем
-                                }
-                                catch (InvalidOperationException)
-                                {
-                                    // _previewBitmap в недействительном состоянии
-                                }
-                                catch (ExternalException)
-                                {
-                                    // Ошибка GDI+ - игнорируем
-                                }
-                            }
-
-                            try
-                            {
-                                // Проверяем валидность current rendering bitmap еще раз
-                                if (_currentRenderingBitmap.Width > 0 && _currentRenderingBitmap.Height > 0)
-                                {
-                                    g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
-                                }
-                            }
-                            catch (ArgumentException)
-                            {
-                                // _currentRenderingBitmap поврежден - игнорируем
-                            }
-                            catch (InvalidOperationException)
-                            {
-                                // _currentRenderingBitmap в недействительном состоянии
-                            }
-                            catch (ExternalException)
-                            {
-                                // Ошибка GDI+ - игнорируем
+                                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
+                                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
+                                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
+                                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
+                                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
+                                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
+                                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
+                                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
+                                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
+                                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
+                                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
+                                g.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
                             }
                         }
-
-                        // Успешно создали bakedBitmap, теперь заменяем старые
-                        _previewBitmap?.Dispose();
-                        _previewBitmap = bakedBitmap;
-                        _currentRenderingBitmap?.Dispose();
-                        _currentRenderingBitmap = null;
-                        _renderedCenterX = _centerX;
-                        _renderedCenterY = _centerY;
-                        _renderedZoom = _zoom;
+                        catch (Exception) { }
                     }
-                    catch (Exception)
-                    {
-                        // Если что-то пошло не так, освобождаем bakedBitmap
-                        bakedBitmap?.Dispose();
-                        throw;
-                    }
+                    g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
-                catch (Exception)
-                {
-                    // Любая ошибка при создании bakedBitmap - игнорируем
-                    // Оставляем существующие bitmap'ы как есть
-                }
-            }
-        }
-
-        private void DrawTransformedPreviewToBitmap(Graphics g)
-        {
-            try
-            {
-                decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
-                decimal currentComplexWidth = BASE_SCALE / _zoom;
-
-                if (_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0)
-                    return;
-
-                if (_previewBitmap == null || _previewBitmap.Width <= 0 || _previewBitmap.Height <= 0)
-                    return;
-
-                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
-                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
-
-                if (unitsPerPixelCurrent == 0)
-                    return;
-
-                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
-                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
-                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
-                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
-
-                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
-                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
-                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
-
-                // Проверяем разумность размеров
-                if (Math.Abs(newWidthPixels) > 50000 || Math.Abs(newHeightPixels) > 50000)
-                    return;
-
-                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
-                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
-                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
-
-                g.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
-            }
-            catch (Exception)
-            {
-                // Любая ошибка при трансформации - игнорируем
+                _previewBitmap?.Dispose();
+                _previewBitmap = bakedBitmap;
+                _currentRenderingBitmap.Dispose();
+                _currentRenderingBitmap = null;
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
             }
         }
 

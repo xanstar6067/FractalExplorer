@@ -5,52 +5,32 @@ using System.Numerics;
 
 namespace FractalExplorer.Engines
 {
+    /// <summary>
+    /// Реализует движок для рендеринга фрактала Коллатца.
+    /// Итерационная формула: z_next = 0.25 * (2 + 7*z - (2 + 5*z) * cos(pi*z))
+    /// </summary>
     public class FractalCollatzEngine : FractalMandelbrotFamilyEngine
     {
-        private decimal _bailoutValue;
-
-        public override decimal ThresholdSquared
-        {
-            get => base.ThresholdSquared;
-            set
-            {
-                base.ThresholdSquared = value;
-                _bailoutValue = (decimal)Math.Sqrt((double)value);
-            }
-        }
-
         #region Private Helpers
 
-        // *** ПОЛНОСТЬЮ ПЕРЕРАБОТАННЫЙ МЕТОД ***
+        /// <summary>
+        /// Вычисляет косинус комплексного числа с высокой точностью (decimal).
+        /// Формула: cos(x + iy) = cos(x)cosh(y) - i*sin(x)sinh(y)
+        /// </summary>
+        /// <param name="z">Комплексное число.</param>
+        /// <returns>Косинус от z.</returns>
         private ComplexDecimal ComplexCos(ComplexDecimal z)
         {
-            // --- ОСНОВНАЯ ЧАСТЬ ВЫЧИСЛЕНИЙ ТЕПЕРЬ ИДЕТ В DECIMAL ---
-            // Мы больше не теряем точность!
-            decimal cos_x = DecimalMath.Cos(z.Real);
-            decimal sin_x = DecimalMath.Sin(z.Real);
-
-            // --- ДЛЯ ГИПЕРБОЛИЧЕСКИХ ФУНКЦИЙ ОСТАВЛЯЕМ DOUBLE ---
-            // Это компромисс, так как реализация Exp() для decimal очень сложна,
-            // но потеря точности в мнимой части гораздо менее критична для стабильности.
+            // Для вычислений тригонометрических функций используем double,
+            // так как в стандартной библиотеке нет аналогов для decimal.
+            double x = (double)z.Real;
             double y = (double)z.Imaginary;
-            if (double.IsInfinity(y) || double.IsNaN(y) || Math.Abs(y) > 700)
-            {
-                throw new OverflowException("Мнимая часть слишком велика для гиперболических функций.");
-            }
 
-            double cosh_y_double = Math.Cosh(y);
-            double sinh_y_double = Math.Sinh(y);
+            decimal cos_x = (decimal)Math.Cos(x);
+            decimal sin_x = (decimal)Math.Sin(x);
+            decimal cosh_y = (decimal)Math.Cosh(y);
+            decimal sinh_y = (decimal)Math.Sinh(y);
 
-            if (double.IsInfinity(cosh_y_double) || double.IsInfinity(sinh_y_double))
-            {
-                throw new OverflowException("Результат гиперболической функции привел к переполнению.");
-            }
-
-            decimal cosh_y = (decimal)cosh_y_double;
-            decimal sinh_y = (decimal)sinh_y_double;
-
-            // Финальные вычисления, которые могут переполниться,
-            // но будут пойманы в главном цикле.
             decimal realPart = cos_x * cosh_y;
             decimal imaginaryPart = -sin_x * sinh_y;
 
@@ -61,40 +41,42 @@ namespace FractalExplorer.Engines
 
         #region Overridden Methods
 
-        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source) { }
+        /// <inheritdoc />
+        public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
+        {
+            // У этого движка нет специфичных параметров для копирования.
+        }
 
+        /// <inheritdoc />
+        /// <remarks>
+        /// Для фрактала Коллатца итерация зависит только от z.
+        /// Начальное z - это сама точка на комплексной плоскости.
+        /// Константа 'c' не используется.
+        /// </remarks>
         protected override void GetCalculationParameters(decimal re, decimal im, out ComplexDecimal initialZ, out ComplexDecimal constantC)
         {
             initialZ = new ComplexDecimal(re, im);
-            constantC = ComplexDecimal.Zero;
+            constantC = ComplexDecimal.Zero; // 'c' не используется, но должно быть определено.
         }
 
-        // Основной цикл остается таким же надежным, каким мы его сделали
+        /// <inheritdoc />
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
             int iter = 0;
+            // Параметр 'c' игнорируется, так как не входит в формулу Коллатца.
 
-            while (iter < MaxIterations && (Math.Abs(z.Real) < _bailoutValue && Math.Abs(z.Imaginary) < _bailoutValue))
+            while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
                 try
                 {
-                    // Вызов PI * z остается прежним, так как PI берется из double, но это допустимо
-                    // для масштабирования перед передачей в высокоточную функцию.
-                    ComplexDecimal pi_z = z * (decimal)Math.PI;
-
-                    // Вызываем наш новый, полностью защищенный ComplexCos
-                    ComplexDecimal cos_pi_z = ComplexCos(pi_z);
-
-                    ComplexDecimal term1 = new ComplexDecimal(2, 0);
-                    ComplexDecimal term2 = z * 7;
-                    ComplexDecimal term3 = term1 + z * 5;
-                    ComplexDecimal term4 = term3 * cos_pi_z;
-                    ComplexDecimal numerator = term1 + term2 - term4;
-                    z = numerator / 4;
+                    // z_next = 0.25 * (2 + 7*z - (2 + 5*z) * cos(pi*z))
+                    ComplexDecimal cos_pi_z = ComplexCos(z * (decimal)Math.PI);
+                    z = (new ComplexDecimal(2, 0) + z * 7 - (new ComplexDecimal(2, 0) + z * 5) * cos_pi_z) / 4;
                     iter++;
                 }
                 catch (OverflowException)
                 {
+                    // Если происходит переполнение, считаем, что точка ушла в бесконечность.
                     iter = MaxIterations;
                     break;
                 }
@@ -102,73 +84,32 @@ namespace FractalExplorer.Engines
             return iter;
         }
 
-        // Методы для double остаются без изменений
+        /// <inheritdoc />
         protected override void GetCalculationParametersDouble(double re, double im, out ComplexDouble initialZ, out ComplexDouble constantC)
         {
             initialZ = new ComplexDouble(re, im);
-            constantC = ComplexDouble.Zero;
+            constantC = ComplexDouble.Zero; // 'c' не используется.
         }
 
+        /// <inheritdoc />
         public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
         {
-            // Этот метод не затрагивается, так как он изначально работает с double
-            // и не претендует на высокую точность.
             int iter = 0;
             double thresholdSq = (double)ThresholdSquared;
+            // Параметр 'c' игнорируется.
+
+            // Преобразуем в System.Numerics.Complex для использования встроенной быстрой функции Cos
             System.Numerics.Complex z_numerics = new System.Numerics.Complex(z.Real, z.Imaginary);
 
             while (iter < MaxIterations && z_numerics.Magnitude * z_numerics.Magnitude <= thresholdSq)
             {
-                try
-                {
-                    if (double.IsInfinity(z_numerics.Real) || double.IsNaN(z_numerics.Real) ||
-                        double.IsInfinity(z_numerics.Imaginary) || double.IsNaN(z_numerics.Imaginary))
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    const double MAX_SAFE_VALUE = 1e6;
-                    if (Math.Abs(z_numerics.Real) > MAX_SAFE_VALUE || Math.Abs(z_numerics.Imaginary) > MAX_SAFE_VALUE)
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    System.Numerics.Complex pi_z = z_numerics * Math.PI;
-                    if (double.IsInfinity(pi_z.Real) || double.IsNaN(pi_z.Real) ||
-                        double.IsInfinity(pi_z.Imaginary) || double.IsNaN(pi_z.Imaginary))
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    System.Numerics.Complex cos_pi_z = System.Numerics.Complex.Cos(pi_z);
-                    if (double.IsInfinity(cos_pi_z.Real) || double.IsNaN(cos_pi_z.Real) ||
-                        double.IsInfinity(cos_pi_z.Imaginary) || double.IsNaN(cos_pi_z.Imaginary))
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    System.Numerics.Complex newZ = 0.25 * (2 + 7 * z_numerics - (2 + 5 * z_numerics) * cos_pi_z);
-                    if (double.IsInfinity(newZ.Real) || double.IsNaN(newZ.Real) ||
-                        double.IsInfinity(newZ.Imaginary) || double.IsNaN(newZ.Imaginary))
-                    {
-                        iter = MaxIterations;
-                        break;
-                    }
-
-                    z_numerics = newZ;
-                    iter++;
-                }
-                catch (Exception)
-                {
-                    iter = MaxIterations;
-                    break;
-                }
+                // z_next = 0.25 * (2 + 7*z - (2 + 5*z) * cos(pi*z))
+                System.Numerics.Complex cos_pi_z = System.Numerics.Complex.Cos(z_numerics * Math.PI);
+                z_numerics = 0.25 * (2 + 7 * z_numerics - (2 + 5 * z_numerics) * cos_pi_z);
+                iter++;
             }
 
+            // Обновляем исходную переменную z (переданную по ссылке) для корректной работы сглаживания
             z = new ComplexDouble(z_numerics.Real, z_numerics.Imaginary);
             return iter;
         }
