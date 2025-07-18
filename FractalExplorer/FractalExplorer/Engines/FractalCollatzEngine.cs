@@ -11,8 +11,28 @@ using System.Threading.Tasks;
 namespace FractalExplorer.Engines
 {
     /// <summary>
-    /// Реализует движок для рендеринга фрактала Коллатца.
-    /// Итерационная формула: z_next = 0.25 * (2 + 7*z - (2 + 5*z) * cos(pi*z))
+    /// Перечисление для различных вариаций итерационной формулы фрактала Коллатца.
+    /// </summary>
+    public enum CollatzVariation
+    {
+        /// <summary>
+        /// Стандартная формула: 0.25 * (2 + 7z - (2 + 5z) * cos(pi*z))
+        /// </summary>
+        Standard,
+
+        /// <summary>
+        /// Вариация с использованием синуса: 0.25 * (2 + 7z - (2 + 5z) * sin(pi*z))
+        /// </summary>
+        SineVariation,
+
+        /// <summary>
+        /// Обобщенная формула для "px + 1": 0.5 * ((p-1)z + 1 - ((p-1)z - 1) * cos(pi*z))
+        /// </summary>
+        GeneralizedP
+    }
+
+    /// <summary>
+    /// Реализует движок для рендеринга фрактала Коллатца с поддержкой нескольких итерационных формул.
     /// </summary>
     public class FractalCollatzEngine
     {
@@ -35,6 +55,19 @@ namespace FractalExplorer.Engines
         public int MaxColorIterations { get; set; } = 1000;
         #endregion
 
+        #region Variation Properties
+        /// <summary>
+        /// Выбранная вариация итерационной формулы Коллатца.
+        /// </summary>
+        public CollatzVariation Variation { get; set; } = CollatzVariation.Standard;
+
+        /// <summary>
+        /// Параметр 'p' для обобщенной вариации <see cref="CollatzVariation.GeneralizedP"/>.
+        /// Определяет правило "px + 1". Для стандартной гипотезы Коллатца p=3.
+        /// </summary>
+        public decimal P_Parameter { get; set; } = 3.0m;
+        #endregion
+
         #region Private Calculation Logic
 
         /// <summary>
@@ -52,6 +85,20 @@ namespace FractalExplorer.Engines
         }
 
         /// <summary>
+        /// Вычисляет синус комплексного числа с высокой точностью (decimal).
+        /// </summary>
+        private ComplexDecimal ComplexSin(ComplexDecimal z)
+        {
+            double x = (double)z.Real;
+            double y = (double)z.Imaginary;
+            decimal sin_x = (decimal)Math.Sin(x);
+            decimal cos_x = (decimal)Math.Cos(x);
+            decimal sinh_y = (decimal)Math.Sinh(y);
+            decimal cosh_y = (decimal)Math.Cosh(y);
+            return new ComplexDecimal(sin_x * cosh_y, cos_x * sinh_y);
+        }
+
+        /// <summary>
         /// Вычисляет количество итераций для точки с использованием высокой точности (<see cref="ComplexDecimal"/>).
         /// </summary>
         private int CalculateIterations(ref ComplexDecimal z)
@@ -61,8 +108,31 @@ namespace FractalExplorer.Engines
             {
                 try
                 {
-                    ComplexDecimal cos_pi_z = ComplexCos(z * (decimal)Math.PI);
-                    z = (new ComplexDecimal(2, 0) + z * 7 - (new ComplexDecimal(2, 0) + z * 5) * cos_pi_z) / 4;
+                    // Выбор итерационной формулы на основе выбранной вариации
+                    switch (Variation)
+                    {
+                        case CollatzVariation.Standard:
+                            {
+                                ComplexDecimal cos_pi_z = ComplexCos(z * (decimal)Math.PI);
+                                z = (new ComplexDecimal(2, 0) + z * 7 - (new ComplexDecimal(2, 0) + z * 5) * cos_pi_z) / 4;
+                                break;
+                            }
+                        case CollatzVariation.SineVariation:
+                            {
+                                // Вариация, использующая синус вместо косинуса для "условия ветвления"
+                                ComplexDecimal sin_pi_z = ComplexSin(z * (decimal)Math.PI);
+                                z = 0.25m * (new ComplexDecimal(2, 0) + z * 7 - (new ComplexDecimal(2, 0) + z * 5) * sin_pi_z);
+                                break;
+                            }
+                        case CollatzVariation.GeneralizedP:
+                            {
+                                // Обобщенная формула для "px + 1"
+                                decimal p = P_Parameter;
+                                ComplexDecimal cos_pi_z = ComplexCos(z * (decimal)Math.PI);
+                                z = 0.5m * ((p - 1) * z + 1 - ((p - 1) * z - 1) * cos_pi_z);
+                                break;
+                            }
+                    }
                     iter++;
                 }
                 catch (OverflowException)
@@ -85,8 +155,29 @@ namespace FractalExplorer.Engines
 
             while (iter < MaxIterations && z_numerics.Magnitude * z_numerics.Magnitude <= thresholdSq)
             {
-                System.Numerics.Complex cos_pi_z = System.Numerics.Complex.Cos(z_numerics * Math.PI);
-                z_numerics = 0.25 * (2 + 7 * z_numerics - (2 + 5 * z_numerics) * cos_pi_z);
+                // Выбор итерационной формулы на основе выбранной вариации
+                switch (Variation)
+                {
+                    case CollatzVariation.Standard:
+                        {
+                            System.Numerics.Complex cos_pi_z = System.Numerics.Complex.Cos(z_numerics * Math.PI);
+                            z_numerics = 0.25 * (2 + 7 * z_numerics - (2 + 5 * z_numerics) * cos_pi_z);
+                            break;
+                        }
+                    case CollatzVariation.SineVariation:
+                        {
+                            System.Numerics.Complex sin_pi_z = System.Numerics.Complex.Sin(z_numerics * Math.PI);
+                            z_numerics = 0.25 * (2 + 7 * z_numerics - (2 + 5 * z_numerics) * sin_pi_z);
+                            break;
+                        }
+                    case CollatzVariation.GeneralizedP:
+                        {
+                            double p = (double)P_Parameter;
+                            System.Numerics.Complex cos_pi_z = System.Numerics.Complex.Cos(z_numerics * Math.PI);
+                            z_numerics = 0.5 * ((p - 1) * z_numerics + 1 - ((p - 1) * z_numerics - 1) * cos_pi_z);
+                            break;
+                        }
+                }
                 iter++;
             }
             z = new ComplexDouble(z_numerics.Real, z_numerics.Imaginary);

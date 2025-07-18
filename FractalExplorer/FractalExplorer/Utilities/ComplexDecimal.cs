@@ -1,4 +1,6 @@
-﻿namespace FractalExplorer.Resources
+﻿using System;
+
+namespace FractalExplorer.Resources
 {
     /// <summary>
     /// Представляет комплексное число, используя тип decimal для высокой точности.
@@ -186,6 +188,18 @@
         public static ComplexDecimal operator *(ComplexDecimal a, decimal b)
         {
             return new ComplexDecimal(a.Real * b, a.Imaginary * b);
+        }
+
+        /// <summary>
+        /// Определяет оператор умножения скаляра (decimal) на комплексное число.
+        /// </summary>
+        /// <param name="b">Скалярное значение.</param>
+        /// <param name="a">Комплексное число.</param>
+        /// <returns>Новое комплексное число, представляющее произведение.</returns>
+        public static ComplexDecimal operator *(decimal b, ComplexDecimal a)
+        {
+            // Умножение коммутативно, поэтому просто вызываем существующий оператор.
+            return a * b;
         }
 
         /// <summary>

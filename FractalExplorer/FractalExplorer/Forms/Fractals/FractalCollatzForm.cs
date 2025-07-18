@@ -3,18 +3,18 @@ using FractalExplorer.Forms.Other;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.RenderUtilities;
-using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using System.Diagnostics;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using System.Text.Json;
 using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -28,6 +28,7 @@ namespace FractalExplorer.Forms.Fractals
     /// </summary>
     public partial class FractalCollatzForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
+        // ... (весь код до региона IHighResRenderable Implementation остается без изменений) ...
         #region Fields
 
         /// <summary>
@@ -170,8 +171,8 @@ namespace FractalExplorer.Forms.Fractals
 
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
-            nudZoom.Minimum = 0.001m;
-            nudZoom.Maximum = 1434648375m;
+            nudZoom.Minimum = 0.000000000000001m;
+            nudZoom.Maximum = decimal.MaxValue;
             _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
@@ -179,6 +180,19 @@ namespace FractalExplorer.Forms.Fractals
             cbSSAA.Items.Add("Низкое (2x)");
             cbSSAA.Items.Add("Высокое (4x)");
             cbSSAA.SelectedItem = "Выкл (1x)";
+
+            // Инициализация новых элементов управления для вариаций
+            cbVariation.DataSource = Enum.GetValues(typeof(CollatzVariation));
+            cbVariation.SelectedItem = CollatzVariation.Standard;
+
+            nudPParameter.Value = 3.0m;
+            nudPParameter.Minimum = -100m;
+            nudPParameter.Maximum = 100m;
+            nudPParameter.DecimalPlaces = 2;
+            nudPParameter.Increment = 0.01m;
+
+            // Скрываем поле для параметра P, так как оно не нужно для стандартной вариации
+            TogglePParameterControl(false);
         }
 
         /// <summary>
@@ -192,6 +206,10 @@ namespace FractalExplorer.Forms.Fractals
             nudZoom.ValueChanged += ParamControl_Changed;
             cbSmooth.CheckedChanged += ParamControl_Changed;
             cbSSAA.SelectedIndexChanged += ParamControl_Changed;
+
+            // Добавляем обработчики для новых элементов
+            cbVariation.SelectedIndexChanged += Variation_Changed;
+            nudPParameter.ValueChanged += ParamControl_Changed;
 
             canvas.MouseWheel += Canvas_MouseWheel;
             canvas.MouseDown += Canvas_MouseDown;
@@ -212,6 +230,19 @@ namespace FractalExplorer.Forms.Fractals
             if (sender == nudZoom && nudZoom.Value != _zoom)
             {
                 _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, nudZoom.Value));
+            }
+            ScheduleRender();
+        }
+
+        /// <summary>
+        /// Обрабатывает изменение выбранной вариации фрактала.
+        /// </summary>
+        private void Variation_Changed(object sender, EventArgs e)
+        {
+            if (cbVariation.SelectedItem is CollatzVariation selectedVariation)
+            {
+                // Показываем или скрываем поле для параметра 'P' в зависимости от выбора
+                TogglePParameterControl(selectedVariation == CollatzVariation.GeneralizedP);
             }
             ScheduleRender();
         }
@@ -425,7 +456,10 @@ namespace FractalExplorer.Forms.Fractals
                 UseSmoothColoring = _fractalEngine.UseSmoothColoring,
                 Palette = _fractalEngine.Palette,
                 SmoothPalette = _fractalEngine.SmoothPalette,
-                MaxColorIterations = _fractalEngine.MaxColorIterations
+                MaxColorIterations = _fractalEngine.MaxColorIterations,
+                // Копируем новые свойства вариаций
+                Variation = _fractalEngine.Variation,
+                P_Parameter = _fractalEngine.P_Parameter
             };
             return engineCopy;
         }
@@ -702,6 +736,23 @@ namespace FractalExplorer.Forms.Fractals
 
         #region Utility Methods
         /// <summary>
+        /// Переключает видимость элементов управления для параметра 'P'.
+        /// </summary>
+        /// <param name="isVisible">True, чтобы сделать элементы видимыми, иначе False.</param>
+        private void TogglePParameterControl(bool isVisible)
+        {
+            if (lblPParameter.InvokeRequired)
+            {
+                lblPParameter.Invoke((Action)(() => TogglePParameterControl(isVisible)));
+            }
+            else
+            {
+                lblPParameter.Visible = isVisible;
+                nudPParameter.Visible = isVisible;
+            }
+        }
+
+        /// <summary>
         /// Завершает текущий рендеринг и "запекает" его результат в основной битмап предпросмотра.
         /// </summary>
         private void CommitAndBakePreview()
@@ -765,6 +816,26 @@ namespace FractalExplorer.Forms.Fractals
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BASE_SCALE / _zoom;
             _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
+
+            // Обновляем движок параметрами вариаций
+            if (cbVariation.InvokeRequired)
+            {
+                cbVariation.Invoke((Action)(() => _fractalEngine.Variation = (CollatzVariation)cbVariation.SelectedItem));
+            }
+            else
+            {
+                _fractalEngine.Variation = (CollatzVariation)cbVariation.SelectedItem;
+            }
+
+            if (nudPParameter.InvokeRequired)
+            {
+                nudPParameter.Invoke((Action)(() => _fractalEngine.P_Parameter = nudPParameter.Value));
+            }
+            else
+            {
+                _fractalEngine.P_Parameter = nudPParameter.Value;
+            }
+
             ApplyActivePalette();
         }
 
@@ -1043,12 +1114,18 @@ namespace FractalExplorer.Forms.Fractals
                 CenterY = _centerY,
                 Zoom = _zoom,
                 BaseScale = BASE_SCALE,
+                Scale = BASE_SCALE / _zoom,
                 Iterations = (int)nudIterations.Value,
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = "collatz",
-                UseSmoothColoring = cbSmooth.Checked
+                UseSmoothColoring = cbSmooth.Checked,
+
+                // Добавляем специфичные для Коллатца параметры
+                Variation = (CollatzVariation)cbVariation.SelectedItem,
+                P_Parameter = nudPParameter.Value
             };
+
             return state;
         }
 
@@ -1066,9 +1143,19 @@ namespace FractalExplorer.Forms.Fractals
                 ThresholdSquared = state.Threshold * state.Threshold,
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
-                Scale = state.BaseScale / state.Zoom,
+                Scale = state.Scale,
                 UseSmoothColoring = state.UseSmoothColoring
             };
+
+            // Извлекаем параметры вариаций из состояния
+            if (state.Variation.HasValue)
+            {
+                engine.Variation = state.Variation.Value;
+            }
+            if (state.P_Parameter.HasValue)
+            {
+                engine.P_Parameter = state.P_Parameter.Value;
+            }
 
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
@@ -1138,6 +1225,7 @@ namespace FractalExplorer.Forms.Fractals
 
         /// <summary>
         /// Класс для хранения параметров предпросмотра фрактала Коллатца.
+        /// Расширен для поддержки вариаций.
         /// </summary>
         public class CollatzPreviewParams
         {
@@ -1148,6 +1236,14 @@ namespace FractalExplorer.Forms.Fractals
             public string PaletteName { get; set; }
             public decimal Threshold { get; set; }
             public bool UseSmoothColoring { get; set; }
+            /// <summary>
+            /// Сохраненная вариация формулы.
+            /// </summary>
+            public CollatzVariation Variation { get; set; }
+            /// <summary>
+            /// Сохраненный параметр 'P'.
+            /// </summary>
+            public decimal P_Parameter { get; set; }
         }
 
         /// <summary>
@@ -1167,7 +1263,10 @@ namespace FractalExplorer.Forms.Fractals
                 Threshold = nudThreshold.Value,
                 Iterations = (int)nudIterations.Value,
                 PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
-                PreviewEngineType = this.FractalTypeIdentifier
+                PreviewEngineType = this.FractalTypeIdentifier,
+                // Сохраняем параметры вариаций
+                Variation = (CollatzVariation)cbVariation.SelectedItem,
+                P_Parameter = nudPParameter.Value
             };
 
             var previewParams = new CollatzPreviewParams
@@ -1178,7 +1277,10 @@ namespace FractalExplorer.Forms.Fractals
                 Iterations = state.Iterations,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
-                UseSmoothColoring = cbSmooth.Checked
+                UseSmoothColoring = cbSmooth.Checked,
+                // Добавляем параметры вариаций в JSON для предпросмотра
+                Variation = state.Variation,
+                P_Parameter = state.P_Parameter
             };
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams);
             return state;
@@ -1202,6 +1304,12 @@ namespace FractalExplorer.Forms.Fractals
                 if (nudZoom.Value != state.Zoom) nudZoom.Value = state.Zoom;
                 if (nudThreshold.Value != state.Threshold) nudThreshold.Value = state.Threshold;
                 if (nudIterations.Value != state.Iterations) nudIterations.Value = state.Iterations;
+
+                // Загружаем и применяем параметры вариаций
+                cbVariation.SelectedItem = state.Variation;
+                nudPParameter.Value = state.P_Parameter;
+                TogglePParameterControl(state.Variation == CollatzVariation.GeneralizedP);
+
 
                 var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
                 if (paletteToLoad != null)
@@ -1240,11 +1348,14 @@ namespace FractalExplorer.Forms.Fractals
                 MaxIterations = previewParams.Iterations,
                 ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
                 CenterX = previewParams.CenterX,
-                CenterY = previewParams.CenterY
+                CenterY = previewParams.CenterY,
+                UseSmoothColoring = previewParams.UseSmoothColoring,
+                // Устанавливаем параметры вариаций для движка предпросмотра
+                Variation = previewParams.Variation,
+                P_Parameter = previewParams.P_Parameter
             };
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             engine.Scale = BASE_SCALE / previewParams.Zoom;
-            engine.UseSmoothColoring = previewParams.UseSmoothColoring;
 
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
             int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? engine.MaxIterations : paletteForPreview.MaxColorIterations;

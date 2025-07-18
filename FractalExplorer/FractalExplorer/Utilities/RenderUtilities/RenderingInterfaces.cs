@@ -1,8 +1,9 @@
-﻿using FractalExplorer.Resources;
+﻿using FractalExplorer.Engines; // <-- Добавьте эту директиву using для доступа к CollatzVariation
+using FractalExplorer.Resources;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Drawing; // <-- Добавьте эту директиву using для доступа к Bitmap
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FractalExplorer.Utilities.RenderUtilities
@@ -26,8 +27,24 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public decimal? Power { get; set; } // Степень 'p' для Обобщенного Мандельброта
         public decimal Scale { get; set; }
         public bool UseInversion { get; set; }
+
+        #region Collatz Specific Parameters
+        /// <summary>
+        /// Получает или задает вариацию формулы для фрактала Коллатца.
+        /// Используется только движком Коллатца.
+        /// </summary>
+        public CollatzVariation? Variation { get; set; }
+
+        /// <summary>
+        /// Получает или задает параметр 'P' для обобщенной вариации Коллатца.
+        /// Используется только движком Коллатца.
+        /// </summary>
+        public decimal? P_Parameter { get; set; }
+        #endregion
+
         public HighResRenderState Clone()
         {
+            // MemberwiseClone корректно скопирует все свойства, включая новые.
             return (HighResRenderState)this.MemberwiseClone();
         }
     }
