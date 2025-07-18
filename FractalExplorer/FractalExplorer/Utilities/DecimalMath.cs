@@ -1,114 +1,37 @@
 ﻿public static class DecimalMath
 {
-    // Определим константы с высокой точностью
-    private static readonly decimal DecimalPI = 3.1415926535897932384626433833m;
-    private static readonly decimal DecimalTwoPI = 2 * DecimalPI;
-
-    // Количество итераций для ряда Тейлора. 
-    // Для decimal 20-25 итераций обычно дают превосходную точность.
-    private const int TaylorSeriesIterations = 28;
+    // Задаем высокоточные константы PI
+    private static readonly decimal PI = 3.1415926535897932384626433832m;
+    private static readonly decimal PI_X_2 = 6.2831853071795864769252867664m;
+    private static readonly decimal PI_OVER_2 = 1.5707963267948966192313216916m;
 
     /// <summary>
-    /// Вычисляет косинус для числа типа decimal.
+    /// Вычисляет косинус для decimal с использованием ряда Тейлора.
     /// </summary>
-    public static decimal Cos(decimal angle)
+    public static decimal Cos(decimal x)
     {
-        // Приведение угла к диапазону [-2π, 2π] для быстрой сходимости ряда
-        angle %= DecimalTwoPI;
+        // Приводим аргумент к диапазону [-PI, PI] для лучшей сходимости и точности
+        while (x > PI) x -= PI_X_2;
+        while (x < -PI) x += PI_X_2;
 
+        // cos(x) = 1 - x^2/2! + x^4/4! - x^6/6! + ...
         decimal result = 1.0m;
-        decimal term;
-        decimal power = angle * angle; // x^2
-        decimal factorial = 2.0m;
-        int sign = -1;
-
-        for (int i = 1; i <= TaylorSeriesIterations; i++)
+        decimal term = 1.0m;
+        // 34 итерации более чем достаточно для полной точности decimal
+        for (int i = 1; i <= 34; i += 2)
         {
-            term = power / factorial;
-            result += sign * term;
-
-            // Если очередной член ряда стал неотличим от нуля для decimal, можно остановиться.
-            if (term == 0m) break;
-
-            sign *= -1;
-            power *= angle * angle; // Увеличиваем степень на 2
-            factorial *= (2 * i + 1) * (2 * i + 2); // Увеличиваем факториал до (2n+2)!
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Вычисляет синус для числа типа decimal.
-    /// </summary>
-    public static decimal Sin(decimal angle)
-    {
-        // Приведение угла к диапазону [-2π, 2π]
-        angle %= DecimalTwoPI;
-
-        decimal result = angle;
-        decimal term;
-        decimal power = angle * angle * angle; // x^3
-        decimal factorial = 6.0m; // 3!
-        int sign = -1;
-
-        for (int i = 1; i <= TaylorSeriesIterations; i++)
-        {
-            term = power / factorial;
-            result += sign * term;
-
-            if (term == 0m) break;
-
-            sign *= -1;
-            power *= angle * angle;
-            factorial *= (2 * i + 2) * (2 * i + 3);
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Вычисляет гиперболический косинус для числа типа decimal.
-    /// </summary>
-    public static decimal Cosh(decimal value)
-    {
-        // Для гиперболических функций приведение не так критично, но может помочь при очень больших значениях
-        decimal result = 1.0m;
-        decimal term;
-        decimal power = value * value;
-        decimal factorial = 2.0m;
-
-        for (int i = 1; i <= TaylorSeriesIterations; i++)
-        {
-            term = power / factorial;
+            term *= -1 * x * x / (i * (i + 1));
             result += term;
-
-            if (term == 0m) break;
-
-            power *= value * value;
-            factorial *= (2 * i + 1) * (2 * i + 2);
         }
         return result;
     }
 
     /// <summary>
-    /// Вычисляет гиперболический синус для числа типа decimal.
+    /// Вычисляет синус для decimal с использованием ряда Тейлора.
     /// </summary>
-    public static decimal Sinh(decimal value)
+    public static decimal Sin(decimal x)
     {
-        decimal result = value;
-        decimal term;
-        decimal power = value * value * value;
-        decimal factorial = 6.0m;
-
-        for (int i = 1; i <= TaylorSeriesIterations; i++)
-        {
-            term = power / factorial;
-            result += term;
-
-            if (term == 0m) break;
-
-            power *= value * value;
-            factorial *= (2 * i + 2) * (2 * i + 3);
-        }
-        return result;
+        // Для Sin проще всего использовать тождество sin(x) = cos(x - PI/2)
+        return Cos(x - PI_OVER_2);
     }
 }

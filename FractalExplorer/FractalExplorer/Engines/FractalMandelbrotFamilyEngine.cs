@@ -37,7 +37,7 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Получает или задает квадрат порога (bailout value), используемый для определения, вышла ли точка за пределы множества.
         /// </summary>
-        public decimal ThresholdSquared { get; set; }
+        public virtual decimal ThresholdSquared { get; set; }
 
         /// <summary>
         /// Получает или задает комплексную константу 'C' для фракталов семейства Жюлиа.
