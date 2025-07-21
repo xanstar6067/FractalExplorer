@@ -171,9 +171,9 @@ namespace FractalExplorer.Forms.Fractals
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.000000000000001m;
-            nudZoom.Maximum = 1434648375m;
-            //nudZoom.Maximum = decimal.MaxValue;
-
+            
+            nudZoom.Maximum = decimal.MaxValue;
+           // nudZoom.Maximum = 1434648375m;
             _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
@@ -387,44 +387,69 @@ namespace FractalExplorer.Forms.Fractals
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
             e.Graphics.Clear(Color.Black);
+
             lock (_bitmapLock)
             {
                 if (_previewBitmap != null)
                 {
+                    // Если позиция и зум не менялись, просто отрисовываем готовый битмап
                     if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
                     {
                         e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
                     }
-                    else
+                    else // Иначе, нужно трансформировать старый битмап для создания иллюзии плавности
                     {
-                        try
+                        // Проверяем, что значения зума корректны
+                        if (_renderedZoom > 0 && _zoom > 0 && _previewBitmap.Width > 0 && _previewBitmap.Height > 0)
                         {
-                            decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
-                            decimal currentComplexWidth = BASE_SCALE / _zoom;
-                            if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
+                            // Эта логика численно устойчива и не приводит к сбоям при экстремальном зуме.
+                            // Она вычисляет трансформацию относительно стабильной системы координат последнего
+                            // завершенного рендера (_renderedZoom), а не текущей (_zoom), что предотвращает
+                            // деление на исчезающе малые числа.
+
+                            // 1. Коэффициент масштабирования: во сколько раз изменился зум
+                            decimal scaleRatio = _zoom / _renderedZoom;
+
+                            // 2. "Единиц на пиксель" для ПОСЛЕДНЕГО завершенного рендера. Эта величина стабильна.
+                            decimal unitsPerPixelRendered = (BASE_SCALE / _renderedZoom) / _previewBitmap.Width;
+
+                            // 3. Находим, где на старом битмапе (_previewBitmap) теперь должен быть центр нового вида.
+                            //    Вычисляем смещение нового центра (_centerX) относительно старого (_renderedCenterX)
+                            //    и переводим его в пиксели старого битмапа.
+                            decimal centerPxOnOldBitmap = (_previewBitmap.Width / 2.0m) + (_centerX - _renderedCenterX) / unitsPerPixelRendered;
+                            decimal centerPyOnOldBitmap = (_previewBitmap.Height / 2.0m) - (_centerY - _renderedCenterY) / unitsPerPixelRendered; // Y инвертирован
+
+                            // 4. Вычисляем новые размеры отмасштабированного битмапа
+                            decimal newWidthPixels = _previewBitmap.Width * scaleRatio;
+                            decimal newHeightPixels = _previewBitmap.Height * scaleRatio;
+
+                            // 5. Вычисляем координаты (смещение) верхнего левого угла отмасштабированного битмапа.
+                            //    Цель — чтобы точка (centerPxOnOldBitmap, centerPyOnOldBitmap) оказалась в центре холста.
+                            decimal offsetXPixels = (canvas.Width / 2.0m) - (centerPxOnOldBitmap * scaleRatio);
+                            decimal offsetYPixels = (canvas.Height / 2.0m) - (centerPyOnOldBitmap * scaleRatio);
+
+                            // 6. Отрисовываем оттрансформированное изображение
+                            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                            PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
+                            PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
+                            PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
+
+                            try
                             {
-                                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
-                                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
-                                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
-                                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
-                                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
-                                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
-                                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
-                                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
-                                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
-                                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
-                                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
+                                // Оставляем try-catch на случай, если даже после всех расчетов
+                                // итоговые float-значения окажутся невалидными (что маловероятно с этой логикой).
                                 e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
                             }
+                            catch (Exception) { /* Игнорировать редкие сбои отрисовки GDI+ */ }
                         }
-                        catch (Exception) { /* Игнорируем ошибки при панорамировании/зуме */ }
                     }
                 }
+
+                // Отрисовываем поверх всего текущий рендеринг (если он идет)
                 if (_currentRenderingBitmap != null) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
             }
+
+            // Отрисовываем визуализацию тайлов
             if (_renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
         }
         #endregion
@@ -760,46 +785,55 @@ namespace FractalExplorer.Forms.Fractals
         {
             lock (_bitmapLock) { if (!_isRenderingPreview || _currentRenderingBitmap == null) return; }
             _previewRenderCts?.Cancel();
+
             lock (_bitmapLock)
             {
                 if (_currentRenderingBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return;
                 var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+
                 using (var g = Graphics.FromImage(bakedBitmap))
                 {
                     g.Clear(Color.Black);
                     g.InterpolationMode = InterpolationMode.Bilinear;
+
                     if (_previewBitmap != null)
                     {
-                        try
+                        if (_renderedZoom > 0 && _zoom > 0 && _previewBitmap.Width > 0 && _previewBitmap.Height > 0)
                         {
-                            decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
-                            decimal currentComplexWidth = BASE_SCALE / _zoom;
-                            if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
+                            // Используется та же самая численно устойчивая логика, что и в Canvas_Paint
+
+                            decimal scaleRatio = _zoom / _renderedZoom;
+                            decimal unitsPerPixelRendered = (BASE_SCALE / _renderedZoom) / _previewBitmap.Width;
+
+                            decimal centerPxOnOldBitmap = (_previewBitmap.Width / 2.0m) + (_centerX - _renderedCenterX) / unitsPerPixelRendered;
+                            decimal centerPyOnOldBitmap = (_previewBitmap.Height / 2.0m) - (_centerY - _renderedCenterY) / unitsPerPixelRendered;
+
+                            decimal newWidthPixels = _previewBitmap.Width * scaleRatio;
+                            decimal newHeightPixels = _previewBitmap.Height * scaleRatio;
+
+                            decimal offsetXPixels = (canvas.Width / 2.0m) - (centerPxOnOldBitmap * scaleRatio);
+                            decimal offsetYPixels = (canvas.Height / 2.0m) - (centerPyOnOldBitmap * scaleRatio);
+
+                            PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
+                            PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
+                            PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
+
+                            try
                             {
-                                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
-                                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
-                                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
-                                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
-                                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
-                                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
-                                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
-                                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
-                                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
-                                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
-                                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
                                 g.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
                             }
+                            catch (Exception) { /* Игнорировать */ }
                         }
-                        catch (Exception) { /* Игнорируем ошибки при панорамировании/зуме */ }
                     }
+
                     g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
+
                 _previewBitmap?.Dispose();
                 _previewBitmap = bakedBitmap;
                 _currentRenderingBitmap.Dispose();
                 _currentRenderingBitmap = null;
+
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;
