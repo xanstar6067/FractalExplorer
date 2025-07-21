@@ -28,7 +28,6 @@ namespace FractalExplorer.Forms.Fractals
     /// </summary>
     public partial class FractalCollatzForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
-        // ... (весь код до региона IHighResRenderable Implementation остается без изменений) ...
         #region Fields
 
         /// <summary>
@@ -172,7 +171,9 @@ namespace FractalExplorer.Forms.Fractals
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.000000000000001m;
-            nudZoom.Maximum = decimal.MaxValue;
+            nudZoom.Maximum = 1434648375m;
+            //nudZoom.Maximum = decimal.MaxValue;
+
             _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
