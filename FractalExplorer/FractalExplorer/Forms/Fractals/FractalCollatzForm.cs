@@ -172,8 +172,8 @@ namespace FractalExplorer.Forms.Fractals
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.000000000000001m;
             
-            nudZoom.Maximum = decimal.MaxValue;
-           // nudZoom.Maximum = 1434648375m;
+            //nudZoom.Maximum = decimal.MaxValue;
+            nudZoom.Maximum = 1434648375m;
             _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
