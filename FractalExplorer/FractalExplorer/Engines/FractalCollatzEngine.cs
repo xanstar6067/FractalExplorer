@@ -106,9 +106,20 @@ namespace FractalExplorer.Engines
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
+                // === ГЛАВНОЕ ИЗМЕНЕНИЕ: УПРЕЖДАЮЩАЯ ПРОВЕРКА ===
+                // Аргумент для Cos/Sin - это z * PI. Проверяем его мнимую часть.
+                // Если |Im(z*PI)| > 60, то Cosh/Sinh почти наверняка вызовут переполнение.
+                // 60 - это безопасный предел.
+                if (Math.Abs(z.Imaginary * (decimal)Math.PI) > 60.0m)
+                {
+                    // Точка гарантированно "улетает". Считаем, что она вышла за пределы.
+                    // Просто выходим из цикла. Текущее значение 'iter' будет использовано для окраски.
+                    break;
+                }
+
                 try
                 {
-                    // Выбор итерационной формулы на основе выбранной вариации
+                    // Теперь можно безопасно вычислять.
                     switch (Variation)
                     {
                         case CollatzVariation.Standard:
@@ -119,14 +130,12 @@ namespace FractalExplorer.Engines
                             }
                         case CollatzVariation.SineVariation:
                             {
-                                // Вариация, использующая синус вместо косинуса для "условия ветвления"
                                 ComplexDecimal sin_pi_z = ComplexSin(z * (decimal)Math.PI);
                                 z = 0.25m * (new ComplexDecimal(2, 0) + z * 7 - (new ComplexDecimal(2, 0) + z * 5) * sin_pi_z);
                                 break;
                             }
                         case CollatzVariation.GeneralizedP:
                             {
-                                // Обобщенная формула для "px + 1"
                                 decimal p = P_Parameter;
                                 ComplexDecimal cos_pi_z = ComplexCos(z * (decimal)Math.PI);
                                 z = 0.5m * ((p - 1) * z + 1 - ((p - 1) * z - 1) * cos_pi_z);
@@ -137,7 +146,11 @@ namespace FractalExplorer.Engines
                 }
                 catch (OverflowException)
                 {
-                    iter = MaxIterations;
+                    // === ВТОРОЕ ВАЖНОЕ ИЗМЕНЕНИЕ ===
+                    // Если переполнение все же случилось (например, при умножении),
+                    // это значит, что точка улетела в бесконечность.
+                    // Мы НЕ присваиваем iter = MaxIterations. Мы просто выходим из цикла.
+                    // Это исправит ошибку с "черным цветом" на границе.
                     break;
                 }
             }
