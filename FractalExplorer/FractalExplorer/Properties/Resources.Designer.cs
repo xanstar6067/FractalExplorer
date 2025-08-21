@@ -63,6 +63,16 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap base_img_CHAT_GPT_01 {
+            get {
+                object obj = ResourceManager.GetObject("base_img_CHAT_GPT_01", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap buffalo_preview {
             get {
                 object obj = ResourceManager.GetObject("buffalo_preview", resourceCulture);

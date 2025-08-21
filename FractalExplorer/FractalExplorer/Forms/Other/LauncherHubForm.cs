@@ -242,7 +242,7 @@ namespace FractalExplorer
                 _selectedFractal = null;
                 lblFractalName.Text = "Выберите фрактал";
                 richTextBoxDescription.Text = "Выберите конкретный фрактал из списка слева, чтобы увидеть его описание и запустить.";
-                pictureBoxPreview.Image = null;
+                pictureBoxPreview.Image = Properties.Resources.base_img_CHAT_GPT_01;
                 btnLaunchSelected.Enabled = false;
             }
         }
