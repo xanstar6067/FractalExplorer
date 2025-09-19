@@ -1,3 +1,4 @@
+using CPU_Benchmark;
 using FractalExplorer.Forms;
 using FractalExplorer.Forms.Fractals;
 using FractalExplorer.Projects;
@@ -48,6 +49,21 @@ namespace FractalExplorer
         private FractalInfo _selectedFractal;
 
         /// <summary>
+        /// Отвечает за получение динамических данных с сенсоров (температура, мощность).
+        /// </summary>
+        private readonly SystemMonitor _systemMonitor;
+
+        /// <summary>
+        /// Таймер для периодического обновления информации о системе в UI.
+        /// </summary>
+        private readonly System.Windows.Forms.Timer _uiUpdateTimer;
+
+        /// <summary>
+        /// Флаг, предотвращающий одновременный запуск нескольких обновлений.
+        /// </summary>
+        private bool _isUpdatingInfo = false;
+
+        /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="LauncherHubForm"/>.
         /// </summary>
         public LauncherHubForm()
@@ -55,9 +71,69 @@ namespace FractalExplorer
             InitializeComponent();
             _fractalCatalog = new List<FractalInfo>();
 
+            _systemMonitor = new SystemMonitor();
+            _uiUpdateTimer = new System.Windows.Forms.Timer { Interval = 1500 }; // Интервал 1.5 секунды
+            _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
+
+            this.Load += LauncherHubForm_Load;
+            this.FormClosing += LauncherHubForm_FormClosing;
+
             InitializeFractalCatalog();
             PopulateTreeView();
             DisplayAppVersionInTitle();
+        }
+
+        /// <summary>
+        /// Обработчик события загрузки формы. Инициализирует монитор и запускает таймер.
+        /// </summary>
+        private void LauncherHubForm_Load(object sender, EventArgs e)
+        {
+            _systemMonitor.Initialize();
+            // Запускаем первое обновление сразу, не дожидаясь тика таймера.
+            UiUpdateTimer_Tick(this, EventArgs.Empty);
+            _uiUpdateTimer.Start();
+        }
+
+        /// <summary>
+        /// Обработчик события закрытия формы. Останавливает таймер и освобождает ресурсы.
+        /// </summary>
+        private void LauncherHubForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _uiUpdateTimer.Stop();
+            _systemMonitor.Dispose();
+        }
+
+        /// <summary>
+        /// Обработчик тика таймера. Асинхронно получает данные с сенсоров и обновляет UI.
+        /// </summary>
+        private async void UiUpdateTimer_Tick(object sender, EventArgs e)
+        {
+            if (_isUpdatingInfo) return; // Предотвращаем повторный вход
+
+            try
+            {
+                _isUpdatingInfo = true;
+
+                // Выполняем опрос сенсоров в фоновом потоке, чтобы не блокировать UI
+                var metrics = await Task.Run(() =>
+                {
+                    float? temp = _systemMonitor.GetCpuTemperature();
+                    float? power = _systemMonitor.GetCpuPackagePower();
+
+                    string tempString = temp.HasValue ? $"{temp.Value:F1} °C" : "N/A";
+                    string powerString = power.HasValue ? $"{power.Value:F1} Вт" : "N/A";
+
+                    return (Temp: tempString, Power: powerString);
+                });
+
+                // Обновляем элементы UI в основном потоке
+                lblTempValue.Text = metrics.Temp;
+                lblPowerValue.Text = metrics.Power;
+            }
+            finally
+            {
+                _isUpdatingInfo = false;
+            }
         }
 
         /// <summary>
@@ -174,7 +250,7 @@ namespace FractalExplorer
                               "Гипотеза утверждает, что последовательность 3n+1 для любого целого числа в итоге придет к циклу 4-2-1. Этот фрактал визуализирует хаотичное и непредсказуемое поведение этой, казалось бы, простой идеи.\n\n" +
                               "В результате получается уникальная, бесконечно детализированная паутинообразная структура, не похожая ни на один другой фрактал.\n\n" +
                               "Особенности: Исследуйте сложную структуру фрактала с помощью глубокого масштабирования, настраивайте цветовые схемы и сохраняйте полученные изображения в высоком разрешении.",
-                PreviewImage = Properties.Resources.collatz_preview 
+                PreviewImage = Properties.Resources.collatz_preview
             });
 
             _fractalCatalog.Add(new FractalInfo
