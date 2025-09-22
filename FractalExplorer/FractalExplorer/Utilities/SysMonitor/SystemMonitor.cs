@@ -88,22 +88,37 @@ namespace CPU_Benchmark
         /// Принудительно обновляет данные всех сенсоров на указанном устройстве.
         /// </summary>
         /// <param name="hardware">Аппаратный компонент для обновления.</param>
-        private void UpdateHardware(IHardware? hardware)
+        private void UpdateHardware(IHardware hardware)
         {
             hardware?.Update();
         }
 
         /// <summary>
-        /// Получает температуру процессорного пакета (CPU Package).
+        /// Получает температуру процессора, выполняя поиск по списку приоритетных сенсоров
+        /// для лучшей совместимости (например, с процессорами Ryzen X3D).
         /// </summary>
-        /// <returns>Температура в градусах Цельсия или <c>null</c>, если сенсор не найден.</returns>
+        /// <returns>Температура в градусах Цельсия или <c>null</c>, если подходящий сенсор не найден.</returns>
         public float? GetCpuTemperature()
         {
             if (_cpu == null) return null;
             UpdateHardware(_cpu);
-            var sensor = _cpu.Sensors.FirstOrDefault(s =>
-                s.SensorType == SensorType.Temperature && s.Name.Contains("CPU Package"));
-            return sensor?.Value;
+
+            // Ищем сенсор по списку приоритетных имен. Это решает проблему с Ryzen X3D.
+            var priorityNames = new[] { "CPU Package", "Core (Tj)", "CPU CCD1 (Tdie)" };
+
+            foreach (var name in priorityNames)
+            {
+                var sensor = _cpu.Sensors.FirstOrDefault(s =>
+                    s.SensorType == SensorType.Temperature && s.Name.Contains(name));
+
+                if (sensor?.Value != null)
+                {
+                    return sensor.Value;
+                }
+            }
+
+            // Если ничего не нашли, возвращаем null
+            return null;
         }
 
         /// <summary>
@@ -120,16 +135,30 @@ namespace CPU_Benchmark
         }
 
         /// <summary>
-        /// Получает энергопотребление процессорного пакета (CPU Package).
+        /// Получает энергопотребление процессорного пакета.
+        /// Поиск ведется по нескольким возможным именам сенсоров для повышения надежности.
         /// </summary>
-        /// <returns>Мощность в ваттах или <c>null</c>, если сенсор не найден.</returns>
+        /// <returns>Мощность в ваттах или <c>null</c>, если подходящий сенсор не найден.</returns>
         public float? GetCpuPackagePower()
         {
             if (_cpu == null) return null;
             UpdateHardware(_cpu);
-            var sensor = _cpu.Sensors.FirstOrDefault(s =>
-                s.SensorType == SensorType.Power && s.Name.Contains("CPU Package"));
-            return sensor?.Value;
+
+            // Ищем сенсор мощности по нескольким возможным именам.
+            var priorityNames = new[] { "CPU Package", "CPU Socket" };
+
+            foreach (var name in priorityNames)
+            {
+                var sensor = _cpu.Sensors.FirstOrDefault(s =>
+                    s.SensorType == SensorType.Power && s.Name.Contains(name));
+
+                if (sensor?.Value != null)
+                {
+                    return sensor.Value;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -157,11 +186,11 @@ namespace CPU_Benchmark
         /// </summary>
         public void Dispose()
         {
-            try
-            {
+            try { 
                 _computer.Close();
-            }
+            } 
             catch { }
         }
     }
 }
+
