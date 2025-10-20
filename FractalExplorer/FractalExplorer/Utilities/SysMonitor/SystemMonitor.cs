@@ -103,13 +103,22 @@ namespace CPU_Benchmark
             if (_cpu == null) return null;
             UpdateHardware(_cpu);
 
-            // Ищем сенсор по списку приоритетных имен. Это решает проблему с Ryzen X3D.
-            var priorityNames = new[] { "CPU Package", "Core (Tj)", "CPU CCD1 (Tdie)" };
+            // Расширенный список для поддержки Ryzen 9950X3D и других процессоров
+            var priorityNames = new[]
+            {
+        "Core (Tctl/Tdie)",    // Ryzen 5000/7000/9000 серии (включая X3D)
+        "Core (Tctl)",          // Альтернативное имя
+        "CCD1 (Tdie)",          // Chiplet 1 без префикса "CPU"
+        "CPU CCD1 (Tdie)",      // Старое именование
+        "CPU Package",          // Intel
+        "Core (Tj)"            // Другие процессоры
+    };
 
             foreach (var name in priorityNames)
             {
                 var sensor = _cpu.Sensors.FirstOrDefault(s =>
-                    s.SensorType == SensorType.Temperature && s.Name.Contains(name));
+                    s.SensorType == SensorType.Temperature &&
+                    s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
                 if (sensor?.Value != null)
                 {
@@ -117,8 +126,12 @@ namespace CPU_Benchmark
                 }
             }
 
-            // Если ничего не нашли, возвращаем null
-            return null;
+            // Если точное совпадение не найдено, ищем по частичному совпадению
+            var tempSensor = _cpu.Sensors.FirstOrDefault(s =>
+                s.SensorType == SensorType.Temperature &&
+                (s.Name.Contains("Tdie") || s.Name.Contains("Package")));
+
+            return tempSensor?.Value;
         }
 
         /// <summary>
@@ -193,4 +206,3 @@ namespace CPU_Benchmark
         }
     }
 }
-
