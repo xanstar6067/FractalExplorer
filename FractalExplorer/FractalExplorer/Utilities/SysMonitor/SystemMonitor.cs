@@ -1,7 +1,8 @@
 ﻿using LibreHardwareMonitor.Hardware;
 using System;
 using System.Collections.Generic;
-using System.Linq; // <-- Убедитесь, что эта строка добавлена
+using System.Diagnostics; // Необходимо для вывода отладочных сообщений
+using System.Linq;
 
 namespace CPU_Benchmark
 {
@@ -77,13 +78,15 @@ namespace CPU_Benchmark
             {
                 _computer.Open();
                 _cpu = _computer.Hardware.FirstOrDefault(h => h.HardwareType == HardwareType.Cpu);
-                // Находим все устройства типа Storage и добавляем их в список.
                 _storageDevices.AddRange(_computer.Hardware.Where(h => h.HardwareType == HardwareType.Storage));
             }
-            catch
+            catch (Exception ex)
             {
-                // Игнорируем ошибки инициализации, чтобы приложение могло работать
-                // даже если LibreHardwareMonitor не смог запуститься (например, из-за отсутствия прав).
+                // Это сообщение появится в окне "Вывод" -> "Отладка" в Visual Studio
+                Debug.WriteLine("ОШИБКА: Не удалось инициализировать SystemMonitor. Мониторинг оборудования будет недоступен.");
+                Debug.WriteLine($"ПРИЧИНА: {ex.Message}");
+                // Если антивирус удалил DLL, здесь, скорее всего, будет ошибка 'FileNotFoundException'
+                // или 'BadImageFormatException', указывающая на LibreHardwareMonitorLib.dll.
             }
         }
 
@@ -197,7 +200,10 @@ namespace CPU_Benchmark
             {
                 _computer.Close();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"ОШИБКА: Произошла ошибка при освобождении ресурсов SystemMonitor: {ex.Message}");
+            }
         }
     }
 }
