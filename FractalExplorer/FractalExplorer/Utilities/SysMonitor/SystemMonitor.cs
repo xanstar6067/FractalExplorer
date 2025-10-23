@@ -1,4 +1,7 @@
 ﻿using LibreHardwareMonitor.Hardware;
+using System;
+using System.Collections.Generic;
+using System.Linq; // <-- Убедитесь, что эта строка добавлена
 
 namespace CPU_Benchmark
 {
@@ -94,44 +97,38 @@ namespace CPU_Benchmark
         }
 
         /// <summary>
-        /// Получает температуру процессора, выполняя поиск по списку приоритетных сенсоров
-        /// для лучшей совместимости (например, с процессорами Ryzen X3D).
+        /// Получает МАКСИМАЛЬНУЮ температуру процессора, анализируя все ключевые сенсоры (Tdie, CCDs).
+        /// Этот метод надежно работает с многочиповыми процессорами AMD Ryzen, включая Zen 4 и Zen 5.
         /// </summary>
-        /// <returns>Температура в градусах Цельсия или <c>null</c>, если подходящий сенсор не найден.</returns>
+        /// <returns>Максимальная температура в градусах Цельсия или <c>null</c>, если сенсоры не найдены.</returns>
         public float? GetCpuTemperature()
         {
             if (_cpu == null) return null;
             UpdateHardware(_cpu);
 
-            // Расширенный список для поддержки Ryzen 9950X3D и других процессоров
-            var priorityNames = new[]
-            {
-        "Core (Tctl/Tdie)",    // Ryzen 5000/7000/9000 серии (включая X3D)
-        "Core (Tctl)",          // Альтернативное имя
-        "CCD1 (Tdie)",          // Chiplet 1 без префикса "CPU"
-        "CPU CCD1 (Tdie)",      // Старое именование
-        "CPU Package",          // Intel
-        "Core (Tj)"            // Другие процессоры
-    };
+            // 1. Основной, самый надежный способ для современных AMD Ryzen.
+            // Находим ВСЕ релевантные температурные сенсоры. Ищем сенсоры,
+            // в имени которых есть "Tdie" (температура кристалла) или "CCD" (температура чиплета).
+            var amdTempSensors = _cpu.Sensors.Where(s =>
+                s.SensorType == SensorType.Temperature &&
+                s.Value.HasValue &&
+                (s.Name.Contains("Tdie") || s.Name.Contains("CCD")));
 
-            foreach (var name in priorityNames)
+            // 2. Если такие сенсоры найдены, возвращаем МАКСИМАЛЬНОЕ значение среди них.
+            // Это дает самую точную картину пиковой температуры процессора.
+            if (amdTempSensors.Any())
             {
-                var sensor = _cpu.Sensors.FirstOrDefault(s =>
-                    s.SensorType == SensorType.Temperature &&
-                    s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-                if (sensor?.Value != null)
-                {
-                    return sensor.Value;
-                }
+                return amdTempSensors.Max(s => s.Value);
             }
 
-            // Если точное совпадение не найдено, ищем по частичному совпадению
-            var tempSensor = _cpu.Sensors.FirstOrDefault(s =>
+            // 3. Запасной вариант (Fallback) для Intel или старых процессоров AMD.
+            // Если специфичных сенсоров Tdie/CCD нет, ищем общий "Package" или "Core" сенсор.
+            var fallbackSensor = _cpu.Sensors.FirstOrDefault(s =>
                 s.SensorType == SensorType.Temperature &&
-                (s.Name.Contains("Tdie") || s.Name.Contains("Package")));
+                s.Value.HasValue &&
+                (s.Name.Contains("Package") || s.Name.Contains("Core")));
 
-            return tempSensor?.Value;
+            return fallbackSensor?.Value;
         }
 
         /// <summary>
@@ -157,7 +154,6 @@ namespace CPU_Benchmark
             if (_cpu == null) return null;
             UpdateHardware(_cpu);
 
-            // Ищем сенсор мощности по нескольким возможным именам.
             var priorityNames = new[] { "CPU Package", "CPU Socket" };
 
             foreach (var name in priorityNames)
@@ -184,9 +180,7 @@ namespace CPU_Benchmark
             foreach (var device in _storageDevices)
             {
                 UpdateHardware(device);
-                // Имя устройства - это и есть его модель
                 string name = device.Name;
-                // Ищем сенсор температуры
                 var tempSensor = device.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Temperature);
                 result.Add(new StorageInfo(name, tempSensor?.Value));
             }
@@ -199,9 +193,10 @@ namespace CPU_Benchmark
         /// </summary>
         public void Dispose()
         {
-            try { 
+            try
+            {
                 _computer.Close();
-            } 
+            }
             catch { }
         }
     }
