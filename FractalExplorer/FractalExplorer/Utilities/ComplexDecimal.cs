@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FractalExplorer.Utilities;
+using System;
 using System.Security.Policy;
 
 namespace FractalExplorer.Resources
@@ -272,7 +273,7 @@ namespace FractalExplorer.Resources
         #region Static Methods
 
         /// <summary>
-        /// Возводит комплексное число в комплексную степень.
+        /// Возводит комплексное число в комплексную степень с высокой точностью.
         /// Формула: z^p = exp(p * log(z))
         /// </summary>
         /// <param name="z">Основание.</param>
@@ -285,25 +286,23 @@ namespace FractalExplorer.Resources
             if (p == One) return z;
             if (z == Zero) return Zero;
 
-            // Переходим к вычислениям через double, так как System.Math не имеет перегрузок для decimal.
-            // Это является узким местом по ТОЧНОСТИ (см. анализ ниже).
-
             // 1. Вычисляем log(z) = ln|z| + i*arg(z)
-            double magnitude = z.Magnitude; // |z|
-            double argument = Math.Atan2((double)z.Imaginary, (double)z.Real); // arg(z)
-            double log_real = Math.Log(magnitude); // ln|z|
-            double log_imag = argument;
+            // Magnitude возвращает double, но его основа - MagnitudeSquared (decimal)
+            decimal magnitude = (decimal)Math.Sqrt((double)z.MagnitudeSquared);
+            decimal argument = DecimalMath.Atan2(z.Imaginary, z.Real);
+            decimal log_real = DecimalMath.Log(magnitude);
+            decimal log_imag = argument;
 
             // 2. Умножаем p * log(z)
             // (p.Re + i*p.Im) * (log_real + i*log_imag)
-            double product_real = (double)p.Real * log_real - (double)p.Imaginary * log_imag;
-            double product_imag = (double)p.Real * log_imag + (double)p.Imaginary * log_real;
+            decimal product_real = p.Real * log_real - p.Imaginary * log_imag;
+            decimal product_imag = p.Real * log_imag + p.Imaginary * log_real;
 
             // 3. Вычисляем exp(product) = e^(product_real) * (cos(product_imag) + i*sin(product_imag))
-            double exp_product_real = Math.Exp(product_real);
+            decimal exp_product_real = DecimalMath.Exp(product_real);
 
-            decimal final_real = (decimal)(exp_product_real * Math.Cos(product_imag));
-            decimal final_imag = (decimal)(exp_product_real * Math.Sin(product_imag));
+            decimal final_real = exp_product_real * DecimalMath.Cos(product_imag);
+            decimal final_imag = exp_product_real * DecimalMath.Sin(product_imag);
 
             return new ComplexDecimal(final_real, final_imag);
         }
