@@ -1,4 +1,17 @@
-﻿using System;
+﻿using FractalExplorer.Engines;
+using FractalExplorer.Resources;
+using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.RenderUtilities;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace FractalExplorer.Forms
@@ -8,127 +21,452 @@ namespace FractalExplorer.Forms
     /// </summary>
     public partial class FractalNovaForm : Form
     {
+        #region Fields
+        private FractalNovaEngine _fractalEngine;
+        private RenderVisualizerComponent _renderVisualizer;
+
+        private const int TILE_SIZE = 16;
+        private readonly object _bitmapLock = new object();
+        private Bitmap _previewBitmap;
+        private Bitmap _currentRenderingBitmap;
+        private CancellationTokenSource _previewRenderCts;
+
+        private volatile bool _isHighResRendering = false;
+        private volatile bool _isRenderingPreview = false;
+
+        protected decimal _zoom = 1.0m;
+        protected decimal _centerX = 0.0m;
+        protected decimal _centerY = 0.0m;
+
+        private decimal _renderedCenterX;
+        private decimal _renderedCenterY;
+        private decimal _renderedZoom;
+
+        private Point _panStart;
+        private bool _panning = false;
+
+        private System.Windows.Forms.Timer _renderDebounceTimer;
+        private string _baseTitle;
+        private const decimal BASE_SCALE = 4.0m;
+        #endregion
+
         #region Constructor
-        /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="FractalNovaForm"/>.
-        /// </summary>
         public FractalNovaForm()
         {
             InitializeComponent();
-            // Подписываемся на событие загрузки формы для инициализации контролов
             this.Load += FractalNovaForm_Load;
         }
         #endregion
 
         #region Form Lifecycle
-        /// <summary>
-        /// Обрабатывает событие загрузки формы.
-        /// </summary>
         private void FractalNovaForm_Load(object sender, EventArgs e)
         {
+            _baseTitle = this.Text;
+            _fractalEngine = new FractalNovaEngine();
+            _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
+            _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
+
             InitializeControls();
             InitializeEventHandlers();
+
+            _centerX = 0.0m; _centerY = 0.0m;
+            _renderedCenterX = _centerX; _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+
+            UpdateEngineParameters();
+            ScheduleRender();
+        }
+
+        private void FractalNovaForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _renderDebounceTimer?.Stop();
+            _renderDebounceTimer?.Dispose();
+            _previewRenderCts?.Cancel();
+            _previewRenderCts?.Dispose();
+            lock (_bitmapLock)
+            {
+                _previewBitmap?.Dispose();
+                _currentRenderingBitmap?.Dispose();
+            }
+            if (_renderVisualizer != null)
+            {
+                _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
+                _renderVisualizer.Dispose();
+            }
         }
         #endregion
 
         #region UI Initialization
-        /// <summary>
-        /// Инициализирует значения по умолчанию и ограничения для элементов управления UI.
-        /// </summary>
         private void InitializeControls()
         {
-            // Настройка потоков
             int cores = Environment.ProcessorCount;
             cbThreads.Items.Clear();
             for (int i = 1; i <= cores; i++) cbThreads.Items.Add(i);
             cbThreads.Items.Add("Auto");
             cbThreads.SelectedItem = "Auto";
 
-            // Настройка сглаживания
             cbSSAA.Items.Add("Выкл (1x)");
             cbSSAA.Items.Add("Низкое (2x)");
             cbSSAA.Items.Add("Высокое (4x)");
             cbSSAA.SelectedItem = "Выкл (1x)";
 
-            // Параметры Nova (P, Z0, m)
-            nudP_Re.Value = 3.0m;
-            nudP_Im.Value = 0.0m;
-            nudZ0_Re.Value = 1.0m;
-            nudZ0_Im.Value = 0.0m;
+            nudP_Re.Value = 3.0m; nudP_Im.Value = 0.0m;
+            nudZ0_Re.Value = 1.0m; nudZ0_Im.Value = 0.0m;
             nudM.Value = 1.0m;
 
-            // Стандартные параметры рендеринга
-            nudIterations.Minimum = 10;
-            nudIterations.Maximum = 100000;
             nudIterations.Value = 100;
-
-            nudThreshold.Minimum = 2m;
-            nudThreshold.Maximum = 1000m;
-            nudThreshold.DecimalPlaces = 1;
-            nudThreshold.Increment = 0.1m;
-            nudThreshold.Value = 10m; // Для Nova порог лучше ставить выше
-
-            nudZoom.DecimalPlaces = 15;
-            nudZoom.Increment = 0.1m;
-            nudZoom.Minimum = 0.001m;
-            nudZoom.Maximum = decimal.MaxValue;
+            nudThreshold.Value = 10m;
             nudZoom.Value = 1.0m;
         }
 
-        /// <summary>
-        /// Инициализирует обработчики событий для кнопок.
-        /// </summary>
         private void InitializeEventHandlers()
         {
             btnSaveHighRes.Click += btnSaveHighRes_Click;
             btnConfigurePalette.Click += btnConfigurePalette_Click;
-            btnRender.Click += btnRender_Click;
+            btnRender.Click += (s, e) => ScheduleRender(true);
             btnStateManager.Click += btnStateManager_Click;
+
+            nudP_Re.ValueChanged += ParamControl_Changed;
+            nudP_Im.ValueChanged += ParamControl_Changed;
+            nudZ0_Re.ValueChanged += ParamControl_Changed;
+            nudZ0_Im.ValueChanged += ParamControl_Changed;
+            nudM.ValueChanged += ParamControl_Changed;
+
+            nudIterations.ValueChanged += ParamControl_Changed;
+            nudThreshold.ValueChanged += ParamControl_Changed;
+            cbThreads.SelectedIndexChanged += ParamControl_Changed;
+            nudZoom.ValueChanged += ParamControl_Changed;
+            cbSmooth.CheckedChanged += ParamControl_Changed;
+            cbSSAA.SelectedIndexChanged += ParamControl_Changed;
+
+            canvas.MouseWheel += Canvas_MouseWheel;
+            canvas.MouseDown += Canvas_MouseDown;
+            canvas.MouseMove += Canvas_MouseMove;
+            canvas.MouseUp += Canvas_MouseUp;
+            canvas.Paint += Canvas_Paint;
+            canvas.Resize += (s, e) => { if (WindowState != FormWindowState.Minimized) ScheduleRender(); };
+
+            _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
+            _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
         }
         #endregion
 
-        #region Button Event Handlers (Stubs)
-
-        /// <summary>
-        /// Обрабатывает нажатие на кнопку "Сохранить изображение". (Заглушка)
-        /// </summary>
-        private void btnSaveHighRes_Click(object sender, EventArgs e)
+        #region UI Event Handlers
+        private void ParamControl_Changed(object sender, EventArgs e)
         {
-            // TODO: Реализовать логику сохранения изображения.
-            // В данный момент функция является заглушкой.
-            Console.WriteLine("Button 'Save Image' clicked.");
+            if (_isHighResRendering) return;
+            if (sender == nudZoom && nudZoom.Value != _zoom) _zoom = nudZoom.Value;
+            ScheduleRender();
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие на кнопку "Настроить палитру". (Заглушка)
-        /// </summary>
-        private void btnConfigurePalette_Click(object sender, EventArgs e)
+        private void btnSaveHighRes_Click(object sender, EventArgs e) { Console.WriteLine("Button 'Save Image' clicked."); }
+        private void btnConfigurePalette_Click(object sender, EventArgs e) { Console.WriteLine("Button 'Configure Palette' clicked."); }
+        private void btnStateManager_Click(object sender, EventArgs e) { Console.WriteLine("Button 'State Manager' clicked."); }
+        #endregion
+
+        #region Canvas Interaction
+        private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
-            // TODO: Реализовать логику вызова окна настройки палитры.
-            // В данный момент функция является заглушкой.
-            Console.WriteLine("Button 'Configure Palette' clicked.");
+            if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
+            CommitAndBakePreview();
+            decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
+            decimal scaleBeforeZoom = BASE_SCALE / _zoom;
+            decimal mouseReal = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
+            decimal mouseImaginary = _centerY - (e.Y - canvas.Height / 2.0m) * scaleBeforeZoom / canvas.Height;
+            _zoom = Math.Max((decimal)nudZoom.Minimum, Math.Min((decimal)nudZoom.Maximum, _zoom * zoomFactor));
+            decimal scaleAfterZoom = BASE_SCALE / _zoom;
+            _centerX = mouseReal - (e.X - canvas.Width / 2.0m) * scaleAfterZoom / canvas.Width;
+            _centerY = mouseImaginary + (e.Y - canvas.Height / 2.0m) * scaleAfterZoom / canvas.Height;
+            canvas.Invalidate();
+            if (nudZoom.Value != _zoom) nudZoom.Value = _zoom;
+            else ScheduleRender();
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие на кнопку "Запустить рендер". (Заглушка)
-        /// </summary>
-        private void btnRender_Click(object sender, EventArgs e)
+        private void Canvas_MouseDown(object sender, MouseEventArgs e)
         {
-            // TODO: Реализовать запуск процесса рендеринга.
-            // В данный момент функция является заглушкой.
-            Console.WriteLine("Button 'Render' clicked.");
+            if (_isHighResRendering) return;
+            if (e.Button == MouseButtons.Left)
+            {
+                _panning = true;
+                _panStart = e.Location;
+                canvas.Cursor = Cursors.Hand;
+            }
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие на кнопку "Менеджер сохранений". (Заглушка)
-        /// </summary>
-        private void btnStateManager_Click(object sender, EventArgs e)
+        private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            // TODO: Реализовать логику вызова менеджера состояний.
-            // В данный момент функция является заглушкой.
-            Console.WriteLine("Button 'State Manager' clicked.");
+            if (_isHighResRendering || !_panning || canvas.Width <= 0) return;
+            CommitAndBakePreview();
+            decimal unitsPerPixel = BASE_SCALE / _zoom / canvas.Width;
+            _centerX -= (decimal)(e.X - _panStart.X) * unitsPerPixel;
+            _centerY += (decimal)(e.Y - _panStart.Y) * unitsPerPixel;
+            _panStart = e.Location;
+            canvas.Invalidate();
+            ScheduleRender();
         }
 
+        private void Canvas_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (_isHighResRendering) return;
+            if (e.Button == MouseButtons.Left)
+            {
+                _panning = false;
+                canvas.Cursor = Cursors.Default;
+            }
+        }
+
+        private void Canvas_Paint(object sender, PaintEventArgs e)
+        {
+            if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
+            e.Graphics.Clear(Color.Black);
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+            lock (_bitmapLock)
+            {
+                if (_previewBitmap != null)
+                {
+                    // Логика интерполяции для плавного зума/панорамирования
+                    // ... (можно скопировать из FractalPhoenixForm)
+                    e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                }
+                if (_currentRenderingBitmap != null) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+            }
+            if (_renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
+        }
+        #endregion
+
+        #region Rendering Logic
+        private void ScheduleRender(bool force = false)
+        {
+            if (_isHighResRendering || WindowState == FormWindowState.Minimized) return;
+            _previewRenderCts?.Cancel();
+            _renderDebounceTimer.Stop();
+            if (force)
+            {
+                RenderDebounceTimer_Tick(null, EventArgs.Empty);
+            }
+            else
+            {
+                _renderDebounceTimer.Start();
+            }
+        }
+
+        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            _renderDebounceTimer.Stop();
+            if (_isHighResRendering || _isRenderingPreview)
+            {
+                ScheduleRender();
+                return;
+            }
+
+            int ssaaFactor = GetSelectedSsaaFactor();
+            this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x";
+
+            await StartPreviewRender(ssaaFactor);
+        }
+
+        private async Task StartPreviewRender(int ssaaFactor)
+        {
+            if (canvas.Width <= 0 || canvas.Height <= 0) return;
+
+            var stopwatch = Stopwatch.StartNew();
+            _isRenderingPreview = true;
+            _previewRenderCts?.Cancel();
+            _previewRenderCts = new CancellationTokenSource();
+            var token = _previewRenderCts.Token;
+            _renderVisualizer?.NotifyRenderSessionStart();
+
+            var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
+            lock (_bitmapLock)
+            {
+                _currentRenderingBitmap?.Dispose();
+                _currentRenderingBitmap = newRenderingBitmap;
+            }
+
+            UpdateEngineParameters();
+            var renderEngineCopy = new FractalNovaEngine
+            {
+                MaxIterations = _fractalEngine.MaxIterations,
+                ThresholdSquared = _fractalEngine.ThresholdSquared,
+                CenterX = _fractalEngine.CenterX,
+                CenterY = _fractalEngine.CenterY,
+                Scale = _fractalEngine.Scale,
+                P = _fractalEngine.P,
+                Z0 = _fractalEngine.Z0,
+                M = _fractalEngine.M,
+                UseSmoothColoring = _fractalEngine.UseSmoothColoring,
+                Palette = _fractalEngine.Palette,
+                SmoothPalette = _fractalEngine.SmoothPalette,
+                MaxColorIterations = _fractalEngine.MaxColorIterations
+            };
+
+            var tiles = GenerateTiles(canvas.Width, canvas.Height);
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+
+            pbRenderProgress.Value = 0;
+            pbRenderProgress.Maximum = tiles.Count;
+            int progress = 0;
+
+            try
+            {
+                await dispatcher.RenderAsync(async (tile, ct) =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
+
+                    byte[] tileBuffer;
+                    int bytesPerPixel;
+
+                    if (ssaaFactor > 1)
+                    {
+                        // TODO: Implement SSAA in NovaEngine
+                        tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out bytesPerPixel);
+                    }
+                    else
+                    {
+                        tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out bytesPerPixel);
+                    }
+
+                    ct.ThrowIfCancellationRequested();
+                    lock (_bitmapLock)
+                    {
+                        if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
+
+                        // ИСПРАВЛЕННЫЙ УЧАСТОК
+                        var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
+                        int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
+                        for (int y = 0; y < tile.Bounds.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            int srcOffset = y * tileWidthInBytes;
+                            Marshal.Copy(tileBuffer, srcOffset, destPtr, tileWidthInBytes);
+                        }
+                        _currentRenderingBitmap.UnlockBits(bmpData);
+                    }
+
+                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
+                    if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
+
+                    canvas.Invoke((Action)(() => {
+                        pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
+                    }));
+                    await Task.Yield();
+                }, token);
+
+                token.ThrowIfCancellationRequested();
+                stopwatch.Stop();
+                this.Text = $"{_baseTitle} - Рендер: {stopwatch.Elapsed.TotalSeconds:F3} сек.";
+
+                lock (_bitmapLock)
+                {
+                    _previewBitmap?.Dispose();
+                    _previewBitmap = newRenderingBitmap; // newRenderingBitmap becomes the final preview
+                    _currentRenderingBitmap = null;
+                    _renderedCenterX = _centerX;
+                    _renderedCenterY = _centerY;
+                    _renderedZoom = _zoom;
+                }
+                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
+            }
+            catch (OperationCanceledException)
+            {
+                lock (_bitmapLock) { if (_currentRenderingBitmap == newRenderingBitmap) { _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; } }
+            }
+            finally
+            {
+                _isRenderingPreview = false;
+                _renderVisualizer?.NotifyRenderSessionComplete();
+                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed) pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
+            }
+        }
+
+        private void OnVisualizerNeedsRedraw()
+        {
+            if (canvas.IsHandleCreated && !canvas.IsDisposed)
+            {
+                canvas.BeginInvoke((Action)(() => canvas.Invalidate()));
+            }
+        }
+        #endregion
+
+        #region Utility Methods
+        private void CommitAndBakePreview()
+        {
+            // TODO: Реализовать для плавной навигации
+        }
+
+        private void UpdateEngineParameters()
+        {
+            _fractalEngine.MaxIterations = (int)nudIterations.Value;
+            _fractalEngine.ThresholdSquared = nudThreshold.Value * nudThreshold.Value;
+            _fractalEngine.CenterX = _centerX;
+            _fractalEngine.CenterY = _centerY;
+            _fractalEngine.Scale = BASE_SCALE / _zoom;
+            _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
+
+            _fractalEngine.P = new Resources.ComplexDecimal(nudP_Re.Value, nudP_Im.Value);
+            _fractalEngine.Z0 = new Resources.ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value);
+            _fractalEngine.M = nudM.Value;
+
+            ApplyActivePalette();
+        }
+
+        private void ApplyActivePalette()
+        {
+            if (_fractalEngine == null) return;
+
+            _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
+            {
+                if (iter == maxIter) return Color.Black;
+                int val = (int)(255.0 * iter / maxColorIter);
+                val = Math.Min(255, Math.Max(0, val));
+                return Color.FromArgb(0, 0, val);
+            };
+
+            _fractalEngine.SmoothPalette = (smoothIter) =>
+            {
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                double t = smoothIter / _fractalEngine.MaxIterations;
+                int val = (int)(255 * t);
+                return Color.FromArgb(val, val, 255);
+            };
+
+            _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
+        }
+
+        private List<TileInfo> GenerateTiles(int width, int height)
+        {
+            var tiles = new List<TileInfo>();
+            Point center = new Point(width / 2, height / 2);
+            for (int y = 0; y < height; y += TILE_SIZE)
+            {
+                for (int x = 0; x < width; x += TILE_SIZE)
+                {
+                    // ИСПРАВЛЕННЫЙ УЧАСТОК
+                    int tileWidth = Math.Min(TILE_SIZE, width - x);
+                    int tileHeight = Math.Min(TILE_SIZE, height - y);
+                    tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
+                }
+            }
+            return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
+        }
+
+        private int GetThreadCount()
+        {
+            return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+        }
+
+        private int GetSelectedSsaaFactor()
+        {
+            if (cbSSAA.SelectedItem == null) return 1;
+            switch (cbSSAA.SelectedItem.ToString())
+            {
+                case "Низкое (2x)": return 2;
+                case "Высокое (4x)": return 4;
+                default: return 1;
+            }
+        }
         #endregion
     }
 }

@@ -464,7 +464,7 @@
             this.btnRender.TabIndex = 17;
             this.btnRender.Text = "Запустить рендер";
             this.btnRender.UseVisualStyleBackColor = true;
-            this.btnRender.Click += new System.EventHandler(this.btnRender_Click);
+            //this.btnRender.Click += new System.EventHandler(this.btnRender_Click);
             // 
             // btnStateManager
             // 
