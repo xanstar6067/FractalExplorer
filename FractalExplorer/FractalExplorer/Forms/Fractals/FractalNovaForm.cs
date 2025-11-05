@@ -55,7 +55,6 @@ namespace FractalExplorer.Forms
         {
             InitializeComponent();
             this.Load += FractalNovaForm_Load;
-            // Важно! Подписываемся на закрытие здесь, чтобы гарантированно отписаться от событий
             this.FormClosed += FractalNovaForm_FormClosed;
         }
         #endregion
@@ -169,9 +168,8 @@ namespace FractalExplorer.Forms
         #region Canvas Interaction
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
-            CommitAndBakePreview(); // <-- Внедрено
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
-
+            CommitAndBakePreview();
             decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
             decimal scaleBeforeZoom = BASE_SCALE / _zoom;
             decimal mouseReal = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
@@ -198,9 +196,8 @@ namespace FractalExplorer.Forms
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
-            CommitAndBakePreview(); // <-- Внедрено
             if (_isHighResRendering || !_panning || canvas.Width <= 0) return;
-
+            CommitAndBakePreview();
             decimal unitsPerPixel = BASE_SCALE / _zoom / canvas.Width;
             _centerX -= (decimal)(e.X - _panStart.X) * unitsPerPixel;
             _centerY += (decimal)(e.Y - _panStart.Y) * unitsPerPixel;
@@ -228,10 +225,8 @@ namespace FractalExplorer.Forms
 
             lock (_bitmapLock)
             {
-                // Рисуем трансформированный _previewBitmap
                 DrawTransformedBitmap(e.Graphics, _previewBitmap, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
 
-                // Поверх рисуем текущий рендер
                 if (_currentRenderingBitmap != null)
                 {
                     e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
@@ -282,7 +277,6 @@ namespace FractalExplorer.Forms
 
             var stopwatch = Stopwatch.StartNew();
             _isRenderingPreview = true;
-            _previewRenderCts?.Cancel();
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
             _renderVisualizer?.NotifyRenderSessionStart();
@@ -327,24 +321,12 @@ namespace FractalExplorer.Forms
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    byte[] tileBuffer;
-                    int bytesPerPixel;
-
-                    if (ssaaFactor > 1)
-                    {
-                        // TODO: Implement SSAA in NovaEngine
-                        tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out bytesPerPixel);
-                    }
-                    else
-                    {
-                        tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out bytesPerPixel);
-                    }
+                    byte[] tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
-
                         var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
                         for (int y = 0; y < tile.Bounds.Height; y++)
@@ -359,7 +341,6 @@ namespace FractalExplorer.Forms
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
                     if (ct.IsCancellationRequested) return;
 
-                    // ИСПРАВЛЕНИЕ ОШИБКИ INVOKE
                     if (canvas.IsHandleCreated && !canvas.IsDisposed)
                     {
                         canvas.Invoke((Action)(() => {
@@ -396,8 +377,9 @@ namespace FractalExplorer.Forms
             }
             catch (OperationCanceledException)
             {
-                lock (_bitmapLock) { if (_currentRenderingBitmap == newRenderingBitmap) { _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; } }
-                // newRenderingBitmap освобождается в блоке lock, если он становится _previewBitmap
+                // ИСПРАВЛЕНИЕ: Отмененный поток не должен ничего удалять.
+                // CommitAndBakePreview сам разберется с newRenderingBitmap.
+                // Мы просто тихо выходим.
             }
             finally
             {
