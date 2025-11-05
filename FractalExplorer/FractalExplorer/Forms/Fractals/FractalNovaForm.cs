@@ -416,23 +416,43 @@ namespace FractalExplorer.Forms
         {
             if (_fractalEngine == null) return;
 
+            // Устанавливаем максимальное количество итераций для цвета равным основному числу итераций.
+            _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
+
+            // Палитра для ДИСКРЕТНОГО окрашивания в оттенках серого.
             _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter) return Color.Black;
-                int val = (int)(255.0 * iter / maxColorIter);
-                val = Math.Min(255, Math.Max(0, val));
-                return Color.FromArgb(0, 0, val);
+                if (iter == maxIter) return Color.Black; // Точка внутри множества
+
+                // Используем логарифмическую шкалу для более плавного градиента
+                double logMax = Math.Log(maxColorIter + 1);
+                if (logMax == 0) return Color.Black;
+
+                double t = Math.Log(iter + 1) / logMax;
+
+                // Инвертируем значение, чтобы быстрый выход (маленький iter) давал яркий цвет
+                int grayValue = (int)(255 * (1.0 - t));
+                grayValue = Math.Max(0, Math.Min(255, grayValue));
+
+                return Color.FromArgb(grayValue, grayValue, grayValue);
             };
 
+            // Палитра для НЕПРЕРЫВНОГО (сглаженного) окрашивания в оттенках серого.
             _fractalEngine.SmoothPalette = (smoothIter) =>
             {
-                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
-                double t = smoothIter / _fractalEngine.MaxIterations;
-                int val = (int)(255 * t);
-                return Color.FromArgb(val, val, 255);
-            };
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black; // Точка внутри множества
+                if (smoothIter < 0) smoothIter = 0;
 
-            _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
+                double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
+                if (logMax <= 0) return Color.Black;
+
+                double t = Math.Log(smoothIter + 1) / logMax;
+
+                int grayValue = (int)(255 * (1.0 - t));
+                grayValue = Math.Max(0, Math.Min(255, grayValue));
+
+                return Color.FromArgb(grayValue, grayValue, grayValue);
+            };
         }
 
         private List<TileInfo> GenerateTiles(int width, int height)
