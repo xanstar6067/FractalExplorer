@@ -486,26 +486,42 @@ namespace FractalExplorer.Forms
 
             _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
 
+            // --- ИНВЕРТИРОВАННАЯ ПАЛИТРА ---
+
+            // Палитра для ДИСКРЕТНОГО окрашивания.
             _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter) return Color.Black;
+                // 1. Точки внутри множества теперь БЕЛЫЕ
+                if (iter == maxIter) return Color.White;
+
                 double logMax = Math.Log(maxColorIter + 1);
                 if (logMax == 0) return Color.Black;
+
                 double t = Math.Log(iter + 1) / logMax;
-                int grayValue = (int)(255 * (1.0 - t));
+
+                // 2. Градиент инвертирован: быстрый выход (далеко) -> черный цвет
+                int grayValue = (int)(255 * t);
                 grayValue = Math.Max(0, Math.Min(255, grayValue));
+
                 return Color.FromArgb(grayValue, grayValue, grayValue);
             };
 
+            // Палитра для НЕПРЕРЫВНОГО (сглаженного) окрашивания.
             _fractalEngine.SmoothPalette = (smoothIter) =>
             {
-                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                // 1. Точки внутри множества теперь БЕЛЫЕ
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.White;
                 if (smoothIter < 0) smoothIter = 0;
+
                 double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
                 if (logMax <= 0) return Color.Black;
+
                 double t = Math.Log(smoothIter + 1) / logMax;
-                int grayValue = (int)(255 * (1.0 - t));
+
+                // 2. Градиент инвертирован: быстрый выход (далеко) -> черный цвет
+                int grayValue = (int)(255 * t);
                 grayValue = Math.Max(0, Math.Min(255, grayValue));
+
                 return Color.FromArgb(grayValue, grayValue, grayValue);
             };
         }
