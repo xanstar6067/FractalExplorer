@@ -55,6 +55,8 @@ namespace FractalExplorer.Forms
         {
             InitializeComponent();
             this.Load += FractalNovaForm_Load;
+            // Важно! Подписываемся на закрытие здесь, чтобы гарантированно отписаться от событий
+            this.FormClosed += FractalNovaForm_FormClosed;
         }
         #endregion
 
@@ -167,8 +169,9 @@ namespace FractalExplorer.Forms
         #region Canvas Interaction
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
+            CommitAndBakePreview(); // <-- Внедрено
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
-            CommitAndBakePreview();
+
             decimal zoomFactor = e.Delta > 0 ? 1.5m : 1.0m / 1.5m;
             decimal scaleBeforeZoom = BASE_SCALE / _zoom;
             decimal mouseReal = _centerX + (e.X - canvas.Width / 2.0m) * scaleBeforeZoom / canvas.Width;
@@ -195,8 +198,9 @@ namespace FractalExplorer.Forms
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
+            CommitAndBakePreview(); // <-- Внедрено
             if (_isHighResRendering || !_panning || canvas.Width <= 0) return;
-            CommitAndBakePreview();
+
             decimal unitsPerPixel = BASE_SCALE / _zoom / canvas.Width;
             _centerX -= (decimal)(e.X - _panStart.X) * unitsPerPixel;
             _centerY += (decimal)(e.Y - _panStart.Y) * unitsPerPixel;
@@ -218,20 +222,26 @@ namespace FractalExplorer.Forms
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
+
             e.Graphics.Clear(Color.Black);
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
 
             lock (_bitmapLock)
             {
-                if (_previewBitmap != null)
+                // Рисуем трансформированный _previewBitmap
+                DrawTransformedBitmap(e.Graphics, _previewBitmap, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
+
+                // Поверх рисуем текущий рендер
+                if (_currentRenderingBitmap != null)
                 {
-                    // Логика интерполяции для плавного зума/панорамирования
-                    // ... (можно скопировать из FractalPhoenixForm)
-                    e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                    e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
-                if (_currentRenderingBitmap != null) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
             }
-            if (_renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
+
+            if (_renderVisualizer != null && _isRenderingPreview)
+            {
+                _renderVisualizer.DrawVisualization(e.Graphics);
+            }
         }
         #endregion
 
@@ -304,8 +314,10 @@ namespace FractalExplorer.Forms
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
 
-            pbRenderProgress.Value = 0;
-            pbRenderProgress.Maximum = tiles.Count;
+            if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+            {
+                pbRenderProgress.Invoke((Action)(() => { pbRenderProgress.Value = 0; pbRenderProgress.Maximum = tiles.Count; }));
+            }
             int progress = 0;
 
             try
@@ -333,7 +345,6 @@ namespace FractalExplorer.Forms
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
 
-                        // ИСПРАВЛЕННЫЙ УЧАСТОК
                         var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
                         for (int y = 0; y < tile.Bounds.Height; y++)
@@ -346,11 +357,18 @@ namespace FractalExplorer.Forms
                     }
 
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
-                    if (ct.IsCancellationRequested || !canvas.IsHandleCreated || canvas.IsDisposed) return;
+                    if (ct.IsCancellationRequested) return;
 
-                    canvas.Invoke((Action)(() => {
-                        pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
-                    }));
+                    // ИСПРАВЛЕНИЕ ОШИБКИ INVOKE
+                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                    {
+                        canvas.Invoke((Action)(() => {
+                            if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                            {
+                                pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
+                            }
+                        }));
+                    }
                     await Task.Yield();
                 }, token);
 
@@ -360,18 +378,26 @@ namespace FractalExplorer.Forms
 
                 lock (_bitmapLock)
                 {
-                    _previewBitmap?.Dispose();
-                    _previewBitmap = newRenderingBitmap; // newRenderingBitmap becomes the final preview
-                    _currentRenderingBitmap = null;
-                    _renderedCenterX = _centerX;
-                    _renderedCenterY = _centerY;
-                    _renderedZoom = _zoom;
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _previewBitmap?.Dispose();
+                        _previewBitmap = _currentRenderingBitmap;
+                        _currentRenderingBitmap = null;
+                        _renderedCenterX = _centerX;
+                        _renderedCenterY = _centerY;
+                        _renderedZoom = _zoom;
+                    }
+                    else
+                    {
+                        newRenderingBitmap?.Dispose();
+                    }
                 }
                 if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
             }
             catch (OperationCanceledException)
             {
                 lock (_bitmapLock) { if (_currentRenderingBitmap == newRenderingBitmap) { _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; } }
+                // newRenderingBitmap освобождается в блоке lock, если он становится _previewBitmap
             }
             finally
             {
@@ -393,7 +419,67 @@ namespace FractalExplorer.Forms
         #region Utility Methods
         private void CommitAndBakePreview()
         {
-            // TODO: Реализовать для плавной навигации
+            lock (_bitmapLock)
+            {
+                if (!_isRenderingPreview || _currentRenderingBitmap == null) return;
+            }
+
+            _previewRenderCts?.Cancel();
+
+            lock (_bitmapLock)
+            {
+                if (_currentRenderingBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return;
+
+                var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+                using (var g = Graphics.FromImage(bakedBitmap))
+                {
+                    g.Clear(Color.Black);
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+                    if (_previewBitmap != null)
+                    {
+                        DrawTransformedBitmap(g, _previewBitmap, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
+                    }
+
+                    g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                }
+
+                _previewBitmap?.Dispose();
+                _previewBitmap = bakedBitmap;
+                _currentRenderingBitmap.Dispose();
+                _currentRenderingBitmap = null;
+
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
+            }
+        }
+
+        private void DrawTransformedBitmap(Graphics g, Bitmap bmp, decimal srcCenterX, decimal srcCenterY, decimal srcZoom, decimal destCenterX, decimal destCenterY, decimal destZoom)
+        {
+            if (bmp == null || g == null || srcZoom <= 0 || destZoom <= 0) return;
+
+            try
+            {
+                decimal renderedScale = BASE_SCALE / srcZoom;
+                decimal currentScale = BASE_SCALE / destZoom;
+                float drawScaleRatio = (float)(renderedScale / currentScale);
+
+                float newWidth = canvas.Width * drawScaleRatio;
+                float newHeight = canvas.Height * drawScaleRatio;
+
+                decimal deltaReal = srcCenterX - destCenterX;
+                decimal deltaImaginary = srcCenterY - destCenterY;
+
+                float offsetX = (float)(deltaReal / currentScale * canvas.Width);
+                float offsetY = (float)(-deltaImaginary / currentScale * canvas.Width);
+
+                float drawX = (canvas.Width - newWidth) / 2.0f + offsetX;
+                float drawY = (canvas.Height - newHeight) / 2.0f + offsetY;
+
+                g.DrawImage(bmp, drawX, drawY, newWidth, newHeight);
+            }
+            catch (Exception) { /* Игнорируем ошибки интерполяции */ }
         }
 
         private void UpdateEngineParameters()
@@ -416,41 +502,28 @@ namespace FractalExplorer.Forms
         {
             if (_fractalEngine == null) return;
 
-            // Устанавливаем максимальное количество итераций для цвета равным основному числу итераций.
             _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
 
-            // Палитра для ДИСКРЕТНОГО окрашивания в оттенках серого.
             _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter) return Color.Black; // Точка внутри множества
-
-                // Используем логарифмическую шкалу для более плавного градиента
+                if (iter == maxIter) return Color.Black;
                 double logMax = Math.Log(maxColorIter + 1);
                 if (logMax == 0) return Color.Black;
-
                 double t = Math.Log(iter + 1) / logMax;
-
-                // Инвертируем значение, чтобы быстрый выход (маленький iter) давал яркий цвет
                 int grayValue = (int)(255 * (1.0 - t));
                 grayValue = Math.Max(0, Math.Min(255, grayValue));
-
                 return Color.FromArgb(grayValue, grayValue, grayValue);
             };
 
-            // Палитра для НЕПРЕРЫВНОГО (сглаженного) окрашивания в оттенках серого.
             _fractalEngine.SmoothPalette = (smoothIter) =>
             {
-                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black; // Точка внутри множества
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
-
                 double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
                 if (logMax <= 0) return Color.Black;
-
                 double t = Math.Log(smoothIter + 1) / logMax;
-
                 int grayValue = (int)(255 * (1.0 - t));
                 grayValue = Math.Max(0, Math.Min(255, grayValue));
-
                 return Color.FromArgb(grayValue, grayValue, grayValue);
             };
         }
@@ -463,7 +536,6 @@ namespace FractalExplorer.Forms
             {
                 for (int x = 0; x < width; x += TILE_SIZE)
                 {
-                    // ИСПРАВЛЕННЫЙ УЧАСТОК
                     int tileWidth = Math.Min(TILE_SIZE, width - x);
                     int tileHeight = Math.Min(TILE_SIZE, height - y);
                     tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
