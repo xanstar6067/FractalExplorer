@@ -15,7 +15,7 @@ namespace FractalExplorer.Engines
     /// Инкапсулирует логику вычислений, поддерживает адаптивную точность (double/decimal),
     /// сглаженное окрашивание и SSAA.
     /// </summary>
-    public class FractalNovaEngine
+    public class FractalNovaMandelbrotEngine
     {
         #region Constants
         /// <summary>
@@ -470,7 +470,7 @@ namespace FractalExplorer.Engines
                 int highResHeight = finalHeight * ssaaFactor;
 
                 // Создаем копию движка для рендеринга в высоком разрешении, чтобы не менять параметры основного
-                var highResEngine = new FractalNovaEngine
+                var highResEngine = new FractalNovaMandelbrotEngine
                 {
                     MaxIterations = this.MaxIterations,
                     ThresholdSquared = this.ThresholdSquared,
