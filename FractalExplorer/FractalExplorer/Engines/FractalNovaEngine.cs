@@ -253,6 +253,118 @@ namespace FractalExplorer.Engines
         }
 
         /// <summary>
+        /// Отрисовывает одну плитку (тайл) с использованием суперсэмплинга (SSAA).
+        /// </summary>
+        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int ssaaFactor, out int bytesPerPixel)
+        {
+            bytesPerPixel = 4; // BGRA
+            byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
+            if (canvasWidth <= 0 || canvasHeight <= 0 || ssaaFactor <= 1)
+            {
+                return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
+            }
+
+            int ssaaSamples = ssaaFactor * ssaaFactor;
+
+            if (Scale < SCALE_THRESHOLD_FOR_DECIMAL)
+            {
+                // --- ВЫСОКАЯ ТОЧНОСТЬ (DECIMAL) ---
+                decimal unitsPerPixel = Scale / canvasWidth;
+                decimal halfWidthPixels = canvasWidth / 2.0m;
+                decimal halfHeightPixels = canvasHeight / 2.0m;
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        long totalR = 0, totalG = 0, totalB = 0;
+
+                        for (int ssaaY = 0; ssaaY < ssaaFactor; ssaaY++)
+                        {
+                            for (int ssaaX = 0; ssaaX < ssaaFactor; ssaaX++)
+                            {
+                                decimal subPixelX = tile.Bounds.X + x + (decimal)ssaaX / ssaaFactor;
+                                decimal subPixelY = tile.Bounds.Y + y + (decimal)ssaaY / ssaaFactor;
+
+                                decimal re = CenterX + (subPixelX - halfWidthPixels) * unitsPerPixel;
+                                decimal im = CenterY - (subPixelY - halfHeightPixels) * unitsPerPixel;
+
+                                ComplexDecimal c = new ComplexDecimal(re, im);
+                                ComplexDecimal z = this.Z0;
+                                int iter = CalculateIterations(ref z, c, this.P, this.M);
+
+                                Color sampleColor = UseSmoothColoring && SmoothPalette != null
+                                    ? SmoothPalette(CalculateSmoothValue(iter, z, this.P))
+                                    : Palette(iter, MaxIterations, MaxColorIterations);
+
+                                totalR += sampleColor.R;
+                                totalG += sampleColor.G;
+                                totalB += sampleColor.B;
+                            }
+                        }
+
+                        int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
+                        buffer[bufferIndex] = (byte)(totalB / ssaaSamples);
+                        buffer[bufferIndex + 1] = (byte)(totalG / ssaaSamples);
+                        buffer[bufferIndex + 2] = (byte)(totalR / ssaaSamples);
+                        buffer[bufferIndex + 3] = 255;
+                    }
+                }
+            }
+            else
+            {
+                // --- СТАНДАРТНАЯ ТОЧНОСТЬ (DOUBLE) ---
+                double unitsPerPixel_d = (double)Scale / canvasWidth;
+                double centerX_d = (double)CenterX;
+                double centerY_d = (double)CenterY;
+                double halfWidthPixels_d = canvasWidth / 2.0;
+                double halfHeightPixels_d = canvasHeight / 2.0;
+                ComplexDouble p_d = new ComplexDouble((double)P.Real, (double)P.Imaginary);
+                ComplexDouble z0_d = new ComplexDouble((double)Z0.Real, (double)Z0.Imaginary);
+                double m_d = (double)M;
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        long totalR = 0, totalG = 0, totalB = 0;
+
+                        for (int ssaaY = 0; ssaaY < ssaaFactor; ssaaY++)
+                        {
+                            for (int ssaaX = 0; ssaaX < ssaaFactor; ssaaX++)
+                            {
+                                double subPixelX = tile.Bounds.X + x + (double)ssaaX / ssaaFactor;
+                                double subPixelY = tile.Bounds.Y + y + (double)ssaaY / ssaaFactor;
+
+                                double re = centerX_d + (subPixelX - halfWidthPixels_d) * unitsPerPixel_d;
+                                double im = centerY_d - (subPixelY - halfHeightPixels_d) * unitsPerPixel_d;
+
+                                ComplexDouble c = new ComplexDouble(re, im);
+                                ComplexDouble z = z0_d;
+                                int iter = CalculateIterationsDouble(ref z, c, p_d, m_d);
+
+                                Color sampleColor = UseSmoothColoring && SmoothPalette != null
+                                    ? SmoothPalette(CalculateSmoothValueDouble(iter, z, p_d))
+                                    : Palette(iter, MaxIterations, MaxColorIterations);
+
+                                totalR += sampleColor.R;
+                                totalG += sampleColor.G;
+                                totalB += sampleColor.B;
+                            }
+                        }
+
+                        int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
+                        buffer[bufferIndex] = (byte)(totalB / ssaaSamples);
+                        buffer[bufferIndex + 1] = (byte)(totalG / ssaaSamples);
+                        buffer[bufferIndex + 2] = (byte)(totalR / ssaaSamples);
+                        buffer[bufferIndex + 3] = 255;
+                    }
+                }
+            }
+            return buffer;
+        }
+
+        /// <summary>
         /// Рендерит фрактал в новый объект Bitmap, используя многопоточность.
         /// </summary>
         public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
