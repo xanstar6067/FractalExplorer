@@ -10,21 +10,25 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Globalization; // <-- Добавлено для форматирования чисел в имени файла
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+// --- НОВЫЕ ДИРЕКТИВЫ ---
+using FractalExplorer.Utilities.SaveIO;
+using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using System.Text.Json;
 
 namespace FractalExplorer.Forms
 {
     /// <summary>
     /// Представляет основную форму для отображения и взаимодействия с фракталом Nova.
     /// </summary>
-    // --- ИЗМЕНЕНО: Реализуем интерфейс ---
-    public partial class FractalNovaForm : Form, IHighResRenderable
+    // --- ИЗМЕНЕНО: Реализуем интерфейс ISaveLoadCapableFractal ---
+    public partial class FractalNovaForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
         #region Fields
         private FractalNovaEngine _fractalEngine;
@@ -138,7 +142,6 @@ namespace FractalExplorer.Forms
         {
             btnConfigurePalette.Click += btnConfigurePalette_Click;
             btnRender.Click += (s, e) => ScheduleRender(true);
-            btnStateManager.Click += btnStateManager_Click;
 
             nudP_Re.ValueChanged += ParamControl_Changed;
             nudP_Im.ValueChanged += ParamControl_Changed;
@@ -173,7 +176,6 @@ namespace FractalExplorer.Forms
             ScheduleRender();
         }
 
-        // --- ИЗМЕНЕНО: Реализация открытия менеджера сохранения ---
         private void btnSaveHighRes_Click(object sender, EventArgs e)
         {
             if (_isHighResRendering)
@@ -203,11 +205,17 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void btnStateManager_Click(object sender, EventArgs e) { Console.WriteLine("Button 'State Manager' clicked."); }
+        // --- ИЗМЕНЕНО: Реализация открытия менеджера сохранения ---
+        private void btnStateManager_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new SaveLoadDialogForm(this))
+            {
+                dialog.ShowDialog(this);
+            }
+        }
         #endregion
 
         #region Canvas Interaction
-        // ... (Этот регион остается без изменений)
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -283,7 +291,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Rendering Logic
-        // ... (Этот регион остается без изменений)
         private void ScheduleRender(bool force = false)
         {
             if (_isHighResRendering || WindowState == FormWindowState.Minimized) return;
@@ -561,7 +568,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Utility Methods
-        // ... (Этот регион остается без изменений)
         private void CommitAndBakePreview()
         {
             lock (_bitmapLock)
@@ -677,7 +683,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Palette Management
-        // ... (Этот регион остается без изменений)
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
             double gamma = palette.Gamma;
@@ -844,15 +849,10 @@ namespace FractalExplorer.Forms
         }
         #endregion
 
-        // --- NEW: Весь регион добавлен для реализации сохранения ---
         #region IHighResRenderable Implementation
 
-        /// <summary>
-        /// Получает текущее состояние для рендеринга в высоком разрешении.
-        /// </summary>
         public HighResRenderState GetRenderState()
         {
-            // Форматируем параметры для имени файла
             string pReStr = nudP_Re.Value.ToString("F4", CultureInfo.InvariantCulture).Replace(".", "_");
             string pImStr = nudP_Im.Value.ToString("F4", CultureInfo.InvariantCulture).Replace(".", "_");
             string z0ReStr = nudZ0_Re.Value.ToString("F4", CultureInfo.InvariantCulture).Replace(".", "_");
@@ -873,7 +873,6 @@ namespace FractalExplorer.Forms
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = fileNameDetails,
                 UseSmoothColoring = cbSmooth.Checked,
-                // Заполняем специфичные для Nova параметры
                 NovaP = new ComplexDecimal(nudP_Re.Value, nudP_Im.Value),
                 NovaZ0 = new ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value),
                 NovaM = nudM.Value
@@ -882,9 +881,6 @@ namespace FractalExplorer.Forms
             return state;
         }
 
-        /// <summary>
-        /// Создает и настраивает экземпляр движка Nova на основе состояния рендеринга.
-        /// </summary>
         private FractalNovaEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
             var engine = new FractalNovaEngine();
@@ -896,7 +892,6 @@ namespace FractalExplorer.Forms
             engine.Scale = state.BaseScale / state.Zoom;
             engine.UseSmoothColoring = state.UseSmoothColoring;
 
-            // Применяем специфичные для Nova параметры из состояния
             engine.P = state.NovaP ?? new ComplexDecimal(3, 0);
             engine.Z0 = state.NovaZ0 ?? new ComplexDecimal(1, 0);
             engine.M = state.NovaM ?? 1.0m;
@@ -905,16 +900,12 @@ namespace FractalExplorer.Forms
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
             engine.MaxColorIterations = effectiveMaxColorIterations;
 
-            // Генерируем палитры для движка
             engine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForRender, effectiveMaxColorIterations);
             engine.Palette = GenerateDiscretePaletteFunction(paletteForRender);
 
             return engine;
         }
 
-        /// <summary>
-        /// Асинхронно рендерит изображение в высоком разрешении.
-        /// </summary>
         public async Task<Bitmap> RenderHighResolutionAsync(HighResRenderState state, int width, int height, int ssaaFactor, IProgress<RenderProgress> progress, CancellationToken cancellationToken)
         {
             _isHighResRendering = true;
@@ -925,7 +916,6 @@ namespace FractalExplorer.Forms
 
                 Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
 
-                // Движок Nova уже имеет метод RenderToBitmapSSAA, используем его
                 Bitmap highResBitmap = await renderEngine.RenderToBitmapSSAA(
                     width, height, threadCount, progressCallback, ssaaFactor, cancellationToken);
 
@@ -937,14 +927,239 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Рендерит предпросмотр для окна рендеринга в высоком разрешении.
-        /// </summary>
         public Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight)
         {
             var engine = CreateEngineFromState(state, forPreview: true);
-            // Используем обычный RenderToBitmap для быстрого превью
             return engine.RenderToBitmap(previewWidth, previewHeight, 1, _ => { }, CancellationToken.None);
+        }
+        #endregion
+
+        // --- NEW: Весь регион добавлен для реализации сохранения ---
+        #region ISaveLoadCapableFractal Implementation
+
+        /// <summary>
+        /// Уникальный идентификатор типа фрактала.
+        /// </summary>
+        public string FractalTypeIdentifier => "NovaMandelbrot";
+
+        /// <summary>
+        /// Тип конкретного класса состояния сохранения для этого фрактала.
+        /// </summary>
+        public Type ConcreteSaveStateType => typeof(NovaMandelbrotSaveState);
+
+        /// <summary>
+        /// Класс для хранения параметров превью фрактала Нова.
+        /// </summary>
+        public class NovaPreviewParams
+        {
+            public decimal CenterX { get; set; }
+            public decimal CenterY { get; set; }
+            public decimal Zoom { get; set; }
+            public int Iterations { get; set; }
+            public string PaletteName { get; set; }
+            public decimal Threshold { get; set; }
+            public decimal P_Re { get; set; }
+            public decimal P_Im { get; set; }
+            public decimal Z0_Re { get; set; }
+            public decimal Z0_Im { get; set; }
+            public decimal M { get; set; }
+            public bool UseSmoothColoring { get; set; }
+        }
+
+        /// <summary>
+        /// Собирает текущее состояние фрактала для сохранения.
+        /// </summary>
+        public FractalSaveStateBase GetCurrentStateForSave(string saveName)
+        {
+            var state = new NovaMandelbrotSaveState(this.FractalTypeIdentifier)
+            {
+                SaveName = saveName,
+                Timestamp = DateTime.Now,
+                CenterX = _centerX,
+                CenterY = _centerY,
+                Zoom = _zoom,
+                Threshold = nudThreshold.Value,
+                Iterations = (int)nudIterations.Value,
+                PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
+                P_Re = nudP_Re.Value,
+                P_Im = nudP_Im.Value,
+                Z0_Re = nudZ0_Re.Value,
+                Z0_Im = nudZ0_Im.Value,
+                M = nudM.Value
+            };
+
+            var previewParams = new NovaPreviewParams
+            {
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = state.Iterations,
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold,
+                P_Re = state.P_Re,
+                P_Im = state.P_Im,
+                Z0_Re = state.Z0_Re,
+                Z0_Im = state.Z0_Im,
+                M = state.M,
+                UseSmoothColoring = cbSmooth.Checked
+            };
+            state.PreviewParametersJson = JsonSerializer.Serialize(previewParams);
+            return state;
+        }
+
+        /// <summary>
+        /// Загружает состояние фрактала из объекта сохранения.
+        /// </summary>
+        public void LoadState(FractalSaveStateBase stateBase)
+        {
+            if (stateBase is NovaMandelbrotSaveState state)
+            {
+                _isRenderingPreview = false;
+                _previewRenderCts?.Cancel();
+                _renderDebounceTimer.Stop();
+
+                _centerX = state.CenterX;
+                _centerY = state.CenterY;
+                _zoom = state.Zoom;
+
+                nudZoom.Value = state.Zoom;
+                nudThreshold.Value = state.Threshold;
+                nudIterations.Value = state.Iterations;
+                nudP_Re.Value = state.P_Re;
+                nudP_Im.Value = state.P_Im;
+                nudZ0_Re.Value = state.Z0_Re;
+                nudZ0_Im.Value = state.Z0_Im;
+                nudM.Value = state.M;
+
+                var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
+                if (paletteToLoad != null) _paletteManager.ActivePalette = paletteToLoad;
+
+                lock (_bitmapLock)
+                {
+                    _previewBitmap?.Dispose(); _previewBitmap = null;
+                    _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null;
+                }
+
+                _renderedCenterX = _centerX;
+                _renderedCenterY = _centerY;
+                _renderedZoom = _zoom;
+
+                UpdateEngineParameters();
+                ScheduleRender(true); // Форсированный рендер после загрузки
+            }
+            else
+            {
+                MessageBox.Show("Несовместимый тип состояния для загрузки.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Асинхронно рендерит тайл предпросмотра для заданного состояния.
+        /// </summary>
+        public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
+        {
+            return await Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(state.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                NovaPreviewParams previewParams;
+                try { previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson); }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+
+                var previewEngine = new FractalNovaEngine
+                {
+                    CenterX = previewParams.CenterX,
+                    CenterY = previewParams.CenterY,
+                    Scale = BASE_SCALE / (previewParams.Zoom > 0 ? previewParams.Zoom : 0.001m),
+                    MaxIterations = previewParams.Iterations,
+                    ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
+                    P = new ComplexDecimal(previewParams.P_Re, previewParams.P_Im),
+                    Z0 = new ComplexDecimal(previewParams.Z0_Re, previewParams.Z0_Im),
+                    M = previewParams.M,
+                    UseSmoothColoring = previewParams.UseSmoothColoring
+                };
+
+                var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
+                int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
+                previewEngine.MaxColorIterations = effectiveMaxColorIterations;
+
+                if (previewEngine.UseSmoothColoring)
+                {
+                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+                }
+                else
+                {
+                    previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+                }
+
+                return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
+            });
+        }
+
+        /// <summary>
+        /// Рендерит полное изображение предпросмотра для заданного состояния.
+        /// </summary>
+        public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
+        {
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+            NovaPreviewParams previewParams;
+            try { previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson); }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+
+            var previewEngine = new FractalNovaEngine
+            {
+                CenterX = previewParams.CenterX,
+                CenterY = previewParams.CenterY,
+                Scale = BASE_SCALE / (previewParams.Zoom > 0 ? previewParams.Zoom : 0.001m),
+                MaxIterations = previewParams.Iterations,
+                ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
+                P = new ComplexDecimal(previewParams.P_Re, previewParams.P_Im),
+                Z0 = new ComplexDecimal(previewParams.Z0_Re, previewParams.Z0_Im),
+                M = previewParams.M,
+                UseSmoothColoring = previewParams.UseSmoothColoring
+            };
+
+            var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
+            int effectiveMaxColorIterations = paletteForPreview.AlignWithRenderIterations ? previewEngine.MaxIterations : paletteForPreview.MaxColorIterations;
+            previewEngine.MaxColorIterations = effectiveMaxColorIterations;
+
+            if (previewEngine.UseSmoothColoring)
+            {
+                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+            }
+            else
+            {
+                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+            }
+
+            return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { }, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Загружает все сохранения для данного типа фрактала.
+        /// </summary>
+        public List<FractalSaveStateBase> LoadAllSavesForThisType()
+        {
+            var specificSaves = SaveFileManager.LoadSaves<NovaMandelbrotSaveState>(this.FractalTypeIdentifier);
+            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+        }
+
+        /// <summary>
+        /// Сохраняет все состояния для данного типа фрактала.
+        /// </summary>
+        public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
+        {
+            var specificSaves = saves.Cast<NovaMandelbrotSaveState>().ToList();
+            SaveFileManager.SaveSaves(this.FractalTypeIdentifier, specificSaves);
         }
         #endregion
     }
