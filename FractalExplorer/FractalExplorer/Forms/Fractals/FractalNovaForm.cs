@@ -357,17 +357,29 @@ namespace FractalExplorer.Forms
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
                     byte[] tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
+
+                    // --- ИСПРАВЛЕННЫЙ БЛОК КОПИРОВАНИЯ ПАМЯТИ ---
                     lock (_bitmapLock)
                     {
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
+
                         var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-                        Marshal.Copy(tileBuffer, 0, bmpData.Scan0, tileBuffer.Length);
+                        int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
+
+                        // Копируем данные построчно, чтобы учесть Stride битмапа
+                        for (int y = 0; y < tile.Bounds.Height; y++)
+                        {
+                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                            int srcOffset = y * tileWidthInBytes;
+                            Marshal.Copy(tileBuffer, srcOffset, destPtr, tileWidthInBytes);
+                        }
+
                         _currentRenderingBitmap.UnlockBits(bmpData);
                     }
+                    // --- КОНЕЦ ИСПРАВЛЕННОГО БЛОКА ---
 
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
                     if (ct.IsCancellationRequested) return;
