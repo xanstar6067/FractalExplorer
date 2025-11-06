@@ -297,10 +297,127 @@ namespace FractalExplorer.Forms
             int ssaaFactor = GetSelectedSsaaFactor();
             this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x";
 
-            await StartPreviewRender(ssaaFactor);
+            if (ssaaFactor > 1)
+            {
+                await StartPreviewRenderSSAA(ssaaFactor);
+            }
+            else
+            {
+                await StartPreviewRender();
+            }
         }
 
-        private async Task StartPreviewRender(int ssaaFactor)
+        private async Task StartPreviewRenderSSAA(int ssaaFactor)
+        {
+            if (canvas.Width <= 0 || canvas.Height <= 0) return;
+
+            var stopwatch = Stopwatch.StartNew();
+            _isRenderingPreview = true;
+            _previewRenderCts = new CancellationTokenSource();
+            var token = _previewRenderCts.Token;
+            _renderVisualizer?.NotifyRenderSessionStart();
+
+            var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
+            lock (_bitmapLock)
+            {
+                _currentRenderingBitmap?.Dispose();
+                _currentRenderingBitmap = newRenderingBitmap;
+            }
+
+            UpdateEngineParameters();
+            var renderEngineCopy = new FractalNovaEngine
+            {
+                MaxIterations = _fractalEngine.MaxIterations,
+                ThresholdSquared = _fractalEngine.ThresholdSquared,
+                CenterX = _fractalEngine.CenterX,
+                CenterY = _fractalEngine.CenterY,
+                Scale = _fractalEngine.Scale,
+                P = _fractalEngine.P,
+                Z0 = _fractalEngine.Z0,
+                M = _fractalEngine.M,
+                UseSmoothColoring = _fractalEngine.UseSmoothColoring,
+                Palette = _fractalEngine.Palette,
+                SmoothPalette = _fractalEngine.SmoothPalette,
+                MaxColorIterations = _fractalEngine.MaxColorIterations
+            };
+
+            var tiles = GenerateTiles(canvas.Width, canvas.Height);
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+
+            if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+            {
+                pbRenderProgress.Invoke((Action)(() => { pbRenderProgress.Value = 0; pbRenderProgress.Maximum = tiles.Count; }));
+            }
+            int progress = 0;
+
+            try
+            {
+                await dispatcher.RenderAsync(async (tile, ct) =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
+
+                    // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+                    byte[] tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, out int bytesPerPixel);
+
+                    ct.ThrowIfCancellationRequested();
+                    lock (_bitmapLock)
+                    {
+                        if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
+                        var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
+                        Marshal.Copy(tileBuffer, 0, bmpData.Scan0, tileBuffer.Length);
+                        _currentRenderingBitmap.UnlockBits(bmpData);
+                    }
+
+                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
+                    if (ct.IsCancellationRequested) return;
+
+                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                    {
+                        canvas.Invoke((Action)(() => {
+                            if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                            {
+                                pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
+                            }
+                        }));
+                    }
+                    await Task.Yield();
+                }, token);
+
+                token.ThrowIfCancellationRequested();
+                stopwatch.Stop();
+                this.Text = $"{_baseTitle} - Рендер (SSAA {ssaaFactor}x): {stopwatch.Elapsed.TotalSeconds:F3} сек.";
+
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _previewBitmap?.Dispose();
+                        _previewBitmap = _currentRenderingBitmap;
+                        _currentRenderingBitmap = null;
+                        _renderedCenterX = _centerX;
+                        _renderedCenterY = _centerY;
+                        _renderedZoom = _zoom;
+                    }
+                    else
+                    {
+                        newRenderingBitmap?.Dispose();
+                    }
+                }
+                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                _isRenderingPreview = false;
+                _renderVisualizer?.NotifyRenderSessionComplete();
+                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed) pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
+            }
+        }
+
+        private async Task StartPreviewRender()
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
 
