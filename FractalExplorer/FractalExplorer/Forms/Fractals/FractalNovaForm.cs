@@ -402,15 +402,26 @@ namespace FractalExplorer.Forms
                     _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
                     if (ct.IsCancellationRequested) return;
 
-                    if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                    // --- ИСПРАВЛЕННЫЙ УЧАСТОК ---
+                    try
                     {
-                        canvas.Invoke((Action)(() => {
-                            if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
-                            {
-                                pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
-                            }
-                        }));
+                        if (canvas.IsHandleCreated && !canvas.IsDisposed)
+                        {
+                            canvas.Invoke((Action)(() => {
+                                if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                                {
+                                    pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
+                                }
+                            }));
+                        }
                     }
+                    catch (ObjectDisposedException)
+                    {
+                        // Это исключение может возникнуть, если форма закрывается во время рендеринга.
+                        // В этом случае обновление UI уже не требуется, поэтому ошибку можно безопасно проигнорировать.
+                    }
+                    // --- КОНЕЦ ИСПРАВЛЕННОГО УЧАСТКА ---
+
                     await Task.Yield();
                 }, token);
 
@@ -441,7 +452,19 @@ namespace FractalExplorer.Forms
             {
                 _isRenderingPreview = false;
                 _renderVisualizer?.NotifyRenderSessionComplete();
-                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed) pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
+                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
+                {
+                    // --- ИСПРАВЛЕННЫЙ УЧАСТОК В FINALLY ---
+                    try
+                    {
+                        pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Игнорируем, форма уже закрыта
+                    }
+                    // --- КОНЕЦ ИСПРАВЛЕННОГО УЧАСТКА ---
+                }
             }
         }
 
