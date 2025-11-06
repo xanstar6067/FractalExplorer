@@ -74,7 +74,7 @@ namespace FractalExplorer.Forms
         {
             _baseTitle = this.Text;
             _fractalEngine = new FractalNovaEngine();
-            _paletteManager = new PaletteManager(); // <--- ИЗМЕНЕНО: Инициализация менеджера палитр
+            _paletteManager = new PaletteManager();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
 
@@ -105,10 +105,9 @@ namespace FractalExplorer.Forms
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
                 _renderVisualizer.Dispose();
             }
-            // --- Добавлено для корректного закрытия формы палитры ---
+
             _colorConfigForm?.Close();
             _colorConfigForm?.Dispose();
-            // --- Конец добавленного кода ---
         }
         #endregion
 
@@ -177,7 +176,6 @@ namespace FractalExplorer.Forms
 
         private void btnSaveHighRes_Click(object sender, EventArgs e) { Console.WriteLine("Button 'Save Image' clicked."); }
 
-        // --- ИЗМЕНЕНО: Реализация открытия окна конфигурации палитры ---
         private void btnConfigurePalette_Click(object sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
@@ -192,7 +190,6 @@ namespace FractalExplorer.Forms
                 _colorConfigForm.Activate();
             }
         }
-        // --- Конец измененного кода ---
 
         private void btnStateManager_Click(object sender, EventArgs e) { Console.WriteLine("Button 'State Manager' clicked."); }
         #endregion
@@ -509,7 +506,6 @@ namespace FractalExplorer.Forms
             ApplyActivePalette();
         }
 
-        // --- ИЗМЕНЕНО: Вся секция управления палитрами была добавлена/заменена ---
         #region Palette Management
 
         /// <summary>
@@ -521,11 +517,13 @@ namespace FractalExplorer.Forms
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
 
+            // --- ИЗМЕНЕНО: Логика для серой палитры возвращена к вашему варианту ---
             if (palette.Name == "Стандартный серый")
             {
                 return (smoothIter) =>
                 {
-                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                    // 1. Точки внутри множества теперь БЕЛЫЕ
+                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.White;
                     if (smoothIter < 0) smoothIter = 0;
 
                     double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
@@ -533,13 +531,15 @@ namespace FractalExplorer.Forms
 
                     double tLog = Math.Log(smoothIter + 1) / logMax;
 
-                    int gray_level = (int)(255.0 * (1.0 - tLog));
-                    gray_level = Math.Max(0, Math.Min(255, gray_level));
+                    // 2. Градиент инвертирован: быстрый выход (далеко) -> черный цвет
+                    int grayValue = (int)(255.0 * tLog);
+                    grayValue = Math.Max(0, Math.Min(255, grayValue));
 
-                    Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
+                    Color baseColor = Color.FromArgb(grayValue, grayValue, grayValue);
                     return ColorCorrection.ApplyGamma(baseColor, gamma);
                 };
             }
+            // --- Конец измененного кода ---
 
             if (effectiveMaxColorIterations <= 0)
             {
@@ -616,6 +616,10 @@ namespace FractalExplorer.Forms
 
             _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
+                // --- ИЗМЕНЕНО: Для серой палитры цвет фрактала должен быть белым, а не браться из кеша ---
+                if (activePalette.Name == "Стандартный серый" && iter == maxIter) return Color.White;
+                // --- Конец измененного кода ---
+
                 if (iter == maxIter) return Color.Black;
                 int index = Math.Min(iter, _gammaCorrectedPaletteCache.Length - 1);
                 return _gammaCorrectedPaletteCache[index];
@@ -632,18 +636,25 @@ namespace FractalExplorer.Forms
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
 
+            // --- ИЗМЕНЕНО: Логика для серой палитры возвращена к вашему варианту ---
             if (palette.Name == "Стандартный серый")
             {
                 return (iter, maxIter, maxColorIter) =>
                 {
-                    if (iter == maxIter) return Color.Black;
+                    if (iter == maxIter) return Color.White; // Точки внутри - белые
+
                     double logMax = Math.Log(maxColorIter + 1);
                     if (logMax == 0) return Color.Black;
+
                     double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
-                    int cVal = (int)(255.0 * (1 - tLog));
+
+                    int cVal = (int)(255.0 * tLog); // Градиент от черного к белому
+
                     return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
                 };
             }
+            // --- Конец измененного кода ---
+
             if (colorCount == 0) return (i, m, mc) => Color.Black;
             if (colorCount == 1) return (iter, max, clrMax) => ColorCorrection.ApplyGamma((iter == max) ? Color.Black : colors[0], gamma);
 
@@ -688,7 +699,6 @@ namespace FractalExplorer.Forms
             ScheduleRender();
         }
         #endregion
-        // --- Конец измененного кода ---
 
         private List<TileInfo> GenerateTiles(int width, int height)
         {
