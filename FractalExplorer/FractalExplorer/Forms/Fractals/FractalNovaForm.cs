@@ -136,7 +136,6 @@ namespace FractalExplorer.Forms
 
         private void InitializeEventHandlers()
         {
-            btnSaveHighRes.Click += btnSaveHighRes_Click;
             btnConfigurePalette.Click += btnConfigurePalette_Click;
             btnRender.Click += (s, e) => ScheduleRender(true);
             btnStateManager.Click += btnStateManager_Click;
