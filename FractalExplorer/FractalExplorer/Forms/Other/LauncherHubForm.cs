@@ -256,13 +256,12 @@ namespace FractalExplorer
             _fractalCatalog.Add(new FractalInfo
             {
                 Family = "Итерируемые функции",
-                DisplayName = "Фрактал Nova",
+                DisplayName = "Фрактал Нова (Мандельброт)",
                 FormToLaunch = typeof(FractalNovaForm),
                 Description = "Мощное обобщение фрактала Ньютона, которое добавляет в итерационную формулу константу C по аналогии с множеством Мандельброта. Формула: Z_n+1 = Z_n - m * (Z_n^p - 1) / (p*Z_n^(p-1)) + C.\n\n" +
                               "Этот фрактал знаменит своей гибкостью. Варьируя степень 'p' (в том числе делая ее комплексной), начальное значение Z₀ и коэффициент релаксации 'm', можно получить бесконечное разнообразие форм — от симметричных звезд до невероятно сложных спиральных галактик.\n\n" +
                               "Особенности: Полный контроль над уникальными параметрами Nova. Исследуйте, как мнимая часть степени 'p' закручивает фрактал в потрясающие спирали. Все возможности по настройке палитры и сохранению также доступны.",
-                //PreviewImage = Properties.Resources.nova_preview // TODO
-                PreviewImage = Properties.Resources.serpinski_preview //Временная заглушка
+                PreviewImage = Properties.Resources.NovaMandelbrot_preview
 
 
             });
