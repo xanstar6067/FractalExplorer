@@ -1,8 +1,7 @@
-﻿using FractalExplorer.Engines; // <-- Добавьте эту директиву using для доступа к CollatzVariation
+﻿using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 using System;
-using System.Collections.Generic;
-using System.Drawing; // <-- Добавьте эту директиву using для доступа к Bitmap
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,27 +23,34 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public ComplexDecimal? JuliaC { get; set; }
         public string FileNameDetails { get; set; }
         public bool UseSmoothColoring { get; set; }
-        public decimal? Power { get; set; } // Степень 'p' для Обобщенного Мандельброта
+        public decimal? Power { get; set; }
         public decimal Scale { get; set; }
         public bool UseInversion { get; set; }
 
         #region Collatz Specific Parameters
-        /// <summary>
-        /// Получает или задает вариацию формулы для фрактала Коллатца.
-        /// Используется только движком Коллатца.
-        /// </summary>
         public CollatzVariation? Variation { get; set; }
-
-        /// <summary>
-        /// Получает или задает параметр 'P' для обобщенной вариации Коллатца.
-        /// Используется только движком Коллатца.
-        /// </summary>
         public decimal? P_Parameter { get; set; }
         #endregion
 
+        // --- NEW: Nova Specific Parameters ---
+        #region Nova Specific Parameters
+        /// <summary>
+        /// Комплексная степень 'p' для фрактала Nova.
+        /// </summary>
+        public ComplexDecimal? NovaP { get; set; }
+        /// <summary>
+        /// Начальное значение Z₀ для фрактала Nova.
+        /// </summary>
+        public ComplexDecimal? NovaZ0 { get; set; }
+        /// <summary>
+        /// Параметр релаксации 'm' для фрактала Nova.
+        /// </summary>
+        public decimal? NovaM { get; set; }
+        #endregion
+        // --- End of new code ---
+
         public HighResRenderState Clone()
         {
-            // MemberwiseClone корректно скопирует все свойства, включая новые.
             return (HighResRenderState)this.MemberwiseClone();
         }
     }
@@ -63,20 +69,8 @@ namespace FractalExplorer.Utilities.RenderUtilities
     /// </summary>
     public interface IHighResRenderable
     {
-
-        /// <summary>
-        /// Получает текущее состояние фрактала для рендеринга.
-        /// </summary>
         HighResRenderState GetRenderState();
-
-        /// <summary>
-        /// Асинхронно рендерит фрактал в высоком разрешении.
-        /// </summary>
         Task<Bitmap> RenderHighResolutionAsync(HighResRenderState state, int width, int height, int ssaaFactor, IProgress<RenderProgress> progress, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Рендерит небольшое превью фрактала.
-        /// </summary>
         Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight);
     }
 }
