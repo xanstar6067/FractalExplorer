@@ -1,7 +1,9 @@
 ﻿using FractalExplorer.Engines;
+using FractalExplorer.Forms.Other;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.RenderUtilities;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +12,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -24,6 +27,13 @@ namespace FractalExplorer.Forms
         #region Fields
         private FractalNovaEngine _fractalEngine;
         private RenderVisualizerComponent _renderVisualizer;
+
+        // --- Добавлено для управления палитрами ---
+        private PaletteManager _paletteManager;
+        private Color[] _gammaCorrectedPaletteCache;
+        private string _paletteCacheSignature;
+        private ColorConfigurationForm _colorConfigForm;
+        // --- Конец добавленного кода ---
 
         private const int TILE_SIZE = 16;
         private readonly object _bitmapLock = new object();
@@ -64,6 +74,7 @@ namespace FractalExplorer.Forms
         {
             _baseTitle = this.Text;
             _fractalEngine = new FractalNovaEngine();
+            _paletteManager = new PaletteManager(); // <--- ИЗМЕНЕНО: Инициализация менеджера палитр
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
 
@@ -94,6 +105,10 @@ namespace FractalExplorer.Forms
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
                 _renderVisualizer.Dispose();
             }
+            // --- Добавлено для корректного закрытия формы палитры ---
+            _colorConfigForm?.Close();
+            _colorConfigForm?.Dispose();
+            // --- Конец добавленного кода ---
         }
         #endregion
 
@@ -161,7 +176,24 @@ namespace FractalExplorer.Forms
         }
 
         private void btnSaveHighRes_Click(object sender, EventArgs e) { Console.WriteLine("Button 'Save Image' clicked."); }
-        private void btnConfigurePalette_Click(object sender, EventArgs e) { Console.WriteLine("Button 'Configure Palette' clicked."); }
+
+        // --- ИЗМЕНЕНО: Реализация открытия окна конфигурации палитры ---
+        private void btnConfigurePalette_Click(object sender, EventArgs e)
+        {
+            if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
+            {
+                _colorConfigForm = new ColorConfigurationForm(_paletteManager);
+                _colorConfigForm.PaletteApplied += OnPaletteApplied;
+                _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
+                _colorConfigForm.Show(this);
+            }
+            else
+            {
+                _colorConfigForm.Activate();
+            }
+        }
+        // --- Конец измененного кода ---
+
         private void btnStateManager_Click(object sender, EventArgs e) { Console.WriteLine("Button 'State Manager' clicked."); }
         #endregion
 
@@ -377,9 +409,6 @@ namespace FractalExplorer.Forms
             }
             catch (OperationCanceledException)
             {
-                // ИСПРАВЛЕНИЕ: Отмененный поток не должен ничего удалять.
-                // CommitAndBakePreview сам разберется с newRenderingBitmap.
-                // Мы просто тихо выходим.
             }
             finally
             {
@@ -480,51 +509,186 @@ namespace FractalExplorer.Forms
             ApplyActivePalette();
         }
 
-        private void ApplyActivePalette()
+        // --- ИЗМЕНЕНО: Вся секция управления палитрами была добавлена/заменена ---
+        #region Palette Management
+
+        /// <summary>
+        /// Генерирует функцию сглаженного окрашивания на основе заданной палитры.
+        /// </summary>
+        private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
-            if (_fractalEngine == null) return;
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            int colorCount = colors.Count;
 
-            _fractalEngine.MaxColorIterations = _fractalEngine.MaxIterations;
-
-            // --- ИНВЕРТИРОВАННАЯ ПАЛИТРА ---
-
-            // Палитра для ДИСКРЕТНОГО окрашивания.
-            _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
+            if (palette.Name == "Стандартный серый")
             {
-                // 1. Точки внутри множества теперь БЕЛЫЕ
-                if (iter == maxIter) return Color.White;
+                return (smoothIter) =>
+                {
+                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                    if (smoothIter < 0) smoothIter = 0;
 
-                double logMax = Math.Log(maxColorIter + 1);
-                if (logMax == 0) return Color.Black;
+                    double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
+                    if (logMax <= 0) return Color.Black;
 
-                double t = Math.Log(iter + 1) / logMax;
+                    double tLog = Math.Log(smoothIter + 1) / logMax;
 
-                // 2. Градиент инвертирован: быстрый выход (далеко) -> черный цвет
-                int grayValue = (int)(255 * t);
-                grayValue = Math.Max(0, Math.Min(255, grayValue));
+                    int gray_level = (int)(255.0 * (1.0 - tLog));
+                    gray_level = Math.Max(0, Math.Min(255, gray_level));
 
-                return Color.FromArgb(grayValue, grayValue, grayValue);
-            };
+                    Color baseColor = Color.FromArgb(gray_level, gray_level, gray_level);
+                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                };
+            }
 
-            // Палитра для НЕПРЕРЫВНОГО (сглаженного) окрашивания.
-            _fractalEngine.SmoothPalette = (smoothIter) =>
+            if (effectiveMaxColorIterations <= 0)
             {
-                // 1. Точки внутри множества теперь БЕЛЫЕ
-                if (smoothIter >= _fractalEngine.MaxIterations) return Color.White;
+                return (smoothIter) => Color.Black;
+            }
+
+            if (colorCount == 0) return (smoothIter) => Color.Black;
+            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
+
+            return (smoothIter) =>
+            {
+                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
 
-                double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
-                if (logMax <= 0) return Color.Black;
+                double cyclicIter = smoothIter % effectiveMaxColorIterations;
 
-                double t = Math.Log(smoothIter + 1) / logMax;
+                double t = cyclicIter / (double)effectiveMaxColorIterations;
+                t = Math.Max(0.0, Math.Min(1.0, t));
 
-                // 2. Градиент инвертирован: быстрый выход (далеко) -> черный цвет
-                int grayValue = (int)(255 * t);
-                grayValue = Math.Max(0, Math.Min(255, grayValue));
+                double scaledT = t * (colorCount - 1);
+                int index1 = (int)Math.Floor(scaledT);
+                int index2 = Math.Min(index1 + 1, colorCount - 1);
+                double localT = scaledT - index1;
 
-                return Color.FromArgb(grayValue, grayValue, grayValue);
+                Color baseColor = LerpColor(colors[index1], colors[index2], localT);
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
         }
+
+        /// <summary>
+        /// Генерирует уникальную "подпись" для палитры на основе ее параметров.
+        /// </summary>
+        private string GeneratePaletteSignature(Palette palette, int maxIterationsForAlignment)
+        {
+            var sb = new StringBuilder();
+            sb.Append(palette.Name);
+            sb.Append(':');
+            foreach (var color in palette.Colors) sb.Append(color.ToArgb().ToString("X8"));
+            sb.Append(':');
+            sb.Append(palette.IsGradient);
+            sb.Append(':');
+            sb.Append(palette.Gamma.ToString("F2"));
+            sb.Append(':');
+            int effectiveMaxColorIterations = palette.AlignWithRenderIterations ? maxIterationsForAlignment : palette.MaxColorIterations;
+            sb.Append(effectiveMaxColorIterations);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Применяет активную цветовую палитру к движку рендеринга.
+        /// </summary>
+        private void ApplyActivePalette()
+        {
+            if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
+
+            var activePalette = _paletteManager.ActivePalette;
+            int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
+
+            _fractalEngine.MaxColorIterations = effectiveMaxColorIterations;
+
+            _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette, effectiveMaxColorIterations);
+
+            string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
+            if (_gammaCorrectedPaletteCache == null || newSignature != _paletteCacheSignature)
+            {
+                _paletteCacheSignature = newSignature;
+                var paletteGeneratorFunc = GenerateDiscretePaletteFunction(activePalette);
+                _gammaCorrectedPaletteCache = new Color[effectiveMaxColorIterations + 1];
+                for (int i = 0; i <= effectiveMaxColorIterations; i++)
+                {
+                    _gammaCorrectedPaletteCache[i] = paletteGeneratorFunc(i, _fractalEngine.MaxIterations, effectiveMaxColorIterations);
+                }
+            }
+
+            _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
+            {
+                if (iter == maxIter) return Color.Black;
+                int index = Math.Min(iter, _gammaCorrectedPaletteCache.Length - 1);
+                return _gammaCorrectedPaletteCache[index];
+            };
+        }
+
+        /// <summary>
+        /// Генерирует функцию окрашивания на основе заданной палитры.
+        /// </summary>
+        private Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
+        {
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            bool isGradient = palette.IsGradient;
+            int colorCount = colors.Count;
+
+            if (palette.Name == "Стандартный серый")
+            {
+                return (iter, maxIter, maxColorIter) =>
+                {
+                    if (iter == maxIter) return Color.Black;
+                    double logMax = Math.Log(maxColorIter + 1);
+                    if (logMax == 0) return Color.Black;
+                    double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
+                    int cVal = (int)(255.0 * (1 - tLog));
+                    return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
+                };
+            }
+            if (colorCount == 0) return (i, m, mc) => Color.Black;
+            if (colorCount == 1) return (iter, max, clrMax) => ColorCorrection.ApplyGamma((iter == max) ? Color.Black : colors[0], gamma);
+
+            return (iter, maxIter, maxColorIter) =>
+            {
+                if (iter == maxIter) return Color.Black;
+                double normalizedIter = maxColorIter > 0 ? (double)Math.Min(iter, maxColorIter) / maxColorIter : 0;
+                Color baseColor;
+                if (isGradient)
+                {
+                    double scaledT = normalizedIter * (colorCount - 1);
+                    int index1 = (int)Math.Floor(scaledT);
+                    int index2 = Math.Min(index1 + 1, colorCount - 1);
+                    double localT = scaledT - index1;
+                    baseColor = LerpColor(colors[index1], colors[index2], localT);
+                }
+                else
+                {
+                    int colorIndex = (int)(normalizedIter * colorCount);
+                    if (colorIndex >= colorCount) colorIndex = colorCount - 1;
+                    baseColor = colors[colorIndex];
+                }
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
+        }
+
+        /// <summary>
+        /// Выполняет линейную интерполяцию между двумя цветами.
+        /// </summary>
+        private Color LerpColor(Color a, Color b, double t)
+        {
+            t = Math.Max(0, Math.Min(1, t));
+            return Color.FromArgb((int)(a.A + (b.A - a.A) * t), (int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
+        }
+
+        /// <summary>
+        /// Обрабатывает событие применения новой палитры из формы конфигурации.
+        /// </summary>
+        private void OnPaletteApplied(object sender, EventArgs e)
+        {
+            UpdateEngineParameters();
+            ScheduleRender();
+        }
+        #endregion
+        // --- Конец измененного кода ---
 
         private List<TileInfo> GenerateTiles(int width, int height)
         {
