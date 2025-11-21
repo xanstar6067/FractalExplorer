@@ -491,18 +491,20 @@ namespace FractalExplorer.Forms
             btnSaveHighRes.Name = "btnSaveHighRes";
             btnSaveHighRes.Size = new Size(228, 34);
             btnSaveHighRes.TabIndex = 15;
-            btnSaveHighRes.Text = "Сохранить (HR)";
+            btnSaveHighRes.Text = "Сохранить изображение"; // Исправлено
             btnSaveHighRes.UseVisualStyleBackColor = true;
+            btnSaveHighRes.Click += btnSaveHighRes_Click;
 
             // btnConfigurePalette
             pnlControls.SetColumnSpan(btnConfigurePalette, 2);
             btnConfigurePalette.Dock = DockStyle.Fill;
             btnConfigurePalette.Location = new Point(6, 515);
-            btnConfigurePalette.Name = "btnConfigurePalette";
+            btnConfigurePalette.Name = "btnConfigurePalette"; // Исправлено имя контрола для соответствия коду Form.cs
             btnConfigurePalette.Size = new Size(228, 34);
             btnConfigurePalette.TabIndex = 16;
-            btnConfigurePalette.Text = "Палитра";
+            btnConfigurePalette.Text = "Настроить палитру"; // Исправлено
             btnConfigurePalette.UseVisualStyleBackColor = true;
+            btnConfigurePalette.Click += btnConfigurePalette_Click;
 
             // btnRender
             pnlControls.SetColumnSpan(btnRender, 2);
@@ -511,8 +513,9 @@ namespace FractalExplorer.Forms
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(228, 34);
             btnRender.TabIndex = 17;
-            btnRender.Text = "Рендер";
+            btnRender.Text = "Запустить рендер"; // Исправлено
             btnRender.UseVisualStyleBackColor = true;
+            btnRender.Click += (s, e) => ScheduleRender(true); // Привязка в коде дизайнера или формы
 
             // btnStateManager
             pnlControls.SetColumnSpan(btnStateManager, 2);
@@ -521,8 +524,9 @@ namespace FractalExplorer.Forms
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(228, 34);
             btnStateManager.TabIndex = 18;
-            btnStateManager.Text = "Менеджер";
+            btnStateManager.Text = "Менеджер сохранений"; // Исправлено
             btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
 
             // lblProgress
             lblProgress.AutoSize = true;
