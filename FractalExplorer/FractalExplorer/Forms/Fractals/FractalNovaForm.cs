@@ -34,7 +34,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Движок для рендеринга фрактала Нова.
         /// </summary>
-        private FractalNovaMandelbrotEngine _fractalEngine;
+        private FractalNovaFamilyEngine _fractalEngine;
         /// <summary>
         /// Компонент для визуализации процесса рендеринга (например, отображения тайлов).
         /// </summary>
@@ -420,7 +420,7 @@ namespace FractalExplorer.Forms
             }
 
             UpdateEngineParameters();
-            var renderEngineCopy = new FractalNovaMandelbrotEngine
+            var renderEngineCopy = new NovaMandelbrotEngine
             {
                 MaxIterations = _fractalEngine.MaxIterations,
                 ThresholdSquared = _fractalEngine.ThresholdSquared,
@@ -553,7 +553,7 @@ namespace FractalExplorer.Forms
             }
 
             UpdateEngineParameters();
-            var renderEngineCopy = new FractalNovaMandelbrotEngine
+            var renderEngineCopy = new NovaMandelbrotEngine
             {
                 MaxIterations = _fractalEngine.MaxIterations,
                 ThresholdSquared = _fractalEngine.ThresholdSquared,
@@ -998,7 +998,7 @@ namespace FractalExplorer.Forms
         private void FractalNovaForm_Load(object sender, EventArgs e)
         {
             _baseTitle = this.Text;
-            _fractalEngine = new FractalNovaMandelbrotEngine();
+            _fractalEngine = new NovaMandelbrotEngine();
             _paletteManager = new PaletteManager();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
@@ -1076,9 +1076,9 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Создает и настраивает экземпляр движка Nova на основе состояния рендеринга.
         /// </summary>
-        private FractalNovaMandelbrotEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
+        private FractalNovaFamilyEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
-            var engine = new FractalNovaMandelbrotEngine();
+            var engine = new NovaMandelbrotEngine();
 
             engine.MaxIterations = forPreview ? Math.Min(state.Iterations, 150) : state.Iterations;
             engine.ThresholdSquared = state.Threshold * state.Threshold;
@@ -1109,7 +1109,7 @@ namespace FractalExplorer.Forms
             _isHighResRendering = true;
             try
             {
-                FractalNovaMandelbrotEngine renderEngine = CreateEngineFromState(state, forPreview: false);
+                FractalNovaFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
                 int threadCount = GetThreadCount();
 
                 Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
@@ -1264,7 +1264,7 @@ namespace FractalExplorer.Forms
                 try { previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson); }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
-                var previewEngine = new FractalNovaMandelbrotEngine
+                var previewEngine = new NovaMandelbrotEngine
                 {
                     CenterX = previewParams.CenterX,
                     CenterY = previewParams.CenterY,
@@ -1314,7 +1314,7 @@ namespace FractalExplorer.Forms
                 return bmpError;
             }
 
-            var previewEngine = new FractalNovaMandelbrotEngine
+            var previewEngine = new NovaMandelbrotEngine
             {
                 CenterX = previewParams.CenterX,
                 CenterY = previewParams.CenterY,
