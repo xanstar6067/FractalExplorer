@@ -1,6 +1,6 @@
 ﻿namespace FractalExplorer.Forms
 {
-    partial class FractalNovaForm
+    partial class FractalNovaMandelbrotForm
     {
         private System.ComponentModel.IContainer components = null;
 
@@ -16,7 +16,7 @@
         #region Windows Form Designer generated code
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalNovaForm));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalNovaMandelbrotForm));
             pnlControls = new TableLayoutPanel();
             gbNovaParameters = new GroupBox();
             tlpNovaParameters = new TableLayoutPanel();

@@ -28,7 +28,7 @@ namespace FractalExplorer.Forms
     /// Реализует интерфейсы <see cref="IHighResRenderable"/> для рендеринга в высоком разрешении 
     /// и <see cref="ISaveLoadCapableFractal"/> для сохранения и загрузки состояний фрактала.
     /// </summary>
-    public partial class FractalNovaForm : Form, IHighResRenderable, ISaveLoadCapableFractal
+    public partial class FractalNovaMandelbrotForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
         #region Fields
         /// <summary>
@@ -137,9 +137,9 @@ namespace FractalExplorer.Forms
 
         #region Constructor
         /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="FractalNovaForm"/>.
+        /// Инициализирует новый экземпляр класса <see cref="FractalNovaMandelbrotForm"/>.
         /// </summary>
-        public FractalNovaForm()
+        public FractalNovaMandelbrotForm()
         {
             InitializeComponent();
             this.Load += FractalNovaForm_Load;
