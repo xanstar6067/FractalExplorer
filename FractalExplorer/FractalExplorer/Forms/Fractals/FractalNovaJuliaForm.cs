@@ -170,24 +170,32 @@ namespace FractalExplorer.Forms
             int w = pbMandelbrotPreview.Width;
             int h = pbMandelbrotPreview.Height;
 
-            // Create a temporary Mandelbrot engine just for the map
             var mapEngine = new NovaMandelbrotEngine
             {
                 P = new ComplexDecimal(nudP_Re.Value, nudP_Im.Value),
                 M = nudM.Value,
                 Z0 = new ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value),
-                MaxIterations = MAP_PREVIEW_ITERATIONS,
-                ThresholdSquared = 100.0m, // Standard threshold for map
+                MaxIterations = MAP_PREVIEW_ITERATIONS, // Обычно 100 или 200
+                ThresholdSquared = 100.0m,
                 CenterX = 0,
                 CenterY = 0,
-                Scale = (decimal)(MAP_MAX_RE - MAP_MIN_RE), // Approx 4.0
+                Scale = (decimal)(MAP_MAX_RE - MAP_MIN_RE),
 
-                // Simple palette for the map
+                // --- ОБНОВЛЕННАЯ ПАЛИТРА "ОГОНЬ" ---
                 Palette = (iter, max, maxColor) =>
                 {
                     if (iter == max) return Color.Black;
-                    int gray = (int)(255.0 * iter / max);
-                    return Color.FromArgb(gray, gray, 255);
+
+                    // Ограничиваем цикл 20 итерациями для контраста
+                    int cycle = 20;
+                    double t = (double)(iter % cycle) / cycle;
+
+                    // Расчет каналов (Черный -> Красный -> Желтый -> Белый)
+                    int r = (int)(Math.Min(255, t * 3 * 255));
+                    int g = (int)(Math.Min(255, Math.Max(0, (t - 0.33) * 3 * 255)));
+                    int b = (int)(Math.Min(255, Math.Max(0, (t - 0.66) * 3 * 255)));
+
+                    return Color.FromArgb(r, g, b);
                 }
             };
 

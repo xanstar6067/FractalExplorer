@@ -287,15 +287,16 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                     Complex z = z0;
                     int iter = 0;
 
-                    // Nova Mandelbrot Formula
-                    // z_next = z - m * (z^p - 1) / (p * z^(p-1)) + c
-                    // Bailout typically when |z|^2 is large, though Nova is a Newton method fractal.
-                    // Using standard escape time coloring for visualization.
-
+                    // Оптимизированный цикл Nova Mandelbrot
                     while (iter < maxIter)
                     {
-                        if (z.Magnitude * z.Magnitude > 100.0) break;
-                        if (z.Magnitude * z.Magnitude < 1e-12) break;
+                        // Проверка на выход за пределы (Bailout)
+                        // Для Nova обычно смотрят на сходимость к корням, но для визуализации 
+                        // "карты" расходимость тоже дает хорошую структуру.
+                        if (z.Magnitude > 20.0) break;
+
+                        // Защита от деления на ноль
+                        if (z.Magnitude < 1e-6) break;
 
                         Complex z_pow_p = Complex.Pow(z, p);
                         Complex z_pow_p_minus_1 = Complex.Pow(z, p - one);
@@ -312,21 +313,34 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                     byte r, g, b;
                     if (iter == maxIter)
                     {
+                        // Внутри множества - черный
                         r = g = b = 0;
                     }
                     else
                     {
-                        double t = (double)iter / maxIter;
-                        // Simple blue-ish palette for selector
-                        r = (byte)(t * 50);
-                        g = (byte)(t * 100);
-                        b = (byte)(Math.Min(255, t * 255 + 40));
+                        // --- ПАЛИТРА "ОГОНЬ" (FIRE) ---
+                        // Ограничиваем цикл окраски 20 итерациями для высокой контрастности
+                        int cycle = 20;
+
+                        // t изменяется от 0.0 до 1.0 внутри каждых 20 итераций
+                        double t = (double)(iter % cycle) / cycle;
+
+                        // Формируем градиент: Черный -> Красный -> Желтый -> Белый
+
+                        // Red канал растет быстро
+                        r = (byte)(Math.Min(255, t * 3 * 255));
+
+                        // Green канал подключается позже (создает желтый)
+                        g = (byte)(Math.Min(255, Math.Max(0, (t - 0.33) * 3 * 255)));
+
+                        // Blue канал подключается в конце (создает белый)
+                        b = (byte)(Math.Min(255, Math.Max(0, (t - 0.66) * 3 * 255)));
                     }
 
                     int index = rowOffset + xCoord * 3;
-                    pixelBuffer[index] = b;
-                    pixelBuffer[index + 1] = g;
-                    pixelBuffer[index + 2] = r;
+                    pixelBuffer[index] = b;     // Blue
+                    pixelBuffer[index + 1] = g; // Green
+                    pixelBuffer[index + 2] = r; // Red
                 }
             });
 
