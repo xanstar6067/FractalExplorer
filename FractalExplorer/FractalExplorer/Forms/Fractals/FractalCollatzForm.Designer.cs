@@ -29,351 +29,351 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalCollatzForm));
-            this.pnlControls = new System.Windows.Forms.TableLayoutPanel();
-            this.nudIterations = new System.Windows.Forms.NumericUpDown();
-            this.lblIterations = new System.Windows.Forms.Label();
-            this.nudThreshold = new System.Windows.Forms.NumericUpDown();
-            this.lblThreshold = new System.Windows.Forms.Label();
-            this.lblZoom = new System.Windows.Forms.Label();
-            this.nudZoom = new System.Windows.Forms.NumericUpDown();
-            this.cbThreads = new System.Windows.Forms.ComboBox();
-            this.lblThreads = new System.Windows.Forms.Label();
-            this.cbSSAA = new System.Windows.Forms.ComboBox();
-            this.lbSSAA = new System.Windows.Forms.Label();
-            this.cbSmooth = new System.Windows.Forms.CheckBox();
-            this.lblVariation = new System.Windows.Forms.Label();
-            this.cbVariation = new System.Windows.Forms.ComboBox();
-            this.lblPParameter = new System.Windows.Forms.Label();
-            this.nudPParameter = new System.Windows.Forms.NumericUpDown();
-            this.btnSaveHighRes = new System.Windows.Forms.Button();
-            this.color_configurations = new System.Windows.Forms.Button();
-            this.btnRender = new System.Windows.Forms.Button();
-            this.btnStateManager = new System.Windows.Forms.Button();
-            this.lblProgress = new System.Windows.Forms.Label();
-            this.pbRenderProgress = new System.Windows.Forms.ProgressBar();
-            this.canvas = new System.Windows.Forms.PictureBox();
-            this.pnlControls.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudIterations)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudThreshold)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudZoom)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudPParameter)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.canvas)).BeginInit();
-            this.SuspendLayout();
+            pnlControls = new TableLayoutPanel();
+            nudIterations = new NumericUpDown();
+            lblIterations = new Label();
+            nudThreshold = new NumericUpDown();
+            lblThreshold = new Label();
+            lblZoom = new Label();
+            nudZoom = new NumericUpDown();
+            cbThreads = new ComboBox();
+            lblThreads = new Label();
+            cbSSAA = new ComboBox();
+            lbSSAA = new Label();
+            cbSmooth = new CheckBox();
+            lblVariation = new Label();
+            cbVariation = new ComboBox();
+            lblPParameter = new Label();
+            nudPParameter = new NumericUpDown();
+            btnSaveHighRes = new Button();
+            color_configurations = new Button();
+            btnRender = new Button();
+            btnStateManager = new Button();
+            lblProgress = new Label();
+            pbRenderProgress = new ProgressBar();
+            canvas = new PictureBox();
+            pnlControls.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudThreshold).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudPParameter).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)canvas).BeginInit();
+            SuspendLayout();
             // 
             // pnlControls
             // 
-            this.pnlControls.ColumnCount = 2;
-            this.pnlControls.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 55F));
-            this.pnlControls.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 45F));
-            this.pnlControls.Controls.Add(this.nudIterations, 0, 0);
-            this.pnlControls.Controls.Add(this.lblIterations, 1, 0);
-            this.pnlControls.Controls.Add(this.nudThreshold, 0, 1);
-            this.pnlControls.Controls.Add(this.lblThreshold, 1, 1);
-            this.pnlControls.Controls.Add(this.lblZoom, 0, 2);
-            this.pnlControls.Controls.Add(this.nudZoom, 0, 3);
-            this.pnlControls.Controls.Add(this.cbThreads, 0, 4);
-            this.pnlControls.Controls.Add(this.lblThreads, 1, 4);
-            this.pnlControls.Controls.Add(this.cbSSAA, 0, 5);
-            this.pnlControls.Controls.Add(this.lbSSAA, 1, 5);
-            this.pnlControls.Controls.Add(this.cbSmooth, 0, 6);
-            this.pnlControls.Controls.Add(this.lblVariation, 1, 7);
-            this.pnlControls.Controls.Add(this.cbVariation, 0, 7);
-            this.pnlControls.Controls.Add(this.lblPParameter, 1, 8);
-            this.pnlControls.Controls.Add(this.nudPParameter, 0, 8);
-            this.pnlControls.Controls.Add(this.btnSaveHighRes, 0, 9);
-            this.pnlControls.Controls.Add(this.color_configurations, 0, 10);
-            this.pnlControls.Controls.Add(this.btnRender, 0, 11);
-            this.pnlControls.Controls.Add(this.btnStateManager, 0, 12);
-            this.pnlControls.Controls.Add(this.lblProgress, 0, 13);
-            this.pnlControls.Controls.Add(this.pbRenderProgress, 0, 14);
-            this.pnlControls.Dock = System.Windows.Forms.DockStyle.Left;
-            this.pnlControls.Location = new System.Drawing.Point(0, 0);
-            this.pnlControls.Name = "pnlControls";
-            this.pnlControls.RowCount = 16;
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 45F));
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 45F));
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 45F));
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 45F));
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
-            this.pnlControls.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.pnlControls.Size = new System.Drawing.Size(231, 636);
-            this.pnlControls.TabIndex = 0;
+            pnlControls.ColumnCount = 2;
+            pnlControls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
+            pnlControls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
+            pnlControls.Controls.Add(nudIterations, 0, 0);
+            pnlControls.Controls.Add(lblIterations, 1, 0);
+            pnlControls.Controls.Add(nudThreshold, 0, 1);
+            pnlControls.Controls.Add(lblThreshold, 1, 1);
+            pnlControls.Controls.Add(lblZoom, 0, 2);
+            pnlControls.Controls.Add(nudZoom, 0, 3);
+            pnlControls.Controls.Add(cbThreads, 0, 4);
+            pnlControls.Controls.Add(lblThreads, 1, 4);
+            pnlControls.Controls.Add(cbSSAA, 0, 5);
+            pnlControls.Controls.Add(lbSSAA, 1, 5);
+            pnlControls.Controls.Add(cbSmooth, 0, 6);
+            pnlControls.Controls.Add(lblVariation, 1, 7);
+            pnlControls.Controls.Add(cbVariation, 0, 7);
+            pnlControls.Controls.Add(lblPParameter, 1, 8);
+            pnlControls.Controls.Add(nudPParameter, 0, 8);
+            pnlControls.Controls.Add(btnSaveHighRes, 0, 9);
+            pnlControls.Controls.Add(color_configurations, 0, 10);
+            pnlControls.Controls.Add(btnRender, 0, 11);
+            pnlControls.Controls.Add(btnStateManager, 0, 12);
+            pnlControls.Controls.Add(lblProgress, 0, 13);
+            pnlControls.Controls.Add(pbRenderProgress, 0, 14);
+            pnlControls.Dock = DockStyle.Left;
+            pnlControls.Location = new Point(0, 0);
+            pnlControls.Name = "pnlControls";
+            pnlControls.RowCount = 16;
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle());
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            pnlControls.Size = new Size(231, 636);
+            pnlControls.TabIndex = 0;
             // 
             // nudIterations
             // 
-            this.nudIterations.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.nudIterations.Location = new System.Drawing.Point(6, 6);
-            this.nudIterations.Margin = new System.Windows.Forms.Padding(6, 6, 3, 3);
-            this.nudIterations.Name = "nudIterations";
-            this.nudIterations.Size = new System.Drawing.Size(118, 23);
-            this.nudIterations.TabIndex = 9;
+            nudIterations.Dock = DockStyle.Fill;
+            nudIterations.Location = new Point(6, 6);
+            nudIterations.Margin = new Padding(6, 6, 3, 3);
+            nudIterations.Name = "nudIterations";
+            nudIterations.Size = new Size(118, 23);
+            nudIterations.TabIndex = 9;
             // 
             // lblIterations
             // 
-            this.lblIterations.AutoSize = true;
-            this.lblIterations.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblIterations.Location = new System.Drawing.Point(130, 0);
-            this.lblIterations.Name = "lblIterations";
-            this.lblIterations.Size = new System.Drawing.Size(98, 32);
-            this.lblIterations.TabIndex = 10;
-            this.lblIterations.Text = "Итерации";
-            this.lblIterations.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblIterations.AutoSize = true;
+            lblIterations.Dock = DockStyle.Fill;
+            lblIterations.Location = new Point(130, 0);
+            lblIterations.Name = "lblIterations";
+            lblIterations.Size = new Size(98, 32);
+            lblIterations.TabIndex = 10;
+            lblIterations.Text = "Итерации";
+            lblIterations.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // nudThreshold
             // 
-            this.nudThreshold.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.nudThreshold.Location = new System.Drawing.Point(6, 35);
-            this.nudThreshold.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.nudThreshold.Name = "nudThreshold";
-            this.nudThreshold.Size = new System.Drawing.Size(118, 23);
-            this.nudThreshold.TabIndex = 11;
+            nudThreshold.Dock = DockStyle.Fill;
+            nudThreshold.Location = new Point(6, 35);
+            nudThreshold.Margin = new Padding(6, 3, 3, 3);
+            nudThreshold.Name = "nudThreshold";
+            nudThreshold.Size = new Size(118, 23);
+            nudThreshold.TabIndex = 11;
             // 
             // lblThreshold
             // 
-            this.lblThreshold.AutoSize = true;
-            this.lblThreshold.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblThreshold.Location = new System.Drawing.Point(130, 32);
-            this.lblThreshold.Name = "lblThreshold";
-            this.lblThreshold.Size = new System.Drawing.Size(98, 29);
-            this.lblThreshold.TabIndex = 12;
-            this.lblThreshold.Text = "Порог выхода";
-            this.lblThreshold.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblThreshold.AutoSize = true;
+            lblThreshold.Dock = DockStyle.Fill;
+            lblThreshold.Location = new Point(130, 32);
+            lblThreshold.Name = "lblThreshold";
+            lblThreshold.Size = new Size(98, 29);
+            lblThreshold.TabIndex = 12;
+            lblThreshold.Text = "Порог выхода";
+            lblThreshold.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // lblZoom
             // 
-            this.lblZoom.AutoSize = true;
-            this.pnlControls.SetColumnSpan(this.lblZoom, 2);
-            this.lblZoom.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblZoom.Location = new System.Drawing.Point(3, 61);
-            this.lblZoom.Name = "lblZoom";
-            this.lblZoom.Size = new System.Drawing.Size(225, 15);
-            this.lblZoom.TabIndex = 13;
-            this.lblZoom.Text = "Приближение";
-            this.lblZoom.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            lblZoom.AutoSize = true;
+            pnlControls.SetColumnSpan(lblZoom, 2);
+            lblZoom.Dock = DockStyle.Fill;
+            lblZoom.Location = new Point(3, 61);
+            lblZoom.Name = "lblZoom";
+            lblZoom.Size = new Size(225, 15);
+            lblZoom.TabIndex = 13;
+            lblZoom.Text = "Приближение";
+            lblZoom.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // nudZoom
             // 
-            this.pnlControls.SetColumnSpan(this.nudZoom, 2);
-            this.nudZoom.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.nudZoom.Location = new System.Drawing.Point(6, 79);
-            this.nudZoom.Margin = new System.Windows.Forms.Padding(6, 3, 6, 3);
-            this.nudZoom.Name = "nudZoom";
-            this.nudZoom.Size = new System.Drawing.Size(219, 23);
-            this.nudZoom.TabIndex = 14;
+            pnlControls.SetColumnSpan(nudZoom, 2);
+            nudZoom.Dock = DockStyle.Fill;
+            nudZoom.Location = new Point(6, 79);
+            nudZoom.Margin = new Padding(6, 3, 6, 3);
+            nudZoom.Name = "nudZoom";
+            nudZoom.Size = new Size(219, 23);
+            nudZoom.TabIndex = 14;
             // 
             // cbThreads
             // 
-            this.cbThreads.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cbThreads.FormattingEnabled = true;
-            this.cbThreads.Location = new System.Drawing.Point(6, 108);
-            this.cbThreads.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.cbThreads.Name = "cbThreads";
-            this.cbThreads.Size = new System.Drawing.Size(118, 23);
-            this.cbThreads.TabIndex = 15;
+            cbThreads.Dock = DockStyle.Fill;
+            cbThreads.FormattingEnabled = true;
+            cbThreads.Location = new Point(6, 108);
+            cbThreads.Margin = new Padding(6, 3, 3, 3);
+            cbThreads.Name = "cbThreads";
+            cbThreads.Size = new Size(118, 23);
+            cbThreads.TabIndex = 15;
             // 
             // lblThreads
             // 
-            this.lblThreads.AutoSize = true;
-            this.lblThreads.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblThreads.Location = new System.Drawing.Point(130, 105);
-            this.lblThreads.Name = "lblThreads";
-            this.lblThreads.Size = new System.Drawing.Size(98, 29);
-            this.lblThreads.TabIndex = 16;
-            this.lblThreads.Text = "Потоки ЦП";
-            this.lblThreads.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblThreads.AutoSize = true;
+            lblThreads.Dock = DockStyle.Fill;
+            lblThreads.Location = new Point(130, 105);
+            lblThreads.Name = "lblThreads";
+            lblThreads.Size = new Size(98, 29);
+            lblThreads.TabIndex = 16;
+            lblThreads.Text = "Потоки ЦП";
+            lblThreads.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // cbSSAA
             // 
-            this.cbSSAA.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cbSSAA.FormattingEnabled = true;
-            this.cbSSAA.Location = new System.Drawing.Point(6, 137);
-            this.cbSSAA.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.cbSSAA.Name = "cbSSAA";
-            this.cbSSAA.Size = new System.Drawing.Size(118, 23);
-            this.cbSSAA.TabIndex = 17;
+            cbSSAA.Dock = DockStyle.Fill;
+            cbSSAA.FormattingEnabled = true;
+            cbSSAA.Location = new Point(6, 137);
+            cbSSAA.Margin = new Padding(6, 3, 3, 3);
+            cbSSAA.Name = "cbSSAA";
+            cbSSAA.Size = new Size(118, 23);
+            cbSSAA.TabIndex = 17;
             // 
             // lbSSAA
             // 
-            this.lbSSAA.AutoSize = true;
-            this.lbSSAA.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lbSSAA.Location = new System.Drawing.Point(130, 134);
-            this.lbSSAA.Name = "lbSSAA";
-            this.lbSSAA.Size = new System.Drawing.Size(98, 29);
-            this.lbSSAA.TabIndex = 18;
-            this.lbSSAA.Text = "Сглаживание";
-            this.lbSSAA.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lbSSAA.AutoSize = true;
+            lbSSAA.Dock = DockStyle.Fill;
+            lbSSAA.Location = new Point(130, 134);
+            lbSSAA.Name = "lbSSAA";
+            lbSSAA.Size = new Size(98, 29);
+            lbSSAA.TabIndex = 18;
+            lbSSAA.Text = "Сглаживание";
+            lbSSAA.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // cbSmooth
             // 
-            this.cbSmooth.AutoSize = true;
-            this.cbSmooth.Checked = true;
-            this.cbSmooth.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.pnlControls.SetColumnSpan(this.cbSmooth, 2);
-            this.cbSmooth.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cbSmooth.Location = new System.Drawing.Point(6, 166);
-            this.cbSmooth.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.cbSmooth.Name = "cbSmooth";
-            this.cbSmooth.Size = new System.Drawing.Size(222, 19);
-            this.cbSmooth.TabIndex = 19;
-            this.cbSmooth.Text = "Плавное окрашивание";
-            this.cbSmooth.UseVisualStyleBackColor = true;
+            cbSmooth.AutoSize = true;
+            cbSmooth.Checked = true;
+            cbSmooth.CheckState = CheckState.Checked;
+            pnlControls.SetColumnSpan(cbSmooth, 2);
+            cbSmooth.Dock = DockStyle.Fill;
+            cbSmooth.Location = new Point(6, 166);
+            cbSmooth.Margin = new Padding(6, 3, 3, 3);
+            cbSmooth.Name = "cbSmooth";
+            cbSmooth.Size = new Size(222, 19);
+            cbSmooth.TabIndex = 19;
+            cbSmooth.Text = "Плавное окрашивание";
+            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // lblVariation
             // 
-            this.lblVariation.AutoSize = true;
-            this.lblVariation.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblVariation.Location = new System.Drawing.Point(130, 188);
-            this.lblVariation.Name = "lblVariation";
-            this.lblVariation.Size = new System.Drawing.Size(98, 29);
-            this.lblVariation.TabIndex = 21;
-            this.lblVariation.Text = "Вариация";
-            this.lblVariation.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblVariation.AutoSize = true;
+            lblVariation.Dock = DockStyle.Fill;
+            lblVariation.Location = new Point(130, 188);
+            lblVariation.Name = "lblVariation";
+            lblVariation.Size = new Size(98, 29);
+            lblVariation.TabIndex = 21;
+            lblVariation.Text = "Вариация";
+            lblVariation.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // cbVariation
             // 
-            this.cbVariation.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.cbVariation.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbVariation.FormattingEnabled = true;
-            this.cbVariation.Location = new System.Drawing.Point(6, 191);
-            this.cbVariation.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.cbVariation.Name = "cbVariation";
-            this.cbVariation.Size = new System.Drawing.Size(118, 23);
-            this.cbVariation.TabIndex = 20;
+            cbVariation.Dock = DockStyle.Fill;
+            cbVariation.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbVariation.FormattingEnabled = true;
+            cbVariation.Location = new Point(6, 191);
+            cbVariation.Margin = new Padding(6, 3, 3, 3);
+            cbVariation.Name = "cbVariation";
+            cbVariation.Size = new Size(118, 23);
+            cbVariation.TabIndex = 20;
             // 
             // lblPParameter
             // 
-            this.lblPParameter.AutoSize = true;
-            this.lblPParameter.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblPParameter.Location = new System.Drawing.Point(130, 217);
-            this.lblPParameter.Name = "lblPParameter";
-            this.lblPParameter.Size = new System.Drawing.Size(98, 29);
-            this.lblPParameter.TabIndex = 23;
-            this.lblPParameter.Text = "Параметр P";
-            this.lblPParameter.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblPParameter.AutoSize = true;
+            lblPParameter.Dock = DockStyle.Fill;
+            lblPParameter.Location = new Point(130, 217);
+            lblPParameter.Name = "lblPParameter";
+            lblPParameter.Size = new Size(98, 29);
+            lblPParameter.TabIndex = 23;
+            lblPParameter.Text = "Параметр P";
+            lblPParameter.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // nudPParameter
             // 
-            this.nudPParameter.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.nudPParameter.Location = new System.Drawing.Point(6, 220);
-            this.nudPParameter.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
-            this.nudPParameter.Name = "nudPParameter";
-            this.nudPParameter.Size = new System.Drawing.Size(118, 23);
-            this.nudPParameter.TabIndex = 22;
+            nudPParameter.Dock = DockStyle.Fill;
+            nudPParameter.Location = new Point(6, 220);
+            nudPParameter.Margin = new Padding(6, 3, 3, 3);
+            nudPParameter.Name = "nudPParameter";
+            nudPParameter.Size = new Size(118, 23);
+            nudPParameter.TabIndex = 22;
             // 
             // btnSaveHighRes
             // 
-            this.pnlControls.SetColumnSpan(this.btnSaveHighRes, 2);
-            this.btnSaveHighRes.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnSaveHighRes.Location = new System.Drawing.Point(6, 249);
-            this.btnSaveHighRes.Margin = new System.Windows.Forms.Padding(6, 3, 6, 3);
-            this.btnSaveHighRes.Name = "btnSaveHighRes";
-            this.btnSaveHighRes.Size = new System.Drawing.Size(219, 39);
-            this.btnSaveHighRes.TabIndex = 24;
-            this.btnSaveHighRes.Text = "Сохранить изображение";
-            this.btnSaveHighRes.UseVisualStyleBackColor = true;
-            this.btnSaveHighRes.Click += new System.EventHandler(this.btnOpenSaveManager_Click);
+            pnlControls.SetColumnSpan(btnSaveHighRes, 2);
+            btnSaveHighRes.Dock = DockStyle.Fill;
+            btnSaveHighRes.Location = new Point(6, 249);
+            btnSaveHighRes.Margin = new Padding(6, 3, 6, 3);
+            btnSaveHighRes.Name = "btnSaveHighRes";
+            btnSaveHighRes.Size = new Size(219, 39);
+            btnSaveHighRes.TabIndex = 24;
+            btnSaveHighRes.Text = "Сохранить изображение";
+            btnSaveHighRes.UseVisualStyleBackColor = true;
+            btnSaveHighRes.Click += btnOpenSaveManager_Click;
             // 
             // color_configurations
             // 
-            this.pnlControls.SetColumnSpan(this.color_configurations, 2);
-            this.color_configurations.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.color_configurations.Location = new System.Drawing.Point(6, 294);
-            this.color_configurations.Margin = new System.Windows.Forms.Padding(6, 3, 6, 3);
-            this.color_configurations.Name = "color_configurations";
-            this.color_configurations.Size = new System.Drawing.Size(219, 39);
-            this.color_configurations.TabIndex = 25;
-            this.color_configurations.Text = "Настроить палитру";
-            this.color_configurations.UseVisualStyleBackColor = true;
-            this.color_configurations.Click += new System.EventHandler(this.color_configurations_Click);
+            pnlControls.SetColumnSpan(color_configurations, 2);
+            color_configurations.Dock = DockStyle.Fill;
+            color_configurations.Location = new Point(6, 294);
+            color_configurations.Margin = new Padding(6, 3, 6, 3);
+            color_configurations.Name = "color_configurations";
+            color_configurations.Size = new Size(219, 39);
+            color_configurations.TabIndex = 25;
+            color_configurations.Text = "Настроить палитру";
+            color_configurations.UseVisualStyleBackColor = true;
+            color_configurations.Click += color_configurations_Click;
             // 
             // btnRender
             // 
-            this.pnlControls.SetColumnSpan(this.btnRender, 2);
-            this.btnRender.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnRender.Location = new System.Drawing.Point(6, 339);
-            this.btnRender.Margin = new System.Windows.Forms.Padding(6, 3, 6, 3);
-            this.btnRender.Name = "btnRender";
-            this.btnRender.Size = new System.Drawing.Size(219, 39);
-            this.btnRender.TabIndex = 26;
-            this.btnRender.Text = "Запустить рендер";
-            this.btnRender.UseVisualStyleBackColor = true;
-            this.btnRender.Click += new System.EventHandler(this.btnRender_Click);
+            pnlControls.SetColumnSpan(btnRender, 2);
+            btnRender.Dock = DockStyle.Fill;
+            btnRender.Location = new Point(6, 339);
+            btnRender.Margin = new Padding(6, 3, 6, 3);
+            btnRender.Name = "btnRender";
+            btnRender.Size = new Size(219, 39);
+            btnRender.TabIndex = 26;
+            btnRender.Text = "Запустить рендер";
+            btnRender.UseVisualStyleBackColor = true;
+            btnRender.Click += btnRender_Click;
             // 
             // btnStateManager
             // 
-            this.pnlControls.SetColumnSpan(this.btnStateManager, 2);
-            this.btnStateManager.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnStateManager.Location = new System.Drawing.Point(6, 384);
-            this.btnStateManager.Margin = new System.Windows.Forms.Padding(6, 3, 6, 3);
-            this.btnStateManager.Name = "btnStateManager";
-            this.btnStateManager.Size = new System.Drawing.Size(219, 39);
-            this.btnStateManager.TabIndex = 27;
-            this.btnStateManager.Text = "Менеджер сохранений";
-            this.btnStateManager.UseVisualStyleBackColor = true;
-            this.btnStateManager.Click += new System.EventHandler(this.btnStateManager_Click);
+            pnlControls.SetColumnSpan(btnStateManager, 2);
+            btnStateManager.Dock = DockStyle.Fill;
+            btnStateManager.Location = new Point(6, 384);
+            btnStateManager.Margin = new Padding(6, 3, 6, 3);
+            btnStateManager.Name = "btnStateManager";
+            btnStateManager.Size = new Size(219, 39);
+            btnStateManager.TabIndex = 27;
+            btnStateManager.Text = "Менеджер сохранений";
+            btnStateManager.UseVisualStyleBackColor = true;
+            btnStateManager.Click += btnStateManager_Click;
             // 
             // lblProgress
             // 
-            this.lblProgress.AutoSize = true;
-            this.pnlControls.SetColumnSpan(this.lblProgress, 2);
-            this.lblProgress.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblProgress.Location = new System.Drawing.Point(3, 426);
-            this.lblProgress.Name = "lblProgress";
-            this.lblProgress.Size = new System.Drawing.Size(225, 20);
-            this.lblProgress.TabIndex = 28;
-            this.lblProgress.Text = "Обработка";
-            this.lblProgress.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
+            lblProgress.AutoSize = true;
+            pnlControls.SetColumnSpan(lblProgress, 2);
+            lblProgress.Dock = DockStyle.Fill;
+            lblProgress.Location = new Point(3, 426);
+            lblProgress.Name = "lblProgress";
+            lblProgress.Size = new Size(225, 20);
+            lblProgress.TabIndex = 28;
+            lblProgress.Text = "Обработка";
+            lblProgress.TextAlign = ContentAlignment.BottomCenter;
             // 
             // pbRenderProgress
             // 
-            this.pnlControls.SetColumnSpan(this.pbRenderProgress, 2);
-            this.pbRenderProgress.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pbRenderProgress.Location = new System.Drawing.Point(6, 449);
-            this.pbRenderProgress.Margin = new System.Windows.Forms.Padding(6, 3, 6, 3);
-            this.pbRenderProgress.Name = "pbRenderProgress";
-            this.pbRenderProgress.Size = new System.Drawing.Size(219, 24);
-            this.pbRenderProgress.TabIndex = 29;
+            pnlControls.SetColumnSpan(pbRenderProgress, 2);
+            pbRenderProgress.Dock = DockStyle.Fill;
+            pbRenderProgress.Location = new Point(6, 449);
+            pbRenderProgress.Margin = new Padding(6, 3, 6, 3);
+            pbRenderProgress.Name = "pbRenderProgress";
+            pbRenderProgress.Size = new Size(219, 24);
+            pbRenderProgress.TabIndex = 29;
             // 
             // canvas
             // 
-            this.canvas.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.canvas.Location = new System.Drawing.Point(231, 0);
-            this.canvas.Name = "canvas";
-            this.canvas.Size = new System.Drawing.Size(853, 636);
-            this.canvas.TabIndex = 1;
-            this.canvas.TabStop = false;
+            canvas.Dock = DockStyle.Fill;
+            canvas.Location = new Point(231, 0);
+            canvas.Name = "canvas";
+            canvas.Size = new Size(853, 636);
+            canvas.TabIndex = 1;
+            canvas.TabStop = false;
             // 
             // FractalCollatzForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1084, 636);
-            this.Controls.Add(this.canvas);
-            this.Controls.Add(this.pnlControls);
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MinimumSize = new System.Drawing.Size(1100, 675);
-            this.Name = "FractalCollatzForm";
-            this.Text = "Фрактал Коллатца";
-            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FractalCollatzForm_FormClosed);
-            this.Load += new System.EventHandler(this.FractalCollatzForm_Load);
-            this.pnlControls.ResumeLayout(false);
-            this.pnlControls.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nudIterations)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudThreshold)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudZoom)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudPParameter)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.canvas)).EndInit();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1084, 636);
+            Controls.Add(canvas);
+            Controls.Add(pnlControls);
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            MinimumSize = new Size(1100, 675);
+            Name = "FractalCollatzForm";
+            Text = "Фрактал Коллатца";
+            FormClosed += FractalCollatzForm_FormClosed;
+            Load += FractalCollatzForm_Load;
+            pnlControls.ResumeLayout(false);
+            pnlControls.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudThreshold).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudPParameter).EndInit();
+            ((System.ComponentModel.ISupportInitialize)canvas).EndInit();
+            ResumeLayout(false);
 
         }
 
