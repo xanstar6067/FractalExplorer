@@ -15,6 +15,26 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         #region Fields
 
         /// <summary>
+        /// Допустимая минимальная действительная часть для выбора.
+        /// </summary>
+        private readonly double _validMinRe;
+
+        /// <summary>
+        /// Допустимая максимальная действительная часть для выбора.
+        /// </summary>
+        private readonly double _validMaxRe;
+
+        /// <summary>
+        /// Допустимая минимальная мнимая часть для выбора.
+        /// </summary>
+        private readonly double _validMinIm;
+
+        /// <summary>
+        /// Допустимая максимальная мнимая часть для выбора.
+        /// </summary>
+        private readonly double _validMaxIm;
+
+        /// <summary>
         /// Ссылка на главную форму, которая является владельцем этого окна и реализует IFractalForm.
         /// </summary>
         private readonly IFractalForm ownerForm;
@@ -143,7 +163,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="owner">Главная форма, являющаяся владельцем этого окна.</param>
         /// <param name="initialRe">Начальное значение действительной части для выбранных координат (по умолчанию NaN).</param>
         /// <param name="initialIm">Начальное значение мнимой части для выбранных координат (по умолчанию NaN).</param>
-        public BurningShipCSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN)
+        public BurningShipCSelectorForm(IFractalForm owner, double initialRe, double initialIm, double validMinRe, double validMaxRe, double validMinIm, double validMaxIm)
         {
             ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
             Text = "Выбор точки C (Множество Горящий Корабль)";
@@ -151,6 +171,12 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
+
+            // Сохраняем допустимые границы
+            _validMinRe = validMinRe;
+            _validMaxRe = validMaxRe;
+            _validMinIm = validMinIm;
+            _validMaxIm = validMaxIm;
 
             displayPictureBox = new PictureBox
             {
@@ -226,6 +252,33 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         #endregion
 
         #region Rendering Logic
+
+        /// <summary>
+        /// Рисует красную рамку, ограничивающую допустимую область выбора.
+        /// </summary>
+        /// <param name="graphics">Графический контекст для рисования.</param>
+        private void DrawValidationBorder(Graphics graphics)
+        {
+            double realRange = currentMaxRe - currentMinRe;
+            double imaginaryRange = currentMaxIm - currentMinIm;
+
+            if (realRange <= 0 || imaginaryRange <= 0) return;
+
+            // Преобразуем комплексные координаты углов рамки в пиксельные
+            float x1 = (float)((_validMinRe - currentMinRe) / realRange * displayPictureBox.Width);
+            float y1 = (float)((currentMaxIm - _validMaxIm) / imaginaryRange * displayPictureBox.Height);
+
+            float x2 = (float)((_validMaxRe - currentMinRe) / realRange * displayPictureBox.Width);
+            float y2 = (float)((currentMaxIm - _validMinIm) / imaginaryRange * displayPictureBox.Height);
+
+            float width = x2 - x1;
+            float height = y2 - y1;
+
+            using (Pen borderPen = new Pen(Color.Red, 1f))
+            {
+                graphics.DrawRectangle(borderPen, x1, y1, width, height);
+            }
+        }
 
         /// <summary>
         /// Обработчик события загрузки формы. Запускает асинхронный рендеринг множества.
@@ -481,7 +534,14 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             double selectedReal = currentMinRe + e.X / (double)displayPictureBox.Width * realRange;
             double selectedImaginary = currentMaxIm - e.Y / (double)displayPictureBox.Height * imaginaryRange;
 
-            SetSelectedCoordinates(selectedReal, selectedImaginary, true);
+            // Проверяем, находится ли клик внутри допустимой области
+            bool isInsideValidArea = selectedReal >= _validMinRe && selectedReal <= _validMaxRe &&
+                                     selectedImaginary >= _validMinIm && selectedImaginary <= _validMaxIm;
+
+            if (isInsideValidArea)
+            {
+                SetSelectedCoordinates(selectedReal, selectedImaginary, true);
+            }
         }
 
         /// <summary>
@@ -495,8 +555,9 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         {
             if (renderedBitmap == null || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
             {
-                e.Graphics.Clear(Color.Black); // Очищаем фон, если нет битмапа.
-                DrawMarker(e.Graphics); // Всегда рисуем маркер, если есть выбранные координаты.
+                e.Graphics.Clear(Color.Black);
+                DrawMarker(e.Graphics);
+                DrawValidationBorder(e.Graphics); // Рисуем рамку
                 return;
             }
 
@@ -516,19 +577,18 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             double currentComplexWidth = currentMaxRealParam - currentMinRealParam;
             double currentComplexHeight = currentMaxImaginaryParam - currentMinImaginaryParam;
 
-            // Если какой-либо диапазон некорректен, очищаем и рисуем только маркер.
             if (renderedComplexWidth <= 0 || renderedComplexHeight <= 0 || currentComplexWidth <= 0 || currentComplexHeight <= 0)
             {
                 e.Graphics.Clear(Color.Black);
                 if (renderedBitmap != null)
                 {
-                    e.Graphics.DrawImageUnscaled(renderedBitmap, Point.Empty); // Fallback для отображения, если масштабирование невозможно
+                    e.Graphics.DrawImageUnscaled(renderedBitmap, Point.Empty);
                 }
                 DrawMarker(e.Graphics);
+                DrawValidationBorder(e.Graphics); // Рисуем рамку
                 return;
             }
 
-            // Вычисляем положение и размер для отрисовки исходного битмапа с учетом нового зума и панорамирования.
             float offsetX = (float)((renderedMinRealParam - currentMinRealParam) / currentComplexWidth * displayPictureBox.Width);
             float offsetY = (float)((currentMaxImaginaryParam - renderedMaxImaginaryParam) / currentComplexHeight * displayPictureBox.Height);
 
@@ -541,7 +601,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
 
             e.Graphics.Clear(Color.Black);
             e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.Bilinear;
-            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half; // Для лучшего качества при масштабировании
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
 
             if (destinationWidthPixels > 0 && destinationHeightPixels > 0)
             {
@@ -551,8 +611,6 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                 }
                 catch (ArgumentException)
                 {
-                    // Если произошла ошибка (например, из-за слишком экстремальных значений),
-                    // рисуем битмап без масштабирования как запасной вариант.
                     if (renderedBitmap != null)
                     {
                         e.Graphics.DrawImageUnscaled(renderedBitmap, Point.Empty);
@@ -561,7 +619,6 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
             else
             {
-                // Если новые размеры некорректны, просто рисуем без масштабирования.
                 if (renderedBitmap != null)
                 {
                     e.Graphics.DrawImageUnscaled(renderedBitmap, Point.Empty);
@@ -569,6 +626,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
 
             DrawMarker(e.Graphics); // Рисуем маркер выбранной точки.
+            DrawValidationBorder(e.Graphics); // Рисуем рамку допустимой области.
         }
 
         /// <summary>

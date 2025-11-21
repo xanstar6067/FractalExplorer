@@ -15,6 +15,26 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         #region Fields
 
         /// <summary>
+        /// Допустимая минимальная действительная часть для выбора.
+        /// </summary>
+        private readonly double _validMinRe;
+
+        /// <summary>
+        /// Допустимая максимальная действительная часть для выбора.
+        /// </summary>
+        private readonly double _validMaxRe;
+
+        /// <summary>
+        /// Допустимая минимальная мнимая часть для выбора.
+        /// </summary>
+        private readonly double _validMinIm;
+
+        /// <summary>
+        /// Допустимая максимальная мнимая часть для выбора.
+        /// </summary>
+        private readonly double _validMaxIm;
+
+        /// <summary>
         /// Ссылка на главную форму, которая является владельцем этого окна и реализует IFractalForm.
         /// </summary>
         private readonly IFractalForm ownerForm;
@@ -143,7 +163,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="owner">Главная форма, являющаяся владельцем этого окна.</param>
         /// <param name="initialRe">Начальное значение действительной части для выбранных координат (по умолчанию NaN).</param>
         /// <param name="initialIm">Начальное значение мнимой части для выбранных координат (по умолчанию NaN).</param>
-        public JuliaMandelbrotSelectorForm(IFractalForm owner, double initialRe = double.NaN, double initialIm = double.NaN)
+        public JuliaMandelbrotSelectorForm(IFractalForm owner, double initialRe, double initialIm, double validMinRe, double validMaxRe, double validMinIm, double validMaxIm)
         {
             ownerForm = owner ?? throw new ArgumentNullException(nameof(owner));
             Text = "Выбор точки C (Множество Мандельброта)";
@@ -151,6 +171,12 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
+
+            // Сохраняем допустимые границы
+            _validMinRe = validMinRe;
+            _validMaxRe = validMaxRe;
+            _validMinIm = validMinIm;
+            _validMaxIm = validMaxIm;
 
             mandelbrotDisplay = new PictureBox
             {
@@ -177,7 +203,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             renderedMinRe = currentMinRe;
             renderedMaxRe = currentMaxRe;
             renderedMinIm = currentMinIm;
-            renderedMaxIm = currentMaxIm; 
+            renderedMaxIm = currentMaxIm;
 
             // Corrected initialization of renderedMaxIm based on currentMaxIm
             renderedMaxIm = currentMaxIm;
@@ -231,6 +257,33 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         #endregion
 
         #region Rendering Logic
+
+        /// <summary>
+        /// Рисует красную рамку, ограничивающую допустимую область выбора.
+        /// </summary>
+        /// <param name="graphics">Графический контекст для рисования.</param>
+        private void DrawValidationBorder(Graphics graphics)
+        {
+            double realRange = currentMaxRe - currentMinRe;
+            double imaginaryRange = currentMaxIm - currentMinIm;
+
+            if (realRange <= 0 || imaginaryRange <= 0) return;
+
+            // Преобразуем комплексные координаты углов рамки в пиксельные
+            float x1 = (float)((_validMinRe - currentMinRe) / realRange * mandelbrotDisplay.Width);
+            float y1 = (float)((currentMaxIm - _validMaxIm) / imaginaryRange * mandelbrotDisplay.Height);
+
+            float x2 = (float)((_validMaxRe - currentMinRe) / realRange * mandelbrotDisplay.Width);
+            float y2 = (float)((currentMaxIm - _validMinIm) / imaginaryRange * mandelbrotDisplay.Height);
+
+            float width = x2 - x1;
+            float height = y2 - y1;
+
+            using (Pen borderPen = new Pen(Color.Red, 1f))
+            {
+                graphics.DrawRectangle(borderPen, x1, y1, width, height);
+            }
+        }
 
         /// <summary>
         /// Обработчик события загрузки формы. Запускает асинхронный рендеринг множества.
@@ -485,7 +538,14 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             double selectedReal = currentMinRe + e.X / (double)mandelbrotDisplay.Width * realRange;
             double selectedImaginary = currentMaxIm - e.Y / (double)mandelbrotDisplay.Height * imaginaryRange;
 
-            SetSelectedCoordinates(selectedReal, selectedImaginary, true);
+            // Проверяем, находится ли клик внутри допустимой области
+            bool isInsideValidArea = selectedReal >= _validMinRe && selectedReal <= _validMaxRe &&
+                                     selectedImaginary >= _validMinIm && selectedImaginary <= _validMaxIm;
+
+            if (isInsideValidArea)
+            {
+                SetSelectedCoordinates(selectedReal, selectedImaginary, true);
+            }
         }
 
         /// <summary>
@@ -501,6 +561,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 e.Graphics.Clear(Color.Black); // Очищаем фон, если нет битмапа.
                 DrawMarker(e.Graphics); // Всегда рисуем маркер, если есть выбранные координаты.
+                DrawValidationBorder(e.Graphics); // Рисуем рамку
                 return;
             }
 
@@ -531,6 +592,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                     e.Graphics.DrawImageUnscaled(mandelbrotBitmap, Point.Empty); // Запасной вариант для отображения, если масштабирование невозможно
                 }
                 DrawMarker(e.Graphics);
+                DrawValidationBorder(e.Graphics); // Рисуем рамку
                 return;
             }
 
@@ -558,8 +620,6 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                 }
                 catch (ArgumentException)
                 {
-                    // Если произошла ошибка (например, из-за слишком экстремальных значений),
-                    // рисуем битмап без масштабирования как запасной вариант.
                     if (mandelbrotBitmap != null)
                     {
                         e.Graphics.DrawImageUnscaled(mandelbrotBitmap, Point.Empty);
@@ -568,7 +628,6 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
             else
             {
-                // Если новые размеры некорректны, просто рисуем без масштабирования.
                 if (mandelbrotBitmap != null)
                 {
                     e.Graphics.DrawImageUnscaled(mandelbrotBitmap, Point.Empty);
@@ -576,6 +635,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
 
             DrawMarker(e.Graphics); // Рисуем маркер выбранной точки.
+            DrawValidationBorder(e.Graphics); // Рисуем рамку допустимой области.
         }
 
         /// <summary>

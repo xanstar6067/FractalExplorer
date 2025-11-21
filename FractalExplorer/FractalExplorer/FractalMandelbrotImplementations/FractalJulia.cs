@@ -250,7 +250,11 @@ namespace FractalExplorer.Projects
 
             if (_mandelbrotCSelectorWindow == null || _mandelbrotCSelectorWindow.IsDisposed)
             {
-                _mandelbrotCSelectorWindow = new JuliaMandelbrotSelectorForm(this, initialReal, initialImaginary);
+                // Передаем границы допустимой области в конструктор
+                _mandelbrotCSelectorWindow = new JuliaMandelbrotSelectorForm(this, initialReal, initialImaginary,
+                    (double)MANDELBROT_MIN_RE, (double)MANDELBROT_MAX_RE,
+                    (double)MANDELBROT_MIN_IM, (double)MANDELBROT_MAX_IM);
+
                 _mandelbrotCSelectorWindow.CoordinatesSelected += (re, im) =>
                 {
                     nudRe.Value = (decimal)re;

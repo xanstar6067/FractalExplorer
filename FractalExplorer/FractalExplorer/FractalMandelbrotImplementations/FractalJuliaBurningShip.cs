@@ -228,7 +228,11 @@ namespace FractalExplorer.Projects
 
             if (_burningShipCSelectorWindow == null || _burningShipCSelectorWindow.IsDisposed)
             {
-                _burningShipCSelectorWindow = new BurningShipCSelectorForm(this, initialReal, initialImaginary);
+                // Передаем границы допустимой области в конструктор
+                _burningShipCSelectorWindow = new BurningShipCSelectorForm(this, initialReal, initialImaginary,
+                    (double)BURNING_SHIP_MIN_REAL, (double)BURNING_SHIP_MAX_REAL,
+                    (double)BURNING_SHIP_MIN_IMAGINARY, (double)BURNING_SHIP_MAX_IMAGINARY);
+
                 _burningShipCSelectorWindow.CoordinatesSelected += (re, im) =>
                 {
                     nudRe.Value = (decimal)re;
