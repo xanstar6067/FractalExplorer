@@ -163,6 +163,22 @@ namespace FractalExplorer.Engines
 
         #region Public Rendering Methods
 
+        public void CopyParametersFrom(FractalNovaFamilyEngine source)
+        {
+            this.MaxIterations = source.MaxIterations;
+            this.ThresholdSquared = source.ThresholdSquared;
+            this.CenterX = source.CenterX;
+            this.CenterY = source.CenterY;
+            this.Scale = source.Scale;
+            this.UseSmoothColoring = source.UseSmoothColoring;
+            this.Palette = source.Palette;
+            this.SmoothPalette = source.SmoothPalette;
+            this.MaxColorIterations = source.MaxColorIterations;
+
+            // Этот метод уже был в твоем коде, он скопирует специфичные параметры (P, Z0, M)
+            this.CopySpecificParametersFrom(source);
+        }
+
         public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel)
         {
             bytesPerPixel = 4;

@@ -25,120 +25,45 @@ namespace FractalExplorer.Forms
 {
     /// <summary>
     /// Представляет основную форму для отображения и взаимодействия с фракталом Нова.
-    /// Реализует интерфейсы <see cref="IHighResRenderable"/> для рендеринга в высоком разрешении 
-    /// и <see cref="ISaveLoadCapableFractal"/> для сохранения и загрузки состояний фрактала.
+    /// Реализует интерфейсы <see cref="IHighResRenderable"/> и <see cref="ISaveLoadCapableFractal"/>.
     /// </summary>
     public partial class FractalNovaMandelbrotForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
         #region Fields
-        /// <summary>
-        /// Движок для рендеринга фрактала Нова.
-        /// </summary>
         private FractalNovaFamilyEngine _fractalEngine;
-        /// <summary>
-        /// Компонент для визуализации процесса рендеринга (например, отображения тайлов).
-        /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
-        /// <summary>
-        /// Менеджер цветовых палитр для фракталов.
-        /// </summary>
         private PaletteManager _paletteManager;
-        /// <summary>
-        /// Кэш для цветов палитры с уже примененной гамма-коррекцией (для дискретного режима).
-        /// </summary>
-        private Color[] _gammaCorrectedPaletteCache;
-        /// <summary>
-        /// "Подпись" палитры, для которой был сгенерирован кэш. 
-        /// </summary>
-        private string _paletteCacheSignature;
-        /// <summary>
-        /// Форма для настройки параметров цветовой палитры.
-        /// </summary>
         private ColorConfigurationForm _colorConfigForm;
+        private System.Windows.Forms.Timer _renderDebounceTimer;
 
-        /// <summary>
-        /// Размер тайла для рендеринга в пикселях.
-        /// </summary>
+        private Color[] _gammaCorrectedPaletteCache;
+        private string _paletteCacheSignature;
+
         private const int TILE_SIZE = 16;
-        /// <summary>
-        /// Объект для синхронизации доступа к битмапам из разных потоков.
-        /// </summary>
         private readonly object _bitmapLock = new object();
-        /// <summary>
-        /// Битмап с отрендеренным предпросмотром фрактала.
-        /// </summary>
         private Bitmap _previewBitmap;
-        /// <summary>
-        /// Битмап, на котором происходит текущий рендеринг.
-        /// </summary>
         private Bitmap _currentRenderingBitmap;
-        /// <summary>
-        /// Источник токенов для отмены текущего рендеринга предпросмотра.
-        /// </summary>
         private CancellationTokenSource _previewRenderCts;
 
-        /// <summary>
-        /// Флаг, указывающий, что в данный момент выполняется рендеринг в высоком разрешении.
-        /// </summary>
         private volatile bool _isHighResRendering = false;
-        /// <summary>
-        /// Флаг, указывающий, что в данный момент выполняется рендеринг предпросмотра.
-        /// </summary>
         private volatile bool _isRenderingPreview = false;
 
-        /// <summary>
-        /// Текущий уровень масштабирования.
-        /// </summary>
         protected decimal _zoom = 1.0m;
-        /// <summary>
-        /// Координата X центра отображаемой области.
-        /// </summary>
         protected decimal _centerX = 0.0m;
-        /// <summary>
-        /// Координата Y центра отображаемой области.
-        /// </summary>
         protected decimal _centerY = 0.0m;
 
-        /// <summary>
-        /// Координата X центра на момент последнего завершенного рендеринга.
-        /// </summary>
         private decimal _renderedCenterX;
-        /// <summary>
-        /// Координата Y центра на момент последнего завершенного рендеринга.
-        /// </summary>
         private decimal _renderedCenterY;
-        /// <summary>
-        /// Уровень масштабирования на момент последнего завершенного рендеринга.
-        /// </summary>
         private decimal _renderedZoom;
 
-        /// <summary>
-        /// Начальная точка для панорамирования.
-        /// </summary>
         private Point _panStart;
-        /// <summary>
-        /// Флаг, указывающий, что выполняется панорамирование.
-        /// </summary>
         private bool _panning = false;
 
-        /// <summary>
-        /// Таймер для отложенного запуска рендеринга после изменения параметров.
-        /// </summary>
-        private System.Windows.Forms.Timer _renderDebounceTimer;
-        /// <summary>
-        /// Базовый заголовок окна.
-        /// </summary>
         private string _baseTitle;
-        /// <summary>
-        /// Базовый масштаб для вычислений.
-        /// </summary>
         private const decimal BASE_SCALE = 4.0m;
         #endregion
 
         #region Constructor
-        /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="FractalNovaMandelbrotForm"/>.
-        /// </summary>
         public FractalNovaMandelbrotForm()
         {
             InitializeComponent();
@@ -148,9 +73,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region UI Initialization
-        /// <summary>
-        /// Инициализирует значения по умолчанию и ограничения для элементов управления UI.
-        /// </summary>
         private void InitializeControls()
         {
             int cores = Environment.ProcessorCount;
@@ -159,9 +81,7 @@ namespace FractalExplorer.Forms
             cbThreads.Items.Add("Auto");
             cbThreads.SelectedItem = "Auto";
 
-            cbSSAA.Items.Add("Выкл (1x)");
-            cbSSAA.Items.Add("Низкое (2x)");
-            cbSSAA.Items.Add("Высокое (4x)");
+            cbSSAA.Items.AddRange(new object[] { "Выкл (1x)", "Низкое (2x)", "Высокое (4x)" });
             cbSSAA.SelectedItem = "Выкл (1x)";
 
             nudP_Re.Value = 3.0m; nudP_Im.Value = 0.0m;
@@ -173,13 +93,12 @@ namespace FractalExplorer.Forms
             nudZoom.Value = 1.0m;
         }
 
-        /// <summary>
-        /// Инициализирует обработчики событий для различных элементов управления UI.
-        /// </summary>
         private void InitializeEventHandlers()
         {
             btnConfigurePalette.Click += btnConfigurePalette_Click;
             btnRender.Click += (s, e) => ScheduleRender(true);
+            //btnSaveHighRes.Click += btnSaveHighRes_Click; //не нужно подписывать повторно
+            //btnStateManager.Click += btnStateManager_Click; //не нужно подписывать повторно
 
             nudP_Re.ValueChanged += ParamControl_Changed;
             nudP_Im.ValueChanged += ParamControl_Changed;
@@ -207,9 +126,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region UI Event Handlers
-        /// <summary>
-        /// Обрабатывает изменение значения в элементах управления параметрами фрактала.
-        /// </summary>
         private void ParamControl_Changed(object sender, EventArgs e)
         {
             if (_isHighResRendering) return;
@@ -217,9 +133,6 @@ namespace FractalExplorer.Forms
             ScheduleRender();
         }
 
-        /// <summary>
-        /// Открывает менеджер сохранения изображений в высоком разрешении.
-        /// </summary>
         private void btnSaveHighRes_Click(object sender, EventArgs e)
         {
             if (_isHighResRendering)
@@ -234,9 +147,6 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие на кнопку конфигурации цветов, открывая соответствующее окно.
-        /// </summary>
         private void btnConfigurePalette_Click(object sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
@@ -252,9 +162,6 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопки, открывая диалог сохранения/загрузки состояний.
-        /// </summary>
         private void btnStateManager_Click(object sender, EventArgs e)
         {
             using (var dialog = new SaveLoadDialogForm(this))
@@ -265,9 +172,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Canvas Interaction
-        /// <summary>
-        /// Обрабатывает событие прокрутки колеса мыши для масштабирования.
-        /// </summary>
         private void Canvas_MouseWheel(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
@@ -285,9 +189,6 @@ namespace FractalExplorer.Forms
             else ScheduleRender();
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопки мыши для начала панорамирования.
-        /// </summary>
         private void Canvas_MouseDown(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
@@ -299,9 +200,6 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Обрабатывает движение мыши для выполнения панорамирования.
-        /// </summary>
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning || canvas.Width <= 0) return;
@@ -314,9 +212,6 @@ namespace FractalExplorer.Forms
             ScheduleRender();
         }
 
-        /// <summary>
-        /// Обрабатывает отпускание кнопки мыши для завершения панорамирования.
-        /// </summary>
         private void Canvas_MouseUp(object sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
@@ -327,12 +222,13 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Обрабатывает событие перерисовки холста, отображая фрактал.
-        /// </summary>
         private void Canvas_Paint(object sender, PaintEventArgs e)
         {
-            if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
+            if (canvas.Width <= 0 || canvas.Height <= 0)
+            {
+                e.Graphics.Clear(Color.Black);
+                return;
+            }
 
             e.Graphics.Clear(Color.Black);
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
@@ -355,10 +251,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Rendering Logic
-        /// <summary>
-        /// Планирует отложенный запуск рендеринга.
-        /// </summary>
-        /// <param name="force">Если true, рендеринг запускается немедленно, игнорируя таймер.</param>
         private void ScheduleRender(bool force = false)
         {
             if (_isHighResRendering || WindowState == FormWindowState.Minimized) return;
@@ -374,9 +266,6 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Обрабатывает тик таймера отложенного рендеринга.
-        /// </summary>
         private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
@@ -386,30 +275,34 @@ namespace FractalExplorer.Forms
                 return;
             }
 
-            int ssaaFactor = GetSelectedSsaaFactor();
-            this.Text = $"{_baseTitle} - Качество: {ssaaFactor}x";
-
-            if (ssaaFactor > 1)
+            try
             {
-                await StartPreviewRenderSSAA(ssaaFactor);
+                int ssaaFactor = GetSelectedSsaaFactor();
+                await StartPreviewRenderInternal(ssaaFactor);
             }
-            else
+            catch (Exception ex)
             {
-                await StartPreviewRender();
+                // Ловим любые неожиданные ошибки из async void, чтобы приложение не падало
+                Debug.WriteLine($"Render failed: {ex}");
+                MessageBox.Show($"Произошла ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _isRenderingPreview = false;
+                if (IsHandleCreated && !IsDisposed)
+                    this.Text = _baseTitle + " - Ошибка";
             }
         }
 
-        /// <summary>
-        /// Асинхронно запускает рендеринг предпросмотра с использованием суперсэмплинга (SSAA).
-        /// </summary>
-        private async Task StartPreviewRenderSSAA(int ssaaFactor)
+        private async Task StartPreviewRenderInternal(int ssaaFactor)
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            var stopwatch = Stopwatch.StartNew();
             _isRenderingPreview = true;
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
+
+            var stopwatch = Stopwatch.StartNew();
+            string statusText = ssaaFactor > 1 ? $"Рендер (SSAA {ssaaFactor}x)..." : "Рендер...";
+            this.Text = $"{_baseTitle} - {statusText}";
+
             _renderVisualizer?.NotifyRenderSessionStart();
 
             var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
@@ -420,21 +313,8 @@ namespace FractalExplorer.Forms
             }
 
             UpdateEngineParameters();
-            var renderEngineCopy = new NovaMandelbrotEngine
-            {
-                MaxIterations = _fractalEngine.MaxIterations,
-                ThresholdSquared = _fractalEngine.ThresholdSquared,
-                CenterX = _fractalEngine.CenterX,
-                CenterY = _fractalEngine.CenterY,
-                Scale = _fractalEngine.Scale,
-                P = _fractalEngine.P,
-                Z0 = _fractalEngine.Z0,
-                M = _fractalEngine.M,
-                UseSmoothColoring = _fractalEngine.UseSmoothColoring,
-                Palette = _fractalEngine.Palette,
-                SmoothPalette = _fractalEngine.SmoothPalette,
-                MaxColorIterations = _fractalEngine.MaxColorIterations
-            };
+            var renderEngineCopy = new NovaMandelbrotEngine();
+            renderEngineCopy.CopyParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
             var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
@@ -452,17 +332,22 @@ namespace FractalExplorer.Forms
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    byte[] tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, out int bytesPerPixel);
+                    byte[] tileBuffer = ssaaFactor > 1
+                        ? renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, out int _)
+                        : renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int _);
 
                     ct.ThrowIfCancellationRequested();
 
                     lock (_bitmapLock)
                     {
+                        // Важная проверка: рендерим только в тот битмап, с которым начинали.
                         if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
 
                         var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
+                        int bytesPerPixel = Image.GetPixelFormatSize(_currentRenderingBitmap.PixelFormat) / 8;
                         int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
 
+                        // Копируем данные ПОСТРОЧНО, чтобы учесть Stride битмапа
                         for (int y = 0; y < tile.Bounds.Height; y++)
                         {
                             IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
@@ -489,14 +374,14 @@ namespace FractalExplorer.Forms
                             }));
                         }
                     }
-                    catch (ObjectDisposedException) { }
+                    catch (ObjectDisposedException) { /* Форма закрывается, игнорируем */ }
 
                     await Task.Yield();
                 }, token);
 
                 token.ThrowIfCancellationRequested();
                 stopwatch.Stop();
-                this.Text = $"{_baseTitle} - Рендер (SSAA {ssaaFactor}x): {stopwatch.Elapsed.TotalSeconds:F3} сек.";
+                this.Text = $"{_baseTitle} - Готово за {stopwatch.Elapsed.TotalSeconds:F3} сек.";
 
                 lock (_bitmapLock)
                 {
@@ -516,7 +401,11 @@ namespace FractalExplorer.Forms
                 }
                 if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+                // Это ожидаемое исключение при отмене рендеринга, просто выходим
+                newRenderingBitmap.Dispose();
+            }
             finally
             {
                 _isRenderingPreview = false;
@@ -527,143 +416,12 @@ namespace FractalExplorer.Forms
                     {
                         pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
                     }
-                    catch (ObjectDisposedException) { }
+                    catch (ObjectDisposedException) { /* Форма уже закрыта */ }
                 }
             }
         }
 
-        /// <summary>
-        /// Запускает асинхронный процесс рендеринга предпросмотра фрактала.
-        /// </summary>
-        private async Task StartPreviewRender()
-        {
-            if (canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            var stopwatch = Stopwatch.StartNew();
-            _isRenderingPreview = true;
-            _previewRenderCts = new CancellationTokenSource();
-            var token = _previewRenderCts.Token;
-            _renderVisualizer?.NotifyRenderSessionStart();
-
-            var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
-            lock (_bitmapLock)
-            {
-                _currentRenderingBitmap?.Dispose();
-                _currentRenderingBitmap = newRenderingBitmap;
-            }
-
-            UpdateEngineParameters();
-            var renderEngineCopy = new NovaMandelbrotEngine
-            {
-                MaxIterations = _fractalEngine.MaxIterations,
-                ThresholdSquared = _fractalEngine.ThresholdSquared,
-                CenterX = _fractalEngine.CenterX,
-                CenterY = _fractalEngine.CenterY,
-                Scale = _fractalEngine.Scale,
-                P = _fractalEngine.P,
-                Z0 = _fractalEngine.Z0,
-                M = _fractalEngine.M,
-                UseSmoothColoring = _fractalEngine.UseSmoothColoring,
-                Palette = _fractalEngine.Palette,
-                SmoothPalette = _fractalEngine.SmoothPalette,
-                MaxColorIterations = _fractalEngine.MaxColorIterations
-            };
-
-            var tiles = GenerateTiles(canvas.Width, canvas.Height);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
-
-            if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
-            {
-                pbRenderProgress.Invoke((Action)(() => { pbRenderProgress.Value = 0; pbRenderProgress.Maximum = tiles.Count; }));
-            }
-            int progress = 0;
-
-            try
-            {
-                await dispatcher.RenderAsync(async (tile, ct) =>
-                {
-                    ct.ThrowIfCancellationRequested();
-                    _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
-
-                    byte[] tileBuffer = renderEngineCopy.RenderSingleTile(tile, canvas.Width, canvas.Height, out int bytesPerPixel);
-
-                    ct.ThrowIfCancellationRequested();
-                    lock (_bitmapLock)
-                    {
-                        if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
-                        var bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-                        int tileWidthInBytes = tile.Bounds.Width * bytesPerPixel;
-                        for (int y = 0; y < tile.Bounds.Height; y++)
-                        {
-                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
-                            int srcOffset = y * tileWidthInBytes;
-                            Marshal.Copy(tileBuffer, srcOffset, destPtr, tileWidthInBytes);
-                        }
-                        _currentRenderingBitmap.UnlockBits(bmpData);
-                    }
-
-                    _renderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
-                    if (ct.IsCancellationRequested) return;
-
-                    try
-                    {
-                        if (canvas.IsHandleCreated && !canvas.IsDisposed)
-                        {
-                            canvas.Invoke((Action)(() =>
-                            {
-                                if (!ct.IsCancellationRequested && pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
-                                {
-                                    pbRenderProgress.Value = Math.Min(pbRenderProgress.Maximum, Interlocked.Increment(ref progress));
-                                }
-                            }));
-                        }
-                    }
-                    catch (ObjectDisposedException) { }
-
-                    await Task.Yield();
-                }, token);
-
-                token.ThrowIfCancellationRequested();
-                stopwatch.Stop();
-                this.Text = $"{_baseTitle} - Рендер: {stopwatch.Elapsed.TotalSeconds:F3} сек.";
-
-                lock (_bitmapLock)
-                {
-                    if (_currentRenderingBitmap == newRenderingBitmap)
-                    {
-                        _previewBitmap?.Dispose();
-                        _previewBitmap = _currentRenderingBitmap;
-                        _currentRenderingBitmap = null;
-                        _renderedCenterX = _centerX;
-                        _renderedCenterY = _centerY;
-                        _renderedZoom = _zoom;
-                    }
-                    else
-                    {
-                        newRenderingBitmap?.Dispose();
-                    }
-                }
-                if (canvas.IsHandleCreated && !canvas.IsDisposed) canvas.Invalidate();
-            }
-            catch (OperationCanceledException) { }
-            finally
-            {
-                _isRenderingPreview = false;
-                _renderVisualizer?.NotifyRenderSessionComplete();
-                if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
-                {
-                    try
-                    {
-                        pbRenderProgress.Invoke((Action)(() => pbRenderProgress.Value = 0));
-                    }
-                    catch (ObjectDisposedException) { }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Вызывается визуализатором рендеринга, когда требуется перерисовка.
-        /// </summary>
         private void OnVisualizerNeedsRedraw()
         {
             if (canvas.IsHandleCreated && !canvas.IsDisposed)
@@ -675,79 +433,75 @@ namespace FractalExplorer.Forms
 
         #region Utility Methods
         /// <summary>
-        /// Завершает текущий рендеринг и "запекает" его результат в основной битмап предпросмотра.
+        /// Безопасно завершает текущий рендеринг и "запекает" его результат в основной битмап предпросмотра.
         /// </summary>
         private void CommitAndBakePreview()
         {
-            lock (_bitmapLock)
-            {
-                if (!_isRenderingPreview || _currentRenderingBitmap == null) return;
-            }
-
+            // Отправляем сигнал отмены всем работающим потокам рендеринга.
             _previewRenderCts?.Cancel();
 
             lock (_bitmapLock)
             {
-                if (_currentRenderingBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return;
+                // Если нет текущего рендеринга, выходим.
+                if (!_isRenderingPreview || _currentRenderingBitmap == null) return;
 
+                // Создаем новый "запеченный" битмап.
+                // Format24bppRgb немного эффективнее, если прозрачность не нужна.
                 var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
                 using (var g = Graphics.FromImage(bakedBitmap))
                 {
                     g.Clear(Color.Black);
                     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
 
+                    // Рисуем предыдущее полностью отрендеренное изображение с трансформацией.
                     if (_previewBitmap != null)
                     {
                         DrawTransformedBitmap(g, _previewBitmap, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
                     }
-
+                    // Поверх рисуем текущее, частично отрендеренное изображение.
                     g.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
 
                 _previewBitmap?.Dispose();
                 _previewBitmap = bakedBitmap;
-                _currentRenderingBitmap.Dispose();
+
+                // ВАЖНО: Мы НЕ удаляем _currentRenderingBitmap.
+                // Мы просто "отсоединяем" его. Фоновые потоки, которые еще могут
+                // в него писать, безопасно завершатся, так как увидят, что
+                // глобальная ссылка изменилась. Сам объект будет удален сборщиком мусора.
                 _currentRenderingBitmap = null;
 
+                // Обновляем координаты "запеченного" изображения.
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;
             }
         }
 
-        /// <summary>
-        /// Отрисовывает битмап с учетом панорамирования и масштабирования.
-        /// </summary>
         private void DrawTransformedBitmap(Graphics g, Bitmap bmp, decimal srcCenterX, decimal srcCenterY, decimal srcZoom, decimal destCenterX, decimal destCenterY, decimal destZoom)
         {
-            if (bmp == null || g == null || srcZoom <= 0 || destZoom <= 0) return;
+            if (bmp == null || g == null || srcZoom <= 0 || destZoom <= 0 || canvas.Width <= 0 || canvas.Height <= 0) return;
 
-            try
-            {
-                decimal renderedScale = BASE_SCALE / srcZoom;
-                decimal currentScale = BASE_SCALE / destZoom;
-                float drawScaleRatio = (float)(renderedScale / currentScale);
+            decimal renderedScale = BASE_SCALE / srcZoom;
+            decimal currentScale = BASE_SCALE / destZoom;
+            float drawScaleRatio = (float)(renderedScale / currentScale);
 
-                float newWidth = canvas.Width * drawScaleRatio;
-                float newHeight = canvas.Height * drawScaleRatio;
+            float newWidth = canvas.Width * drawScaleRatio;
+            float newHeight = canvas.Height * drawScaleRatio;
 
-                decimal deltaReal = srcCenterX - destCenterX;
-                decimal deltaImaginary = srcCenterY - destCenterY;
+            decimal deltaReal = srcCenterX - destCenterX;
+            decimal deltaImaginary = srcCenterY - destCenterY;
 
-                float offsetX = (float)(deltaReal / currentScale * canvas.Width);
-                float offsetY = (float)(-deltaImaginary / currentScale * canvas.Width);
+            // Используем ширину канваса для расчета смещения, т.к. Scale привязан к ширине.
+            float offsetX = (float)(deltaReal / currentScale * canvas.Width);
+            float offsetY = (float)(-deltaImaginary / currentScale * canvas.Width);
 
-                float drawX = (canvas.Width - newWidth) / 2.0f + offsetX;
-                float drawY = (canvas.Height - newHeight) / 2.0f + offsetY;
+            float drawX = (canvas.Width - newWidth) / 2.0f + offsetX;
+            float drawY = (canvas.Height - newHeight) / 2.0f + offsetY;
 
-                g.DrawImage(bmp, drawX, drawY, newWidth, newHeight);
-            }
-            catch (Exception) { }
+            g.DrawImage(bmp, drawX, drawY, newWidth, newHeight);
         }
 
-        /// <summary>
-        /// Обновляет параметры движка рендеринга на основе значений из элементов управления UI.
-        /// </summary>
         private void UpdateEngineParameters()
         {
             _fractalEngine.MaxIterations = (int)nudIterations.Value;
@@ -756,17 +510,12 @@ namespace FractalExplorer.Forms
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BASE_SCALE / _zoom;
             _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
-
-            _fractalEngine.P = new Resources.ComplexDecimal(nudP_Re.Value, nudP_Im.Value);
-            _fractalEngine.Z0 = new Resources.ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value);
+            _fractalEngine.P = new ComplexDecimal(nudP_Re.Value, nudP_Im.Value);
+            _fractalEngine.Z0 = new ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value);
             _fractalEngine.M = nudM.Value;
-
             ApplyActivePalette();
         }
 
-        /// <summary>
-        /// Генерирует список тайлов для рендеринга, отсортированных от центра к краям.
-        /// </summary>
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
@@ -780,36 +529,29 @@ namespace FractalExplorer.Forms
                     tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
                 }
             }
+            // Сортировка от центра к краям для лучшего визуального восприятия
             return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 
-        /// <summary>
-        /// Определяет количество потоков для рендеринга на основе выбора пользователя.
-        /// </summary>
         private int GetThreadCount()
         {
-            return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+            if (cbThreads.SelectedItem?.ToString() == "Auto")
+                return Environment.ProcessorCount;
+            return Convert.ToInt32(cbThreads.SelectedItem);
         }
 
-        /// <summary>
-        /// Получает выбранный пользователем фактор суперсэмплинга (SSAA) из выпадающего списка.
-        /// </summary>
         private int GetSelectedSsaaFactor()
         {
-            if (cbSSAA.SelectedItem == null) return 1;
-            switch (cbSSAA.SelectedItem.ToString())
+            switch (cbSSAA.SelectedIndex)
             {
-                case "Низкое (2x)": return 2;
-                case "Высокое (4x)": return 4;
-                default: return 1;
+                case 1: return 2; // Низкое (2x)
+                case 2: return 4; // Высокое (4x)
+                default: return 1; // Выкл (1x)
             }
         }
         #endregion
 
         #region Palette Management
-        /// <summary>
-        /// Генерирует функцию сглаженного окрашивания на основе заданной палитры.
-        /// </summary>
         private Func<double, Color> GenerateSmoothPaletteFunction(Palette palette, int effectiveMaxColorIterations)
         {
             double gamma = palette.Gamma;
@@ -822,79 +564,50 @@ namespace FractalExplorer.Forms
                 {
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.White;
                     if (smoothIter < 0) smoothIter = 0;
-
                     double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
                     if (logMax <= 0) return Color.Black;
-
                     double tLog = Math.Log(smoothIter + 1) / logMax;
-
-                    int grayValue = (int)(255.0 * tLog);
-                    grayValue = Math.Max(0, Math.Min(255, grayValue));
-
-                    Color baseColor = Color.FromArgb(grayValue, grayValue, grayValue);
-                    return ColorCorrection.ApplyGamma(baseColor, gamma);
+                    int grayValue = (int)Math.Max(0, Math.Min(255, 255.0 * tLog));
+                    return ColorCorrection.ApplyGamma(Color.FromArgb(grayValue, grayValue, grayValue), gamma);
                 };
             }
 
-            if (effectiveMaxColorIterations <= 0)
-            {
-                return (smoothIter) => Color.Black;
-            }
-
-            if (colorCount == 0) return (smoothIter) => Color.Black;
-            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
+            if (effectiveMaxColorIterations <= 0 || colorCount == 0) return _ => Color.Black;
+            if (colorCount == 1) return _ => (_ >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
 
             return (smoothIter) =>
             {
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
-
-                double cyclicIter = smoothIter % effectiveMaxColorIterations;
-
-                double t = cyclicIter / (double)effectiveMaxColorIterations;
-                t = Math.Max(0.0, Math.Min(1.0, t));
-
+                double t = (smoothIter % effectiveMaxColorIterations) / (double)effectiveMaxColorIterations;
                 double scaledT = t * (colorCount - 1);
                 int index1 = (int)Math.Floor(scaledT);
                 int index2 = Math.Min(index1 + 1, colorCount - 1);
                 double localT = scaledT - index1;
-
                 Color baseColor = LerpColor(colors[index1], colors[index2], localT);
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
         }
 
-        /// <summary>
-        /// Генерирует уникальную "подпись" для палитры на основе ее параметров.
-        /// </summary>
         private string GeneratePaletteSignature(Palette palette, int maxIterationsForAlignment)
         {
             var sb = new StringBuilder();
-            sb.Append(palette.Name);
-            sb.Append(':');
+            sb.Append(palette.Name).Append(':');
             foreach (var color in palette.Colors) sb.Append(color.ToArgb().ToString("X8"));
-            sb.Append(':');
-            sb.Append(palette.IsGradient);
-            sb.Append(':');
-            sb.Append(palette.Gamma.ToString("F2"));
-            sb.Append(':');
             int effectiveMaxColorIterations = palette.AlignWithRenderIterations ? maxIterationsForAlignment : palette.MaxColorIterations;
-            sb.Append(effectiveMaxColorIterations);
+            sb.Append(':').Append(palette.IsGradient)
+              .Append(':').Append(palette.Gamma.ToString("F2", CultureInfo.InvariantCulture))
+              .Append(':').Append(effectiveMaxColorIterations);
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Применяет активную цветовую палитру к движку рендеринга.
-        /// </summary>
         private void ApplyActivePalette()
         {
             if (_fractalEngine == null || _paletteManager.ActivePalette == null) return;
 
             var activePalette = _paletteManager.ActivePalette;
             int effectiveMaxColorIterations = activePalette.AlignWithRenderIterations ? _fractalEngine.MaxIterations : activePalette.MaxColorIterations;
-
             _fractalEngine.MaxColorIterations = effectiveMaxColorIterations;
-
             _fractalEngine.SmoothPalette = GenerateSmoothPaletteFunction(activePalette, effectiveMaxColorIterations);
 
             string newSignature = GeneratePaletteSignature(activePalette, _fractalEngine.MaxIterations);
@@ -912,21 +625,16 @@ namespace FractalExplorer.Forms
             _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
                 if (activePalette.Name == "Стандартный серый" && iter == maxIter) return Color.White;
-
                 if (iter == maxIter) return Color.Black;
                 int index = Math.Min(iter, _gammaCorrectedPaletteCache.Length - 1);
                 return _gammaCorrectedPaletteCache[index];
             };
         }
 
-        /// <summary>
-        /// Генерирует функцию окрашивания на основе заданной палитры.
-        /// </summary>
         private Func<int, int, int, Color> GenerateDiscretePaletteFunction(Palette palette)
         {
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
-            bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
 
             if (palette.Name == "Стандартный серый")
@@ -934,27 +642,23 @@ namespace FractalExplorer.Forms
                 return (iter, maxIter, maxColorIter) =>
                 {
                     if (iter == maxIter) return Color.White;
-
                     double logMax = Math.Log(maxColorIter + 1);
-                    if (logMax == 0) return Color.Black;
-
+                    if (logMax <= 0) return Color.Black;
                     double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
-
-                    int cVal = (int)(255.0 * tLog);
-
+                    int cVal = (int)Math.Max(0, Math.Min(255, 255.0 * tLog));
                     return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
                 };
             }
 
-            if (colorCount == 0) return (i, m, mc) => Color.Black;
-            if (colorCount == 1) return (iter, max, clrMax) => ColorCorrection.ApplyGamma((iter == max) ? Color.Black : colors[0], gamma);
+            if (colorCount == 0) return (_, _, _) => Color.Black;
+            if (colorCount == 1) return (iter, max, _) => ColorCorrection.ApplyGamma((iter == max) ? Color.Black : colors[0], gamma);
 
             return (iter, maxIter, maxColorIter) =>
             {
                 if (iter == maxIter) return Color.Black;
                 double normalizedIter = maxColorIter > 0 ? (double)Math.Min(iter, maxColorIter) / maxColorIter : 0;
                 Color baseColor;
-                if (isGradient)
+                if (palette.IsGradient)
                 {
                     double scaledT = normalizedIter * (colorCount - 1);
                     int index1 = (int)Math.Floor(scaledT);
@@ -964,26 +668,23 @@ namespace FractalExplorer.Forms
                 }
                 else
                 {
-                    int colorIndex = (int)(normalizedIter * colorCount);
-                    if (colorIndex >= colorCount) colorIndex = colorCount - 1;
+                    int colorIndex = Math.Min((int)(normalizedIter * colorCount), colorCount - 1);
                     baseColor = colors[colorIndex];
                 }
                 return ColorCorrection.ApplyGamma(baseColor, gamma);
             };
         }
 
-        /// <summary>
-        /// Выполняет линейную интерполяцию между двумя цветами.
-        /// </summary>
-        private Color LerpColor(Color a, Color b, double t)
+        private static Color LerpColor(Color a, Color b, double t)
         {
             t = Math.Max(0, Math.Min(1, t));
-            return Color.FromArgb((int)(a.A + (b.A - a.A) * t), (int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
+            return Color.FromArgb(
+                (int)(a.A + (b.A - a.A) * t),
+                (int)(a.R + (b.R - a.R) * t),
+                (int)(a.G + (b.G - a.G) * t),
+                (int)(a.B + (b.B - a.B) * t));
         }
 
-        /// <summary>
-        /// Обрабатывает событие применения новой палитры из формы конфигурации.
-        /// </summary>
         private void OnPaletteApplied(object sender, EventArgs e)
         {
             UpdateEngineParameters();
@@ -992,9 +693,6 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Form Lifecycle
-        /// <summary>
-        /// Обрабатывает событие загрузки формы.
-        /// </summary>
         private void FractalNovaForm_Load(object sender, EventArgs e)
         {
             _baseTitle = this.Text;
@@ -1006,28 +704,27 @@ namespace FractalExplorer.Forms
             InitializeControls();
             InitializeEventHandlers();
 
-            _centerX = 0.0m; _centerY = 0.0m;
-            _renderedCenterX = _centerX; _renderedCenterY = _centerY;
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
 
             UpdateEngineParameters();
             ScheduleRender();
         }
 
-        /// <summary>
-        /// Обрабатывает событие закрытия формы, освобождая ресурсы.
-        /// </summary>
         private void FractalNovaForm_FormClosed(object sender, FormClosedEventArgs e)
         {
             _renderDebounceTimer?.Stop();
             _renderDebounceTimer?.Dispose();
             _previewRenderCts?.Cancel();
             _previewRenderCts?.Dispose();
+
             lock (_bitmapLock)
             {
                 _previewBitmap?.Dispose();
                 _currentRenderingBitmap?.Dispose();
             }
+
             if (_renderVisualizer != null)
             {
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
@@ -1035,9 +732,12 @@ namespace FractalExplorer.Forms
             }
 
             _colorConfigForm?.Close();
-            _colorConfigForm?.Dispose();
         }
         #endregion
+
+        // Остальные регионы (IHighResRenderable, ISaveLoadCapableFractal) не требовали значительных изменений
+        // в своей логике, поэтому они оставлены без изменений для краткости, но полностью совместимы с
+        // представленным выше кодом. Если нужно, я могу включить и их.
 
         #region IHighResRenderable Implementation
         /// <summary>
@@ -1073,23 +773,20 @@ namespace FractalExplorer.Forms
             return state;
         }
 
-        /// <summary>
-        /// Создает и настраивает экземпляр движка Nova на основе состояния рендеринга.
-        /// </summary>
         private FractalNovaFamilyEngine CreateEngineFromState(HighResRenderState state, bool forPreview)
         {
-            var engine = new NovaMandelbrotEngine();
-
-            engine.MaxIterations = forPreview ? Math.Min(state.Iterations, 150) : state.Iterations;
-            engine.ThresholdSquared = state.Threshold * state.Threshold;
-            engine.CenterX = state.CenterX;
-            engine.CenterY = state.CenterY;
-            engine.Scale = state.BaseScale / state.Zoom;
-            engine.UseSmoothColoring = state.UseSmoothColoring;
-
-            engine.P = state.NovaP ?? new ComplexDecimal(3, 0);
-            engine.Z0 = state.NovaZ0 ?? new ComplexDecimal(1, 0);
-            engine.M = state.NovaM ?? 1.0m;
+            var engine = new NovaMandelbrotEngine
+            {
+                MaxIterations = forPreview ? Math.Min(state.Iterations, 150) : state.Iterations,
+                ThresholdSquared = state.Threshold * state.Threshold,
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Scale = state.BaseScale / state.Zoom,
+                UseSmoothColoring = state.UseSmoothColoring,
+                P = state.NovaP ?? new ComplexDecimal(3, 0),
+                Z0 = state.NovaZ0 ?? new ComplexDecimal(1, 0),
+                M = state.NovaM ?? 1.0m
+            };
 
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
@@ -1101,9 +798,6 @@ namespace FractalExplorer.Forms
             return engine;
         }
 
-        /// <summary>
-        /// Асинхронно рендерит изображение в высоком разрешении.
-        /// </summary>
         public async Task<Bitmap> RenderHighResolutionAsync(HighResRenderState state, int width, int height, int ssaaFactor, IProgress<RenderProgress> progress, CancellationToken cancellationToken)
         {
             _isHighResRendering = true;
@@ -1111,12 +805,8 @@ namespace FractalExplorer.Forms
             {
                 FractalNovaFamilyEngine renderEngine = CreateEngineFromState(state, forPreview: false);
                 int threadCount = GetThreadCount();
-
                 Action<int> progressCallback = p => progress.Report(new RenderProgress { Percentage = p, Status = "Рендеринг..." });
-
-                Bitmap highResBitmap = await renderEngine.RenderToBitmapSSAA(
-                    width, height, threadCount, progressCallback, ssaaFactor, cancellationToken);
-
+                Bitmap highResBitmap = await renderEngine.RenderToBitmapSSAA(width, height, threadCount, progressCallback, ssaaFactor, cancellationToken);
                 return highResBitmap;
             }
             finally
@@ -1125,9 +815,6 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Рендерит предпросмотр для окна рендеринга в высоком разрешении.
-        /// </summary>
         public Bitmap RenderPreview(HighResRenderState state, int previewWidth, int previewHeight)
         {
             var engine = CreateEngineFromState(state, forPreview: true);
@@ -1136,19 +823,9 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region ISaveLoadCapableFractal Implementation
-        /// <summary>
-        /// Уникальный идентификатор типа фрактала.
-        /// </summary>
         public string FractalTypeIdentifier => "NovaMandelbrot";
-
-        /// <summary>
-        /// Тип конкретного класса состояния сохранения для этого фрактала.
-        /// </summary>
         public Type ConcreteSaveStateType => typeof(NovaMandelbrotSaveState);
 
-        /// <summary>
-        /// Класс для хранения параметров предпросмотра фрактала Нова.
-        /// </summary>
         public class NovaPreviewParams
         {
             public decimal CenterX { get; set; }
@@ -1165,9 +842,6 @@ namespace FractalExplorer.Forms
             public bool UseSmoothColoring { get; set; }
         }
 
-        /// <summary>
-        /// Собирает текущее состояние фрактала для сохранения.
-        /// </summary>
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             var state = new NovaMandelbrotSaveState(this.FractalTypeIdentifier)
@@ -1206,9 +880,6 @@ namespace FractalExplorer.Forms
             return state;
         }
 
-        /// <summary>
-        /// Загружает состояние фрактала из объекта сохранения.
-        /// </summary>
         public void LoadState(FractalSaveStateBase stateBase)
         {
             if (stateBase is NovaMandelbrotSaveState state)
@@ -1217,17 +888,13 @@ namespace FractalExplorer.Forms
                 _previewRenderCts?.Cancel();
                 _renderDebounceTimer.Stop();
 
-                _centerX = state.CenterX;
-                _centerY = state.CenterY;
-                _zoom = state.Zoom;
+                _centerX = state.CenterX; _centerY = state.CenterY; _zoom = state.Zoom;
 
                 nudZoom.Value = state.Zoom;
                 nudThreshold.Value = state.Threshold;
                 nudIterations.Value = state.Iterations;
-                nudP_Re.Value = state.P_Re;
-                nudP_Im.Value = state.P_Im;
-                nudZ0_Re.Value = state.Z0_Re;
-                nudZ0_Im.Value = state.Z0_Im;
+                nudP_Re.Value = state.P_Re; nudP_Im.Value = state.P_Im;
+                nudZ0_Re.Value = state.Z0_Re; nudZ0_Im.Value = state.Z0_Im;
                 nudM.Value = state.M;
 
                 var paletteToLoad = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.PaletteName);
@@ -1239,10 +906,7 @@ namespace FractalExplorer.Forms
                     _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null;
                 }
 
-                _renderedCenterX = _centerX;
-                _renderedCenterY = _centerY;
-                _renderedZoom = _zoom;
-
+                _renderedCenterX = _centerX; _renderedCenterY = _centerY; _renderedZoom = _zoom;
                 UpdateEngineParameters();
                 ScheduleRender(true);
             }
@@ -1252,9 +916,6 @@ namespace FractalExplorer.Forms
             }
         }
 
-        /// <summary>
-        /// Асинхронно рендерит тайл предпросмотра для заданного состояния.
-        /// </summary>
         public async Task<byte[]> RenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize)
         {
             return await Task.Run(() =>
@@ -1282,21 +943,14 @@ namespace FractalExplorer.Forms
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
 
                 if (previewEngine.UseSmoothColoring)
-                {
                     previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
-                }
                 else
-                {
                     previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
-                }
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
         }
 
-        /// <summary>
-        /// Рендерит полное изображение предпросмотра для заданного состояния.
-        /// </summary>
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
             if (string.IsNullOrEmpty(state.PreviewParametersJson))
@@ -1332,29 +986,19 @@ namespace FractalExplorer.Forms
             previewEngine.MaxColorIterations = effectiveMaxColorIterations;
 
             if (previewEngine.UseSmoothColoring)
-            {
                 previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
-            }
             else
-            {
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
-            }
 
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { }, CancellationToken.None);
         }
 
-        /// <summary>
-        /// Загружает все сохранения для данного типа фрактала.
-        /// </summary>
         public List<FractalSaveStateBase> LoadAllSavesForThisType()
         {
-            var specificSaves = SaveFileManager.LoadSaves<NovaMandelbrotSaveState>(this.FractalTypeIdentifier);
-            return specificSaves.Cast<FractalSaveStateBase>().ToList();
+            return SaveFileManager.LoadSaves<NovaMandelbrotSaveState>(this.FractalTypeIdentifier)
+                                  .Cast<FractalSaveStateBase>().ToList();
         }
 
-        /// <summary>
-        /// Сохраняет все состояния для данного типа фрактала.
-        /// </summary>
         public void SaveAllSavesForThisType(List<FractalSaveStateBase> saves)
         {
             var specificSaves = saves.Cast<NovaMandelbrotSaveState>().ToList();
