@@ -36,20 +36,12 @@
             pictureBoxPreview = new PictureBox();
             richTextBoxDescription = new RichTextBox();
             btnLaunchSelected = new Button();
-            groupBoxSystemInfo = new GroupBox();
-            tblSystemInfo = new TableLayoutPanel();
-            lblPowerValue = new Label();
-            lblTempLabel = new Label();
-            lblPowerLabel = new Label();
-            lblTempValue = new Label();
             ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
             splitContainerMain.Panel1.SuspendLayout();
             splitContainerMain.Panel2.SuspendLayout();
             splitContainerMain.SuspendLayout();
             pnlDetails.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).BeginInit();
-            groupBoxSystemInfo.SuspendLayout();
-            tblSystemInfo.SuspendLayout();
             SuspendLayout();
             // 
             // splitContainerMain
@@ -88,7 +80,6 @@
             pnlDetails.Controls.Add(pictureBoxPreview, 0, 1);
             pnlDetails.Controls.Add(richTextBoxDescription, 0, 2);
             pnlDetails.Controls.Add(btnLaunchSelected, 0, 4);
-            pnlDetails.Controls.Add(groupBoxSystemInfo, 0, 3);
             pnlDetails.Dock = DockStyle.Fill;
             pnlDetails.Location = new Point(0, 0);
             pnlDetails.Name = "pnlDetails";
@@ -97,7 +88,7 @@
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 8F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
             pnlDetails.Size = new Size(556, 521);
             pnlDetails.TabIndex = 0;
@@ -119,7 +110,7 @@
             pictureBoxPreview.Dock = DockStyle.Fill;
             pictureBoxPreview.Location = new Point(8, 48);
             pictureBoxPreview.Name = "pictureBoxPreview";
-            pictureBoxPreview.Size = new Size(540, 164);
+            pictureBoxPreview.Size = new Size(540, 200);
             pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBoxPreview.TabIndex = 1;
             pictureBoxPreview.TabStop = false;
@@ -130,10 +121,10 @@
             richTextBoxDescription.BorderStyle = BorderStyle.None;
             richTextBoxDescription.Dock = DockStyle.Fill;
             richTextBoxDescription.Font = new Font("Segoe UI", 10F);
-            richTextBoxDescription.Location = new Point(8, 218);
+            richTextBoxDescription.Location = new Point(8, 254);
             richTextBoxDescription.Name = "richTextBoxDescription";
             richTextBoxDescription.ReadOnly = true;
-            richTextBoxDescription.Size = new Size(540, 164);
+            richTextBoxDescription.Size = new Size(540, 200);
             richTextBoxDescription.TabIndex = 2;
             richTextBoxDescription.Text = "";
             // 
@@ -149,86 +140,6 @@
             btnLaunchSelected.Text = "Запустить";
             btnLaunchSelected.UseVisualStyleBackColor = true;
             btnLaunchSelected.Click += btnLaunchSelected_Click;
-            // 
-            // groupBoxSystemInfo
-            // 
-            groupBoxSystemInfo.Controls.Add(tblSystemInfo);
-            groupBoxSystemInfo.Dock = DockStyle.Fill;
-            groupBoxSystemInfo.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            groupBoxSystemInfo.Location = new Point(8, 388);
-            groupBoxSystemInfo.Name = "groupBoxSystemInfo";
-            groupBoxSystemInfo.Size = new Size(540, 74);
-            groupBoxSystemInfo.TabIndex = 4;
-            groupBoxSystemInfo.TabStop = false;
-            groupBoxSystemInfo.Text = "Мониторинг системы";
-            groupBoxSystemInfo.Visible = false;
-            // 
-            // tblSystemInfo
-            // 
-            tblSystemInfo.ColumnCount = 2;
-            tblSystemInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180F));
-            tblSystemInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tblSystemInfo.Controls.Add(lblPowerValue, 1, 1);
-            tblSystemInfo.Controls.Add(lblTempLabel, 0, 0);
-            tblSystemInfo.Controls.Add(lblPowerLabel, 0, 1);
-            tblSystemInfo.Controls.Add(lblTempValue, 1, 0);
-            tblSystemInfo.Dock = DockStyle.Fill;
-            tblSystemInfo.Font = new Font("Segoe UI", 9F);
-            tblSystemInfo.Location = new Point(3, 19);
-            tblSystemInfo.Name = "tblSystemInfo";
-            tblSystemInfo.RowCount = 2;
-            tblSystemInfo.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tblSystemInfo.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tblSystemInfo.Size = new Size(534, 52);
-            tblSystemInfo.TabIndex = 0;
-            // 
-            // lblPowerValue
-            // 
-            lblPowerValue.AutoSize = true;
-            lblPowerValue.Dock = DockStyle.Fill;
-            lblPowerValue.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            lblPowerValue.Location = new Point(183, 26);
-            lblPowerValue.Name = "lblPowerValue";
-            lblPowerValue.Size = new Size(348, 26);
-            lblPowerValue.TabIndex = 3;
-            lblPowerValue.Text = "N/A";
-            lblPowerValue.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // lblTempLabel
-            // 
-            lblTempLabel.AutoSize = true;
-            lblTempLabel.Dock = DockStyle.Fill;
-            lblTempLabel.Font = new Font("Segoe UI", 9.75F);
-            lblTempLabel.Location = new Point(3, 0);
-            lblTempLabel.Name = "lblTempLabel";
-            lblTempLabel.Size = new Size(174, 26);
-            lblTempLabel.TabIndex = 0;
-            lblTempLabel.Text = "Температура процессора:";
-            lblTempLabel.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // lblPowerLabel
-            // 
-            lblPowerLabel.AutoSize = true;
-            lblPowerLabel.Dock = DockStyle.Fill;
-            lblPowerLabel.Font = new Font("Segoe UI", 9.75F);
-            lblPowerLabel.Location = new Point(3, 26);
-            lblPowerLabel.Name = "lblPowerLabel";
-            lblPowerLabel.Size = new Size(174, 26);
-            lblPowerLabel.TabIndex = 1;
-            lblPowerLabel.Text = "Потребляемая мощность:";
-            lblPowerLabel.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // lblTempValue
-            // 
-            lblTempValue.AutoSize = true;
-            lblTempValue.Dock = DockStyle.Fill;
-            lblTempValue.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
-            lblTempValue.Location = new Point(183, 0);
-            lblTempValue.Name = "lblTempValue";
-            lblTempValue.Size = new Size(348, 26);
-            lblTempValue.TabIndex = 2;
-            lblTempValue.Text = "N/A";
-            lblTempValue.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // LauncherHubForm
             // 
@@ -249,9 +160,6 @@
             pnlDetails.ResumeLayout(false);
             pnlDetails.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).EndInit();
-            groupBoxSystemInfo.ResumeLayout(false);
-            tblSystemInfo.ResumeLayout(false);
-            tblSystemInfo.PerformLayout();
             ResumeLayout(false);
 
         }
@@ -265,11 +173,5 @@
         private System.Windows.Forms.PictureBox pictureBoxPreview;
         private System.Windows.Forms.RichTextBox richTextBoxDescription;
         private System.Windows.Forms.Button btnLaunchSelected;
-        private System.Windows.Forms.GroupBox groupBoxSystemInfo;
-        private System.Windows.Forms.TableLayoutPanel tblSystemInfo;
-        private System.Windows.Forms.Label lblPowerValue;
-        private System.Windows.Forms.Label lblTempLabel;
-        private System.Windows.Forms.Label lblPowerLabel;
-        private System.Windows.Forms.Label lblTempValue;
     }
 }
