@@ -48,16 +48,6 @@ namespace FractalExplorer
         private FractalInfo _selectedFractal;
 
         /// <summary>
-        /// Таймер для периодического обновления информации о системе в UI.
-        /// </summary>
-        private readonly System.Windows.Forms.Timer _uiUpdateTimer;
-
-        /// <summary>
-        /// Флаг, предотвращающий одновременный запуск нескольких обновлений.
-        /// </summary>
-        private bool _isUpdatingInfo = false;
-
-        /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="LauncherHubForm"/>.
         /// </summary>
         public LauncherHubForm()
