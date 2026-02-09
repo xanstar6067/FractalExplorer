@@ -1,4 +1,3 @@
-using CPU_Benchmark;
 using FractalExplorer.Forms;
 using FractalExplorer.Forms.Fractals;
 using FractalExplorer.Projects;
@@ -49,11 +48,6 @@ namespace FractalExplorer
         private FractalInfo _selectedFractal;
 
         /// <summary>
-        /// Отвечает за получение динамических данных с сенсоров (температура, мощность).
-        /// </summary>
-        private readonly SystemMonitor _systemMonitor;
-
-        /// <summary>
         /// Таймер для периодического обновления информации о системе в UI.
         /// </summary>
         private readonly System.Windows.Forms.Timer _uiUpdateTimer;
@@ -71,7 +65,6 @@ namespace FractalExplorer
             InitializeComponent();
             _fractalCatalog = new List<FractalInfo>();
 
-            _systemMonitor = new SystemMonitor();
             _uiUpdateTimer = new System.Windows.Forms.Timer { Interval = 1500 }; // Интервал 1.5 секунды
             _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
 
@@ -88,7 +81,6 @@ namespace FractalExplorer
         /// </summary>
         private void LauncherHubForm_Load(object sender, EventArgs e)
         {
-            _systemMonitor.Initialize();
             // Запускаем первое обновление сразу, не дожидаясь тика таймера.
             UiUpdateTimer_Tick(this, EventArgs.Empty);
             _uiUpdateTimer.Start();
@@ -100,7 +92,7 @@ namespace FractalExplorer
         private void LauncherHubForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             _uiUpdateTimer.Stop();
-            _systemMonitor.Dispose();
+
         }
 
         /// <summary>
@@ -108,32 +100,7 @@ namespace FractalExplorer
         /// </summary>
         private async void UiUpdateTimer_Tick(object sender, EventArgs e)
         {
-            if (_isUpdatingInfo) return; // Предотвращаем повторный вход
-
-            try
-            {
-                _isUpdatingInfo = true;
-
-                // Выполняем опрос сенсоров в фоновом потоке, чтобы не блокировать UI
-                var metrics = await Task.Run(() =>
-                {
-                    float? temp = _systemMonitor.GetCpuTemperature();
-                    float? power = _systemMonitor.GetCpuPackagePower();
-
-                    string tempString = temp.HasValue ? $"{temp.Value:F1} °C" : "N/A";
-                    string powerString = power.HasValue ? $"{power.Value:F1} Вт" : "N/A";
-
-                    return (Temp: tempString, Power: powerString);
-                });
-
-                // Обновляем элементы UI в основном потоке
-                lblTempValue.Text = metrics.Temp;
-                lblPowerValue.Text = metrics.Power;
-            }
-            finally
-            {
-                _isUpdatingInfo = false;
-            }
+           
         }
 
         /// <summary>
