@@ -65,43 +65,11 @@ namespace FractalExplorer
             InitializeComponent();
             _fractalCatalog = new List<FractalInfo>();
 
-            _uiUpdateTimer = new System.Windows.Forms.Timer { Interval = 1500 }; // Интервал 1.5 секунды
-            _uiUpdateTimer.Tick += UiUpdateTimer_Tick;
-
-            this.Load += LauncherHubForm_Load;
-            this.FormClosing += LauncherHubForm_FormClosing;
-
             InitializeFractalCatalog();
             PopulateTreeView();
             DisplayAppVersionInTitle();
         }
 
-        /// <summary>
-        /// Обработчик события загрузки формы. Инициализирует монитор и запускает таймер.
-        /// </summary>
-        private void LauncherHubForm_Load(object sender, EventArgs e)
-        {
-            // Запускаем первое обновление сразу, не дожидаясь тика таймера.
-            UiUpdateTimer_Tick(this, EventArgs.Empty);
-            _uiUpdateTimer.Start();
-        }
-
-        /// <summary>
-        /// Обработчик события закрытия формы. Останавливает таймер и освобождает ресурсы.
-        /// </summary>
-        private void LauncherHubForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            _uiUpdateTimer.Stop();
-
-        }
-
-        /// <summary>
-        /// Обработчик тика таймера. Асинхронно получает данные с сенсоров и обновляет UI.
-        /// </summary>
-        private async void UiUpdateTimer_Tick(object sender, EventArgs e)
-        {
-           
-        }
 
         /// <summary>
         /// Инициализирует каталог фракталов, добавляя информацию о каждом из них.
