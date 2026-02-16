@@ -89,7 +89,7 @@
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 8F));
-            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 45F));
             pnlDetails.Size = new Size(556, 521);
             pnlDetails.TabIndex = 0;
             // 
@@ -110,7 +110,7 @@
             pictureBoxPreview.Dock = DockStyle.Fill;
             pictureBoxPreview.Location = new Point(8, 48);
             pictureBoxPreview.Name = "pictureBoxPreview";
-            pictureBoxPreview.Size = new Size(540, 200);
+            pictureBoxPreview.Size = new Size(540, 203);
             pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBoxPreview.TabIndex = 1;
             pictureBoxPreview.TabStop = false;
@@ -121,10 +121,10 @@
             richTextBoxDescription.BorderStyle = BorderStyle.None;
             richTextBoxDescription.Dock = DockStyle.Fill;
             richTextBoxDescription.Font = new Font("Segoe UI", 10F);
-            richTextBoxDescription.Location = new Point(8, 254);
+            richTextBoxDescription.Location = new Point(8, 257);
             richTextBoxDescription.Name = "richTextBoxDescription";
             richTextBoxDescription.ReadOnly = true;
-            richTextBoxDescription.Size = new Size(540, 200);
+            richTextBoxDescription.Size = new Size(540, 203);
             richTextBoxDescription.TabIndex = 2;
             richTextBoxDescription.Text = "";
             // 
@@ -133,9 +133,9 @@
             btnLaunchSelected.Dock = DockStyle.Fill;
             btnLaunchSelected.Enabled = false;
             btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            btnLaunchSelected.Location = new Point(8, 468);
+            btnLaunchSelected.Location = new Point(8, 474);
             btnLaunchSelected.Name = "btnLaunchSelected";
-            btnLaunchSelected.Size = new Size(540, 45);
+            btnLaunchSelected.Size = new Size(540, 39);
             btnLaunchSelected.TabIndex = 3;
             btnLaunchSelected.Text = "Запустить";
             btnLaunchSelected.UseVisualStyleBackColor = true;
