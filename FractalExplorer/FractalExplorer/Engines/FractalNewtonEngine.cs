@@ -96,12 +96,17 @@ namespace FractalExplorer.Engines
                 var tokens = tokenizer.Tokenize();
                 var parser = new Parser(tokens);
                 f_ast = parser.Parse();
-                f_deriv_ast = f_ast.Differentiate("z");
+
+                var derivativeExpression = NewtonSymbolicMath.Differentiate(expression, "z");
+                var derivTokenizer = new Tokenizer(derivativeExpression);
+                var derivTokens = derivTokenizer.Tokenize();
+                var derivParser = new Parser(derivTokens);
+                f_deriv_ast = derivParser.Parse();
 
                 // Отладочная информация
                 sb.AppendLine("Исходная функция: f(z) = " + f_ast.ToString());
                 sb.AppendLine("AST f(z): " + f_ast.Print());
-                sb.AppendLine("Производная: f'(z) = " + f_deriv_ast.ToString());
+                sb.AppendLine("Производная AngouriMath: f'(z) = " + derivativeExpression);
                 sb.AppendLine("AST f'(z): " + f_deriv_ast.Print());
 
                 debugInfo = sb.ToString();
