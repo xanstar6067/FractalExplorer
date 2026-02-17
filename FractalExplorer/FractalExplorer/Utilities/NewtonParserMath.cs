@@ -70,6 +70,12 @@ namespace FractalExplorer.Parsers
             }
 
             substituted = substituted.Substitute("i", MathS.i);
+
+            if (!substituted.EvaluableNumerical)
+            {
+                return new Complex(double.NaN, double.NaN);
+            }
+
             Entity numericResult = substituted.EvalNumerical();
             return ToComplex(numericResult);
         }
