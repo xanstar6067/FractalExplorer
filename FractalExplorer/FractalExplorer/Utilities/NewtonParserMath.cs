@@ -74,7 +74,7 @@ namespace FractalExplorer.Parsers
                 if (char.IsLetter(current))
                 {
                     var start = _pos;
-                    while (_pos < _text.Length && char.IsLetterOrDigit(_text[_pos]))
+                    while (_pos < _text.Length && char.IsLetter(_text[_pos]))
                     {
                         _pos++;
                     }
@@ -125,9 +125,9 @@ namespace FractalExplorer.Parsers
                     var current = tokens[i];
                     var next = tokens[i + 1];
 
-                    // Умножение после числа, переменной или закрывающей скобки перед переменной или открывающей скобкой
+                    // Умножение после числа, переменной или закрывающей скобки перед числом, переменной или открывающей скобкой
                     if ((current.Type == TokenType.Number || current.Type == TokenType.Variable || current.Type == TokenType.RightParen) &&
-                        (next.Type == TokenType.Variable || next.Type == TokenType.LeftParen))
+                        (next.Type == TokenType.Number || next.Type == TokenType.Variable || next.Type == TokenType.LeftParen))
                     {
                         result.Add(new Token(TokenType.Operator, "*"));
                     }
@@ -534,15 +534,32 @@ namespace FractalExplorer.Parsers
         /// <returns>Узел выражения.</returns>
         private ExpressionNode ParseTerm()
         {
-            var node = ParseFactor();
+            var node = ParseUnary();
             while (Current.Value == "*" || Current.Value == "/")
             {
                 var op = Current;
                 Advance();
-                var right = ParseFactor();
+                var right = ParseUnary();
                 node = new BinaryOpNode(node, op.Value, right);
             }
             return node;
+        }
+
+        /// <summary>
+        /// Парсит унарные операции. Унарные + и - имеют меньший приоритет,
+        /// чем возведение в степень: выражение -z^2 интерпретируется как -(z^2).
+        /// </summary>
+        /// <returns>Узел выражения.</returns>
+        private ExpressionNode ParseUnary()
+        {
+            var token = Current;
+            if (token.Value == "+" || token.Value == "-")
+            {
+                Advance();
+                return new UnaryOpNode(token.Value, ParseUnary());
+            }
+
+            return ParseFactor();
         }
 
         /// <summary>
@@ -563,19 +580,13 @@ namespace FractalExplorer.Parsers
         }
 
         /// <summary>
-        /// Парсит первичные элементы выражения: числа, переменные, унарные операции, выражения в скобках.
+        /// Парсит первичные элементы выражения: числа, переменные и выражения в скобках.
         /// </summary>
         /// <returns>Узел выражения.</returns>
         /// <exception cref="Exception">Выбрасывается при ошибках парсинга чисел или отсутствии закрывающей скобки.</exception>
         private ExpressionNode ParsePrimary()
         {
             var token = Current;
-            if (token.Value == "+" || token.Value == "-")
-            {
-                Advance();
-                return new UnaryOpNode(token.Value, ParsePrimary());
-            }
-
             if (token.Type == TokenType.Number)
             {
                 Advance();
