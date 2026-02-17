@@ -1,8 +1,5 @@
 ﻿using AngouriMath;
-<<<<<<< ours
 using AngouriMath.Extensions;
-=======
->>>>>>> theirs
 using System.Globalization;
 using System.Numerics;
 
@@ -173,33 +170,4 @@ namespace FractalExplorer.Parsers
             return new AngouriExpressionNode(expression);
         }
     }
-<<<<<<< ours
-=======
-
-    #endregion
-
-    /// <summary>
-    /// Утилиты символьной математики на базе AngouriMath для формул Ньютона.
-    /// </summary>
-    public static class NewtonSymbolicMath
-    {
-        /// <summary>
-        /// Строит символьную производную выражения по переменной.
-        /// </summary>
-        /// <param name="expression">Исходное выражение.</param>
-        /// <param name="varName">Имя переменной дифференцирования.</param>
-        /// <returns>Строка с производной в синтаксисе, совместимом с текущим парсером.</returns>
-        public static string Differentiate(string expression, string varName)
-        {
-            if (string.IsNullOrWhiteSpace(expression))
-            {
-                throw new Exception("Формула не может быть пустой.");
-            }
-
-            var derivative = MathS.FromString(expression).Differentiate(varName).Simplify();
-            return derivative.Stringize().ToLowerInvariant();
-        }
-    }
-
->>>>>>> theirs
 }
