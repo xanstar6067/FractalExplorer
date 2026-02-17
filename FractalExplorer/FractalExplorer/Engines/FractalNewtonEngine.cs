@@ -162,13 +162,12 @@ namespace FractalExplorer.Engines
                     {
                         variables["z"] = z;
                         Complex fValue = f_ast.Evaluate(variables);
-                        if (!IsFiniteComplex(fValue) || fValue.Magnitude < epsilon) break;
+                        if (fValue.Magnitude < epsilon) break;
 
                         Complex fDerivValue = f_deriv_ast.Evaluate(variables);
-                        if (!IsFiniteComplex(fDerivValue) || fDerivValue == Complex.Zero) break;
+                        if (fDerivValue == Complex.Zero) break;
 
                         z -= fValue / fDerivValue;
-                        if (!IsFiniteComplex(z)) break;
                         iter++;
                     }
 
@@ -231,13 +230,12 @@ namespace FractalExplorer.Engines
                     {
                         variables["z"] = z;
                         Complex fValue = f_ast.Evaluate(variables);
-                        if (!IsFiniteComplex(fValue) || fValue.Magnitude < epsilon) break;
+                        if (fValue.Magnitude < epsilon) break;
 
                         Complex fDerivValue = f_deriv_ast.Evaluate(variables);
-                        if (!IsFiniteComplex(fDerivValue) || fDerivValue == Complex.Zero) break;
+                        if (fDerivValue == Complex.Zero) break;
 
                         z -= fValue / fDerivValue;
-                        if (!IsFiniteComplex(z)) break;
                         iter++;
                     }
 
@@ -299,13 +297,12 @@ namespace FractalExplorer.Engines
                     {
                         variables["z"] = z;
                         Complex fValue = f_ast.Evaluate(variables);
-                        if (!IsFiniteComplex(fValue) || fValue.Magnitude < epsilon) break;
+                        if (fValue.Magnitude < epsilon) break;
 
                         Complex fDerivValue = f_deriv_ast.Evaluate(variables);
-                        if (!IsFiniteComplex(fDerivValue) || fDerivValue == Complex.Zero) break;
+                        if (fDerivValue == Complex.Zero) break;
 
                         z -= fValue / fDerivValue;
-                        if (!IsFiniteComplex(z)) break;
                         iter++;
                     }
                     tempColorBuffer[x, y] = GetPixelColor(z, iter);
@@ -451,22 +448,10 @@ namespace FractalExplorer.Engines
                     Complex fValue = f_ast.Evaluate(variables);
                     Complex fDerivValue = f_deriv_ast.Evaluate(variables);
 
-                    if (!IsFiniteComplex(fValue) || !IsFiniteComplex(fDerivValue) || fDerivValue.Magnitude < epsilon / 100)
-                    {
-                        break;
-                    }
+                    if (fDerivValue.Magnitude < epsilon / 100) break;
 
                     Complex step = fValue / fDerivValue;
-                    if (!IsFiniteComplex(step))
-                    {
-                        break;
-                    }
-
                     z -= step;
-                    if (!IsFiniteComplex(z))
-                    {
-                        break;
-                    }
 
                     if (step.Magnitude < epsilon)
                     {
@@ -507,12 +492,6 @@ namespace FractalExplorer.Engines
         /// <param name="saturation">Насыщенность (0-1).</param>
         /// <param name="value">Яркость (0-1).</param>
         /// <returns>Цвет в формате RGB.</returns>
-        private static bool IsFiniteComplex(Complex value)
-            => !double.IsNaN(value.Real)
-               && !double.IsNaN(value.Imaginary)
-               && !double.IsInfinity(value.Real)
-               && !double.IsInfinity(value.Imaginary);
-
         private Color HsvToRgb(double hue, double saturation, double value)
         {
             int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
