@@ -96,17 +96,19 @@ namespace FractalExplorer.Parsers
 
         private static Complex ToComplex(Entity entity)
         {
-            string expression = entity.Stringize();
-            expression = expression.Replace(" ", string.Empty).Replace("I", "i");
+            string expression = entity.Stringize()
+                .Replace(" ", string.Empty)
+                .Replace("I", "i")
+                .Replace("*", string.Empty);
+
+            expression = TrimOuterParentheses(expression);
 
             if (!expression.Contains('i'))
             {
                 return new Complex(ParseDouble(expression), 0);
             }
 
-            expression = expression.Replace("*", string.Empty);
-
-            if (expression == "i")
+            if (expression == "i" || expression == "+i")
             {
                 return new Complex(0, 1);
             }
@@ -118,15 +120,7 @@ namespace FractalExplorer.Parsers
 
             int iIndex = expression.IndexOf('i');
             string beforeI = expression[..iIndex];
-
-            int splitIndex = -1;
-            for (int index = 1; index < beforeI.Length; index++)
-            {
-                if (beforeI[index] == '+' || beforeI[index] == '-')
-                {
-                    splitIndex = index;
-                }
-            }
+            int splitIndex = FindRealImagSplitIndex(beforeI);
 
             if (splitIndex == -1)
             {
@@ -138,8 +132,45 @@ namespace FractalExplorer.Parsers
             return new Complex(ParseDouble(realPart), ParseImaginary(imaginaryPart));
         }
 
+        private static int FindRealImagSplitIndex(string value)
+        {
+            int parenthesesDepth = 0;
+            for (int index = 1; index < value.Length; index++)
+            {
+                char current = value[index];
+
+                if (current == '(')
+                {
+                    parenthesesDepth++;
+                    continue;
+                }
+
+                if (current == ')')
+                {
+                    parenthesesDepth--;
+                    continue;
+                }
+
+                if (parenthesesDepth != 0)
+                {
+                    continue;
+                }
+
+                if ((current == '+' || current == '-') && !IsExponentSign(value, index))
+                {
+                    return index;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsExponentSign(string value, int index)
+            => index > 0 && (value[index - 1] == 'E' || value[index - 1] == 'e');
+
         private static double ParseImaginary(string value)
         {
+            value = TrimOuterParentheses(value);
             if (value == "+" || string.IsNullOrEmpty(value)) return 1;
             if (value == "-") return -1;
             return ParseDouble(value);
@@ -147,12 +178,51 @@ namespace FractalExplorer.Parsers
 
         private static double ParseDouble(string value)
         {
+            value = TrimOuterParentheses(value);
+
+            if (value.StartsWith('+'))
+            {
+                value = value[1..];
+            }
+
             if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
             {
                 return result;
             }
 
             throw new Exception($"Не удалось преобразовать числовое значение '{value}' в комплексное число.");
+        }
+
+        private static string TrimOuterParentheses(string value)
+        {
+            value = value.Trim();
+
+            while (value.Length >= 2 && value[0] == '(' && value[^1] == ')')
+            {
+                int depth = 0;
+                bool wrapsWholeExpression = true;
+
+                for (int i = 0; i < value.Length; i++)
+                {
+                    if (value[i] == '(') depth++;
+                    else if (value[i] == ')') depth--;
+
+                    if (depth == 0 && i < value.Length - 1)
+                    {
+                        wrapsWholeExpression = false;
+                        break;
+                    }
+                }
+
+                if (!wrapsWholeExpression)
+                {
+                    break;
+                }
+
+                value = value[1..^1].Trim();
+            }
+
+            return value;
         }
     }
 
