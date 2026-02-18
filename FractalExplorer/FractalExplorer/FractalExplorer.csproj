@@ -6,7 +6,8 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-
+	<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+	  
     <!-- === НАСТРОЙКИ ВЕРСИОНИРОВАНИЯ === -->
     <!-- 
       Инструкция по изменению версии:
