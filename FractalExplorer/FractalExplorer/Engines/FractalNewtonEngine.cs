@@ -92,13 +92,14 @@ namespace FractalExplorer.Engines
             var sb = new StringBuilder();
             try
             {
-                var tokenizer = new Tokenizer(expression);
-                var tokens = tokenizer.Tokenize();
-                var parser = new Parser(tokens);
-                f_ast = parser.Parse();
-                f_deriv_ast = f_ast.Differentiate("z");
+                var bridgeResult = AngouriExpressionBridge.Build(expression);
+                f_ast = bridgeResult.FormulaAst;
+                f_deriv_ast = bridgeResult.DerivativeAst;
 
                 // Отладочная информация
+                sb.AppendLine("Источник (Angouri): " + expression);
+                sb.AppendLine("После Angouri (f): " + bridgeResult.FormulaText);
+                sb.AppendLine("После Angouri (f') : " + bridgeResult.DerivativeText);
                 sb.AppendLine("Исходная функция: f(z) = " + f_ast.ToString());
                 sb.AppendLine("AST f(z): " + f_ast.Print());
                 sb.AppendLine("Производная: f'(z) = " + f_deriv_ast.ToString());
