@@ -8,6 +8,11 @@ namespace FractalExplorer.Resources
     public enum TileSchedulingStrategy
     {
         /// <summary>
+        /// Плитки рендерятся в исходном (классическом) порядке, в котором были сформированы.
+        /// </summary>
+        Classic,
+
+        /// <summary>
         /// Плитки упорядочиваются по спирали от центра к краям.
         /// </summary>
         Spiral,
@@ -26,12 +31,20 @@ namespace FractalExplorer.Resources
         /// <summary>
         /// Текущий шаблон рендера, выбранный пользователем в launcher-форме.
         /// </summary>
-        public static TileSchedulingStrategy SelectedPattern { get; set; } = TileSchedulingStrategy.Spiral;
+        public static TileSchedulingStrategy SelectedPattern { get; set; } = TileSchedulingStrategy.Classic;
     }
 
     internal interface ITileSchedulingTemplate
     {
         IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles);
+    }
+
+    internal sealed class ClassicTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            return tiles;
+        }
     }
 
     internal sealed class SpiralTileSchedulingTemplate : ITileSchedulingTemplate
@@ -140,6 +153,7 @@ namespace FractalExplorer.Resources
         private static readonly IReadOnlyDictionary<TileSchedulingStrategy, ITileSchedulingTemplate> _templates =
             new Dictionary<TileSchedulingStrategy, ITileSchedulingTemplate>
             {
+                [TileSchedulingStrategy.Classic] = new ClassicTileSchedulingTemplate(),
                 [TileSchedulingStrategy.Spiral] = new SpiralTileSchedulingTemplate(),
                 [TileSchedulingStrategy.Randomized] = new RandomizedTileSchedulingTemplate()
             };
@@ -158,7 +172,7 @@ namespace FractalExplorer.Resources
         public TileRenderDispatcher(
             IEnumerable<TileInfo> tiles,
             int maxConcurrency,
-            TileSchedulingStrategy schedulingStrategy = TileSchedulingStrategy.Spiral)
+            TileSchedulingStrategy schedulingStrategy = TileSchedulingStrategy.Classic)
         {
             _tilesToRender = tiles ?? throw new ArgumentNullException(nameof(tiles));
             _maxConcurrency = Math.Max(1, maxConcurrency); // Гарантируем, что минимум один поток будет работать
@@ -225,7 +239,7 @@ namespace FractalExplorer.Resources
                 return template.Build(tiles);
             }
 
-            return _templates[TileSchedulingStrategy.Spiral].Build(tiles);
+            return _templates[TileSchedulingStrategy.Classic].Build(tiles);
         }
 
         #endregion

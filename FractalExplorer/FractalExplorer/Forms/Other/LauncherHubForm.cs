@@ -1,4 +1,4 @@
-using FractalExplorer.Forms;
+﻿using FractalExplorer.Forms;
 using FractalExplorer.Forms.Fractals;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
@@ -70,10 +70,18 @@ namespace FractalExplorer
         private void InitializeRenderPatternSelector()
         {
             cbRenderPattern.Items.Clear();
+            cbRenderPattern.Items.Add("Классический");
             cbRenderPattern.Items.Add("Спиральный");
             cbRenderPattern.Items.Add("Случайный");
 
-            cbRenderPattern.SelectedIndex = RenderPatternSettings.SelectedPattern == TileSchedulingStrategy.Randomized ? 1 : 0;
+            cbRenderPattern.SelectedIndex = RenderPatternSettings.SelectedPattern switch
+            {
+                TileSchedulingStrategy.Classic => 0,
+                TileSchedulingStrategy.Spiral => 1,
+                TileSchedulingStrategy.Randomized => 2,
+                _ => 0
+            };
+
             cbRenderPattern.SelectedIndexChanged += cbRenderPattern_SelectedIndexChanged;
         }
 
@@ -82,9 +90,13 @@ namespace FractalExplorer
         /// </summary>
         private void cbRenderPattern_SelectedIndexChanged(object sender, EventArgs e)
         {
-            RenderPatternSettings.SelectedPattern = cbRenderPattern.SelectedIndex == 1
-                ? TileSchedulingStrategy.Randomized
-                : TileSchedulingStrategy.Spiral;
+            RenderPatternSettings.SelectedPattern = cbRenderPattern.SelectedIndex switch
+            {
+                0 => TileSchedulingStrategy.Classic,
+                1 => TileSchedulingStrategy.Spiral,
+                2 => TileSchedulingStrategy.Randomized,
+                _ => TileSchedulingStrategy.Classic
+            };
         }
 
         /// <summary>
