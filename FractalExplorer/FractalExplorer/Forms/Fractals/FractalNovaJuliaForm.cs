@@ -502,7 +502,7 @@ namespace FractalExplorer.Forms
             renderEngineCopy.CopyParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated)
             {

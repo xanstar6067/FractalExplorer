@@ -380,7 +380,7 @@ namespace FractalExplorer
             double currentRenderedZoom = _zoom;
 
             var tiles = GenerateTiles(fractal_bitmap.Width, fractal_bitmap.Height);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
 
             if (progressBar.IsHandleCreated && !progressBar.IsDisposed)
             {

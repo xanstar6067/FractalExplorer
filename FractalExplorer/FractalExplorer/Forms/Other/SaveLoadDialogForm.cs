@@ -187,7 +187,7 @@ namespace FractalExplorer.Forms
             try
             {
                 var tiles = GenerateTiles(pictureBoxPreview.Width, pictureBoxPreview.Height);
-                var dispatcher = new TileRenderDispatcher(tiles, Environment.ProcessorCount);
+                var dispatcher = new TileRenderDispatcher(tiles, Environment.ProcessorCount, RenderPatternSettings.SelectedPattern);
 
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {

@@ -522,7 +522,7 @@ namespace FractalExplorer.Forms.Fractals
             var renderEngineCopy = CreateEngineCopy();
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -639,7 +639,7 @@ namespace FractalExplorer.Forms.Fractals
             var renderEngineCopy = CreateEngineCopy();
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
