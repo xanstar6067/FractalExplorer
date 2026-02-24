@@ -8,14 +8,109 @@ namespace FractalExplorer.Resources
     public enum TileSchedulingStrategy
     {
         /// <summary>
-        /// Порядок плиток сохраняется таким, каким он был передан в диспетчер.
+        /// Плитки упорядочиваются по спирали от центра к краям.
         /// </summary>
-        PreserveInputOrder,
+        Spiral,
 
         /// <summary>
         /// Плитки перемешиваются случайным образом перед рендерингом.
         /// </summary>
         Randomized
+    }
+
+    /// <summary>
+    /// Глобальная конфигурация выбранного шаблона рендера плиток.
+    /// </summary>
+    public static class RenderPatternSettings
+    {
+        /// <summary>
+        /// Текущий шаблон рендера, выбранный пользователем в launcher-форме.
+        /// </summary>
+        public static TileSchedulingStrategy SelectedPattern { get; set; } = TileSchedulingStrategy.Spiral;
+    }
+
+    internal interface ITileSchedulingTemplate
+    {
+        IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles);
+    }
+
+    internal sealed class SpiralTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            if (tiles.Count <= 1)
+            {
+                return tiles;
+            }
+
+            var xValues = tiles.Select(t => t.Bounds.X).Distinct().OrderBy(v => v).ToArray();
+            var yValues = tiles.Select(t => t.Bounds.Y).Distinct().OrderBy(v => v).ToArray();
+            int columns = xValues.Length;
+            int rows = yValues.Length;
+
+            var xIndexMap = xValues.Select((value, index) => new { value, index }).ToDictionary(x => x.value, x => x.index);
+            var yIndexMap = yValues.Select((value, index) => new { value, index }).ToDictionary(y => y.value, y => y.index);
+
+            var tileLookup = new Dictionary<(int col, int row), TileInfo>();
+            foreach (var tile in tiles)
+            {
+                int col = xIndexMap[tile.Bounds.X];
+                int row = yIndexMap[tile.Bounds.Y];
+                tileLookup[(col, row)] = tile;
+            }
+
+            var ordered = new List<TileInfo>(tiles.Count);
+            var visited = new HashSet<(int col, int row)>();
+            int maxRadius = Math.Max(columns, rows);
+            int centerCol = (columns - 1) / 2;
+            int centerRow = (rows - 1) / 2;
+
+            for (int radius = 0; radius <= maxRadius && ordered.Count < tiles.Count; radius++)
+            {
+                int left = centerCol - radius;
+                int right = centerCol + radius;
+                int top = centerRow - radius;
+                int bottom = centerRow + radius;
+
+                for (int col = left; col <= right; col++) TryAdd(col, top);
+                for (int row = top + 1; row <= bottom; row++) TryAdd(right, row);
+                for (int col = right - 1; col >= left; col--) TryAdd(col, bottom);
+                for (int row = bottom - 1; row > top; row--) TryAdd(left, row);
+            }
+
+            return ordered;
+
+            void TryAdd(int col, int row)
+            {
+                if (col < 0 || col >= columns || row < 0 || row >= rows) return;
+                if (!visited.Add((col, row))) return;
+                if (tileLookup.TryGetValue((col, row), out var tile))
+                {
+                    ordered.Add(tile);
+                }
+            }
+        }
+    }
+
+    internal sealed class RandomizedTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            if (tiles.Count <= 1)
+            {
+                return tiles;
+            }
+
+            var randomizedTiles = tiles.ToList();
+            var random = Random.Shared;
+            for (int i = randomizedTiles.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (randomizedTiles[i], randomizedTiles[j]) = (randomizedTiles[j], randomizedTiles[i]);
+            }
+
+            return randomizedTiles;
+        }
     }
 
     /// <summary>
@@ -42,6 +137,13 @@ namespace FractalExplorer.Resources
         /// </summary>
         private readonly TileSchedulingStrategy _schedulingStrategy;
 
+        private static readonly IReadOnlyDictionary<TileSchedulingStrategy, ITileSchedulingTemplate> _templates =
+            new Dictionary<TileSchedulingStrategy, ITileSchedulingTemplate>
+            {
+                [TileSchedulingStrategy.Spiral] = new SpiralTileSchedulingTemplate(),
+                [TileSchedulingStrategy.Randomized] = new RandomizedTileSchedulingTemplate()
+            };
+
         #endregion
 
         #region Constructor
@@ -56,7 +158,7 @@ namespace FractalExplorer.Resources
         public TileRenderDispatcher(
             IEnumerable<TileInfo> tiles,
             int maxConcurrency,
-            TileSchedulingStrategy schedulingStrategy = TileSchedulingStrategy.Randomized)
+            TileSchedulingStrategy schedulingStrategy = TileSchedulingStrategy.Spiral)
         {
             _tilesToRender = tiles ?? throw new ArgumentNullException(nameof(tiles));
             _maxConcurrency = Math.Max(1, maxConcurrency); // Гарантируем, что минимум один поток будет работать
@@ -113,19 +215,17 @@ namespace FractalExplorer.Resources
             TileSchedulingStrategy strategy)
         {
             var tiles = sourceTiles as List<TileInfo> ?? sourceTiles.ToList();
-            if (tiles.Count <= 1 || strategy == TileSchedulingStrategy.PreserveInputOrder)
+            if (tiles.Count <= 1)
             {
                 return tiles;
             }
 
-            var random = Random.Shared;
-            for (int i = tiles.Count - 1; i > 0; i--)
+            if (_templates.TryGetValue(strategy, out var template))
             {
-                int j = random.Next(i + 1);
-                (tiles[i], tiles[j]) = (tiles[j], tiles[i]);
+                return template.Build(tiles);
             }
 
-            return tiles;
+            return _templates[TileSchedulingStrategy.Spiral].Build(tiles);
         }
 
         #endregion

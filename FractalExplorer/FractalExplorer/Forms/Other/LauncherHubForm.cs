@@ -1,6 +1,7 @@
 using FractalExplorer.Forms;
 using FractalExplorer.Forms.Fractals;
 using FractalExplorer.Projects;
+using FractalExplorer.Resources;
 using System.Reflection;
 
 namespace FractalExplorer
@@ -57,9 +58,34 @@ namespace FractalExplorer
 
             InitializeFractalCatalog();
             PopulateTreeView();
+            InitializeRenderPatternSelector();
             DisplayAppVersionInTitle();
         }
 
+
+
+        /// <summary>
+        /// Инициализирует список шаблонов рендера и синхронизирует его с глобальными настройками.
+        /// </summary>
+        private void InitializeRenderPatternSelector()
+        {
+            cbRenderPattern.Items.Clear();
+            cbRenderPattern.Items.Add("Спиральный");
+            cbRenderPattern.Items.Add("Случайный");
+
+            cbRenderPattern.SelectedIndex = RenderPatternSettings.SelectedPattern == TileSchedulingStrategy.Randomized ? 1 : 0;
+            cbRenderPattern.SelectedIndexChanged += cbRenderPattern_SelectedIndexChanged;
+        }
+
+        /// <summary>
+        /// Применяет новый шаблон рендера из выпадающего списка.
+        /// </summary>
+        private void cbRenderPattern_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            RenderPatternSettings.SelectedPattern = cbRenderPattern.SelectedIndex == 1
+                ? TileSchedulingStrategy.Randomized
+                : TileSchedulingStrategy.Spiral;
+        }
 
         /// <summary>
         /// Инициализирует каталог фракталов, добавляя информацию о каждом из них.

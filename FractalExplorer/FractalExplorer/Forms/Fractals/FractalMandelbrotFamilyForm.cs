@@ -540,7 +540,7 @@ namespace FractalDraving
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), TileSchedulingStrategy.Randomized);
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -666,7 +666,7 @@ namespace FractalDraving
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), TileSchedulingStrategy.Randomized);
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
