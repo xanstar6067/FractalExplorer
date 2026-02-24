@@ -113,7 +113,6 @@
             headerPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             headerPanel.Size = new Size(540, 54);
             headerPanel.TabIndex = 0;
-            headerPanel.SetRowSpan(lblFractalName, 2);
             // 
             // lblFractalName
             // 
@@ -122,6 +121,7 @@
             lblFractalName.Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold);
             lblFractalName.Location = new Point(3, 0);
             lblFractalName.Name = "lblFractalName";
+            headerPanel.SetRowSpan(lblFractalName, 2);
             lblFractalName.Size = new Size(264, 54);
             lblFractalName.TabIndex = 0;
             lblFractalName.Text = "Выберите фрактал";
@@ -136,7 +136,7 @@
             lblRenderPatternType.Name = "lblRenderPatternType";
             lblRenderPatternType.Size = new Size(264, 24);
             lblRenderPatternType.TabIndex = 1;
-            lblRenderPatternType.Text = "тип рендера";
+            lblRenderPatternType.Text = "Тип рендера";
             lblRenderPatternType.TextAlign = ContentAlignment.BottomLeft;
             // 
             // cbRenderPattern
@@ -147,7 +147,7 @@
             cbRenderPattern.FormattingEnabled = true;
             cbRenderPattern.Location = new Point(273, 27);
             cbRenderPattern.Name = "cbRenderPattern";
-            cbRenderPattern.Size = new Size(264, 27);
+            cbRenderPattern.Size = new Size(264, 25);
             cbRenderPattern.TabIndex = 2;
             // 
             // pictureBoxPreview
