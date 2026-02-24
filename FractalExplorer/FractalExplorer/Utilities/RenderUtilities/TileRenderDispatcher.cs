@@ -7,20 +7,14 @@ namespace FractalExplorer.Resources
     /// </summary>
     public enum TileSchedulingStrategy
     {
-        /// <summary>
-        /// Плитки рендерятся в исходном (классическом) порядке, в котором были сформированы.
-        /// </summary>
-        Classic,
-
-        /// <summary>
-        /// Плитки упорядочиваются по спирали от центра к краям.
-        /// </summary>
-        Spiral,
-
-        /// <summary>
-        /// Плитки перемешиваются случайным образом перед рендерингом.
-        /// </summary>
-        Randomized
+        Classic,      // От центра к краям (наш новый вариант)
+        Linear,       // Строго сверху-вниз
+        Spiral,       // Прямоугольная спираль
+        Randomized,   // Случайно
+        Checkerboard, // Шахматный порядок
+        Diagonal,     // Диагональная волна
+        EdgesInward,  // От краев к центру
+        MortonCurve   // Z-Кривая Мортона
     }
 
     /// <summary>
@@ -155,6 +149,68 @@ namespace FractalExplorer.Resources
             }
 
             return randomizedTiles;
+        }
+    }
+
+    internal sealed class CheckerboardTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            if (tiles.Count <= 1) return tiles;
+
+            // Находим индексы столбцов и строк для создания сетки (как вы делали в Spiral)
+            var xValues = tiles.Select(t => t.Bounds.X).Distinct().OrderBy(v => v).ToList();
+            var yValues = tiles.Select(t => t.Bounds.Y).Distinct().OrderBy(v => v).ToList();
+
+            // Сортируем: сначала четная сумма индексов (col + row), затем нечетная
+            return tiles.OrderBy(tile =>
+            {
+                int col = xValues.IndexOf(tile.Bounds.X);
+                int row = yValues.IndexOf(tile.Bounds.Y);
+                return (col + row) % 2; // Сначала 0, потом 1
+            }).ToList();
+        }
+    }
+
+    internal sealed class DiagonalTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            // Просто сортируем по сумме координат X и Y
+            return tiles.OrderBy(tile => tile.Bounds.X + tile.Bounds.Y).ToList();
+        }
+    }
+
+    internal sealed class EdgesInwardTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            if (tiles.Count <= 1) return tiles;
+
+            double minX = tiles.Min(t => t.Bounds.X);
+            double maxX = tiles.Max(t => t.Bounds.X);
+            double minY = tiles.Min(t => t.Bounds.Y);
+            double maxY = tiles.Max(t => t.Bounds.Y);
+
+            double centerX = minX + (maxX - minX) / 2.0;
+            double centerY = minY + (maxY - minY) / 2.0;
+
+            // Отличие только в OrderByDescending
+            return tiles.OrderByDescending(tile =>
+            {
+                double dx = tile.Bounds.X - centerX;
+                double dy = tile.Bounds.Y - centerY;
+                return (dx * dx) + (dy * dy);
+            }).ToList();
+        }
+    }
+
+    internal sealed class LinearTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            // Сортировка сверху-вниз, при совпадении Y — слева-направо
+            return tiles.OrderBy(t => t.Bounds.Y).ThenBy(t => t.Bounds.X).ToList();
         }
     }
 

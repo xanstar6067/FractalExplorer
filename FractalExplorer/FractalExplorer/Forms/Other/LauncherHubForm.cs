@@ -69,19 +69,37 @@ namespace FractalExplorer
         /// </summary>
         private void InitializeRenderPatternSelector()
         {
+            // Отписываемся от события, чтобы избежать его срабатывания во время инициализации
+            cbRenderPattern.SelectedIndexChanged -= cbRenderPattern_SelectedIndexChanged;
+
             cbRenderPattern.Items.Clear();
-            cbRenderPattern.Items.Add("Классический");
+
+            // Старые элементы
+            cbRenderPattern.Items.Add("Классический (от центра)");
+            cbRenderPattern.Items.Add("Построчный"); // Бывший классический
             cbRenderPattern.Items.Add("Спиральный");
             cbRenderPattern.Items.Add("Случайный");
+
+            // Новые зрелищные элементы
+            cbRenderPattern.Items.Add("Шахматный");
+            cbRenderPattern.Items.Add("Диагональный");
+            cbRenderPattern.Items.Add("От краев к центру");
+            cbRenderPattern.Items.Add("Z-кривая (Мортон)");
 
             cbRenderPattern.SelectedIndex = RenderPatternSettings.SelectedPattern switch
             {
                 TileSchedulingStrategy.Classic => 0,
-                TileSchedulingStrategy.Spiral => 1,
-                TileSchedulingStrategy.Randomized => 2,
-                _ => 0
+                TileSchedulingStrategy.Linear => 1,
+                TileSchedulingStrategy.Spiral => 2,
+                TileSchedulingStrategy.Randomized => 3,
+                TileSchedulingStrategy.Checkerboard => 4,
+                TileSchedulingStrategy.Diagonal => 5,
+                TileSchedulingStrategy.EdgesInward => 6,
+                TileSchedulingStrategy.MortonCurve => 7,
+                _ => 0 // По умолчанию — классический
             };
 
+            // Подписываемся на событие обратно
             cbRenderPattern.SelectedIndexChanged += cbRenderPattern_SelectedIndexChanged;
         }
 
@@ -93,9 +111,14 @@ namespace FractalExplorer
             RenderPatternSettings.SelectedPattern = cbRenderPattern.SelectedIndex switch
             {
                 0 => TileSchedulingStrategy.Classic,
-                1 => TileSchedulingStrategy.Spiral,
-                2 => TileSchedulingStrategy.Randomized,
-                _ => TileSchedulingStrategy.Classic
+                1 => TileSchedulingStrategy.Linear,
+                2 => TileSchedulingStrategy.Spiral,
+                3 => TileSchedulingStrategy.Randomized,
+                4 => TileSchedulingStrategy.Checkerboard,
+                5 => TileSchedulingStrategy.Diagonal,
+                6 => TileSchedulingStrategy.EdgesInward,
+                7 => TileSchedulingStrategy.MortonCurve,
+                _ => TileSchedulingStrategy.Classic // Безопасное значение по умолчанию
             };
         }
 
