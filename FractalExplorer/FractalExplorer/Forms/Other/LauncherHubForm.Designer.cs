@@ -88,7 +88,7 @@
             pnlDetails.Name = "pnlDetails";
             pnlDetails.Padding = new Padding(5);
             pnlDetails.RowCount = 5;
-            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 60F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 8F));
@@ -108,7 +108,7 @@
             headerPanel.Name = "headerPanel";
             headerPanel.RowCount = 1;
             headerPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            headerPanel.Size = new Size(540, 34);
+            headerPanel.Size = new Size(540, 54);
             headerPanel.TabIndex = 0;
             // 
             // lblFractalName
@@ -118,18 +118,18 @@
             lblFractalName.Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold);
             lblFractalName.Location = new Point(3, 0);
             lblFractalName.Name = "lblFractalName";
-            lblFractalName.Size = new Size(264, 34);
+            lblFractalName.Size = new Size(264, 54);
             lblFractalName.TabIndex = 0;
             lblFractalName.Text = "Выберите фрактал";
             lblFractalName.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // cbRenderPattern
             // 
-            cbRenderPattern.Dock = DockStyle.Fill;
+            cbRenderPattern.Dock = DockStyle.Bottom;
             cbRenderPattern.DropDownStyle = ComboBoxStyle.DropDownList;
             cbRenderPattern.Font = new Font("Segoe UI", 10F);
             cbRenderPattern.FormattingEnabled = true;
-            cbRenderPattern.Location = new Point(273, 3);
+            cbRenderPattern.Location = new Point(273, 26);
             cbRenderPattern.Name = "cbRenderPattern";
             cbRenderPattern.Size = new Size(264, 25);
             cbRenderPattern.TabIndex = 1;
@@ -137,9 +137,9 @@
             // pictureBoxPreview
             // 
             pictureBoxPreview.Dock = DockStyle.Fill;
-            pictureBoxPreview.Location = new Point(8, 48);
+            pictureBoxPreview.Location = new Point(8, 68);
             pictureBoxPreview.Name = "pictureBoxPreview";
-            pictureBoxPreview.Size = new Size(540, 203);
+            pictureBoxPreview.Size = new Size(540, 193);
             pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBoxPreview.TabIndex = 1;
             pictureBoxPreview.TabStop = false;
@@ -150,10 +150,10 @@
             richTextBoxDescription.BorderStyle = BorderStyle.None;
             richTextBoxDescription.Dock = DockStyle.Fill;
             richTextBoxDescription.Font = new Font("Segoe UI", 10F);
-            richTextBoxDescription.Location = new Point(8, 257);
+            richTextBoxDescription.Location = new Point(8, 267);
             richTextBoxDescription.Name = "richTextBoxDescription";
             richTextBoxDescription.ReadOnly = true;
-            richTextBoxDescription.Size = new Size(540, 203);
+            richTextBoxDescription.Size = new Size(540, 193);
             richTextBoxDescription.TabIndex = 2;
             richTextBoxDescription.Text = "";
             // 
