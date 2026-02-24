@@ -43,7 +43,39 @@ namespace FractalExplorer.Resources
     {
         public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
         {
-            return tiles;
+            if (tiles.Count <= 1)
+            {
+                return tiles;
+            }
+
+            // 1. Вычисляем крайние координаты для нахождения центра в один проход
+            double minX = double.MaxValue;
+            double maxX = double.MinValue;
+            double minY = double.MaxValue;
+            double maxY = double.MinValue;
+
+            foreach (var tile in tiles)
+            {
+                if (tile.Bounds.X < minX) minX = tile.Bounds.X;
+                if (tile.Bounds.X > maxX) maxX = tile.Bounds.X;
+                if (tile.Bounds.Y < minY) minY = tile.Bounds.Y;
+                if (tile.Bounds.Y > maxY) maxY = tile.Bounds.Y;
+            }
+
+            // 2. Находим глобальный центр координат
+            double centerX = minX + (maxX - minX) / 2.0;
+            double centerY = minY + (maxY - minY) / 2.0;
+
+            // 3. Сортируем тайлы по квадрату евклидова расстояния от центра
+            // (x - Cx)^2 + (y - Cy)^2
+            var sortedTiles = tiles.OrderBy(tile =>
+            {
+                double dx = tile.Bounds.X - centerX;
+                double dy = tile.Bounds.Y - centerY;
+                return (dx * dx) + (dy * dy);
+            }).ToList();
+
+            return sortedTiles;
         }
     }
 
