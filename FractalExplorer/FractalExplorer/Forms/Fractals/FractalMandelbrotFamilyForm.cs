@@ -540,7 +540,7 @@ namespace FractalDraving
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), TileSchedulingStrategy.Randomized);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -666,7 +666,7 @@ namespace FractalDraving
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount());
+            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), TileSchedulingStrategy.Randomized);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -786,7 +786,8 @@ namespace FractalDraving
         #region Utility Methods
 
         /// <summary>
-        /// Генерирует список плиток (тайлов) для рендеринга изображения, отсортированных от центра к краям.
+        /// Генерирует список плиток (тайлов) для рендеринга изображения в порядке обычного обхода сетки.
+        /// Итоговая стратегия распределения задается в <see cref="TileRenderDispatcher"/>.
         /// </summary>
         /// <param name="width">Ширина изображения в пикселях.</param>
         /// <param name="height">Высота изображения в пикселях.</param>
@@ -794,7 +795,6 @@ namespace FractalDraving
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
-            Point center = new Point(width / 2, height / 2);
             for (int y = 0; y < height; y += TILE_SIZE)
             {
                 for (int x = 0; x < width; x += TILE_SIZE)
@@ -802,7 +802,7 @@ namespace FractalDraving
                     tiles.Add(new TileInfo(x, y, TILE_SIZE, TILE_SIZE));
                 }
             }
-            return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
+            return tiles;
         }
 
         /// <summary>
