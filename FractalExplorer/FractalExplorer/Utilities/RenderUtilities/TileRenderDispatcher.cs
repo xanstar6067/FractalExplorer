@@ -214,6 +214,41 @@ namespace FractalExplorer.Resources
         }
     }
 
+    internal sealed class MortonCurveTileSchedulingTemplate : ITileSchedulingTemplate
+    {
+        public IReadOnlyList<TileInfo> Build(IReadOnlyList<TileInfo> tiles)
+        {
+            if (tiles.Count <= 1)
+            {
+                return tiles;
+            }
+
+            var xValues = tiles.Select(t => t.Bounds.X).Distinct().OrderBy(v => v).ToArray();
+            var yValues = tiles.Select(t => t.Bounds.Y).Distinct().OrderBy(v => v).ToArray();
+
+            var xIndexMap = xValues.Select((value, index) => new { value, index }).ToDictionary(x => x.value, x => x.index);
+            var yIndexMap = yValues.Select((value, index) => new { value, index }).ToDictionary(y => y.value, y => y.index);
+
+            return tiles
+                .OrderBy(tile => InterleaveBits(
+                    (uint)xIndexMap[tile.Bounds.X],
+                    (uint)yIndexMap[tile.Bounds.Y]))
+                .ToList();
+        }
+
+        private static ulong InterleaveBits(uint x, uint y)
+        {
+            ulong result = 0;
+            for (int bit = 0; bit < 32; bit++)
+            {
+                result |= ((ulong)(x >> bit) & 1UL) << (bit * 2);
+                result |= ((ulong)(y >> bit) & 1UL) << (bit * 2 + 1);
+            }
+
+            return result;
+        }
+    }
+
     /// <summary>
     /// Управляет параллельным рендерингом плиток (тайлов), распределяя их по рабочим потокам.
     /// </summary>
@@ -242,8 +277,13 @@ namespace FractalExplorer.Resources
             new Dictionary<TileSchedulingStrategy, ITileSchedulingTemplate>
             {
                 [TileSchedulingStrategy.Classic] = new ClassicTileSchedulingTemplate(),
+                [TileSchedulingStrategy.Linear] = new LinearTileSchedulingTemplate(),
                 [TileSchedulingStrategy.Spiral] = new SpiralTileSchedulingTemplate(),
-                [TileSchedulingStrategy.Randomized] = new RandomizedTileSchedulingTemplate()
+                [TileSchedulingStrategy.Randomized] = new RandomizedTileSchedulingTemplate(),
+                [TileSchedulingStrategy.Checkerboard] = new CheckerboardTileSchedulingTemplate(),
+                [TileSchedulingStrategy.Diagonal] = new DiagonalTileSchedulingTemplate(),
+                [TileSchedulingStrategy.EdgesInward] = new EdgesInwardTileSchedulingTemplate(),
+                [TileSchedulingStrategy.MortonCurve] = new MortonCurveTileSchedulingTemplate()
             };
 
         #endregion
