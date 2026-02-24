@@ -34,6 +34,7 @@
             pnlDetails = new TableLayoutPanel();
             headerPanel = new TableLayoutPanel();
             lblFractalName = new Label();
+            lblRenderPatternType = new Label();
             cbRenderPattern = new ComboBox();
             pictureBoxPreview = new PictureBox();
             richTextBoxDescription = new RichTextBox();
@@ -102,14 +103,17 @@
             headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             headerPanel.Controls.Add(lblFractalName, 0, 0);
-            headerPanel.Controls.Add(cbRenderPattern, 1, 0);
+            headerPanel.Controls.Add(lblRenderPatternType, 1, 0);
+            headerPanel.Controls.Add(cbRenderPattern, 1, 1);
             headerPanel.Dock = DockStyle.Fill;
             headerPanel.Location = new Point(8, 8);
             headerPanel.Name = "headerPanel";
-            headerPanel.RowCount = 1;
+            headerPanel.RowCount = 2;
+            headerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
             headerPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             headerPanel.Size = new Size(540, 54);
             headerPanel.TabIndex = 0;
+            headerPanel.SetRowSpan(lblFractalName, 2);
             // 
             // lblFractalName
             // 
@@ -123,16 +127,28 @@
             lblFractalName.Text = "Выберите фрактал";
             lblFractalName.TextAlign = ContentAlignment.MiddleLeft;
             // 
+            // lblRenderPatternType
+            // 
+            lblRenderPatternType.AutoSize = true;
+            lblRenderPatternType.Dock = DockStyle.Fill;
+            lblRenderPatternType.Font = new Font("Segoe UI", 9F);
+            lblRenderPatternType.Location = new Point(273, 0);
+            lblRenderPatternType.Name = "lblRenderPatternType";
+            lblRenderPatternType.Size = new Size(264, 24);
+            lblRenderPatternType.TabIndex = 1;
+            lblRenderPatternType.Text = "тип рендера";
+            lblRenderPatternType.TextAlign = ContentAlignment.BottomLeft;
+            // 
             // cbRenderPattern
             // 
-            cbRenderPattern.Dock = DockStyle.Bottom;
+            cbRenderPattern.Dock = DockStyle.Fill;
             cbRenderPattern.DropDownStyle = ComboBoxStyle.DropDownList;
             cbRenderPattern.Font = new Font("Segoe UI", 10F);
             cbRenderPattern.FormattingEnabled = true;
-            cbRenderPattern.Location = new Point(273, 26);
+            cbRenderPattern.Location = new Point(273, 27);
             cbRenderPattern.Name = "cbRenderPattern";
-            cbRenderPattern.Size = new Size(264, 25);
-            cbRenderPattern.TabIndex = 1;
+            cbRenderPattern.Size = new Size(264, 27);
+            cbRenderPattern.TabIndex = 2;
             // 
             // pictureBoxPreview
             // 
@@ -201,6 +217,7 @@
         private System.Windows.Forms.TableLayoutPanel pnlDetails;
         private System.Windows.Forms.TableLayoutPanel headerPanel;
         private System.Windows.Forms.Label lblFractalName;
+        private System.Windows.Forms.Label lblRenderPatternType;
         private System.Windows.Forms.ComboBox cbRenderPattern;
         private System.Windows.Forms.PictureBox pictureBoxPreview;
         private System.Windows.Forms.RichTextBox richTextBoxDescription;
