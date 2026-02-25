@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-	<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+	<!--EnableCompressionInSingleFile>true</EnableCompressionInSingleFile-->
 	  
     <!-- === НАСТРОЙКИ ВЕРСИОНИРОВАНИЯ === -->
     <!-- 
@@ -52,10 +52,6 @@
 
   <ItemGroup>
     <Content Include="FractalExplorer.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="AngouriMath" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup>
