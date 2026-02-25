@@ -29,204 +29,204 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LauncherHubForm));
-            this.splitContainerMain = new System.Windows.Forms.SplitContainer();
-            this.treeViewFractals = new System.Windows.Forms.TreeView();
-            this.pnlDetails = new System.Windows.Forms.TableLayoutPanel();
-            this.lblFractalName = new System.Windows.Forms.Label();
-            this.pictureBoxPreview = new System.Windows.Forms.PictureBox();
-            this.settingsPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.lblRenderPatternType = new System.Windows.Forms.Label();
-            this.cbRenderPattern = new System.Windows.Forms.ComboBox();
-            this.btnLaunchSelected = new System.Windows.Forms.Button();
-            this.richTextBoxDescription = new System.Windows.Forms.RichTextBox();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerMain)).BeginInit();
-            this.splitContainerMain.Panel1.SuspendLayout();
-            this.splitContainerMain.Panel2.SuspendLayout();
-            this.splitContainerMain.SuspendLayout();
-            this.pnlDetails.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxPreview)).BeginInit();
-            this.settingsPanel.SuspendLayout();
-            this.SuspendLayout();
+            splitContainerMain = new SplitContainer();
+            treeViewFractals = new TreeView();
+            pnlDetails = new TableLayoutPanel();
+            lblFractalName = new Label();
+            pictureBoxPreview = new PictureBox();
+            settingsPanel = new TableLayoutPanel();
+            lblRenderPatternType = new Label();
+            cbRenderPattern = new ComboBox();
+            btnLaunchSelected = new Button();
+            richTextBoxDescription = new RichTextBox();
+            ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
+            splitContainerMain.Panel1.SuspendLayout();
+            splitContainerMain.Panel2.SuspendLayout();
+            splitContainerMain.SuspendLayout();
+            pnlDetails.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).BeginInit();
+            settingsPanel.SuspendLayout();
+            SuspendLayout();
             // 
             // splitContainerMain
             // 
-            this.splitContainerMain.BackColor = System.Drawing.SystemColors.ControlLight;
-            this.splitContainerMain.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainerMain.IsSplitterFixed = true;
-            this.splitContainerMain.Location = new System.Drawing.Point(0, 0);
-            this.splitContainerMain.Name = "splitContainerMain";
+            splitContainerMain.BackColor = SystemColors.ControlLight;
+            splitContainerMain.Dock = DockStyle.Fill;
+            splitContainerMain.IsSplitterFixed = true;
+            splitContainerMain.Location = new Point(0, 0);
+            splitContainerMain.Name = "splitContainerMain";
             // 
             // splitContainerMain.Panel1
             // 
-            this.splitContainerMain.Panel1.BackColor = System.Drawing.SystemColors.Window;
-            this.splitContainerMain.Panel1.Controls.Add(this.treeViewFractals);
-            this.splitContainerMain.Panel1.Padding = new System.Windows.Forms.Padding(10);
+            splitContainerMain.Panel1.BackColor = SystemColors.Window;
+            splitContainerMain.Panel1.Controls.Add(treeViewFractals);
+            splitContainerMain.Panel1.Padding = new Padding(10);
             // 
             // splitContainerMain.Panel2
             // 
-            this.splitContainerMain.Panel2.BackColor = System.Drawing.SystemColors.Control;
-            this.splitContainerMain.Panel2.Controls.Add(this.pnlDetails);
-            this.splitContainerMain.Size = new System.Drawing.Size(844, 521);
-            this.splitContainerMain.SplitterDistance = 284;
-            this.splitContainerMain.SplitterWidth = 2;
-            this.splitContainerMain.TabIndex = 0;
+            splitContainerMain.Panel2.BackColor = SystemColors.Control;
+            splitContainerMain.Panel2.Controls.Add(pnlDetails);
+            splitContainerMain.Size = new Size(844, 521);
+            splitContainerMain.SplitterDistance = 284;
+            splitContainerMain.SplitterWidth = 2;
+            splitContainerMain.TabIndex = 0;
             // 
             // treeViewFractals
             // 
-            this.treeViewFractals.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.treeViewFractals.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.treeViewFractals.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.treeViewFractals.Location = new System.Drawing.Point(10, 10);
-            this.treeViewFractals.Name = "treeViewFractals";
-            this.treeViewFractals.ShowLines = false;
-            this.treeViewFractals.Size = new System.Drawing.Size(264, 501);
-            this.treeViewFractals.TabIndex = 0;
-            this.treeViewFractals.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeViewFractals_AfterSelect);
+            treeViewFractals.BorderStyle = BorderStyle.None;
+            treeViewFractals.Dock = DockStyle.Fill;
+            treeViewFractals.Font = new Font("Segoe UI", 11F);
+            treeViewFractals.Location = new Point(10, 10);
+            treeViewFractals.Name = "treeViewFractals";
+            treeViewFractals.ShowLines = false;
+            treeViewFractals.Size = new Size(264, 501);
+            treeViewFractals.TabIndex = 0;
+            treeViewFractals.AfterSelect += treeViewFractals_AfterSelect;
             // 
             // pnlDetails
             // 
-            this.pnlDetails.ColumnCount = 2;
-            this.pnlDetails.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 220F));
-            this.pnlDetails.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.pnlDetails.Controls.Add(this.lblFractalName, 0, 0);
-            this.pnlDetails.Controls.Add(this.pictureBoxPreview, 0, 1);
-            this.pnlDetails.Controls.Add(this.settingsPanel, 1, 1);
-            this.pnlDetails.Controls.Add(this.richTextBoxDescription, 0, 2);
-            this.pnlDetails.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pnlDetails.Location = new System.Drawing.Point(0, 0);
-            this.pnlDetails.Name = "pnlDetails";
-            this.pnlDetails.Padding = new System.Windows.Forms.Padding(15);
-            this.pnlDetails.RowCount = 3;
-            this.pnlDetails.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.pnlDetails.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 220F));
-            this.pnlDetails.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.pnlDetails.Size = new System.Drawing.Size(558, 521);
-            this.pnlDetails.TabIndex = 0;
+            pnlDetails.ColumnCount = 2;
+            pnlDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
+            pnlDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            pnlDetails.Controls.Add(lblFractalName, 0, 0);
+            pnlDetails.Controls.Add(pictureBoxPreview, 0, 1);
+            pnlDetails.Controls.Add(settingsPanel, 1, 1);
+            pnlDetails.Controls.Add(richTextBoxDescription, 0, 2);
+            pnlDetails.Dock = DockStyle.Fill;
+            pnlDetails.Location = new Point(0, 0);
+            pnlDetails.Name = "pnlDetails";
+            pnlDetails.Padding = new Padding(15);
+            pnlDetails.RowCount = 3;
+            pnlDetails.RowStyles.Add(new RowStyle());
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Absolute, 202F));
+            pnlDetails.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            pnlDetails.Size = new Size(558, 521);
+            pnlDetails.TabIndex = 0;
             // 
             // lblFractalName
             // 
-            this.lblFractalName.AutoSize = true;
-            this.pnlDetails.SetColumnSpan(this.lblFractalName, 2);
-            this.lblFractalName.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblFractalName.Font = new System.Drawing.Font("Segoe UI Semibold", 16F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.lblFractalName.Location = new System.Drawing.Point(15, 15);
-            this.lblFractalName.Margin = new System.Windows.Forms.Padding(0, 0, 0, 15);
-            this.lblFractalName.Name = "lblFractalName";
-            this.lblFractalName.Size = new System.Drawing.Size(528, 30);
-            this.lblFractalName.TabIndex = 0;
-            this.lblFractalName.Text = "Выберите фрактал";
-            this.lblFractalName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            lblFractalName.AutoSize = true;
+            pnlDetails.SetColumnSpan(lblFractalName, 2);
+            lblFractalName.Dock = DockStyle.Fill;
+            lblFractalName.Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold);
+            lblFractalName.Location = new Point(15, 15);
+            lblFractalName.Margin = new Padding(0, 0, 0, 15);
+            lblFractalName.Name = "lblFractalName";
+            lblFractalName.Size = new Size(528, 30);
+            lblFractalName.TabIndex = 0;
+            lblFractalName.Text = "Выберите фрактал";
+            lblFractalName.TextAlign = ContentAlignment.MiddleLeft;
             // 
             // pictureBoxPreview
             // 
-            this.pictureBoxPreview.BackColor = System.Drawing.SystemColors.ControlLight;
-            this.pictureBoxPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pictureBoxPreview.Location = new System.Drawing.Point(15, 60);
-            this.pictureBoxPreview.Margin = new System.Windows.Forms.Padding(0, 0, 15, 0);
-            this.pictureBoxPreview.Name = "pictureBoxPreview";
-            this.pictureBoxPreview.Size = new System.Drawing.Size(205, 220);
-            this.pictureBoxPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pictureBoxPreview.TabIndex = 1;
-            this.pictureBoxPreview.TabStop = false;
+            pictureBoxPreview.BackColor = SystemColors.ControlLight;
+            pictureBoxPreview.Dock = DockStyle.Fill;
+            pictureBoxPreview.Location = new Point(15, 60);
+            pictureBoxPreview.Margin = new Padding(0, 0, 15, 0);
+            pictureBoxPreview.Name = "pictureBoxPreview";
+            pictureBoxPreview.Size = new Size(205, 202);
+            pictureBoxPreview.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBoxPreview.TabIndex = 1;
+            pictureBoxPreview.TabStop = false;
             // 
             // settingsPanel
             // 
-            this.settingsPanel.ColumnCount = 1;
-            this.settingsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.settingsPanel.Controls.Add(this.lblRenderPatternType, 0, 0);
-            this.settingsPanel.Controls.Add(this.cbRenderPattern, 0, 1);
-            this.settingsPanel.Controls.Add(this.btnLaunchSelected, 0, 2);
-            this.settingsPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.settingsPanel.Location = new System.Drawing.Point(235, 60);
-            this.settingsPanel.Margin = new System.Windows.Forms.Padding(0);
-            this.settingsPanel.Name = "settingsPanel";
-            this.settingsPanel.RowCount = 3;
-            this.settingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.settingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.settingsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
-            this.settingsPanel.Size = new System.Drawing.Size(308, 220);
-            this.settingsPanel.TabIndex = 4;
+            settingsPanel.ColumnCount = 1;
+            settingsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            settingsPanel.Controls.Add(lblRenderPatternType, 0, 0);
+            settingsPanel.Controls.Add(cbRenderPattern, 0, 1);
+            settingsPanel.Controls.Add(btnLaunchSelected, 0, 2);
+            settingsPanel.Dock = DockStyle.Fill;
+            settingsPanel.Location = new Point(235, 60);
+            settingsPanel.Margin = new Padding(0);
+            settingsPanel.Name = "settingsPanel";
+            settingsPanel.RowCount = 3;
+            settingsPanel.RowStyles.Add(new RowStyle());
+            settingsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            settingsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
+            settingsPanel.Size = new Size(308, 202);
+            settingsPanel.TabIndex = 4;
             // 
             // lblRenderPatternType
             // 
-            this.lblRenderPatternType.AutoSize = true;
-            this.lblRenderPatternType.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblRenderPatternType.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.lblRenderPatternType.Location = new System.Drawing.Point(0, 0);
-            this.lblRenderPatternType.Margin = new System.Windows.Forms.Padding(0, 0, 0, 5);
-            this.lblRenderPatternType.Name = "lblRenderPatternType";
-            this.lblRenderPatternType.Size = new System.Drawing.Size(308, 19);
-            this.lblRenderPatternType.TabIndex = 1;
-            this.lblRenderPatternType.Text = "Тип рендера:";
+            lblRenderPatternType.AutoSize = true;
+            lblRenderPatternType.Dock = DockStyle.Fill;
+            lblRenderPatternType.Font = new Font("Segoe UI", 10F);
+            lblRenderPatternType.Location = new Point(0, 0);
+            lblRenderPatternType.Margin = new Padding(0, 0, 0, 5);
+            lblRenderPatternType.Name = "lblRenderPatternType";
+            lblRenderPatternType.Size = new Size(308, 19);
+            lblRenderPatternType.TabIndex = 1;
+            lblRenderPatternType.Text = "Тип рендера:";
             // 
             // cbRenderPattern
             // 
-            this.cbRenderPattern.Dock = System.Windows.Forms.DockStyle.Top;
-            this.cbRenderPattern.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbRenderPattern.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.cbRenderPattern.FormattingEnabled = true;
-            this.cbRenderPattern.Location = new System.Drawing.Point(0, 24);
-            this.cbRenderPattern.Margin = new System.Windows.Forms.Padding(0);
-            this.cbRenderPattern.Name = "cbRenderPattern";
-            this.cbRenderPattern.Size = new System.Drawing.Size(308, 28);
-            this.cbRenderPattern.TabIndex = 2;
+            cbRenderPattern.Dock = DockStyle.Top;
+            cbRenderPattern.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbRenderPattern.Font = new Font("Segoe UI", 11F);
+            cbRenderPattern.FormattingEnabled = true;
+            cbRenderPattern.Location = new Point(0, 24);
+            cbRenderPattern.Margin = new Padding(0);
+            cbRenderPattern.Name = "cbRenderPattern";
+            cbRenderPattern.Size = new Size(308, 28);
+            cbRenderPattern.TabIndex = 2;
             // 
             // btnLaunchSelected
             // 
-            this.btnLaunchSelected.BackColor = System.Drawing.SystemColors.Highlight;
-            this.btnLaunchSelected.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.btnLaunchSelected.Enabled = false;
-            this.btnLaunchSelected.FlatAppearance.BorderSize = 0;
-            this.btnLaunchSelected.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnLaunchSelected.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.btnLaunchSelected.ForeColor = System.Drawing.Color.White;
-            this.btnLaunchSelected.Location = new System.Drawing.Point(0, 175);
-            this.btnLaunchSelected.Margin = new System.Windows.Forms.Padding(0, 5, 0, 0);
-            this.btnLaunchSelected.Name = "btnLaunchSelected";
-            this.btnLaunchSelected.Size = new System.Drawing.Size(308, 45);
-            this.btnLaunchSelected.TabIndex = 3;
-            this.btnLaunchSelected.Text = "Запустить";
-            this.btnLaunchSelected.UseVisualStyleBackColor = false;
-            this.btnLaunchSelected.Click += new System.EventHandler(this.btnLaunchSelected_Click);
+            btnLaunchSelected.BackColor = SystemColors.Highlight;
+            btnLaunchSelected.Dock = DockStyle.Fill;
+            btnLaunchSelected.Enabled = false;
+            btnLaunchSelected.FlatAppearance.BorderSize = 0;
+            btnLaunchSelected.FlatStyle = FlatStyle.Flat;
+            btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            btnLaunchSelected.ForeColor = Color.White;
+            btnLaunchSelected.Location = new Point(0, 157);
+            btnLaunchSelected.Margin = new Padding(0, 5, 0, 0);
+            btnLaunchSelected.Name = "btnLaunchSelected";
+            btnLaunchSelected.Size = new Size(308, 45);
+            btnLaunchSelected.TabIndex = 3;
+            btnLaunchSelected.Text = "Запустить";
+            btnLaunchSelected.UseVisualStyleBackColor = false;
+            btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 
             // richTextBoxDescription
             // 
-            this.richTextBoxDescription.BackColor = System.Drawing.SystemColors.Control;
-            this.richTextBoxDescription.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.pnlDetails.SetColumnSpan(this.richTextBoxDescription, 2);
-            this.richTextBoxDescription.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.richTextBoxDescription.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.richTextBoxDescription.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(60)))));
-            this.richTextBoxDescription.Location = new System.Drawing.Point(15, 295);
-            this.richTextBoxDescription.Margin = new System.Windows.Forms.Padding(0, 15, 0, 0);
-            this.richTextBoxDescription.Name = "richTextBoxDescription";
-            this.richTextBoxDescription.ReadOnly = true;
-            this.richTextBoxDescription.Size = new System.Drawing.Size(528, 211);
-            this.richTextBoxDescription.TabIndex = 2;
-            this.richTextBoxDescription.Text = "";
+            richTextBoxDescription.BackColor = SystemColors.Control;
+            richTextBoxDescription.BorderStyle = BorderStyle.None;
+            pnlDetails.SetColumnSpan(richTextBoxDescription, 2);
+            richTextBoxDescription.Dock = DockStyle.Fill;
+            richTextBoxDescription.Font = new Font("Segoe UI", 11F);
+            richTextBoxDescription.ForeColor = Color.FromArgb(60, 60, 60);
+            richTextBoxDescription.Location = new Point(15, 277);
+            richTextBoxDescription.Margin = new Padding(0, 15, 0, 0);
+            richTextBoxDescription.Name = "richTextBoxDescription";
+            richTextBoxDescription.ReadOnly = true;
+            richTextBoxDescription.Size = new Size(528, 229);
+            richTextBoxDescription.TabIndex = 2;
+            richTextBoxDescription.Text = "";
             // 
             // LauncherHubForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(844, 521);
-            this.Controls.Add(this.splitContainerMain);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MaximizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(720, 480);
-            this.Name = "LauncherHubForm";
-            this.Text = "Менеджер фракталов";
-            this.splitContainerMain.Panel1.ResumeLayout(false);
-            this.splitContainerMain.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainerMain)).EndInit();
-            this.splitContainerMain.ResumeLayout(false);
-            this.pnlDetails.ResumeLayout(false);
-            this.pnlDetails.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxPreview)).EndInit();
-            this.settingsPanel.ResumeLayout(false);
-            this.settingsPanel.PerformLayout();
-            this.ResumeLayout(false);
+            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(844, 521);
+            Controls.Add(splitContainerMain);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            MaximizeBox = false;
+            MinimumSize = new Size(720, 480);
+            Name = "LauncherHubForm";
+            Text = "Менеджер фракталов";
+            splitContainerMain.Panel1.ResumeLayout(false);
+            splitContainerMain.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainerMain).EndInit();
+            splitContainerMain.ResumeLayout(false);
+            pnlDetails.ResumeLayout(false);
+            pnlDetails.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).EndInit();
+            settingsPanel.ResumeLayout(false);
+            settingsPanel.PerformLayout();
+            ResumeLayout(false);
 
         }
 
