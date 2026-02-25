@@ -342,60 +342,67 @@ namespace FractalExplorer.Engines
             // Аварийный лимит для предотвращения бесконечного цикла, если точки не попадают на экран
             long maxTotalGenerations = (long)targetVisiblePoints * 1000 + 1000000;
 
-            Parallel.For(0, numThreads, new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token }, threadId =>
+            try
             {
-                Random localRand = new Random();
-                // Начальная случайная точка внутри области (например, квадрат от -0.5 до 0.5)
-                PointF currentPoint = new PointF((float)(localRand.NextDouble() - 0.5), (float)(localRand.NextDouble() - 0.5));
-
-                // "Прогрев" - несколько начальных итераций для приведения точки в область фрактала
-                for (int i = 0; i < 20; i++)
+                Parallel.For(0, numThreads, new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token }, threadId =>
                 {
-                    currentPoint = MidPoint(currentPoint, verticesWorld[localRand.Next(3)]);
-                }
+                    Random localRand = new Random();
+                    // Начальная случайная точка внутри области (например, квадрат от -0.5 до 0.5)
+                    PointF currentPoint = new PointF((float)(localRand.NextDouble() - 0.5), (float)(localRand.NextDouble() - 0.5));
 
-                // Основной цикл генерации точек
-                while (true)
-                {
-                    // Проверки на условия выхода из цикла
-                    if (token.IsCancellationRequested)
+                    // "Прогрев" - несколько начальных итераций для приведения точки в область фрактала
+                    for (int i = 0; i < 20; i++)
                     {
-                        break;
-                    }
-                    if (Interlocked.Read(ref visiblePointsDrawn) >= targetVisiblePoints)
-                    {
-                        break;
-                    }
-                    if (Interlocked.Read(ref totalGeneratedPoints) > maxTotalGenerations)
-                    {
-                        break;
+                        currentPoint = MidPoint(currentPoint, verticesWorld[localRand.Next(3)]);
                     }
 
-                    Interlocked.Increment(ref totalGeneratedPoints);
-
-                    // Генерируем новую точку: середина между текущей точкой и случайно выбранной вершиной
-                    currentPoint = MidPoint(currentPoint, verticesWorld[localRand.Next(3)]);
-                    Point screenPoint = Point.Round(WorldToScreen(currentPoint, width, height));
-
-                    // Если точка находится в пределах экрана, отрисовываем ее
-                    if (screenPoint.X >= 0 && screenPoint.X < width && screenPoint.Y >= 0 && screenPoint.Y < height)
+                    // Основной цикл генерации точек
+                    while (true)
                     {
-                        int index = screenPoint.Y * stride + screenPoint.X * bytesPerPixel;
-                        buffer[index + 0] = colorB;
-                        buffer[index + 1] = colorG;
-                        buffer[index + 2] = colorR;
-                        buffer[index + 3] = colorA;
-
-                        long currentVisible = Interlocked.Increment(ref visiblePointsDrawn);
-
-                        // Обновляем прогресс, но не слишком часто, чтобы не создавать накладные расходы
-                        if (currentVisible % 1000 == 0)
+                        // Проверки на условия выхода из цикла
+                        if (token.IsCancellationRequested)
                         {
-                            reportProgress((int)Math.Min(100, (100L * currentVisible / targetVisiblePoints)));
+                            break;
+                        }
+                        if (Interlocked.Read(ref visiblePointsDrawn) >= targetVisiblePoints)
+                        {
+                            break;
+                        }
+                        if (Interlocked.Read(ref totalGeneratedPoints) > maxTotalGenerations)
+                        {
+                            break;
+                        }
+
+                        Interlocked.Increment(ref totalGeneratedPoints);
+
+                        // Генерируем новую точку: середина между текущей точкой и случайно выбранной вершиной
+                        currentPoint = MidPoint(currentPoint, verticesWorld[localRand.Next(3)]);
+                        Point screenPoint = Point.Round(WorldToScreen(currentPoint, width, height));
+
+                        // Если точка находится в пределах экрана, отрисовываем ее
+                        if (screenPoint.X >= 0 && screenPoint.X < width && screenPoint.Y >= 0 && screenPoint.Y < height)
+                        {
+                            int index = screenPoint.Y * stride + screenPoint.X * bytesPerPixel;
+                            buffer[index + 0] = colorB;
+                            buffer[index + 1] = colorG;
+                            buffer[index + 2] = colorR;
+                            buffer[index + 3] = colorA;
+
+                            long currentVisible = Interlocked.Increment(ref visiblePointsDrawn);
+
+                            // Обновляем прогресс, но не слишком часто, чтобы не создавать накладные расходы
+                            if (currentVisible % 1000 == 0)
+                            {
+                                reportProgress((int)Math.Min(100, (100L * currentVisible / targetVisiblePoints)));
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // Игнорируем, так как отмена рендера при перетаскивании/масштабировании ожидаема.
+            }
 
             // Убеждаемся, что прогресс установлен на 100%, если не было отмены
             if (!token.IsCancellationRequested)
