@@ -96,10 +96,11 @@ namespace FractalExplorer.Engines
                 var tokens = tokenizer.Tokenize();
                 var parser = new Parser(tokens);
 
-                f_ast = parser.Parse();
-                f_deriv_ast = f_ast.Differentiate("z");
+                // ВАЖНО: Вызываем Simplify() для базовой функции и для производной!
+                f_ast = parser.Parse().Simplify();
+                f_deriv_ast = f_ast.Differentiate("z").Simplify();
 
-                // Отладочная информация
+                // Отладочная информация будет уже выводить красивые и короткие формулы
                 sb.AppendLine("Источник (legacy parser): " + expression);
                 sb.AppendLine("Токены: " + string.Join(" ", tokens.Select(t => $"[{t.Type}:{t.Value}]")));
                 sb.AppendLine("Исходная функция: f(z) = " + f_ast.ToString());
@@ -115,7 +116,7 @@ namespace FractalExplorer.Engines
             {
                 f_ast = null;
                 f_deriv_ast = null;
-                Roots.Clear();
+                Roots.Clear(); // Убедись, что Roots доступен в этом контексте
                 debugInfo = $"ОШИБКА ПАРСИНГА:\n{ex.Message}";
                 return false;
             }

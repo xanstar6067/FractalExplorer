@@ -161,6 +161,12 @@ namespace FractalExplorer.Parsers
         public abstract ExpressionNode Differentiate(string varName);
 
         /// <summary>
+        /// Упрощает дерево выражений (свертка констант и удаление избыточных операций).
+        /// </summary>
+        /// <returns>Упрощенный узел выражения.</returns>
+        public abstract ExpressionNode Simplify();
+
+        /// <summary>
         /// Печатает структурированное представление узла (для отладки).
         /// </summary>
         /// <param name="indent">Строка отступа для форматирования.</param>
@@ -211,17 +217,27 @@ namespace FractalExplorer.Parsers
         public override ExpressionNode Differentiate(string varName) => new NumberNode(Complex.Zero);
 
         /// <summary>
+        /// Возвращает сам узел, так как число не может быть упрощено.
+        /// </summary>
+        public override ExpressionNode Simplify() => this;
+
+        /// <summary>
         /// Печатает структурированное представление узла числа.
         /// </summary>
         /// <param name="indent">Строка отступа.</param>
         /// <returns>Строковое представление узла.</returns>
-        public override string Print(string indent = "") => $"{indent}Number({Value})";
+        public override string Print(string indent = "") => $"{indent}Number({Value.Real}{(Value.Imaginary >= 0 ? "+" : "")}{Value.Imaginary}i)";
 
         /// <summary>
         /// Печатает простое строковое представление числа.
         /// </summary>
         /// <returns>Строковое представление числа.</returns>
-        public override string PrintSimple() => Value.ToString();
+        public override string PrintSimple()
+        {
+            if (Value.Imaginary == 0) return Value.Real.ToString(CultureInfo.InvariantCulture);
+            if (Value.Real == 0) return Value.Imaginary == 1 ? "i" : Value.Imaginary == -1 ? "-i" : $"{Value.Imaginary.ToString(CultureInfo.InvariantCulture)}i";
+            return $"({Value.Real.ToString(CultureInfo.InvariantCulture)}{(Value.Imaginary >= 0 ? "+" : "")}{Value.Imaginary.ToString(CultureInfo.InvariantCulture)}i)";
+        }
     }
 
     /// <summary>
@@ -276,6 +292,11 @@ namespace FractalExplorer.Parsers
             }
             return new NumberNode(Complex.Zero);
         }
+
+        /// <summary>
+        /// Возвращает сам узел, так как переменная не может быть упрощена.
+        /// </summary>
+        public override ExpressionNode Simplify() => this;
 
         /// <summary>
         /// Печатает структурированное представление узла переменной.
@@ -348,11 +369,8 @@ namespace FractalExplorer.Parsers
 
         /// <summary>
         /// Вычисляет производную бинарной операции по заданной переменной.
-        /// Поддерживает правила дифференцирования для сложения, вычитания, умножения, деления и возведения в степень (только для числового показателя).
+        /// Поддерживает правила дифференцирования для сложения, вычитания, умножения, деления и возведения в степень.
         /// </summary>
-        /// <param name="varName">Имя переменной, по которой производится дифференцирование.</param>
-        /// <returns>Узел выражения, представляющий производную.</returns>
-        /// <exception cref="Exception">Выбрасывается, если дифференцирование для данного оператора не поддерживается.</exception>
         public override ExpressionNode Differentiate(string varName)
         {
             var u = Left; // Обозначение для левого операнда
@@ -364,11 +382,74 @@ namespace FractalExplorer.Parsers
             {
                 "+" => new BinaryOpNode(du, "+", dv),
                 "-" => new BinaryOpNode(du, "-", dv),
-                "*" => new BinaryOpNode(new BinaryOpNode(du, "*", v), "+", new BinaryOpNode(u, "*", dv)), // Правило произведения: (uv)' = u'v + uv'
-                "/" => new BinaryOpNode(new BinaryOpNode(new BinaryOpNode(du, "*", v), "-", new BinaryOpNode(u, "*", dv)), "/", new BinaryOpNode(v, "^", new NumberNode(new Complex(2, 0)))), // Правило частного: (u/v)' = (u'v - uv') / v^2
-                "^" when v is NumberNode c => new BinaryOpNode(new BinaryOpNode(c, "*", du), "*", new BinaryOpNode(u, "^", new NumberNode(c.Value - 1))), // Правило степени: (u^c)' = c * u^(c-1) * u'
+                "*" => new BinaryOpNode(new BinaryOpNode(du, "*", v), "+", new BinaryOpNode(u, "*", dv)), // (uv)' = u'v + uv'
+                "/" => new BinaryOpNode(new BinaryOpNode(new BinaryOpNode(du, "*", v), "-", new BinaryOpNode(u, "*", dv)), "/", new BinaryOpNode(v, "^", new NumberNode(new Complex(2, 0)))), // (u/v)' = (u'v - uv') / v^2
+                "^" when v is NumberNode c => new BinaryOpNode(new BinaryOpNode(c, "*", du), "*", new BinaryOpNode(u, "^", new NumberNode(c.Value - 1))), // (u^c)' = c * u' * u^(c-1)
                 _ => throw new Exception($"Дифференцирование для оператора '{Operator}' не поддерживается."),
             };
+        }
+
+        /// <summary>
+        /// Упрощает бинарную операцию, удаляя нули, единицы и сворачивая константы.
+        /// </summary>
+        public override ExpressionNode Simplify()
+        {
+            // 1. Рекурсивно упрощаем левую и правую ветви
+            var left = Left.Simplify();
+            var right = Right.Simplify();
+
+            // 2. Свертка констант (Constant Folding)
+            if (left is NumberNode lNum && right is NumberNode rNum)
+            {
+                return Operator switch
+                {
+                    "+" => new NumberNode(lNum.Value + rNum.Value),
+                    "-" => new NumberNode(lNum.Value - rNum.Value),
+                    "*" => new NumberNode(lNum.Value * rNum.Value),
+                    "/" => new NumberNode(lNum.Value / rNum.Value),
+                    "^" => new NumberNode(Complex.Pow(lNum.Value, rNum.Value)),
+                    _ => new BinaryOpNode(left, Operator, right)
+                };
+            }
+
+            // Подготовка флагов для алгебраических правил
+            bool isLeftZero = left is NumberNode ln0 && ln0.Value == Complex.Zero;
+            bool isRightZero = right is NumberNode rn0 && rn0.Value == Complex.Zero;
+            bool isLeftOne = left is NumberNode ln1 && ln1.Value == Complex.One;
+            bool isRightOne = right is NumberNode rn1 && rn1.Value == Complex.One;
+
+            // 3. Алгебраическое упрощение (Algebraic Simplification)
+            switch (Operator)
+            {
+                case "+":
+                    if (isLeftZero) return right; // 0 + x -> x
+                    if (isRightZero) return left; // x + 0 -> x
+                    break;
+                case "-":
+                    if (isRightZero) return left; // x - 0 -> x
+                    if (isLeftZero) return new UnaryOpNode("-", right).Simplify(); // 0 - x -> -x
+                    if (left.PrintSimple() == right.PrintSimple()) return new NumberNode(Complex.Zero); // x - x -> 0
+                    break;
+                case "*":
+                    if (isLeftZero || isRightZero) return new NumberNode(Complex.Zero); // 0 * x -> 0
+                    if (isLeftOne) return right; // 1 * x -> x
+                    if (isRightOne) return left; // x * 1 -> x
+                    break;
+                case "/":
+                    if (isLeftZero) return new NumberNode(Complex.Zero); // 0 / x -> 0
+                    if (isRightOne) return left; // x / 1 -> x
+                    if (left.PrintSimple() == right.PrintSimple()) return new NumberNode(Complex.One); // x / x -> 1
+                    break;
+                case "^":
+                    if (isRightZero) return new NumberNode(Complex.One); // x ^ 0 -> 1
+                    if (isRightOne) return left; // x ^ 1 -> x
+                    if (isLeftZero) return new NumberNode(Complex.Zero); // 0 ^ x -> 0
+                    if (isLeftOne) return new NumberNode(Complex.One); // 1 ^ x -> 1
+                    break;
+            }
+
+            // Возвращаем узел с упрощенными ветвями
+            return new BinaryOpNode(left, Operator, right);
         }
 
         /// <summary>
@@ -389,7 +470,7 @@ namespace FractalExplorer.Parsers
         /// Печатает простое строковое представление бинарной операции.
         /// </summary>
         /// <returns>Строковое представление операции.</returns>
-        public override string PrintSimple() => $"({Left.PrintSimple()} {Operator} {Right.PrintSimple()})";
+        public override string PrintSimple() => $"({Left.PrintSimple()}{Operator}{Right.PrintSimple()})";
     }
 
     /// <summary>
@@ -438,9 +519,30 @@ namespace FractalExplorer.Parsers
         /// <summary>
         /// Вычисляет производную унарной операции.
         /// </summary>
-        /// <param name="varName">Имя переменной, по которой производится дифференцирование.</param>
-        /// <returns>Узел выражения, представляющий производную.</returns>
         public override ExpressionNode Differentiate(string varName) => new UnaryOpNode(Operator, Operand.Differentiate(varName));
+
+        /// <summary>
+        /// Упрощает унарную операцию, сворачивая константы.
+        /// </summary>
+        public override ExpressionNode Simplify()
+        {
+            var simplifiedOperand = Operand.Simplify();
+
+            // Если под унарным оператором число - вычисляем его
+            if (simplifiedOperand is NumberNode numberNode)
+            {
+                if (Operator == "-") return new NumberNode(-numberNode.Value);
+                if (Operator == "+") return numberNode;
+            }
+
+            // Избавляемся от лишнего унарного плюса
+            if (Operator == "+")
+            {
+                return simplifiedOperand;
+            }
+
+            return new UnaryOpNode(Operator, simplifiedOperand);
+        }
 
         /// <summary>
         /// Печатает структурированное представление узла унарной операции.
