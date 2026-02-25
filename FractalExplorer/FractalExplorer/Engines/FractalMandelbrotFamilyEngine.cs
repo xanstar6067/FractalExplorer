@@ -990,6 +990,48 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class MandelbrotEngine : FractalMandelbrotFamilyEngine
     {
+        /// <summary>
+        /// Проверяет быструю принадлежность точки внутренним областям классического множества Мандельброта.
+        /// </summary>
+        /// <remarks>
+        /// Формулы отсечения:
+        /// 1) Главная кардиоида: q = (x - 1/4)^2 + y^2, q * (q + (x - 1/4)) <= (1/4) * y^2.
+        /// 2) Bulb периода 2: (x + 1)^2 + y^2 <= 1/16.
+        /// </remarks>
+        private static bool IsInsideMainCardioidOrPeriod2Bulb(decimal x, decimal y)
+        {
+            decimal xMinusQuarter = x - 0.25m;
+            decimal ySquared = y * y;
+            decimal q = xMinusQuarter * xMinusQuarter + ySquared;
+            if (q * (q + xMinusQuarter) <= 0.25m * ySquared)
+            {
+                return true;
+            }
+
+            decimal xPlusOne = x + 1.0m;
+            return (xPlusOne * xPlusOne + ySquared) <= 0.0625m;
+        }
+
+        /// <summary>
+        /// Проверяет быструю принадлежность точки внутренним областям классического множества Мандельброта (double-версия).
+        /// </summary>
+        private static bool IsInsideMainCardioidOrPeriod2BulbDouble(double x, double y)
+        {
+            // Формулы отсечения:
+            // 1) Главная кардиоида: q = (x - 1/4)^2 + y^2, q * (q + (x - 1/4)) <= (1/4) * y^2.
+            // 2) Bulb периода 2: (x + 1)^2 + y^2 <= 1/16.
+            double xMinusQuarter = x - 0.25;
+            double ySquared = y * y;
+            double q = xMinusQuarter * xMinusQuarter + ySquared;
+            if (q * (q + xMinusQuarter) <= 0.25 * ySquared)
+            {
+                return true;
+            }
+
+            double xPlusOne = x + 1.0;
+            return (xPlusOne * xPlusOne + ySquared) <= 0.0625;
+        }
+
         /// <inheritdoc />
         public override void CopySpecificParametersFrom(FractalMandelbrotFamilyEngine source)
         {
@@ -1006,6 +1048,11 @@ namespace FractalExplorer.Engines
         /// <inheritdoc />
         public override int CalculateIterations(ref ComplexDecimal z, ComplexDecimal c)
         {
+            if (IsInsideMainCardioidOrPeriod2Bulb(c.Real, c.Imaginary))
+            {
+                return MaxIterations;
+            }
+
             int iter = 0;
             while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
             {
@@ -1025,6 +1072,11 @@ namespace FractalExplorer.Engines
         /// <inheritdoc />
         public override int CalculateIterationsDouble(ref ComplexDouble z, ComplexDouble c)
         {
+            if (IsInsideMainCardioidOrPeriod2BulbDouble(c.Real, c.Imaginary))
+            {
+                return MaxIterations;
+            }
+
             int iter = 0;
             double thresholdSq = (double)ThresholdSquared;
             while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
