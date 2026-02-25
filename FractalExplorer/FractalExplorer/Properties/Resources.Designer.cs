@@ -83,9 +83,29 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap buffalo_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("buffalo_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap burningship_preview {
             get {
                 object obj = ResourceManager.GetObject("burningship_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap burningship_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("burningship_preview_sq512", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -103,9 +123,29 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap collatz_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("collatz_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap general_mandelbrot_preview {
             get {
                 object obj = ResourceManager.GetObject("general_mandelbrot_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap general_mandelbrot_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("general_mandelbrot_preview_sq512", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -123,9 +163,29 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap julia_burningship_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("julia_burningship_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap julia_preview {
             get {
                 object obj = ResourceManager.GetObject("julia_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap julia_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("julia_preview_sq512", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -143,9 +203,29 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap mandelbrot_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("mandelbrot_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap newton_preview {
             get {
                 object obj = ResourceManager.GetObject("newton_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap newton_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("newton_preview_sq512", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -163,9 +243,29 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap NovaJulia_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("NovaJulia_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap NovaMandelbrot_preview {
             get {
                 object obj = ResourceManager.GetObject("NovaMandelbrot_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap NovaMandelbrot_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("NovaMandelbrot_preview_sq512", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -183,6 +283,16 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap phoenix_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("phoenix_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap serpinski_preview {
             get {
                 object obj = ResourceManager.GetObject("serpinski_preview", resourceCulture);
@@ -193,9 +303,29 @@ namespace FractalExplorer.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap serpinski_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("serpinski_preview_sq512", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap simonobrot_preview {
             get {
                 object obj = ResourceManager.GetObject("simonobrot_preview", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap simonobrot_preview_sq512 {
+            get {
+                object obj = ResourceManager.GetObject("simonobrot_preview_sq512", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
