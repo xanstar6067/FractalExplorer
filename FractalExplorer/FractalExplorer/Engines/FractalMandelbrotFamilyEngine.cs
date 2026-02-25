@@ -428,6 +428,24 @@ namespace FractalExplorer.Engines
             {
                 return (decimal re, decimal im, out int iter, out ComplexDecimal z) =>
                 {
+                    decimal xMinusQuarter = re - 0.25m;
+                    decimal ySquared = im * im;
+                    decimal q = xMinusQuarter * xMinusQuarter + ySquared;
+                    if (q * (q + xMinusQuarter) <= 0.25m * ySquared)
+                    {
+                        z = ComplexDecimal.Zero;
+                        iter = maxIterations;
+                        return;
+                    }
+
+                    decimal xPlusOne = re + 1.0m;
+                    if ((xPlusOne * xPlusOne + ySquared) <= 0.0625m)
+                    {
+                        z = ComplexDecimal.Zero;
+                        iter = maxIterations;
+                        return;
+                    }
+
                     ComplexDecimal c = new ComplexDecimal(re, im);
                     z = ComplexDecimal.Zero;
                     iter = 0;
@@ -502,6 +520,24 @@ namespace FractalExplorer.Engines
             {
                 return (double re, double im, out int iter, out ComplexDouble z) =>
                 {
+                    double xMinusQuarter = re - 0.25;
+                    double ySquared = im * im;
+                    double q = xMinusQuarter * xMinusQuarter + ySquared;
+                    if (q * (q + xMinusQuarter) <= 0.25 * ySquared)
+                    {
+                        z = ComplexDouble.Zero;
+                        iter = maxIterations;
+                        return;
+                    }
+
+                    double xPlusOne = re + 1.0;
+                    if ((xPlusOne * xPlusOne + ySquared) <= 0.0625)
+                    {
+                        z = ComplexDouble.Zero;
+                        iter = maxIterations;
+                        return;
+                    }
+
                     ComplexDouble c = new ComplexDouble(re, im);
                     z = ComplexDouble.Zero;
                     iter = 0;
