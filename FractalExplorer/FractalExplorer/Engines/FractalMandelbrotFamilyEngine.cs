@@ -17,6 +17,18 @@ namespace FractalExplorer.Engines
     /// </summary>
     public abstract class FractalMandelbrotFamilyEngine
     {
+        private delegate void IterationCalculatorDecimal(decimal re, decimal im, out int iter, out ComplexDecimal z);
+        private delegate void IterationCalculatorDouble(double re, double im, out int iter, out ComplexDouble z);
+
+        private enum SpecializedEngineKind
+        {
+            None,
+            Mandelbrot,
+            Julia,
+            MandelbrotBurningShip,
+            JuliaBurningShip
+        }
+
         #region Constants
 
         /// <summary>
@@ -245,6 +257,9 @@ namespace FractalExplorer.Engines
                     decimal halfWidthPixels = renderWidth / 2.0m;
                     decimal halfHeightPixels = renderHeight / 2.0m;
                     decimal unitsPerPixel = Scale / renderWidth;
+                    decimal centerX = CenterX;
+                    decimal centerY = CenterY;
+                    IterationCalculatorDecimal iterationCalculator = CreateDecimalIterationCalculator();
 
                     Parallel.For(0, renderHeight, po, y =>
                     {
@@ -252,11 +267,10 @@ namespace FractalExplorer.Engines
                         int rowOffset = y * bmpData.Stride;
                         for (int x = 0; x < renderWidth; x++)
                         {
-                            decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
-                            decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
+                            decimal re = centerX + (x - halfWidthPixels) * unitsPerPixel;
+                            decimal im = centerY - (y - halfHeightPixels) * unitsPerPixel;
 
-                            GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                            int iter = CalculateIterations(ref z, c);
+                            iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
                             Color pixelColor = UseSmoothColoring && SmoothPalette != null
                                 ? SmoothPalette(CalculateSmoothValue(iter, z))
@@ -281,6 +295,7 @@ namespace FractalExplorer.Engines
                     double unitsPerPixel_d = (double)Scale / renderWidth;
                     double halfWidthPixels_d = renderWidth / 2.0;
                     double halfHeightPixels_d = renderHeight / 2.0;
+                    IterationCalculatorDouble iterationCalculator = CreateDoubleIterationCalculator();
 
                     Parallel.For(0, renderHeight, po, y =>
                     {
@@ -291,8 +306,7 @@ namespace FractalExplorer.Engines
                             double re = centerX_d + (x - halfWidthPixels_d) * unitsPerPixel_d;
                             double im = centerY_d - (y - halfHeightPixels_d) * unitsPerPixel_d;
 
-                            GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                            int iter = CalculateIterationsDouble(ref z, c);
+                            iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
                             Color pixelColor = UseSmoothColoring && SmoothPalette != null
                                 ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
@@ -365,6 +379,163 @@ namespace FractalExplorer.Engines
 
         #region Private Rendering Helpers
 
+        private SpecializedEngineKind GetSpecializedEngineKind()
+        {
+            if (this is MandelbrotEngine) return SpecializedEngineKind.Mandelbrot;
+            if (this is JuliaEngine) return SpecializedEngineKind.Julia;
+            if (this is MandelbrotBurningShipEngine) return SpecializedEngineKind.MandelbrotBurningShip;
+            if (this is JuliaBurningShipEngine) return SpecializedEngineKind.JuliaBurningShip;
+            return SpecializedEngineKind.None;
+        }
+
+        private IterationCalculatorDecimal CreateDecimalIterationCalculator(bool allowSpecialized = true)
+        {
+            SpecializedEngineKind kind = allowSpecialized ? GetSpecializedEngineKind() : SpecializedEngineKind.None;
+            int maxIterations = MaxIterations;
+            decimal thresholdSq = ThresholdSquared;
+
+            if (kind == SpecializedEngineKind.Julia || kind == SpecializedEngineKind.JuliaBurningShip)
+            {
+                ComplexDecimal juliaC = C;
+                if (kind == SpecializedEngineKind.Julia)
+                {
+                    return (decimal re, decimal im, out int iter, out ComplexDecimal z) =>
+                    {
+                        z = new ComplexDecimal(re, im);
+                        iter = 0;
+                        while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                        {
+                            z = z * z + juliaC;
+                            iter++;
+                        }
+                    };
+                }
+
+                return (decimal re, decimal im, out int iter, out ComplexDecimal z) =>
+                {
+                    z = new ComplexDecimal(re, im);
+                    iter = 0;
+                    while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                    {
+                        z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                        z = z * z + juliaC;
+                        iter++;
+                    }
+                };
+            }
+
+            if (kind == SpecializedEngineKind.Mandelbrot)
+            {
+                return (decimal re, decimal im, out int iter, out ComplexDecimal z) =>
+                {
+                    ComplexDecimal c = new ComplexDecimal(re, im);
+                    z = ComplexDecimal.Zero;
+                    iter = 0;
+                    while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                    {
+                        z = z * z + c;
+                        iter++;
+                    }
+                };
+            }
+
+            if (kind == SpecializedEngineKind.MandelbrotBurningShip)
+            {
+                return (decimal re, decimal im, out int iter, out ComplexDecimal z) =>
+                {
+                    ComplexDecimal c = new ComplexDecimal(re, im);
+                    z = ComplexDecimal.Zero;
+                    iter = 0;
+                    while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                    {
+                        z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                        z = z * z + c;
+                        iter++;
+                    }
+                };
+            }
+
+            return (decimal re, decimal im, out int iter, out ComplexDecimal z) =>
+            {
+                GetCalculationParameters(re, im, out z, out ComplexDecimal c);
+                iter = CalculateIterations(ref z, c);
+            };
+        }
+
+        private IterationCalculatorDouble CreateDoubleIterationCalculator(bool allowSpecialized = true)
+        {
+            SpecializedEngineKind kind = allowSpecialized ? GetSpecializedEngineKind() : SpecializedEngineKind.None;
+            int maxIterations = MaxIterations;
+            double thresholdSq = (double)ThresholdSquared;
+
+            if (kind == SpecializedEngineKind.Julia || kind == SpecializedEngineKind.JuliaBurningShip)
+            {
+                ComplexDouble juliaC = new ComplexDouble((double)C.Real, (double)C.Imaginary);
+                if (kind == SpecializedEngineKind.Julia)
+                {
+                    return (double re, double im, out int iter, out ComplexDouble z) =>
+                    {
+                        z = new ComplexDouble(re, im);
+                        iter = 0;
+                        while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                        {
+                            z = z * z + juliaC;
+                            iter++;
+                        }
+                    };
+                }
+
+                return (double re, double im, out int iter, out ComplexDouble z) =>
+                {
+                    z = new ComplexDouble(re, im);
+                    iter = 0;
+                    while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                    {
+                        z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                        z = z * z + juliaC;
+                        iter++;
+                    }
+                };
+            }
+
+            if (kind == SpecializedEngineKind.Mandelbrot)
+            {
+                return (double re, double im, out int iter, out ComplexDouble z) =>
+                {
+                    ComplexDouble c = new ComplexDouble(re, im);
+                    z = ComplexDouble.Zero;
+                    iter = 0;
+                    while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                    {
+                        z = z * z + c;
+                        iter++;
+                    }
+                };
+            }
+
+            if (kind == SpecializedEngineKind.MandelbrotBurningShip)
+            {
+                return (double re, double im, out int iter, out ComplexDouble z) =>
+                {
+                    ComplexDouble c = new ComplexDouble(re, im);
+                    z = ComplexDouble.Zero;
+                    iter = 0;
+                    while (iter < maxIterations && z.MagnitudeSquared <= thresholdSq)
+                    {
+                        z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+                        z = z * z + c;
+                        iter++;
+                    }
+                };
+            }
+
+            return (double re, double im, out int iter, out ComplexDouble z) =>
+            {
+                GetCalculationParametersDouble(re, im, out z, out ComplexDouble c);
+                iter = CalculateIterationsDouble(ref z, c);
+            };
+        }
+
         /// <summary>
         /// Вспомогательный метод для рендеринга тайла с высокой точностью (<see cref="decimal"/>).
         /// </summary>
@@ -378,6 +549,9 @@ namespace FractalExplorer.Engines
             decimal halfWidthPixels = canvasWidth / 2.0m;
             decimal halfHeightPixels = canvasHeight / 2.0m;
             decimal unitsPerPixel = Scale / canvasWidth;
+            decimal centerX = CenterX;
+            decimal centerY = CenterY;
+            IterationCalculatorDecimal iterationCalculator = CreateDecimalIterationCalculator();
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
@@ -389,11 +563,10 @@ namespace FractalExplorer.Engines
                     int canvasX = tile.Bounds.X + x;
                     if (canvasX >= canvasWidth) continue;
 
-                    decimal re = CenterX + (canvasX - halfWidthPixels) * unitsPerPixel;
-                    decimal im = CenterY - (canvasY - halfHeightPixels) * unitsPerPixel;
+                    decimal re = centerX + (canvasX - halfWidthPixels) * unitsPerPixel;
+                    decimal im = centerY - (canvasY - halfHeightPixels) * unitsPerPixel;
 
-                    GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                    int iter = CalculateIterations(ref z, c);
+                    iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
                     Color pixelColor = UseSmoothColoring && SmoothPalette != null
                         ? SmoothPalette(CalculateSmoothValue(iter, z))
@@ -421,6 +594,7 @@ namespace FractalExplorer.Engines
             double centerX_d = (double)CenterX;
             double centerY_d = (double)CenterY;
             double scale_d = (double)Scale;
+            IterationCalculatorDouble iterationCalculator = CreateDoubleIterationCalculator();
 
             double halfWidthPixels = canvasWidth / 2.0;
             double halfHeightPixels = canvasHeight / 2.0;
@@ -439,8 +613,7 @@ namespace FractalExplorer.Engines
                     double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
                     double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
 
-                    GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                    int iter = CalculateIterationsDouble(ref z, c);
+                    iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
                     Color pixelColor = UseSmoothColoring && SmoothPalette != null
                         ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
@@ -474,6 +647,9 @@ namespace FractalExplorer.Engines
             decimal unitsPerSubPixel = Scale / highResCanvasWidth;
             decimal highResHalfWidthPixels = highResCanvasWidth / 2.0m;
             decimal highResHalfHeightPixels = (long)canvasHeight * supersamplingFactor / 2.0m;
+            decimal centerX = CenterX;
+            decimal centerY = CenterY;
+            IterationCalculatorDecimal iterationCalculator = CreateDecimalIterationCalculator();
 
             Parallel.For(0, highResTileHeight, y =>
             {
@@ -482,11 +658,10 @@ namespace FractalExplorer.Engines
                     long globalHighResX = (long)tile.Bounds.X * supersamplingFactor + x;
                     long globalHighResY = (long)tile.Bounds.Y * supersamplingFactor + y;
 
-                    decimal re = CenterX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
-                    decimal im = CenterY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
+                    decimal re = centerX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
+                    decimal im = centerY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                    GetCalculationParameters(re, im, out ComplexDecimal z, out ComplexDecimal c);
-                    int iter = CalculateIterations(ref z, c);
+                    iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
                     highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
                         ? SmoothPalette(CalculateSmoothValue(iter, z))
@@ -543,6 +718,7 @@ namespace FractalExplorer.Engines
             double highResHalfHeightPixels = (long)canvasHeight * supersamplingFactor / 2.0;
             double centerX_d = (double)CenterX;
             double centerY_d = (double)CenterY;
+            IterationCalculatorDouble iterationCalculator = CreateDoubleIterationCalculator();
 
             Parallel.For(0, highResTileHeight, y =>
             {
@@ -554,8 +730,7 @@ namespace FractalExplorer.Engines
                     double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
                     double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                    GetCalculationParametersDouble(re, im, out ComplexDouble z, out ComplexDouble c);
-                    int iter = CalculateIterationsDouble(ref z, c);
+                    iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
                     highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
                         ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
