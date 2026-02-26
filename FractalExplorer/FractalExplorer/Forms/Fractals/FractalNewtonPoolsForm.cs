@@ -462,7 +462,8 @@ namespace FractalExplorer
         }
 
         /// <summary>
-        /// Генерирует список плиток для рендеринга, отсортированных от центра к краям.
+        /// Генерирует список плиток (тайлов) для рендеринга изображения в порядке обычного обхода сетки.
+        /// Итоговая стратегия распределения задается в <see cref="TileRenderDispatcher"/>.
         /// </summary>
         /// <param name="width">Ширина области рендеринга.</param>
         /// <param name="height">Высота области рендеринга.</param>
@@ -470,7 +471,6 @@ namespace FractalExplorer
         private List<TileInfo> GenerateTiles(int width, int height)
         {
             var tiles = new List<TileInfo>();
-            Point center = new Point(width / 2, height / 2);
 
             for (int y = 0; y < height; y += TILE_SIZE)
             {
@@ -481,7 +481,7 @@ namespace FractalExplorer
                     tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
                 }
             }
-            return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
+            return tiles;
         }
 
         #endregion
