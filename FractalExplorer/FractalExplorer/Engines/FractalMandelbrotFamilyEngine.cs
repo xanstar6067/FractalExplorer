@@ -1333,21 +1333,78 @@ namespace FractalExplorer.Engines
         {
             int iter = 0;
             double thresholdSq = (double)ThresholdSquared;
-            double power_d = (double)Power;
+            decimal power = Power;
+            int integerPower = decimal.Truncate(power) == power ? (int)power : -1;
 
-            // Преобразуем в стандартный System.Numerics.Complex для использования быстрой функции Pow
-            Complex z_numerics = new Complex(z.Real, z.Imaginary);
-            Complex c_numerics = new Complex(c.Real, c.Imaginary);
-
-            while (iter < MaxIterations && z_numerics.Magnitude * z_numerics.Magnitude <= thresholdSq)
+            if (integerPower >= 2 && integerPower <= 8)
             {
-                z_numerics = Complex.Pow(z_numerics, power_d) + c_numerics;
+                while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
+                {
+                    z = PowComplexDoubleInteger(z, integerPower) + c;
+                    iter++;
+                }
+
+                return iter;
+            }
+
+            // Для дробных и экзотических степеней сохраняем прежнее поведение через System.Numerics.Complex.Pow.
+            double powerDouble = (double)power;
+            Complex cNumerics = new Complex(c.Real, c.Imaginary);
+
+            while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
+            {
+                Complex zNumerics = Complex.Pow(new Complex(z.Real, z.Imaginary), powerDouble) + cNumerics;
+                z = new ComplexDouble(zNumerics.Real, zNumerics.Imaginary);
                 iter++;
             }
 
-            // Обновляем исходную переменную z, переданную по ссылке
-            z = new ComplexDouble(z_numerics.Real, z_numerics.Imaginary);
             return iter;
+        }
+
+        private static ComplexDouble PowComplexDoubleInteger(ComplexDouble z, int power)
+        {
+            switch (power)
+            {
+                case 2:
+                    return z * z;
+                case 3:
+                {
+                    ComplexDouble z2 = z * z;
+                    return z2 * z;
+                }
+                case 4:
+                {
+                    ComplexDouble z2 = z * z;
+                    return z2 * z2;
+                }
+                case 5:
+                {
+                    ComplexDouble z2 = z * z;
+                    ComplexDouble z4 = z2 * z2;
+                    return z4 * z;
+                }
+                case 6:
+                {
+                    ComplexDouble z2 = z * z;
+                    ComplexDouble z4 = z2 * z2;
+                    return z4 * z2;
+                }
+                case 7:
+                {
+                    ComplexDouble z2 = z * z;
+                    ComplexDouble z4 = z2 * z2;
+                    ComplexDouble z6 = z4 * z2;
+                    return z6 * z;
+                }
+                case 8:
+                {
+                    ComplexDouble z2 = z * z;
+                    ComplexDouble z4 = z2 * z2;
+                    return z4 * z4;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(power), "Поддерживаются только степени 2..8.");
+            }
         }
 
         /// <summary>
