@@ -782,6 +782,27 @@ namespace FractalExplorer
             public NewtonColorPalette PaletteSnapshot { get; set; }
         }
 
+        private int ResolveEffectiveIterations(int stateIterations, int previewIterations)
+        {
+            if (stateIterations > 0) return stateIterations;
+            if (previewIterations > 0) return previewIterations;
+            return Math.Max(1, (int)nudIterations.Minimum);
+        }
+
+        private NewtonPreviewParams BuildPreviewParamsFromState(NewtonSaveState state)
+        {
+            if (state == null) return null;
+            return new NewtonPreviewParams
+            {
+                Formula = state.Formula,
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = state.Iterations,
+                PaletteSnapshot = state.PaletteSnapshot
+            };
+        }
+
         /// <inheritdoc />
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
@@ -789,6 +810,7 @@ namespace FractalExplorer
             _paletteManager.ActivePalette.IsGradient = _engine.UseGradient;
             _paletteManager.ActivePalette.RootColors = new List<Color>(_engine.RootColors);
 
+            int iterations = (int)nudIterations.Value;
             var state = new NewtonSaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
@@ -797,7 +819,7 @@ namespace FractalExplorer
                 CenterX = (decimal)_centerX,
                 CenterY = (decimal)_centerY,
                 Zoom = (decimal)_zoom,
-                Iterations = (int)nudIterations.Value,
+                Iterations = iterations,
                 PaletteSnapshot = _paletteManager.ActivePalette
             };
 
@@ -807,7 +829,7 @@ namespace FractalExplorer
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = state.Iterations,
+                Iterations = iterations,
                 PaletteSnapshot = state.PaletteSnapshot
             };
 
@@ -862,16 +884,22 @@ namespace FractalExplorer
         {
             return await Task.Run(() =>
             {
-                if (string.IsNullOrEmpty(state.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-
-                NewtonPreviewParams previewParams;
-                try
+                NewtonPreviewParams previewParams = null;
+                if (!string.IsNullOrEmpty(state.PreviewParametersJson))
                 {
-                    var jsonOptions = new JsonSerializerOptions();
-                    jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
-                    previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                    try
+                    {
+                        var jsonOptions = new JsonSerializerOptions();
+                        jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
+                        previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                    }
+                    catch { }
                 }
-                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+                if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as NewtonSaveState);
+                if (previewParams == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+
+                int stateIterations = (state as NewtonSaveState)?.Iterations ?? 0;
+                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
 
                 var previewEngine = new FractalNewtonEngine();
                 if (!previewEngine.SetFormula(previewParams.Formula, out _)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
@@ -879,7 +907,7 @@ namespace FractalExplorer
                 previewEngine.CenterX = (double)previewParams.CenterX;
                 previewEngine.CenterY = (double)previewParams.CenterY;
                 previewEngine.Scale = 3.0 / (double)previewParams.Zoom;
-                previewEngine.MaxIterations = 150;
+                previewEngine.MaxIterations = effectiveIterations;
 
                 var palette = previewParams.PaletteSnapshot;
                 previewEngine.BackgroundColor = palette.BackgroundColor;
@@ -893,26 +921,27 @@ namespace FractalExplorer
         /// <inheritdoc />
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
-            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            NewtonPreviewParams previewParams = null;
+            if (!string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                try
+                {
+                    var jsonOptions = new JsonSerializerOptions();
+                    jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
+                    previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                }
+                catch (Exception) { }
+            }
+            if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as NewtonSaveState);
+            if (previewParams == null)
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
                 return bmpError;
             }
 
-            NewtonPreviewParams previewParams;
-            try
-            {
-                var jsonOptions = new JsonSerializerOptions();
-                jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
-                previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
-            }
-            catch (Exception)
-            {
-                var bmpError = new Bitmap(previewWidth, previewHeight);
-                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
-                return bmpError;
-            }
+            int stateIterations = (state as NewtonSaveState)?.Iterations ?? 0;
+            int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
 
             var previewEngine = new FractalNewtonEngine();
             if (!previewEngine.SetFormula(previewParams.Formula, out _))
@@ -926,7 +955,7 @@ namespace FractalExplorer
             previewEngine.CenterY = (double)previewParams.CenterY;
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             previewEngine.Scale = 3.0 / (double)previewParams.Zoom;
-            previewEngine.MaxIterations = previewParams.Iterations;
+            previewEngine.MaxIterations = effectiveIterations;
 
             var palette = previewParams.PaletteSnapshot;
             previewEngine.BackgroundColor = palette.BackgroundColor;

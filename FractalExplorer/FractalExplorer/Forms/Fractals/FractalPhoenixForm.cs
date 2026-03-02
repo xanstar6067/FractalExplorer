@@ -1119,11 +1119,38 @@ namespace FractalExplorer.Forms
             public bool UseSmoothColoring { get; set; }
         }
 
+        private int ResolveEffectiveIterations(int stateIterations, int previewIterations)
+        {
+            if (stateIterations > 0) return stateIterations;
+            if (previewIterations > 0) return previewIterations;
+            return Math.Max(1, (int)nudIterations.Minimum);
+        }
+
+        private PhoenixPreviewParams BuildPreviewParamsFromState(PhoenixSaveState state)
+        {
+            if (state == null) return null;
+            return new PhoenixPreviewParams
+            {
+                CenterX = state.CenterX,
+                CenterY = state.CenterY,
+                Zoom = state.Zoom,
+                Iterations = state.Iterations,
+                PaletteName = state.PaletteName,
+                Threshold = state.Threshold,
+                C1Re = state.C1Re,
+                C1Im = state.C1Im,
+                C2Re = state.C2Re,
+                C2Im = state.C2Im,
+                UseSmoothColoring = false
+            };
+        }
+
         /// <summary>
         /// Собирает текущее состояние фрактала для сохранения.
         /// </summary>
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
+            int iterations = (int)nudIterations.Value;
             var state = new PhoenixSaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
@@ -1132,7 +1159,7 @@ namespace FractalExplorer.Forms
                 CenterY = _centerY,
                 Zoom = _zoom,
                 Threshold = nudThreshold.Value,
-                Iterations = (int)nudIterations.Value,
+                Iterations = iterations,
                 PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 C1Re = nudC1Re.Value,
                 C1Im = nudC1Im.Value,
@@ -1144,7 +1171,7 @@ namespace FractalExplorer.Forms
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = state.Iterations,
+                Iterations = iterations,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 C1Re = state.C1Re,
@@ -1198,17 +1225,24 @@ namespace FractalExplorer.Forms
         {
             return await Task.Run(() =>
             {
-                if (string.IsNullOrEmpty(state.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-                PhoenixPreviewParams previewParams;
-                try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson); }
-                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
+                PhoenixPreviewParams previewParams = null;
+                if (!string.IsNullOrEmpty(state.PreviewParametersJson))
+                {
+                    try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson); }
+                    catch { }
+                }
+                if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as PhoenixSaveState);
+                if (previewParams == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+
+                int stateIterations = (state as PhoenixSaveState)?.Iterations ?? 0;
+                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
 
                 var previewEngine = new PhoenixEngine();
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
                 previewEngine.Scale = BASE_SCALE / previewParams.Zoom;
-                previewEngine.MaxIterations = previewParams.Iterations;
+                previewEngine.MaxIterations = effectiveIterations;
                 previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
                 previewEngine.C1 = new ComplexDecimal(previewParams.C1Re, previewParams.C1Im);
                 previewEngine.C2 = new ComplexDecimal(previewParams.C2Re, previewParams.C2Im);
@@ -1236,26 +1270,28 @@ namespace FractalExplorer.Forms
         /// </summary>
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
-            if (string.IsNullOrEmpty(state.PreviewParametersJson))
+            PhoenixPreviewParams previewParams = null;
+            if (!string.IsNullOrEmpty(state.PreviewParametersJson))
+            {
+                try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson); }
+                catch (Exception) { }
+            }
+            if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as PhoenixSaveState);
+            if (previewParams == null)
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
                 return bmpError;
             }
-            PhoenixPreviewParams previewParams;
-            try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson); }
-            catch (Exception)
-            {
-                var bmpError = new Bitmap(previewWidth, previewHeight);
-                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
-                return bmpError;
-            }
+
+            int stateIterations = (state as PhoenixSaveState)?.Iterations ?? 0;
+            int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
             var previewEngine = new PhoenixEngine();
             previewEngine.CenterX = previewParams.CenterX;
             previewEngine.CenterY = previewParams.CenterY;
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             previewEngine.Scale = BASE_SCALE / previewParams.Zoom;
-            previewEngine.MaxIterations = previewParams.Iterations;
+            previewEngine.MaxIterations = effectiveIterations;
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             previewEngine.C1 = new ComplexDecimal(previewParams.C1Re, previewParams.C1Im);
             previewEngine.C2 = new ComplexDecimal(previewParams.C2Re, previewParams.C2Im);
