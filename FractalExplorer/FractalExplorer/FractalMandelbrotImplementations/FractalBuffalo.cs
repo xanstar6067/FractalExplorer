@@ -73,8 +73,6 @@ namespace FractalExplorer.Projects
         /// <returns>Объект <see cref="FractalSaveStateBase"/>, содержащий все параметры текущего вида фрактала.</returns>
         public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
-            int iterations = (int)nudIterations.Value;
-
             var state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
@@ -83,7 +81,7 @@ namespace FractalExplorer.Projects
                 CenterY = _centerY,
                 Zoom = _zoom,
                 Threshold = nudThreshold.Value,
-                Iterations = iterations,
+                Iterations = (int)nudIterations.Value,
                 PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 PreviewEngineType = this.FractalTypeIdentifier
             };
@@ -98,8 +96,6 @@ namespace FractalExplorer.Projects
                 Threshold = state.Threshold,
                 PreviewEngineType = state.PreviewEngineType
             };
-            // В preview JSON дублируются параметры для обратной совместимости, но источник итераций при рендере
-            // всегда определяется через ResolveEffectiveIterations с приоритетом top-level state.Iterations.
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, new JsonSerializerOptions());
             return state;
         }
@@ -146,15 +142,19 @@ namespace FractalExplorer.Projects
         {
             return Task.Run(() =>
             {
-                var previewParams = ResolvePreviewParamsWithFallback<PreviewParams>(stateBase);
-                if (previewParams == null)
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
                     return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+
+                PreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
                 var previewEngine = new BuffaloEngine();
 
-                int stateIterations = (stateBase as MandelbrotFamilySaveState)?.Iterations ?? 0;
-                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
-                previewEngine.MaxIterations = effectiveIterations;
+                previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;

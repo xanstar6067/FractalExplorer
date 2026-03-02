@@ -16,6 +16,37 @@ namespace FractalExplorer.Utilities
     /// </summary>
     public static class PresetManager
     {
+        #region Constants
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов семейства Мандельброта.
+        /// Эти значения выбраны, чтобы обеспечить разумную скорость рендера миниатюр
+        /// в окне сохранения/загрузки, не нагружая систему слишком сильно.
+        /// </summary>
+        private const int PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY = 1000;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Феникс.
+        /// </summary>
+        private const int PREVIEW_ITERATION_LIMIT_PHOENIX = 500;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра пресетов фрактала Бассейны Ньютона.
+        /// </summary>
+        private const int PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS = 50;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра геометрического фрактала Серпинского.
+        /// </summary>
+        private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC = 5;
+
+        /// <summary>
+        /// Ограничение на количество итераций для предварительного просмотра хаотического фрактала Серпинского.
+        /// </summary>
+        private const int PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS = 20000;
+
+        #endregion
+
         #region Public API / Dispatcher
 
         /// <summary>
@@ -88,7 +119,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, 500),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = preset1.PreviewEngineType,
@@ -115,7 +146,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, 500),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = preset2.PreviewEngineType,
@@ -154,7 +185,8 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -181,7 +213,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -207,7 +239,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -233,7 +265,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
                 Zoom = preset4.Zoom,
-                Iterations = preset4.Iterations,
+                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset4.PaletteName,
                 Threshold = preset4.Threshold,
                 PreviewEngineType = "Mandelbrot"
@@ -272,7 +304,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 CRe = preset1.CRe,
@@ -302,7 +334,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 CRe = preset2.CRe,
@@ -332,7 +364,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 CRe = preset3.CRe,
@@ -362,7 +394,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
                 Zoom = preset4.Zoom,
-                Iterations = preset4.Iterations,
+                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset4.PaletteName,
                 Threshold = preset4.Threshold,
                 CRe = preset4.CRe,
@@ -401,7 +433,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
@@ -427,7 +459,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
@@ -453,7 +485,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 PreviewEngineType = "MandelbrotBurningShip"
@@ -492,7 +524,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 CRe = preset1.CRe,
@@ -522,7 +554,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 CRe = preset2.CRe,
@@ -552,7 +584,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 CRe = preset3.CRe,
@@ -585,7 +617,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = "Buffalo" // Указываем правильный тип движка
@@ -609,7 +641,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = "Buffalo" // Указываем правильный тип движка
@@ -643,7 +675,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 PreviewEngineType = preset1.PreviewEngineType,
@@ -672,7 +704,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 PreviewEngineType = preset2.PreviewEngineType,
@@ -701,7 +733,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_MANDELBROT_FAMILY),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 PreviewEngineType = preset3.PreviewEngineType,
@@ -748,7 +780,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 C1Re = preset1.C1Re,
@@ -781,7 +813,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
                 PaletteName = preset2.PaletteName,
                 Threshold = preset2.Threshold,
                 C1Re = preset2.C1Re,
@@ -814,7 +846,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_PHOENIX),
                 PaletteName = preset3.PaletteName,
                 Threshold = preset3.Threshold,
                 C1Re = preset3.C1Re,
@@ -861,7 +893,8 @@ namespace FractalExplorer.Utilities
             var previewParams1S = new FractalSerpinski.SerpinskyPreviewParams
             {
                 RenderMode = preset1.RenderMode,
-                Iterations = preset1.Iterations,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_GEOMETRIC),
                 Zoom = preset1.Zoom,
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
@@ -889,7 +922,8 @@ namespace FractalExplorer.Utilities
             var previewParams2S = new FractalSerpinski.SerpinskyPreviewParams
             {
                 RenderMode = preset2.RenderMode,
-                Iterations = preset2.Iterations,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_SERPINSKY_CHAOS),
                 Zoom = preset2.Zoom,
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
@@ -939,7 +973,8 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                // Количество итераций для превью ограничивается, чтобы рендер был быстрым.
+                Iterations = Math.Min(preset1.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
                 PaletteSnapshot = preset1.PaletteSnapshot
             };
             preset1.PreviewParametersJson = JsonSerializer.Serialize(previewParams1N, jsonOptions);
@@ -972,7 +1007,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset2.CenterX,
                 CenterY = preset2.CenterY,
                 Zoom = preset2.Zoom,
-                Iterations = preset2.Iterations,
+                Iterations = Math.Min(preset2.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
                 PaletteSnapshot = preset2.PaletteSnapshot
             };
             preset2.PreviewParametersJson = JsonSerializer.Serialize(previewParams2N, jsonOptions);
@@ -1005,7 +1040,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset3.CenterX,
                 CenterY = preset3.CenterY,
                 Zoom = preset3.Zoom,
-                Iterations = preset3.Iterations,
+                Iterations = Math.Min(preset3.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
                 PaletteSnapshot = preset3.PaletteSnapshot
             };
             preset3.PreviewParametersJson = JsonSerializer.Serialize(previewParams3N, jsonOptions);
@@ -1038,7 +1073,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset4.CenterX,
                 CenterY = preset4.CenterY,
                 Zoom = preset4.Zoom,
-                Iterations = preset4.Iterations,
+                Iterations = Math.Min(preset4.Iterations, PREVIEW_ITERATION_LIMIT_NEWTON_CHAOS),
                 PaletteSnapshot = preset4.PaletteSnapshot
             };
             preset4.PreviewParametersJson = JsonSerializer.Serialize(previewParams4N, jsonOptions);
@@ -1079,7 +1114,7 @@ namespace FractalExplorer.Utilities
                 CenterX = preset1.CenterX,
                 CenterY = preset1.CenterY,
                 Zoom = preset1.Zoom,
-                Iterations = preset1.Iterations,
+                Iterations = Math.Min(preset1.Iterations, 150), // Ограничение для быстрого рендера превью
                 PaletteName = preset1.PaletteName,
                 Threshold = preset1.Threshold,
                 UseSmoothColoring = false

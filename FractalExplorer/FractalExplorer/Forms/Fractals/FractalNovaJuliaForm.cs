@@ -1081,36 +1081,6 @@ namespace FractalExplorer.Forms
             public bool UseSmoothColoring { get; set; }
         }
 
-        private int ResolveEffectiveIterations(int stateIterations, int previewIterations)
-        {
-            if (stateIterations > 0) return stateIterations;
-            if (previewIterations > 0) return previewIterations;
-            return Math.Max(1, (int)nudIterations.Minimum);
-        }
-
-        private NovaJuliaPreviewParams BuildPreviewParamsFromState(NovaJuliaSaveState state)
-        {
-            if (state == null) return null;
-
-            return new NovaJuliaPreviewParams
-            {
-                CenterX = state.CenterX,
-                CenterY = state.CenterY,
-                Zoom = state.Zoom,
-                Iterations = state.Iterations,
-                PaletteName = state.PaletteName,
-                Threshold = state.Threshold,
-                P_Re = state.P_Re,
-                P_Im = state.P_Im,
-                Z0_Re = state.Z0_Re,
-                Z0_Im = state.Z0_Im,
-                M = state.M,
-                C_Re = state.C_Re,
-                C_Im = state.C_Im,
-                UseSmoothColoring = false
-            };
-        }
-
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             var state = new NovaJuliaSaveState(this.FractalTypeIdentifier)
@@ -1206,24 +1176,27 @@ namespace FractalExplorer.Forms
         {
             return await Task.Run(() =>
             {
-                NovaJuliaPreviewParams p = null;
-                if (!string.IsNullOrEmpty(state.PreviewParametersJson))
+                if (string.IsNullOrEmpty(state.PreviewParametersJson))
                 {
-                    try { p = JsonSerializer.Deserialize<NovaJuliaPreviewParams>(state.PreviewParametersJson); }
-                    catch { }
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
-                if (p == null) p = BuildPreviewParamsFromState(state as NovaJuliaSaveState);
-                if (p == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
 
-                int stateIterations = (state as NovaJuliaSaveState)?.Iterations ?? 0;
-                int effectiveIterations = ResolveEffectiveIterations(stateIterations, p.Iterations);
+                NovaJuliaPreviewParams p;
+                try
+                {
+                    p = JsonSerializer.Deserialize<NovaJuliaPreviewParams>(state.PreviewParametersJson);
+                }
+                catch
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
 
                 var previewEngine = new NovaJuliaEngine
                 {
                     CenterX = p.CenterX,
                     CenterY = p.CenterY,
                     Scale = BASE_SCALE / (p.Zoom > 0 ? p.Zoom : 0.001m),
-                    MaxIterations = effectiveIterations,
+                    MaxIterations = p.Iterations,
                     ThresholdSquared = p.Threshold * p.Threshold,
                     P = new ComplexDecimal(p.P_Re, p.P_Im),
                     Z0 = new ComplexDecimal(p.Z0_Re, p.Z0_Im),
@@ -1250,29 +1223,37 @@ namespace FractalExplorer.Forms
 
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
-            NovaJuliaPreviewParams p = null;
-            if (!string.IsNullOrEmpty(state.PreviewParametersJson))
-            {
-                try { p = JsonSerializer.Deserialize<NovaJuliaPreviewParams>(state.PreviewParametersJson); }
-                catch { }
-            }
-            if (p == null) p = BuildPreviewParamsFromState(state as NovaJuliaSaveState);
-            if (p == null)
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
             {
                 var bmp = new Bitmap(previewWidth, previewHeight);
-                using (var g = Graphics.FromImage(bmp)) { g.Clear(Color.DarkGray); }
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.Clear(Color.DarkGray);
+                }
                 return bmp;
             }
 
-            int stateIterations = (state as NovaJuliaSaveState)?.Iterations ?? 0;
-            int effectiveIterations = ResolveEffectiveIterations(stateIterations, p.Iterations);
+            NovaJuliaPreviewParams p;
+            try
+            {
+                p = JsonSerializer.Deserialize<NovaJuliaPreviewParams>(state.PreviewParametersJson);
+            }
+            catch
+            {
+                var bmp = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.Clear(Color.DarkRed);
+                }
+                return bmp;
+            }
 
             var previewEngine = new NovaJuliaEngine
             {
                 CenterX = p.CenterX,
                 CenterY = p.CenterY,
                 Scale = BASE_SCALE / (p.Zoom > 0 ? p.Zoom : 0.001m),
-                MaxIterations = effectiveIterations,
+                MaxIterations = p.Iterations,
                 ThresholdSquared = p.Threshold * p.Threshold,
                 P = new ComplexDecimal(p.P_Re, p.P_Im),
                 Z0 = new ComplexDecimal(p.Z0_Re, p.Z0_Im),

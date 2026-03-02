@@ -1293,30 +1293,6 @@ namespace FractalExplorer.Forms.Fractals
             public decimal P_Parameter { get; set; }
         }
 
-        private int ResolveEffectiveIterations(int stateIterations, int previewIterations)
-        {
-            if (stateIterations > 0) return stateIterations;
-            if (previewIterations > 0) return previewIterations;
-            return Math.Max(1, (int)nudIterations.Minimum);
-        }
-
-        private CollatzPreviewParams BuildPreviewParamsFromState(CollatzSaveState state)
-        {
-            if (state == null) return null;
-            return new CollatzPreviewParams
-            {
-                CenterX = state.CenterX,
-                CenterY = state.CenterY,
-                Zoom = state.Zoom,
-                Iterations = state.Iterations,
-                PaletteName = state.PaletteName,
-                Threshold = state.Threshold,
-                UseSmoothColoring = false,
-                Variation = state.Variation,
-                P_Parameter = state.P_Parameter
-            };
-        }
-
         /// <summary>
         /// Собирает текущее состояние фрактала для сохранения.
         /// </summary>
@@ -1324,7 +1300,6 @@ namespace FractalExplorer.Forms.Fractals
         /// <returns>Объект состояния фрактала, готовый к сериализации.</returns>
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
-            int iterations = (int)nudIterations.Value;
             var state = new CollatzSaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
@@ -1333,7 +1308,7 @@ namespace FractalExplorer.Forms.Fractals
                 CenterY = _centerY,
                 Zoom = _zoom,
                 Threshold = nudThreshold.Value,
-                Iterations = iterations,
+                Iterations = (int)nudIterations.Value,
                 PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 PreviewEngineType = this.FractalTypeIdentifier,
                 // Сохраняем параметры вариаций
@@ -1346,7 +1321,7 @@ namespace FractalExplorer.Forms.Fractals
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = iterations,
+                Iterations = state.Iterations,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 UseSmoothColoring = cbSmooth.Checked,
@@ -1413,11 +1388,11 @@ namespace FractalExplorer.Forms.Fractals
         /// </summary>
         /// <param name="previewParams">Параметры для создания движка превью.</param>
         /// <returns>Настроенный экземпляр <see cref="FractalCollatzEngine"/>.</returns>
-        private FractalCollatzEngine CreateEngineFromPreviewParams(CollatzPreviewParams previewParams, int effectiveIterations)
+        private FractalCollatzEngine CreateEngineFromPreviewParams(CollatzPreviewParams previewParams)
         {
             var engine = new FractalCollatzEngine
             {
-                MaxIterations = effectiveIterations,
+                MaxIterations = previewParams.Iterations,
                 ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
                 CenterX = previewParams.CenterX,
                 CenterY = previewParams.CenterY,
@@ -1457,19 +1432,18 @@ namespace FractalExplorer.Forms.Fractals
         {
             return await Task.Run(() =>
             {
-                CollatzPreviewParams previewParams = null;
-                if (!string.IsNullOrEmpty(state.PreviewParametersJson))
+                if (string.IsNullOrEmpty(state.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                CollatzPreviewParams previewParams;
+                try
                 {
-                    try { previewParams = JsonSerializer.Deserialize<CollatzPreviewParams>(state.PreviewParametersJson); }
-                    catch { }
+                    previewParams = JsonSerializer.Deserialize<CollatzPreviewParams>(state.PreviewParametersJson);
                 }
-                if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as CollatzSaveState);
-                if (previewParams == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                catch
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
 
-                int stateIterations = (state as CollatzSaveState)?.Iterations ?? 0;
-                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
-
-                var previewEngine = CreateEngineFromPreviewParams(previewParams, effectiveIterations);
+                var previewEngine = CreateEngineFromPreviewParams(previewParams);
                 previewEngine.UseSmoothColoring = false; // Упрощение для превью
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
@@ -1487,23 +1461,25 @@ namespace FractalExplorer.Forms.Fractals
         /// <returns>Bitmap с изображением превью.</returns>
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
-            CollatzPreviewParams previewParams = null;
-            if (!string.IsNullOrEmpty(state.PreviewParametersJson))
-            {
-                try { previewParams = JsonSerializer.Deserialize<CollatzPreviewParams>(state.PreviewParametersJson); }
-                catch (Exception) { }
-            }
-            if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as CollatzSaveState);
-            if (previewParams == null)
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
                 return bmpError;
             }
+            CollatzPreviewParams previewParams;
+            try
+            {
+                previewParams = JsonSerializer.Deserialize<CollatzPreviewParams>(state.PreviewParametersJson);
+            }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
 
-            int stateIterations = (state as CollatzSaveState)?.Iterations ?? 0;
-            int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
-            var previewEngine = CreateEngineFromPreviewParams(previewParams, effectiveIterations);
+            var previewEngine = CreateEngineFromPreviewParams(previewParams);
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
         }
 

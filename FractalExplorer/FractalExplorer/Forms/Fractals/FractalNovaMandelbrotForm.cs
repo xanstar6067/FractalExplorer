@@ -970,33 +970,6 @@ namespace FractalExplorer.Forms
             public bool UseSmoothColoring { get; set; }
         }
 
-        private int ResolveEffectiveIterations(int stateIterations, int previewIterations)
-        {
-            if (stateIterations > 0) return stateIterations;
-            if (previewIterations > 0) return previewIterations;
-            return Math.Max(1, (int)nudIterations.Minimum);
-        }
-
-        private NovaPreviewParams BuildPreviewParamsFromState(NovaMandelbrotSaveState state)
-        {
-            if (state == null) return null;
-            return new NovaPreviewParams
-            {
-                CenterX = state.CenterX,
-                CenterY = state.CenterY,
-                Zoom = state.Zoom,
-                Iterations = state.Iterations,
-                PaletteName = state.PaletteName,
-                Threshold = state.Threshold,
-                P_Re = state.P_Re,
-                P_Im = state.P_Im,
-                Z0_Re = state.Z0_Re,
-                Z0_Im = state.Z0_Im,
-                M = state.M,
-                UseSmoothColoring = false
-            };
-        }
-
         public FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
             var state = new NovaMandelbrotSaveState(this.FractalTypeIdentifier)
@@ -1086,24 +1059,26 @@ namespace FractalExplorer.Forms
         {
             return await Task.Run(() =>
             {
-                NovaPreviewParams previewParams = null;
-                if (!string.IsNullOrEmpty(state.PreviewParametersJson))
+                if (string.IsNullOrEmpty(state.PreviewParametersJson))
                 {
-                    try { previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson); }
-                    catch { }
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
-                if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as NovaMandelbrotSaveState);
-                if (previewParams == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-
-                int stateIterations = (state as NovaMandelbrotSaveState)?.Iterations ?? 0;
-                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
+                NovaPreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson);
+                }
+                catch
+                {
+                    return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                }
 
                 var previewEngine = new NovaMandelbrotEngine
                 {
                     CenterX = previewParams.CenterX,
                     CenterY = previewParams.CenterY,
                     Scale = BASE_SCALE / (previewParams.Zoom > 0 ? previewParams.Zoom : 0.001m),
-                    MaxIterations = effectiveIterations,
+                    MaxIterations = previewParams.Iterations,
                     ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
                     P = new ComplexDecimal(previewParams.P_Re, previewParams.P_Im),
                     Z0 = new ComplexDecimal(previewParams.Z0_Re, previewParams.Z0_Im),
@@ -1130,14 +1105,7 @@ namespace FractalExplorer.Forms
 
         public Bitmap RenderPreview(FractalSaveStateBase state, int previewWidth, int previewHeight)
         {
-            NovaPreviewParams previewParams = null;
-            if (!string.IsNullOrEmpty(state.PreviewParametersJson))
-            {
-                try { previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson); }
-                catch (Exception) { }
-            }
-            if (previewParams == null) previewParams = BuildPreviewParamsFromState(state as NovaMandelbrotSaveState);
-            if (previewParams == null)
+            if (string.IsNullOrEmpty(state.PreviewParametersJson))
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError))
@@ -1147,16 +1115,28 @@ namespace FractalExplorer.Forms
                 }
                 return bmpError;
             }
-
-            int stateIterations = (state as NovaMandelbrotSaveState)?.Iterations ?? 0;
-            int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
+            NovaPreviewParams previewParams;
+            try
+            {
+                previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson);
+            }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError))
+                {
+                    g.Clear(Color.DarkRed);
+                    TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                return bmpError;
+            }
 
             var previewEngine = new NovaMandelbrotEngine
             {
                 CenterX = previewParams.CenterX,
                 CenterY = previewParams.CenterY,
                 Scale = BASE_SCALE / (previewParams.Zoom > 0 ? previewParams.Zoom : 0.001m),
-                MaxIterations = effectiveIterations,
+                MaxIterations = previewParams.Iterations,
                 ThresholdSquared = previewParams.Threshold * previewParams.Threshold,
                 P = new ComplexDecimal(previewParams.P_Re, previewParams.P_Im),
                 Z0 = new ComplexDecimal(previewParams.Z0_Re, previewParams.Z0_Im),

@@ -1302,78 +1302,6 @@ namespace FractalDraving
         }
 
         /// <summary>
-        /// Инвариант preview-рендера: итоговое значение итераций всегда вычисляется через этот метод.
-        /// JSON-параметры превью являются вторичным источником и не могут переопределить валидное top-level
-        /// значение из сохраненного состояния.
-        /// </summary>
-        protected virtual int ResolveEffectiveIterations(int stateIterations, int previewIterations)
-        {
-            if (stateIterations > 0) return stateIterations;
-            if (previewIterations > 0) return previewIterations;
-            return 1;
-        }
-
-        protected virtual PreviewParams BuildPreviewParamsFromState(MandelbrotFamilySaveState state)
-        {
-            if (state == null) return null;
-
-            var fallback = new PreviewParams
-            {
-                CenterX = state.CenterX,
-                CenterY = state.CenterY,
-                Zoom = state.Zoom,
-                Iterations = state.Iterations,
-                PaletteName = state.PaletteName,
-                Threshold = state.Threshold,
-                PreviewEngineType = state.PreviewEngineType
-            };
-
-            if (state is JuliaFamilySaveState juliaState)
-            {
-                fallback.CRe = juliaState.CRe;
-                fallback.CIm = juliaState.CIm;
-            }
-
-            return fallback;
-        }
-
-        protected TPreview ResolvePreviewParamsWithFallback<TPreview>(FractalSaveStateBase stateBase, Func<MandelbrotFamilySaveState, TPreview> fallbackBuilder = null)
-            where TPreview : PreviewParams
-        {
-            TPreview previewParams = null;
-
-            if (!string.IsNullOrWhiteSpace(stateBase?.PreviewParametersJson))
-            {
-                try
-                {
-                    previewParams = JsonSerializer.Deserialize<TPreview>(stateBase.PreviewParametersJson, new JsonSerializerOptions());
-                }
-                catch
-                {
-                    previewParams = null;
-                }
-            }
-
-            if (previewParams != null)
-            {
-                return previewParams;
-            }
-
-            var typedState = stateBase as MandelbrotFamilySaveState;
-            if (typedState == null)
-            {
-                return null;
-            }
-
-            if (fallbackBuilder != null)
-            {
-                return fallbackBuilder(typedState);
-            }
-
-            return BuildPreviewParamsFromState(typedState) as TPreview;
-        }
-
-        /// <summary>
         /// Открывает диалог менеджера состояний (сохранений).
         /// </summary>
         /// <param name="sender">Источник события.</param>
@@ -1393,14 +1321,13 @@ namespace FractalDraving
             if (this is FractalJulia || this is FractalJuliaBurningShip) state = new JuliaFamilySaveState(this.FractalTypeIdentifier);
             else state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier);
 
-            int iterations = (int)nudIterations.Value;
             state.SaveName = saveName;
             state.Timestamp = DateTime.Now;
             state.CenterX = _centerX;
             state.CenterY = _centerY;
             state.Zoom = _zoom;
             state.Threshold = nudThreshold.Value;
-            state.Iterations = iterations;
+            state.Iterations = (int)nudIterations.Value;
             state.PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый";
             state.PreviewEngineType = this.FractalTypeIdentifier;
 
@@ -1409,7 +1336,7 @@ namespace FractalDraving
                 CenterX = _centerX,
                 CenterY = _centerY,
                 Zoom = _zoom,
-                Iterations = iterations,
+                Iterations = (int)nudIterations.Value,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 PreviewEngineType = state.PreviewEngineType
@@ -1425,8 +1352,6 @@ namespace FractalDraving
                     previewParams.CIm = juliaState.CIm;
                 }
             }
-            // В preview JSON дублируются параметры для совместимости сохранений, но источник итераций
-            // в preview-рендере всегда определяется через ResolveEffectiveIterations.
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, new JsonSerializerOptions());
             return state;
         }
@@ -1479,9 +1404,10 @@ namespace FractalDraving
         {
             return await Task.Run(() =>
             {
-                var previewParams = ResolvePreviewParamsWithFallback<PreviewParams>(stateBase);
-
-                if (previewParams == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                PreviewParams previewParams;
+                try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson); }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
                 FractalMandelbrotFamilyEngine previewEngine;
                 switch (previewParams.PreviewEngineType)
@@ -1490,12 +1416,17 @@ namespace FractalDraving
                     case "Julia": previewEngine = new JuliaEngine { C = new ComplexDecimal(previewParams.CRe, previewParams.CIm) }; break;
                     case "MandelbrotBurningShip": previewEngine = new MandelbrotBurningShipEngine(); break;
                     case "JuliaBurningShip": previewEngine = new JuliaBurningShipEngine { C = new ComplexDecimal(previewParams.CRe, previewParams.CIm) }; break;
+                    case "GeneralizedMandelbrot":
+                        var genMandelbrotParams = JsonSerializer.Deserialize<FractalGeneralizedMandelbrot.GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
+                        previewEngine = new GeneralizedMandelbrotEngine
+                        {
+                            Power = genMandelbrotParams.Power
+                        };
+                        break;
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                int stateIterations = (stateBase as MandelbrotFamilySaveState)?.Iterations ?? 0;
-                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
-                previewEngine.MaxIterations = effectiveIterations;
+                previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
@@ -1527,11 +1458,18 @@ namespace FractalDraving
         /// <inheritdoc/>
         public virtual Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
-            var previewParams = ResolvePreviewParamsWithFallback<PreviewParams>(stateBase);
-            if (previewParams == null)
+            if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
                 using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkGray); TextRenderer.DrawText(g, "Нет данных", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+                return bmpError;
+            }
+            PreviewParams previewParams;
+            try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson, new JsonSerializerOptions()); }
+            catch (Exception)
+            {
+                var bmpError = new Bitmap(previewWidth, previewHeight);
+                using (var g = Graphics.FromImage(bmpError)) { g.Clear(Color.DarkRed); TextRenderer.DrawText(g, "Ошибка параметров", Font, new Rectangle(0, 0, previewWidth, previewHeight), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
                 return bmpError;
             }
 
@@ -1551,9 +1489,7 @@ namespace FractalDraving
             previewEngine.CenterY = previewParams.CenterY;
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             previewEngine.Scale = this.BaseScale / previewParams.Zoom;
-            int stateIterations = (stateBase as MandelbrotFamilySaveState)?.Iterations ?? 0;
-            int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
-            previewEngine.MaxIterations = effectiveIterations;
+            previewEngine.MaxIterations = previewParams.Iterations;
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 

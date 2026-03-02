@@ -141,31 +141,9 @@ namespace FractalExplorer.Projects
             public bool UseInversion { get; set; }
         }
 
-        protected override PreviewParams BuildPreviewParamsFromState(MandelbrotFamilySaveState state)
-        {
-            var fallback = base.BuildPreviewParamsFromState(state);
-            if (fallback is null) return null;
-
-            var generalizedState = state as GeneralizedMandelbrotSaveState;
-            return new SimonobrotPreviewParams
-            {
-                CenterX = fallback.CenterX,
-                CenterY = fallback.CenterY,
-                Zoom = fallback.Zoom,
-                Iterations = fallback.Iterations,
-                PaletteName = fallback.PaletteName,
-                Threshold = fallback.Threshold,
-                PreviewEngineType = fallback.PreviewEngineType,
-                Power = generalizedState?.Power ?? nudPower?.Value ?? 2m,
-                UseInversion = generalizedState?.UseInversion ?? chkInversion?.Checked ?? false
-            };
-        }
-
         /// <inheritdoc />
         public override FractalSaveStateBase GetCurrentStateForSave(string saveName)
         {
-            int iterations = (int)nudIterations.Value;
-
             var state = new GeneralizedMandelbrotSaveState(this.FractalTypeIdentifier)
             {
                 SaveName = saveName,
@@ -174,7 +152,7 @@ namespace FractalExplorer.Projects
                 CenterY = _centerY,
                 Zoom = _zoom,
                 Threshold = nudThreshold.Value,
-                Iterations = iterations,
+                Iterations = (int)nudIterations.Value,
                 PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 PreviewEngineType = this.FractalTypeIdentifier,
                 Power = nudPower.Value,
@@ -186,15 +164,13 @@ namespace FractalExplorer.Projects
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = iterations,
+                Iterations = Math.Min(state.Iterations, 1000),
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 PreviewEngineType = state.PreviewEngineType,
                 Power = state.Power,
                 UseInversion = state.UseInversion
             };
-            // В preview JSON дублируются параметры для обратной совместимости, но источник итераций при рендере
-            // всегда определяется через ResolveEffectiveIterations с приоритетом top-level state.Iterations.
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, new JsonSerializerOptions());
             return state;
         }
@@ -229,11 +205,15 @@ namespace FractalExplorer.Projects
         {
             return Task.Run(() =>
             {
-                var previewParams = ResolvePreviewParamsWithFallback<SimonobrotPreviewParams>(
-                    stateBase,
-                    state => BuildPreviewParamsFromState(state) as SimonobrotPreviewParams);
-                if (previewParams == null)
+                if (string.IsNullOrEmpty(stateBase.PreviewParametersJson))
                     return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+
+                SimonobrotPreviewParams previewParams;
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<SimonobrotPreviewParams>(stateBase.PreviewParametersJson);
+                }
+                catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
                 var previewEngine = new SimonobrotEngine
                 {
@@ -241,9 +221,7 @@ namespace FractalExplorer.Projects
                     UseInversion = previewParams.UseInversion
                 };
 
-                int stateIterations = (stateBase as MandelbrotFamilySaveState)?.Iterations ?? 0;
-                int effectiveIterations = ResolveEffectiveIterations(stateIterations, previewParams.Iterations);
-                previewEngine.MaxIterations = effectiveIterations;
+                previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
