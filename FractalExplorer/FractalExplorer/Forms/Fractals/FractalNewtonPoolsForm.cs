@@ -807,7 +807,7 @@ namespace FractalExplorer
                 CenterX = state.CenterX,
                 CenterY = state.CenterY,
                 Zoom = state.Zoom,
-                Iterations = Math.Min(state.Iterations, 50),
+                Iterations = state.Iterations,
                 PaletteSnapshot = state.PaletteSnapshot
             };
 

@@ -671,7 +671,7 @@ namespace FractalExplorer
                 CenterY = state.CenterY,
                 FractalColor = state.FractalColor,
                 BackgroundColor = state.BackgroundColor,
-                Iterations = (state.RenderMode == SerpinskyRenderMode.Geometric) ? Math.Min(state.Iterations, 5) : Math.Min(state.Iterations, 20000)
+                Iterations = state.Iterations
             };
 
             var jsonOptions = new JsonSerializerOptions();
