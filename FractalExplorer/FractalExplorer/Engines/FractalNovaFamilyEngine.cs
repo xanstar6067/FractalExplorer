@@ -118,45 +118,78 @@ namespace FractalExplorer.Engines
         #region Private Smoothing Logic
 
         /// <summary>
-        /// Вычисляет сглаженное значение итерации для Nova (Decimal).
-        /// Учитывает реальную часть степени P для логарифмирования.
+        /// Вычисляет сглаженное значение итерации для Nova по формуле
+        /// <c>iter + 1 - log(log(|z|²) / (2 * log(2))) / log(|P|)</c>,
+        /// где <c>|P|</c> — модуль комплексной степени.
+        /// При некорректных аргументах логарифма (≤ 0, NaN, Infinity) возвращает безопасный fallback: <paramref name="iter"/>.
         /// </summary>
         private double CalculateSmoothValue(int iter, ComplexDecimal finalZ)
         {
             if (iter >= MaxIterations) return iter;
 
-            double log_zn_sq = Math.Log((double)finalZ.MagnitudeSquared);
+            double magnitudeSquared = (double)finalZ.MagnitudeSquared;
+            double pMagnitude = P.Magnitude;
+            const double denominator = 2.0 * Math.Log(2.0);
 
-            // Для Nova база логарифма зависит от степени P
-            double log_p = Math.Log(Math.Abs((double)P.Real));
-            if (log_p == 0) log_p = Math.Log(2); // Fallback
-
-            // Формула сглаживания для метода Ньютона/Новы отличается от Мандельброта
-            // iter + 1 - log(log(|z|^2) / (2*log(2))) / log(p) -- примерная адаптация
-            // Используем классическую формулу сходимости:
-
-            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / log_p;
-            return iter + 1 - nu;
-        }
-
-        /// <summary>
-        /// Вычисляет сглаженное значение итерации для Nova (Double).
-        /// </summary>
-        private double CalculateSmoothValueDouble(int iter, ComplexDouble finalZ)
-        {
-            if (iter >= MaxIterations || double.IsInfinity(finalZ.MagnitudeSquared) || double.IsNaN(finalZ.MagnitudeSquared))
+            if (magnitudeSquared <= 0 || pMagnitude <= 0 || double.IsNaN(magnitudeSquared) || double.IsInfinity(magnitudeSquared) || double.IsNaN(pMagnitude) || double.IsInfinity(pMagnitude))
             {
                 return iter;
             }
 
-            double log_zn_sq = Math.Log(finalZ.MagnitudeSquared);
-            if (log_zn_sq <= 0) return iter;
+            double logZnSq = Math.Log(magnitudeSquared);
+            double logP = Math.Log(pMagnitude);
+            if (logZnSq <= 0 || logP == 0 || double.IsNaN(logZnSq) || double.IsInfinity(logZnSq) || double.IsNaN(logP) || double.IsInfinity(logP))
+            {
+                return iter;
+            }
 
-            double log_p = Math.Log((double)Math.Abs(P.Real)); // P.Real уже double, но приведение для надежности
-            if (log_p == 0) log_p = Math.Log(2);
+            double innerArgument = logZnSq / denominator;
+            if (innerArgument <= 0 || double.IsNaN(innerArgument) || double.IsInfinity(innerArgument))
+            {
+                return iter;
+            }
 
-            double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / log_p;
-            return iter + 1 - nu;
+            double nu = Math.Log(innerArgument) / logP;
+            return double.IsNaN(nu) || double.IsInfinity(nu) ? iter : iter + 1 - nu;
+        }
+
+        /// <summary>
+        /// Вычисляет сглаженное значение итерации для Nova по формуле
+        /// <c>iter + 1 - log(log(|z|²) / (2 * log(2))) / log(|P|)</c>,
+        /// где <c>|P|</c> — модуль комплексной степени.
+        /// При некорректных аргументах логарифма (≤ 0, NaN, Infinity) возвращает безопасный fallback: <paramref name="iter"/>.
+        /// </summary>
+        private double CalculateSmoothValueDouble(int iter, ComplexDouble finalZ)
+        {
+            if (iter >= MaxIterations)
+            {
+                return iter;
+            }
+
+            double magnitudeSquared = finalZ.MagnitudeSquared;
+            double pMagnitude = P.Magnitude;
+            const double denominator = 2.0 * Math.Log(2.0);
+
+            if (magnitudeSquared <= 0 || pMagnitude <= 0 || double.IsNaN(magnitudeSquared) || double.IsInfinity(magnitudeSquared) || double.IsNaN(pMagnitude) || double.IsInfinity(pMagnitude))
+            {
+                return iter;
+            }
+
+            double logZnSq = Math.Log(magnitudeSquared);
+            double logP = Math.Log(pMagnitude);
+            if (logZnSq <= 0 || logP == 0 || double.IsNaN(logZnSq) || double.IsInfinity(logZnSq) || double.IsNaN(logP) || double.IsInfinity(logP))
+            {
+                return iter;
+            }
+
+            double innerArgument = logZnSq / denominator;
+            if (innerArgument <= 0 || double.IsNaN(innerArgument) || double.IsInfinity(innerArgument))
+            {
+                return iter;
+            }
+
+            double nu = Math.Log(innerArgument) / logP;
+            return double.IsNaN(nu) || double.IsInfinity(nu) ? iter : iter + 1 - nu;
         }
 
         #endregion
@@ -706,4 +739,3 @@ namespace FractalExplorer.Engines
 
     #endregion
 }
-
