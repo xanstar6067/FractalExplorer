@@ -128,7 +128,7 @@ namespace FractalExplorer.Engines
             if (iter >= MaxIterations) return iter;
 
             double magnitudeSquared = (double)finalZ.MagnitudeSquared;
-            double pMagnitude = P.Magnitude;
+            double pMagnitude = (double)P.Magnitude;
             double denominator = 2.0 * Math.Log(2.0);
 
             if (magnitudeSquared <= 0 || pMagnitude <= 0 || double.IsNaN(magnitudeSquared) || double.IsInfinity(magnitudeSquared) || double.IsNaN(pMagnitude) || double.IsInfinity(pMagnitude))
@@ -167,7 +167,7 @@ namespace FractalExplorer.Engines
             }
 
             double magnitudeSquared = finalZ.MagnitudeSquared;
-            double pMagnitude = P.Magnitude;
+            double pMagnitude = (double)P.Magnitude;
             double denominator = 2.0 * Math.Log(2.0);
 
             if (magnitudeSquared <= 0 || pMagnitude <= 0 || double.IsNaN(magnitudeSquared) || double.IsInfinity(magnitudeSquared) || double.IsNaN(pMagnitude) || double.IsInfinity(pMagnitude))
