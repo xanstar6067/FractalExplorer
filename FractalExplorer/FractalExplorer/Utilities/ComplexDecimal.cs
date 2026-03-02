@@ -41,7 +41,7 @@ namespace FractalExplorer.Resources
         /// Получает модуль (длину) комплексного числа.
         /// Вычисляется как квадратный корень из MagnitudeSquared.
         /// </summary>
-        public double Magnitude => Math.Sqrt((double)MagnitudeSquared);
+        public decimal Magnitude => DecimalMath.Sqrt(MagnitudeSquared);
 
         #endregion
 
@@ -248,6 +248,19 @@ namespace FractalExplorer.Resources
         }
 
         /// <summary>
+        /// Создает комплексное число из полярных координат (модуля и аргумента) в decimal-точности.
+        /// </summary>
+        /// <param name="magnitude">Модуль (длина) комплексного числа.</param>
+        /// <param name="angleRadians">Аргумент (угол) комплексного числа в радианах.</param>
+        /// <returns>Новое комплексное число, созданное из полярных координат.</returns>
+        public static ComplexDecimal FromPolarCoordinatesDecimal(decimal magnitude, decimal angleRadians)
+        {
+            decimal real = magnitude * DecimalMath.Cos(angleRadians);
+            decimal imaginary = magnitude * DecimalMath.Sin(angleRadians);
+            return new ComplexDecimal(real, imaginary);
+        }
+
+        /// <summary>
         /// Ограничивает десятичное значение заданным минимальным и максимальным диапазоном.
         /// </summary>
         /// <param name="value">Десятичное значение для ограничения.</param>
@@ -288,7 +301,7 @@ namespace FractalExplorer.Resources
 
             // 1. Вычисляем log(z) = ln|z| + i*arg(z)
             // Magnitude возвращает double, но его основа - MagnitudeSquared (decimal)
-            decimal magnitude = (decimal)Math.Sqrt((double)z.MagnitudeSquared);
+            decimal magnitude = DecimalMath.Sqrt(z.MagnitudeSquared);
             decimal argument = DecimalMath.Atan2(z.Imaginary, z.Real);
             decimal log_real = DecimalMath.Log(magnitude);
             decimal log_imag = argument;

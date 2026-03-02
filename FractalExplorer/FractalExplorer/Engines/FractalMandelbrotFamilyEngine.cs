@@ -926,8 +926,8 @@ namespace FractalExplorer.Engines
                     ComplexDecimal zPower = PowerComplex(z, p);
 
                     // Используем стандартную формулу Simonobrot: (z^p * |z|^p) + c
-                    decimal magnitude = (decimal)z.Magnitude;
-                    decimal magnitudePower = (decimal)Math.Pow((double)magnitude, (double)p);
+                    decimal magnitude = DecimalMath.Sqrt(z.MagnitudeSquared);
+                    decimal magnitudePower = DecimalMath.Pow(magnitude, p);
                     z = new ComplexDecimal(zPower.Real * magnitudePower + c.Real,
                                          zPower.Imaginary * magnitudePower + c.Imaginary);
                 }
@@ -995,15 +995,21 @@ namespace FractalExplorer.Engines
         /// <returns>Результат возведения в степень.</returns>
         private ComplexDecimal PowerComplex(ComplexDecimal z, decimal power)
         {
-            // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
-            double r = z.Magnitude;
-            double theta = Math.Atan2((double)z.Imaginary, (double)z.Real);
-            double p = (double)power;
+            if (z == ComplexDecimal.Zero) return ComplexDecimal.Zero;
 
-            double newR = Math.Pow(r, p);
-            double newTheta = theta * p;
+            decimal integerPart = decimal.Truncate(power);
+            if (power == integerPart)
+            {
+                int intPower = (int)integerPart;
+                if (intPower >= 0)
+                {
+                    return PowComplexDecimalInteger(z, intPower);
+                }
 
-            return ComplexDecimal.FromPolarCoordinates(newR, newTheta);
+                return ComplexDecimal.One / PowComplexDecimalInteger(z, -intPower);
+            }
+
+            return ComplexDecimal.Pow(z, new ComplexDecimal(power, 0m));
         }
 
         /// <summary>
@@ -1012,6 +1018,28 @@ namespace FractalExplorer.Engines
         /// <param name="z">Комплексное число.</param>
         /// <param name="power">Степень.</param>
         /// <returns>Результат возведения в степень.</returns>
+        private static ComplexDecimal PowComplexDecimalInteger(ComplexDecimal z, int power)
+        {
+            if (power == 0) return ComplexDecimal.One;
+
+            ComplexDecimal result = ComplexDecimal.One;
+            ComplexDecimal current = z;
+            int exponent = power;
+
+            while (exponent > 0)
+            {
+                if ((exponent & 1) == 1)
+                {
+                    result *= current;
+                }
+
+                current *= current;
+                exponent >>= 1;
+            }
+
+            return result;
+        }
+
         private ComplexDouble PowerComplexDouble(ComplexDouble z, double power)
         {
             // Проверка на z=0 была вынесена выше, поэтому здесь она не нужна.
@@ -1417,14 +1445,41 @@ namespace FractalExplorer.Engines
         {
             if (z == ComplexDecimal.Zero) return ComplexDecimal.Zero;
 
-            double r = z.Magnitude;
-            double theta = Math.Atan2((double)z.Imaginary, (double)z.Real);
-            double p = (double)power;
+            decimal integerPart = decimal.Truncate(power);
+            if (power == integerPart)
+            {
+                int intPower = (int)integerPart;
+                if (intPower >= 0)
+                {
+                    return PowComplexDecimalInteger(z, intPower);
+                }
 
-            double newR = Math.Pow(r, p);
-            double newTheta = theta * p;
+                return ComplexDecimal.One / PowComplexDecimalInteger(z, -intPower);
+            }
 
-            return ComplexDecimal.FromPolarCoordinates(newR, newTheta);
+            return ComplexDecimal.Pow(z, new ComplexDecimal(power, 0m));
+        }
+
+        private static ComplexDecimal PowComplexDecimalInteger(ComplexDecimal z, int power)
+        {
+            if (power == 0) return ComplexDecimal.One;
+
+            ComplexDecimal result = ComplexDecimal.One;
+            ComplexDecimal current = z;
+            int exponent = power;
+
+            while (exponent > 0)
+            {
+                if ((exponent & 1) == 1)
+                {
+                    result *= current;
+                }
+
+                current *= current;
+                exponent >>= 1;
+            }
+
+            return result;
         }
     }
 

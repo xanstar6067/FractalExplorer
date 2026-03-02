@@ -163,5 +163,63 @@ namespace FractalExplorer.Utilities
             if (y < 0m) return -PI_OVER_2;
             return 0m; // y == 0, x == 0
         }
+
+        /// <summary>
+        /// Вычисляет квадратный корень для decimal методом Ньютона-Рафсона.
+        /// </summary>
+        public static decimal Sqrt(decimal d)
+        {
+            if (d < 0m) throw new ArgumentOutOfRangeException(nameof(d), "Квадратный корень из отрицательного числа не определен.");
+            if (d == 0m) return 0m;
+
+            decimal x = d >= 1m ? d : 1m;
+            for (int i = 0; i < 100; i++)
+            {
+                decimal next = (x + d / x) / 2m;
+                if (Math.Abs(next - x) <= Epsilon) return next;
+                x = next;
+            }
+
+            return x;
+        }
+
+        /// <summary>
+        /// Вычисляет степень decimal-числа для целых и дробных показателей.
+        /// </summary>
+        public static decimal Pow(decimal value, decimal exponent)
+        {
+            if (exponent == 0m) return 1m;
+            if (value == 0m) return 0m;
+
+            bool integerExponent = decimal.Truncate(exponent) == exponent;
+            if (integerExponent)
+            {
+                int n = (int)exponent;
+                bool negative = n < 0;
+                if (negative) n = -n;
+
+                decimal result = 1m;
+                decimal current = value;
+                while (n > 0)
+                {
+                    if ((n & 1) == 1)
+                    {
+                        result *= current;
+                    }
+
+                    current *= current;
+                    n >>= 1;
+                }
+
+                return negative ? 1m / result : result;
+            }
+
+            if (value < 0m)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Дробная степень для отрицательного основания не поддерживается.");
+            }
+
+            return Exp(Log(value) * exponent);
+        }
     }
 }
