@@ -660,7 +660,9 @@ namespace FractalExplorer
 
                 _previewBitmap?.Dispose();
                 _previewBitmap = bakedBitmap;
-                _currentRenderingBitmap.Dispose();
+                // ВАЖНО: здесь только detach. Фоновые worker'ы могут еще завершаться и
+                // писать в старый bitmap под _bitmapLock, поэтому немедленный Dispose опасен.
+                // Реальный Dispose выполняется в безопасной точке жизненного цикла формы (cleanup/закрытие).
                 _currentRenderingBitmap = null;
 
                 _renderedCenterX = _centerX;
@@ -723,6 +725,13 @@ namespace FractalExplorer
             _previewRenderCts?.Cancel();
             _previewRenderCts?.Dispose();
             _renderDebounceTimer?.Dispose();
+            lock (_bitmapLock)
+            {
+                _previewBitmap?.Dispose();
+                _previewBitmap = null;
+                _currentRenderingBitmap?.Dispose();
+                _currentRenderingBitmap = null;
+            }
             _colorSettingsForm?.Close();
             _colorSettingsForm?.Dispose();
             if (_renderVisualizer != null)
