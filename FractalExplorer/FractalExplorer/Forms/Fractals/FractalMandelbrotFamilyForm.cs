@@ -1301,11 +1301,16 @@ namespace FractalDraving
             public string PreviewEngineType { get; set; }
         }
 
+        /// <summary>
+        /// Инвариант preview-рендера: итоговое значение итераций всегда вычисляется через этот метод.
+        /// JSON-параметры превью являются вторичным источником и не могут переопределить валидное top-level
+        /// значение из сохраненного состояния.
+        /// </summary>
         protected virtual int ResolveEffectiveIterations(int stateIterations, int previewIterations)
         {
             if (stateIterations > 0) return stateIterations;
             if (previewIterations > 0) return previewIterations;
-            return Math.Max(1, (int)nudIterations.Minimum);
+            return 1;
         }
 
         protected virtual PreviewParams BuildPreviewParamsFromState(MandelbrotFamilySaveState state)
@@ -1332,6 +1337,42 @@ namespace FractalDraving
             return fallback;
         }
 
+        protected TPreview ResolvePreviewParamsWithFallback<TPreview>(FractalSaveStateBase stateBase, Func<MandelbrotFamilySaveState, TPreview> fallbackBuilder = null)
+            where TPreview : PreviewParams
+        {
+            TPreview previewParams = null;
+
+            if (!string.IsNullOrWhiteSpace(stateBase?.PreviewParametersJson))
+            {
+                try
+                {
+                    previewParams = JsonSerializer.Deserialize<TPreview>(stateBase.PreviewParametersJson, new JsonSerializerOptions());
+                }
+                catch
+                {
+                    previewParams = null;
+                }
+            }
+
+            if (previewParams != null)
+            {
+                return previewParams;
+            }
+
+            var typedState = stateBase as MandelbrotFamilySaveState;
+            if (typedState == null)
+            {
+                return null;
+            }
+
+            if (fallbackBuilder != null)
+            {
+                return fallbackBuilder(typedState);
+            }
+
+            return BuildPreviewParamsFromState(typedState) as TPreview;
+        }
+
         /// <summary>
         /// Открывает диалог менеджера состояний (сохранений).
         /// </summary>
@@ -1352,13 +1393,14 @@ namespace FractalDraving
             if (this is FractalJulia || this is FractalJuliaBurningShip) state = new JuliaFamilySaveState(this.FractalTypeIdentifier);
             else state = new MandelbrotFamilySaveState(this.FractalTypeIdentifier);
 
+            int iterations = (int)nudIterations.Value;
             state.SaveName = saveName;
             state.Timestamp = DateTime.Now;
             state.CenterX = _centerX;
             state.CenterY = _centerY;
             state.Zoom = _zoom;
             state.Threshold = nudThreshold.Value;
-            state.Iterations = (int)nudIterations.Value;
+            state.Iterations = iterations;
             state.PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый";
             state.PreviewEngineType = this.FractalTypeIdentifier;
 
@@ -1367,7 +1409,7 @@ namespace FractalDraving
                 CenterX = _centerX,
                 CenterY = _centerY,
                 Zoom = _zoom,
-                Iterations = (int)nudIterations.Value,
+                Iterations = iterations,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 PreviewEngineType = state.PreviewEngineType
@@ -1383,6 +1425,8 @@ namespace FractalDraving
                     previewParams.CIm = juliaState.CIm;
                 }
             }
+            // В preview JSON дублируются параметры для совместимости сохранений, но источник итераций
+            // в preview-рендере всегда определяется через ResolveEffectiveIterations.
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams, new JsonSerializerOptions());
             return state;
         }
@@ -1435,17 +1479,7 @@ namespace FractalDraving
         {
             return await Task.Run(() =>
             {
-                PreviewParams previewParams = null;
-                if (!string.IsNullOrEmpty(stateBase.PreviewParametersJson))
-                {
-                    try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson); }
-                    catch { }
-                }
-
-                if (previewParams == null)
-                {
-                    previewParams = BuildPreviewParamsFromState(stateBase as MandelbrotFamilySaveState);
-                }
+                var previewParams = ResolvePreviewParamsWithFallback<PreviewParams>(stateBase);
 
                 if (previewParams == null) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
 
@@ -1456,13 +1490,6 @@ namespace FractalDraving
                     case "Julia": previewEngine = new JuliaEngine { C = new ComplexDecimal(previewParams.CRe, previewParams.CIm) }; break;
                     case "MandelbrotBurningShip": previewEngine = new MandelbrotBurningShipEngine(); break;
                     case "JuliaBurningShip": previewEngine = new JuliaBurningShipEngine { C = new ComplexDecimal(previewParams.CRe, previewParams.CIm) }; break;
-                    case "GeneralizedMandelbrot":
-                        var genMandelbrotParams = JsonSerializer.Deserialize<FractalGeneralizedMandelbrot.GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
-                        previewEngine = new GeneralizedMandelbrotEngine
-                        {
-                            Power = genMandelbrotParams.Power
-                        };
-                        break;
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
@@ -1500,14 +1527,7 @@ namespace FractalDraving
         /// <inheritdoc/>
         public virtual Bitmap RenderPreview(FractalSaveStateBase stateBase, int previewWidth, int previewHeight)
         {
-            PreviewParams previewParams = null;
-            if (!string.IsNullOrEmpty(stateBase.PreviewParametersJson))
-            {
-                try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson, new JsonSerializerOptions()); }
-                catch (Exception) { }
-            }
-
-            if (previewParams == null) previewParams = BuildPreviewParamsFromState(stateBase as MandelbrotFamilySaveState);
+            var previewParams = ResolvePreviewParamsWithFallback<PreviewParams>(stateBase);
             if (previewParams == null)
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
