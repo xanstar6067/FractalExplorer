@@ -108,7 +108,7 @@ namespace FractalExplorer.Forms
         /// <param name="showPresets">Если true, отображаются предустановки; иначе — пользовательские сохранения.</param>
         private void PopulateList(bool showPresets)
         {
-            _previewRenderCts?.Cancel(); // Отменяем текущий рендер, так как список обновляется.
+            CancelAndDisposePreviewCts(); // Отменяем текущий рендер, так как список обновляется.
 
             if (showPresets)
             {
@@ -145,7 +145,7 @@ namespace FractalExplorer.Forms
         /// </summary>
         private void listBoxSaves_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _previewRenderCts?.Cancel();
+            CancelAndDisposePreviewCts();
 
             if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
             {
@@ -174,7 +174,7 @@ namespace FractalExplorer.Forms
             }
 
             _isRenderingPreview = true;
-            _previewRenderCts?.Cancel();
+            CancelAndDisposePreviewCts();
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
 
@@ -415,7 +415,7 @@ namespace FractalExplorer.Forms
         /// </summary>
         private void ClearPreview()
         {
-            _previewRenderCts?.Cancel();
+            CancelAndDisposePreviewCts();
             lock (_bitmapLock)
             {
                 _previewBitmap?.Dispose();
@@ -455,8 +455,32 @@ namespace FractalExplorer.Forms
         /// </summary>
         private void SaveLoadDialogForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            CancelAndDisposePreviewCts();
             ClearPreview();
             _renderVisualizer?.Dispose();
+        }
+
+        /// <summary>
+        /// Отменяет текущий token source рендера превью, освобождает его ресурсы и обнуляет ссылку.
+        /// </summary>
+        private void CancelAndDisposePreviewCts()
+        {
+            if (_previewRenderCts == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _previewRenderCts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // CTS уже освобожден в другом участке кода.
+            }
+
+            _previewRenderCts.Dispose();
+            _previewRenderCts = null;
         }
 
         /// <summary>
