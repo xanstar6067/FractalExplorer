@@ -1426,7 +1426,9 @@ namespace FractalDraving
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                previewEngine.MaxIterations = previewParams.Iterations;
+                int effectiveIterations = ResolvePreviewIterations(stateBase, previewParams.Iterations);
+
+                previewEngine.MaxIterations = effectiveIterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
@@ -1489,7 +1491,10 @@ namespace FractalDraving
             previewEngine.CenterY = previewParams.CenterY;
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             previewEngine.Scale = this.BaseScale / previewParams.Zoom;
-            previewEngine.MaxIterations = previewParams.Iterations;
+
+            int effectiveIterations = ResolvePreviewIterations(stateBase, previewParams.Iterations);
+
+            previewEngine.MaxIterations = effectiveIterations;
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
@@ -1511,6 +1516,22 @@ namespace FractalDraving
             }
 
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
+        }
+
+
+        private static int ResolvePreviewIterations(FractalSaveStateBase stateBase, int legacyIterations)
+        {
+            if (stateBase is GeneralizedMandelbrotSaveState generalizedState)
+            {
+                return generalizedState.Iterations;
+            }
+
+            if (stateBase is MandelbrotFamilySaveState mandelbrotState)
+            {
+                return mandelbrotState.Iterations;
+            }
+
+            return legacyIterations;
         }
 
         /// <inheritdoc/>
