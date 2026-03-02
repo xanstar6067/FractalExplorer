@@ -278,91 +278,96 @@ namespace FractalExplorer.Forms
         /// <returns>Массив байтов с пиксельными данными для запрошенной плитки (формат 32bpp ARGB).</returns>
         private async Task<byte[]> GetOrRenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize, CancellationToken cancellationToken)
         {
-            string currentStateIdentifier = $"{state.FractalType}_{state.SaveName}_{state.Timestamp.Ticks}";
-            var tileCoord = new Point(tile.Bounds.X, tile.Bounds.Y);
-            long cacheGeneration;
-            bool needsRender;
-
-            lock (_previewCacheLock)
+            const int maxAttempts = 2;
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                bool isSameSession = _cachedPreviewStateIdentifier == currentStateIdentifier;
-                bool hasValidBitmap = _cachedFullPreviewBitmap != null
-                                      && _cachedFullPreviewBitmap.Width == totalWidth
-                                      && _cachedFullPreviewBitmap.Height == totalHeight;
-
-                // Если кеш не соответствует текущей сессии или размеру превью, сбрасываем его.
-                if (!isSameSession || !hasValidBitmap || _renderedTilesCache == null)
-                {
-                    _cachedFullPreviewBitmap?.Dispose();
-                    _cachedFullPreviewBitmap = new Bitmap(totalWidth, totalHeight, PixelFormat.Format32bppArgb);
-                    _renderedTilesCache = new HashSet<Point>();
-                    _cachedPreviewStateIdentifier = currentStateIdentifier;
-                    _previewCacheGeneration++;
-                }
-
-                cacheGeneration = _previewCacheGeneration;
-                needsRender = !_renderedTilesCache.Contains(tileCoord);
-            }
-
-            byte[] tileBuffer;
-            if (needsRender)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                string expectedStateIdentifier = currentStateIdentifier;
-                long expectedCacheGeneration = cacheGeneration;
-
-                // Anti-race guard: перед записью в кеш обязательно повторно проверяем,
-                // что сессия/поколение кеша не сменились, пока шёл await рендера.
-                // Делегируем вызов рендеринга соответствующей реализации фрактала.
-                tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize);
+                string currentStateIdentifier = $"{state.FractalType}_{state.SaveName}_{state.Timestamp.Ticks}";
+                var tileCoord = new Point(tile.Bounds.X, tile.Bounds.Y);
+                long cacheGeneration;
+                bool needsRender;
 
                 lock (_previewCacheLock)
                 {
-                    bool cacheSessionStillValid = _cachedPreviewStateIdentifier == expectedStateIdentifier
-                                                  && _previewCacheGeneration == expectedCacheGeneration
-                                                  && _cachedFullPreviewBitmap != null
-                                                  && _cachedFullPreviewBitmap.Width == totalWidth
-                                                  && _cachedFullPreviewBitmap.Height == totalHeight
-                                                  && _renderedTilesCache != null;
+                    bool isSameSession = _cachedPreviewStateIdentifier == currentStateIdentifier;
+                    bool hasValidBitmap = _cachedFullPreviewBitmap != null
+                                          && _cachedFullPreviewBitmap.Width == totalWidth
+                                          && _cachedFullPreviewBitmap.Height == totalHeight;
 
-                    if (cancellationToken.IsCancellationRequested || !cacheSessionStillValid)
+                    // Если кеш не соответствует текущей сессии или размеру превью, сбрасываем его.
+                    if (!isSameSession || !hasValidBitmap || _renderedTilesCache == null)
                     {
-                        return tileBuffer;
+                        _cachedFullPreviewBitmap?.Dispose();
+                        _cachedFullPreviewBitmap = new Bitmap(totalWidth, totalHeight, PixelFormat.Format32bppArgb);
+                        _renderedTilesCache = new HashSet<Point>();
+                        _cachedPreviewStateIdentifier = currentStateIdentifier;
+                        _previewCacheGeneration++;
                     }
 
-                    // Повторная проверка на случай, если другой поток уже отрендерил эту плитку.
-                    if (!_renderedTilesCache.Contains(tileCoord))
-                    {
-                        // Построчно копируем отрендеренную плитку в общий кеш-битмап.
-                        BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
-                        int tileRowBytes = tile.Bounds.Width * 4;
-                        for (int y = 0; y < tile.Bounds.Height; y++)
-                        {
-                            IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
-                            Marshal.Copy(tileBuffer, y * tileRowBytes, destPtr, tileRowBytes);
-                        }
-                        _cachedFullPreviewBitmap.UnlockBits(bmpData);
-                        _renderedTilesCache.Add(tileCoord);
-                    }
+                    cacheGeneration = _previewCacheGeneration;
+                    needsRender = !_renderedTilesCache.Contains(tileCoord);
                 }
-            }
-            else
-            {
+
+                byte[] tileBuffer;
+                if (needsRender)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    string expectedStateIdentifier = currentStateIdentifier;
+                    long expectedCacheGeneration = cacheGeneration;
+
+                    // Anti-race guard: перед записью в кеш обязательно повторно проверяем,
+                    // что сессия/поколение кеша не сменились, пока шёл await рендера.
+                    // Делегируем вызов рендеринга соответствующей реализации фрактала.
+                    tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize);
+
+                    lock (_previewCacheLock)
+                    {
+                        bool cacheSessionStillValid = _cachedPreviewStateIdentifier == expectedStateIdentifier
+                                                      && _previewCacheGeneration == expectedCacheGeneration
+                                                      && _cachedFullPreviewBitmap != null
+                                                      && _cachedFullPreviewBitmap.Width == totalWidth
+                                                      && _cachedFullPreviewBitmap.Height == totalHeight
+                                                      && _renderedTilesCache != null;
+
+                        if (cancellationToken.IsCancellationRequested || !cacheSessionStillValid)
+                        {
+                            return tileBuffer;
+                        }
+
+                        // Повторная проверка на случай, если другой поток уже отрендерил эту плитку.
+                        if (!_renderedTilesCache.Contains(tileCoord))
+                        {
+                            // Построчно копируем отрендеренную плитку в общий кеш-битмап.
+                            BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
+                            int tileRowBytes = tile.Bounds.Width * 4;
+                            for (int y = 0; y < tile.Bounds.Height; y++)
+                            {
+                                IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
+                                Marshal.Copy(tileBuffer, y * tileRowBytes, destPtr, tileRowBytes);
+                            }
+                            _cachedFullPreviewBitmap.UnlockBits(bmpData);
+                            _renderedTilesCache.Add(tileCoord);
+                        }
+                    }
+
+                    return tileBuffer;
+                }
+
                 bool shouldReTry;
+                bool canRetryByCacheRace;
 
                 // Если плитка уже есть в кеше, извлекаем ее данные.
                 tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 lock (_previewCacheLock)
                 {
-                    bool cacheSessionStillValid = !cancellationToken.IsCancellationRequested
-                                                  && _cachedPreviewStateIdentifier == currentStateIdentifier
+                    bool cacheSessionStillValid = _cachedPreviewStateIdentifier == currentStateIdentifier
                                                   && _cachedFullPreviewBitmap != null
                                                   && _cachedFullPreviewBitmap.Width == totalWidth
                                                   && _cachedFullPreviewBitmap.Height == totalHeight
                                                   && _renderedTilesCache != null
                                                   && _renderedTilesCache.Contains(tileCoord);
 
+                    canRetryByCacheRace = !cancellationToken.IsCancellationRequested && !cacheSessionStillValid;
                     shouldReTry = !cacheSessionStillValid;
                     if (!shouldReTry)
                     {
@@ -378,13 +383,20 @@ namespace FractalExplorer.Forms
                     }
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 if (shouldReTry)
                 {
-                    return await GetOrRenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize, cancellationToken);
+                    // Рекурсия запрещена: здесь возможна гонка с отменой, поэтому retry только в ограниченном цикле.
+                    if (canRetryByCacheRace && attempt < maxAttempts - 1)
+                    {
+                        continue;
+                    }
                 }
+
+                return tileBuffer;
             }
 
-            return tileBuffer;
+            throw new InvalidOperationException("Не удалось получить плитку превью после ограниченного числа попыток.");
         }
 
         /// <summary>
