@@ -493,7 +493,6 @@ namespace FractalExplorer.Forms
             var newRenderingBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
-                _currentRenderingBitmap?.Dispose();
                 _currentRenderingBitmap = newRenderingBitmap;
             }
 
@@ -602,6 +601,13 @@ namespace FractalExplorer.Forms
             }
             catch (OperationCanceledException)
             {
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
                 newRenderingBitmap.Dispose();
             }
             finally
