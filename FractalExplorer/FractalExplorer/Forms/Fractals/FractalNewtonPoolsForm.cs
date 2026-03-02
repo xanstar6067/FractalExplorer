@@ -369,7 +369,6 @@ namespace FractalExplorer
             var newRenderingBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
-                _currentRenderingBitmap?.Dispose();
                 _currentRenderingBitmap = newRenderingBitmap;
             }
 
@@ -445,8 +444,14 @@ namespace FractalExplorer
             }
             catch (OperationCanceledException)
             {
-                lock (_bitmapLock) { if (_currentRenderingBitmap == newRenderingBitmap) { _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; } }
-                newRenderingBitmap?.Dispose();
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
+                newRenderingBitmap.Dispose();
             }
             catch (Exception ex)
             {

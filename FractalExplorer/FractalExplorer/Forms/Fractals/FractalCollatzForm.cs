@@ -511,7 +511,6 @@ namespace FractalExplorer.Forms.Fractals
             var newRenderingBitmap = new Bitmap(currentWidth, currentHeight, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
-                _currentRenderingBitmap?.Dispose();
                 _currentRenderingBitmap = newRenderingBitmap;
             }
             UpdateEngineParameters();
@@ -592,8 +591,14 @@ namespace FractalExplorer.Forms.Fractals
             }
             catch (OperationCanceledException)
             {
-                lock (_bitmapLock) { if (_currentRenderingBitmap == newRenderingBitmap) { _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; } }
-                newRenderingBitmap?.Dispose();
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
+                newRenderingBitmap.Dispose();
             }
             catch (Exception ex)
             {
@@ -628,7 +633,6 @@ namespace FractalExplorer.Forms.Fractals
             var newRenderingBitmap = new Bitmap(currentWidth, currentHeight, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)
             {
-                _currentRenderingBitmap?.Dispose();
                 _currentRenderingBitmap = newRenderingBitmap;
             }
             UpdateEngineParameters();
@@ -708,8 +712,14 @@ namespace FractalExplorer.Forms.Fractals
             }
             catch (OperationCanceledException)
             {
-                lock (_bitmapLock) { if (_currentRenderingBitmap == newRenderingBitmap) { _currentRenderingBitmap?.Dispose(); _currentRenderingBitmap = null; } }
-                newRenderingBitmap?.Dispose();
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
+                newRenderingBitmap.Dispose();
             }
             catch (Exception ex)
             {
