@@ -154,7 +154,11 @@ namespace FractalExplorer.Projects
 
                 var previewEngine = new BuffaloEngine();
 
-                previewEngine.MaxIterations = previewParams.Iterations;
+                int renderIterations = stateBase is MandelbrotFamilySaveState state && state.Iterations > 0
+                    ? state.Iterations
+                    : previewParams.Iterations;
+
+                previewEngine.MaxIterations = renderIterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
