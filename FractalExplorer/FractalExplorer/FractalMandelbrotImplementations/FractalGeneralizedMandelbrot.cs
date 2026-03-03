@@ -244,13 +244,9 @@ namespace FractalExplorer.Projects
 
                 var previewEngine = new GeneralizedMandelbrotEngine();
 
-                int renderIterations = stateBase is MandelbrotFamilySaveState state && state.Iterations > 0
-                    ? state.Iterations
-                    : previewParams.Iterations;
-
                 // Установка специфичных для этого фрактала и общих параметров для движка
                 previewEngine.Power = previewParams.Power;
-                previewEngine.MaxIterations = renderIterations;
+                previewEngine.MaxIterations = previewParams.Iterations;
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
