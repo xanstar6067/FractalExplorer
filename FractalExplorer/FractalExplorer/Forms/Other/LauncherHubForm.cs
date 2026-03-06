@@ -52,9 +52,23 @@ namespace FractalExplorer
         private FractalInfo _selectedFractal;
 
         /// <summary>
-        /// Темы, доступные для выбора пользователем.
+        /// Пункты селектора тем (реальные темы и действия управления).
         /// </summary>
-        private readonly List<ThemeDefinition> _themeOptions = new();
+        private readonly List<ThemeSelectorItem> _themeOptions = new();
+
+        /// <summary>
+        /// Модель элемента выпадающего списка тем.
+        /// </summary>
+        private sealed class ThemeSelectorItem
+        {
+            public bool IsManageAction { get; init; }
+            public string? ThemeId { get; init; }
+            public string DisplayText { get; init; } = string.Empty;
+
+            public override string ToString() => DisplayText;
+        }
+
+        private const string ManageThemesItemText = "Управление темами...";
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="LauncherHubForm"/>.
@@ -142,16 +156,25 @@ namespace FractalExplorer
             cbTheme.SelectedIndexChanged -= cbTheme_SelectedIndexChanged;
 
             _themeOptions.Clear();
-            _themeOptions.AddRange(ThemeManager.GetAllThemes());
+            _themeOptions.AddRange(ThemeManager.GetAllThemes().Select(theme => new ThemeSelectorItem
+            {
+                IsManageAction = false,
+                ThemeId = theme.Id,
+                DisplayText = theme.DisplayName
+            }));
+            _themeOptions.Add(new ThemeSelectorItem
+            {
+                IsManageAction = true,
+                ThemeId = null,
+                DisplayText = ManageThemesItemText
+            });
 
             cbTheme.Items.Clear();
-            foreach (ThemeDefinition theme in _themeOptions)
-            {
-                cbTheme.Items.Add(theme.DisplayName);
-            }
+            cbTheme.Items.AddRange(_themeOptions.Cast<object>().ToArray());
 
-            int selectedThemeIndex = _themeOptions.FindIndex(theme =>
-                string.Equals(theme.Id, ThemeManager.CurrentThemeId, StringComparison.OrdinalIgnoreCase));
+            int selectedThemeIndex = _themeOptions.FindIndex(item =>
+                !item.IsManageAction &&
+                string.Equals(item.ThemeId, ThemeManager.CurrentThemeId, StringComparison.OrdinalIgnoreCase));
 
             cbTheme.SelectedIndex = selectedThemeIndex >= 0 ? selectedThemeIndex : 0;
 
@@ -192,21 +215,32 @@ namespace FractalExplorer
                 return;
             }
 
-            ThemeDefinition selectedTheme = _themeOptions[cbTheme.SelectedIndex];
+            ThemeSelectorItem selectedItem = _themeOptions[cbTheme.SelectedIndex];
 
-            ThemeManager.SetTheme(selectedTheme.Id);
+            if (selectedItem.IsManageAction)
+            {
+                using ThemeEditorForm themeEditorForm = new();
+                themeEditorForm.ShowDialog(this);
+
+                InitializeThemeSelector();
+
+                int activeThemeIndex = _themeOptions.FindIndex(item =>
+                    !item.IsManageAction &&
+                    string.Equals(item.ThemeId, ThemeManager.CurrentThemeId, StringComparison.OrdinalIgnoreCase));
+                cbTheme.SelectedIndex = activeThemeIndex >= 0 ? activeThemeIndex : 0;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedItem.ThemeId))
+            {
+                return;
+            }
+
+            ThemeManager.SetTheme(selectedItem.ThemeId);
             ThemeManager.ApplyTheme(this);
 
-            Settings.Default.UiTheme = selectedTheme.Id;
+            Settings.Default.UiTheme = selectedItem.ThemeId;
             Settings.Default.Save();
-        }
-
-
-
-        private void btnThemeEditor_Click(object sender, EventArgs e)
-        {
-            using ThemeEditorForm themeEditorForm = new();
-            themeEditorForm.ShowDialog(this);
         }
 
         /// <summary>
