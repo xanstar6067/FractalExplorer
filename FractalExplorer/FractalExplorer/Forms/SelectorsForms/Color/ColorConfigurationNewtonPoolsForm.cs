@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using Microsoft.VisualBasic; // Для Interaction.InputBox
+using FractalExplorer.Utilities.ColorPicking;
 
 using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer
@@ -45,6 +46,7 @@ namespace FractalExplorer
         /// чтобы избежать рекурсивных вызовов обработчиков событий.
         /// </summary>
         private bool _isProgrammaticChange = false;
+        private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
 
         #endregion
 
@@ -193,20 +195,18 @@ namespace FractalExplorer
             Panel clickedPanel = sender as Panel;
             int colorIndex = (int)clickedPanel.Tag;
 
-            using (ColorDialog colorDialog = new ColorDialog { Color = clickedPanel.BackColor })
+            Color initialColor = clickedPanel.BackColor;
+            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
             {
-                if (colorDialog.ShowDialog() == DialogResult.OK)
-                {
-                    clickedPanel.BackColor = colorDialog.Color;
+                clickedPanel.BackColor = selectedColor;
 
-                    // Убеждаемся, что список цветов в палитре достаточно большой
-                    while (_paletteManager.ActivePalette.RootColors.Count <= colorIndex)
-                    {
-                        _paletteManager.ActivePalette.RootColors.Add(Color.Black);
-                    }
-                    _paletteManager.ActivePalette.RootColors[colorIndex] = colorDialog.Color;
-                    PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+                // Убеждаемся, что список цветов в палитре достаточно большой
+                while (_paletteManager.ActivePalette.RootColors.Count <= colorIndex)
+                {
+                    _paletteManager.ActivePalette.RootColors.Add(Color.Black);
                 }
+                _paletteManager.ActivePalette.RootColors[colorIndex] = selectedColor;
+                PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
             }
         }
 
@@ -223,14 +223,12 @@ namespace FractalExplorer
                 MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            using (ColorDialog colorDialog = new ColorDialog { Color = panelBackgroundColor.BackColor })
+            Color initialColor = panelBackgroundColor.BackColor;
+            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
             {
-                if (colorDialog.ShowDialog() == DialogResult.OK)
-                {
-                    panelBackgroundColor.BackColor = colorDialog.Color;
-                    _paletteManager.ActivePalette.BackgroundColor = colorDialog.Color;
-                    PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
-                }
+                panelBackgroundColor.BackColor = selectedColor;
+                _paletteManager.ActivePalette.BackgroundColor = selectedColor;
+                PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
             }
         }
 

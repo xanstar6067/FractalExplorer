@@ -1,4 +1,5 @@
 using FractalExplorer.Utilities.Theme;
+using FractalExplorer.Utilities.ColorPicking;
 
 namespace FractalExplorer.Forms.Other
 {
@@ -31,6 +32,7 @@ namespace FractalExplorer.Forms.Other
         private readonly Dictionary<string, Color> _currentColors = new(StringComparer.Ordinal);
 
         private readonly WindowsThemeImporter _windowsThemeImporter = new();
+        private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
 
         private List<ThemeDefinition> _themes = new();
         private ThemeDefinition? _selectedTheme;
@@ -234,13 +236,12 @@ namespace FractalExplorer.Forms.Other
                 return;
             }
 
-            colorDialogTheme.Color = currentColor;
-            if (colorDialogTheme.ShowDialog(this) != DialogResult.OK)
+            if (!_colorSelectionService.TrySelectColor(this, currentColor, out Color selectedColor))
             {
                 return;
             }
 
-            _currentColors[propertyName] = colorDialogTheme.Color;
+            _currentColors[propertyName] = selectedColor;
             RefreshColorPreviews();
             ApplyPreviewTheme();
         }

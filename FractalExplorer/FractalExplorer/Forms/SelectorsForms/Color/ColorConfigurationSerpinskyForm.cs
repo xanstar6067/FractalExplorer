@@ -1,4 +1,5 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
+using FractalExplorer.Utilities.ColorPicking;
 
 namespace FractalExplorer.SelectorsForms
 {
@@ -12,6 +13,7 @@ namespace FractalExplorer.SelectorsForms
         #region Fields
         private readonly SerpinskyPaletteManager _paletteManager;
         private SerpinskyColorPalette _selectedPalette;
+        private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
         #endregion
 
         #region Events
@@ -139,11 +141,11 @@ namespace FractalExplorer.SelectorsForms
                 MessageBox.Show("Нельзя изменять встроенные палитры. Создайте новую, чтобы редактировать.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            colorDialog1.Color = panel.BackColor;
-            if (colorDialog1.ShowDialog() == DialogResult.OK)
+            Color initialColor = panel.BackColor;
+            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
             {
-                panel.BackColor = colorDialog1.Color;
-                setColorAction(colorDialog1.Color);
+                panel.BackColor = selectedColor;
+                setColorAction(selectedColor);
             }
         }
         #endregion

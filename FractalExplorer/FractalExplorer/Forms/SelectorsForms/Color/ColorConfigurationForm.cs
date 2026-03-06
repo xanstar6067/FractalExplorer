@@ -1,4 +1,5 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
+using FractalExplorer.Utilities.ColorPicking;
 using System.Drawing.Drawing2D;
 
 using FractalExplorer.Utilities.Theme;
@@ -17,6 +18,7 @@ namespace FractalExplorer.Utilities
         /// Менеджер палитр, управляющий доступными палитрами.
         /// </summary>
         private readonly PaletteManager _paletteManager;
+        private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
@@ -276,9 +278,9 @@ namespace FractalExplorer.Utilities
         /// <param name="e">Аргументы события.</param>
         private void btnAddColor_Click(object sender, EventArgs e)
         {
-            if (colorDialog1.ShowDialog() == DialogResult.OK)
+            if (_colorSelectionService.TrySelectColor(this, Color.White, out Color selectedColor))
             {
-                _selectedPalette.Colors.Add(colorDialog1.Color);
+                _selectedPalette.Colors.Add(selectedColor);
                 DisplayPaletteDetails();
             }
         }
@@ -292,10 +294,10 @@ namespace FractalExplorer.Utilities
         private void btnEditColor_Click(object sender, EventArgs e)
         {
             if (lbColorStops.SelectedIndex == -1) return;
-            colorDialog1.Color = _selectedPalette.Colors[lbColorStops.SelectedIndex];
-            if (colorDialog1.ShowDialog() == DialogResult.OK)
+            Color initialColor = _selectedPalette.Colors[lbColorStops.SelectedIndex];
+            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
             {
-                _selectedPalette.Colors[lbColorStops.SelectedIndex] = colorDialog1.Color;
+                _selectedPalette.Colors[lbColorStops.SelectedIndex] = selectedColor;
                 DisplayPaletteDetails();
             }
         }
