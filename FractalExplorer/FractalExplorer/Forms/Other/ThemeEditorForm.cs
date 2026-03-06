@@ -13,17 +13,17 @@ namespace FractalExplorer.Forms.Other
 
         private readonly List<ThemeColorBinding> _colorBindings = new()
         {
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BaseBackground), DisplayName = "BaseBackground", Getter = theme => theme.BaseBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PanelBackground), DisplayName = "PanelBackground", Getter = theme => theme.PanelBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.ControlBackground), DisplayName = "ControlBackground", Getter = theme => theme.ControlBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PrimaryText), DisplayName = "PrimaryText", Getter = theme => theme.PrimaryText },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.SecondaryText), DisplayName = "SecondaryText", Getter = theme => theme.SecondaryText },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.AccentPrimary), DisplayName = "AccentPrimary", Getter = theme => theme.AccentPrimary },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.AccentSecondary), DisplayName = "AccentSecondary", Getter = theme => theme.AccentSecondary },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.HoverBackground), DisplayName = "HoverBackground", Getter = theme => theme.HoverBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PressedBackground), DisplayName = "PressedBackground", Getter = theme => theme.PressedBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "BorderColor", Getter = theme => theme.BorderColor },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InputBorderColor), DisplayName = "InputBorderColor", Getter = theme => theme.InputBorderColor }
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BaseBackground), DisplayName = "Фон формы", Getter = theme => theme.BaseBackground },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PanelBackground), DisplayName = "Фон панелей", Getter = theme => theme.PanelBackground },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.ControlBackground), DisplayName = "Фон элементов управления", Getter = theme => theme.ControlBackground },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PrimaryText), DisplayName = "Текст (основной)", Getter = theme => theme.PrimaryText },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.SecondaryText), DisplayName = "Текст (вторичный)", Getter = theme => theme.SecondaryText },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.AccentPrimary), DisplayName = "Акцент (основной)", Getter = theme => theme.AccentPrimary },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.AccentSecondary), DisplayName = "Акцент (дополнительный)", Getter = theme => theme.AccentSecondary },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.HoverBackground), DisplayName = "Фон при наведении", Getter = theme => theme.HoverBackground },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PressedBackground), DisplayName = "Фон при нажатии", Getter = theme => theme.PressedBackground },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "Граница", Getter = theme => theme.BorderColor },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InputBorderColor), DisplayName = "Граница поля ввода", Getter = theme => theme.InputBorderColor }
         };
 
         private readonly Dictionary<string, Panel> _colorPreviewPanels = new(StringComparer.Ordinal);
@@ -65,20 +65,20 @@ namespace FractalExplorer.Forms.Other
                     Text = binding.DisplayName,
                     TextAlign = ContentAlignment.MiddleLeft,
                     Location = new Point(0, 6),
-                    Size = new Size(150, 22)
+                    Size = new Size(220, 22)
                 };
 
                 Panel colorPanel = new()
                 {
                     BorderStyle = BorderStyle.FixedSingle,
-                    Location = new Point(158, 6),
+                    Location = new Point(228, 6),
                     Size = new Size(48, 22)
                 };
 
                 Button button = new()
                 {
                     Text = "Изменить",
-                    Location = new Point(214, 4),
+                    Location = new Point(284, 4),
                     Size = new Size(90, 26),
                     Tag = binding.PropertyName
                 };

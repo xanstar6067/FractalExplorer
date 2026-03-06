@@ -11,6 +11,23 @@ namespace FractalExplorer.Utilities.Theme
         {
             new ThemeDefinition
             {
+                Id = DefaultThemeId,
+                DisplayName = "Тёмная (зелёная)",
+                IsBuiltIn = true,
+                BaseBackground = Color.FromArgb(18, 18, 18),
+                PanelBackground = Color.FromArgb(24, 34, 28),
+                ControlBackground = Color.FromArgb(34, 48, 39),
+                PrimaryText = Color.FromArgb(236, 242, 236),
+                SecondaryText = Color.FromArgb(170, 188, 172),
+                AccentPrimary = Color.FromArgb(76, 175, 80),
+                AccentSecondary = Color.FromArgb(139, 195, 74),
+                HoverBackground = Color.FromArgb(48, 66, 54),
+                PressedBackground = Color.FromArgb(61, 83, 68),
+                BorderColor = Color.FromArgb(72, 98, 79),
+                InputBorderColor = Color.FromArgb(90, 118, 98)
+            },
+            new ThemeDefinition
+            {
                 Id = "dark-modern-lab-blue",
                 DisplayName = "Тёмная (синяя)",
                 IsBuiltIn = true,
@@ -59,23 +76,6 @@ namespace FractalExplorer.Utilities.Theme
                 PressedBackground = Color.FromArgb(205, 211, 223),
                 BorderColor = Color.FromArgb(176, 185, 201),
                 InputBorderColor = Color.FromArgb(158, 168, 188)
-            },
-            new ThemeDefinition
-            {
-                Id = DefaultThemeId,
-                DisplayName = "Тёмная (зелёная)",
-                IsBuiltIn = true,
-                BaseBackground = Color.FromArgb(18, 18, 18),
-                PanelBackground = Color.FromArgb(24, 34, 28),
-                ControlBackground = Color.FromArgb(34, 48, 39),
-                PrimaryText = Color.FromArgb(236, 242, 236),
-                SecondaryText = Color.FromArgb(170, 188, 172),
-                AccentPrimary = Color.FromArgb(76, 175, 80),
-                AccentSecondary = Color.FromArgb(139, 195, 74),
-                HoverBackground = Color.FromArgb(48, 66, 54),
-                PressedBackground = Color.FromArgb(61, 83, 68),
-                BorderColor = Color.FromArgb(72, 98, 79),
-                InputBorderColor = Color.FromArgb(90, 118, 98)
             },
             new ThemeDefinition
             {

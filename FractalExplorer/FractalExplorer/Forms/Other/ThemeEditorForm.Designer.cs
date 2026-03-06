@@ -221,7 +221,7 @@ namespace FractalExplorer.Forms.Other
             lblPreviewSubText.Name = "lblPreviewSubText";
             lblPreviewSubText.Size = new Size(104, 15);
             lblPreviewSubText.TabIndex = 1;
-            lblPreviewSubText.Text = "Secondary sample";
+            lblPreviewSubText.Text = "Пример вторичного текста";
             // 
             // lblPreviewTitle
             // 
@@ -231,7 +231,7 @@ namespace FractalExplorer.Forms.Other
             lblPreviewTitle.Name = "lblPreviewTitle";
             lblPreviewTitle.Size = new Size(150, 19);
             lblPreviewTitle.TabIndex = 0;
-            lblPreviewTitle.Text = "Primary text preview";
+            lblPreviewTitle.Text = "Пример основного текста";
             // 
             // buttonsPanel
             // 
@@ -255,7 +255,7 @@ namespace FractalExplorer.Forms.Other
             btnNew.Name = "btnNew";
             btnNew.Size = new Size(75, 27);
             btnNew.TabIndex = 0;
-            btnNew.Text = "New";
+            btnNew.Text = "Новая";
             btnNew.UseVisualStyleBackColor = true;
             btnNew.Click += btnNew_Click;
             // 
@@ -263,9 +263,9 @@ namespace FractalExplorer.Forms.Other
             // 
             btnCopy.Location = new Point(573, 3);
             btnCopy.Name = "btnCopy";
-            btnCopy.Size = new Size(75, 27);
+            btnCopy.Size = new Size(95, 27);
             btnCopy.TabIndex = 1;
-            btnCopy.Text = "Copy";
+            btnCopy.Text = "Копировать";
             btnCopy.UseVisualStyleBackColor = true;
             btnCopy.Click += btnCopy_Click;
             // 
@@ -273,9 +273,9 @@ namespace FractalExplorer.Forms.Other
             // 
             btnDelete.Location = new Point(492, 3);
             btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(75, 27);
+            btnDelete.Size = new Size(85, 27);
             btnDelete.TabIndex = 2;
-            btnDelete.Text = "Delete";
+            btnDelete.Text = "Удалить";
             btnDelete.UseVisualStyleBackColor = true;
             btnDelete.Click += btnDelete_Click;
             // 
@@ -283,9 +283,9 @@ namespace FractalExplorer.Forms.Other
             // 
             btnSaveApply.Location = new Point(380, 3);
             btnSaveApply.Name = "btnSaveApply";
-            btnSaveApply.Size = new Size(106, 27);
+            btnSaveApply.Size = new Size(170, 27);
             btnSaveApply.TabIndex = 3;
-            btnSaveApply.Text = "Save / Apply";
+            btnSaveApply.Text = "Сохранить и применить";
             btnSaveApply.UseVisualStyleBackColor = true;
             btnSaveApply.Click += btnSaveApply_Click;
             // 
@@ -293,9 +293,9 @@ namespace FractalExplorer.Forms.Other
             // 
             btnClose.Location = new Point(299, 3);
             btnClose.Name = "btnClose";
-            btnClose.Size = new Size(75, 27);
+            btnClose.Size = new Size(90, 27);
             btnClose.TabIndex = 4;
-            btnClose.Text = "Close";
+            btnClose.Text = "Закрыть";
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
             // 
