@@ -24,7 +24,6 @@
             panelBackgroundColor = new Panel();
             label1 = new Label();
             btnSave = new Button();
-            colorDialog1 = new ColorDialog();
             cbPalettes = new ComboBox();
             label2 = new Label();
             btnSaveAs = new Button();
@@ -187,7 +186,6 @@
         private System.Windows.Forms.Panel panelBackgroundColor;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.ComboBox cbPalettes;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnSaveAs;

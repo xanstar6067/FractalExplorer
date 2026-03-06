@@ -31,7 +31,6 @@
             btnSave = new Button();
             btnApply = new Button();
             btnClose = new Button();
-            colorDialog1 = new ColorDialog();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
             checkAlignSteps = new CheckBox();
@@ -200,11 +199,6 @@
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
             // 
-            // colorDialog1
-            // 
-            colorDialog1.AnyColor = true;
-            colorDialog1.FullOpen = true;
-            // 
             // groupBox1
             // 
             groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
@@ -356,7 +350,6 @@
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnApply;
         private System.Windows.Forms.Button btnClose;
-        private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.CheckBox checkAlignSteps;

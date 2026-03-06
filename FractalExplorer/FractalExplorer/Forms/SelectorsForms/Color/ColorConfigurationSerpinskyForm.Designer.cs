@@ -32,7 +32,6 @@
             btnClose = new Button();
             btnApply = new Button();
             btnSave = new Button();
-            colorDialog1 = new ColorDialog();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             SuspendLayout();
@@ -187,11 +186,6 @@
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
             // 
-            // colorDialog1
-            // 
-            colorDialog1.AnyColor = true;
-            colorDialog1.FullOpen = true;
-            // 
             // ColorConfigurationSerpinskyForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -228,7 +222,6 @@
         private System.Windows.Forms.Button btnClose;
         private System.Windows.Forms.Button btnApply;
         private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.ColorDialog colorDialog1;
         private System.Windows.Forms.Panel panelFractalColor;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label1;

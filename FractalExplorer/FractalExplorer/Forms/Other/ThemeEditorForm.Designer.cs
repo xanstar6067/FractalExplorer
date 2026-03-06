@@ -40,7 +40,6 @@ namespace FractalExplorer.Forms.Other
             btnSaveApply = new Button();
             btnCopyWindowsTheme = new Button();
             btnClose = new Button();
-            colorDialogTheme = new ColorDialog();
             ((System.ComponentModel.ISupportInitialize)splitMain).BeginInit();
             splitMain.Panel1.SuspendLayout();
             splitMain.Panel2.SuspendLayout();
@@ -366,6 +365,5 @@ namespace FractalExplorer.Forms.Other
         private Button btnSaveApply;
         private Button btnCopyWindowsTheme;
         private Button btnClose;
-        private ColorDialog colorDialogTheme;
     }
 }
