@@ -51,6 +51,11 @@ namespace FractalExplorer
         private FractalInfo _selectedFractal;
 
         /// <summary>
+        /// Темы, доступные для выбора пользователем.
+        /// </summary>
+        private readonly List<ThemeDefinition> _themeOptions = new();
+
+        /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="LauncherHubForm"/>.
         /// </summary>
         public LauncherHubForm()
@@ -133,26 +138,19 @@ namespace FractalExplorer
         {
             cbTheme.SelectedIndexChanged -= cbTheme_SelectedIndexChanged;
 
-            cbTheme.Items.Clear();
-            cbTheme.Items.Add("Тёмная (зелёная)");
-            cbTheme.Items.Add("Тёмная (синяя)");
-            cbTheme.Items.Add("Тёмная (фиолетовая)");
-            cbTheme.Items.Add("Светлая");
-            cbTheme.Items.Add("Тёплая");
-            cbTheme.Items.Add("Огненная");
-            cbTheme.Items.Add("Фиолетовая");
+            _themeOptions.Clear();
+            _themeOptions.AddRange(ThemeManager.GetAllThemes());
 
-            cbTheme.SelectedIndex = ThemeManager.CurrentTheme switch
+            cbTheme.Items.Clear();
+            foreach (ThemeDefinition theme in _themeOptions)
             {
-                AppTheme.DarkModernLabGreen => 0,
-                AppTheme.DarkModernLabBlue => 1,
-                AppTheme.DarkModernLabViolet => 2,
-                AppTheme.Light => 3,
-                AppTheme.LightWarm => 4,
-                AppTheme.LightFire => 5,
-                AppTheme.LightViolet => 6,
-                _ => 0
-            };
+                cbTheme.Items.Add(theme.DisplayName);
+            }
+
+            int selectedThemeIndex = _themeOptions.FindIndex(theme =>
+                string.Equals(theme.Id, ThemeManager.CurrentThemeId, StringComparison.OrdinalIgnoreCase));
+
+            cbTheme.SelectedIndex = selectedThemeIndex >= 0 ? selectedThemeIndex : 0;
 
             cbTheme.SelectedIndexChanged += cbTheme_SelectedIndexChanged;
         }
@@ -162,22 +160,17 @@ namespace FractalExplorer
         /// </summary>
         private void cbTheme_SelectedIndexChanged(object sender, EventArgs e)
         {
-            AppTheme selectedTheme = cbTheme.SelectedIndex switch
+            if (cbTheme.SelectedIndex < 0 || cbTheme.SelectedIndex >= _themeOptions.Count)
             {
-                0 => AppTheme.DarkModernLabGreen,
-                1 => AppTheme.DarkModernLabBlue,
-                2 => AppTheme.DarkModernLabViolet,
-                3 => AppTheme.Light,
-                4 => AppTheme.LightWarm,
-                5 => AppTheme.LightFire,
-                6 => AppTheme.LightViolet,
-                _ => ThemeManager.CurrentTheme
-            };
+                return;
+            }
 
-            ThemeManager.SetTheme(selectedTheme);
+            ThemeDefinition selectedTheme = _themeOptions[cbTheme.SelectedIndex];
+
+            ThemeManager.SetTheme(selectedTheme.Id);
             ThemeManager.ApplyTheme(this);
 
-            Settings.Default.UiTheme = selectedTheme.ToString();
+            Settings.Default.UiTheme = selectedTheme.Id;
             Settings.Default.Save();
         }
 

@@ -16,15 +16,14 @@ namespace FractalExplorer.Main
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
 
-            AppTheme startupTheme;
-            if (!ThemeManager.TryGetThemeByName(Settings.Default.UiTheme, out startupTheme))
+            string startupThemeId;
+            if (!ThemeManager.TryResolveThemeId(Settings.Default.UiTheme, out startupThemeId))
             {
-                startupTheme = AppTheme.DarkModernLabGreen;
-                Settings.Default.UiTheme = startupTheme.ToString();
+                Settings.Default.UiTheme = startupThemeId;
                 Settings.Default.Save();
             }
 
-            ThemeManager.SetTheme(startupTheme);
+            ThemeManager.SetTheme(startupThemeId);
             Application.Run(new LauncherHubForm());
         }
     }

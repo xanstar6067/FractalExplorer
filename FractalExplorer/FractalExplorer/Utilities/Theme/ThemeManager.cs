@@ -5,10 +5,15 @@ namespace FractalExplorer.Utilities.Theme
 {
     public static class ThemeManager
     {
-        private static readonly Dictionary<AppTheme, ThemeDefinition> Themes = new()
+        public const string DefaultThemeId = "dark-modern-lab-green";
+
+        private static readonly List<ThemeDefinition> BuiltInThemes = new()
         {
-            [AppTheme.DarkModernLabBlue] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = "dark-modern-lab-blue",
+                DisplayName = "Тёмная (синяя)",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(18, 18, 18),
                 PanelBackground = Color.FromArgb(28, 30, 36),
                 ControlBackground = Color.FromArgb(36, 40, 48),
@@ -21,8 +26,11 @@ namespace FractalExplorer.Utilities.Theme
                 BorderColor = Color.FromArgb(64, 74, 92),
                 InputBorderColor = Color.FromArgb(82, 95, 118)
             },
-            [AppTheme.DarkModernLabViolet] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = "dark-modern-lab-violet",
+                DisplayName = "Тёмная (фиолетовая)",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(18, 18, 18),
                 PanelBackground = Color.FromArgb(30, 26, 38),
                 ControlBackground = Color.FromArgb(42, 36, 52),
@@ -35,8 +43,11 @@ namespace FractalExplorer.Utilities.Theme
                 BorderColor = Color.FromArgb(88, 74, 110),
                 InputBorderColor = Color.FromArgb(105, 90, 132)
             },
-            [AppTheme.Light] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = "light",
+                DisplayName = "Светлая",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(245, 246, 248),
                 PanelBackground = Color.FromArgb(233, 235, 240),
                 ControlBackground = Color.FromArgb(255, 255, 255),
@@ -49,8 +60,11 @@ namespace FractalExplorer.Utilities.Theme
                 BorderColor = Color.FromArgb(176, 185, 201),
                 InputBorderColor = Color.FromArgb(158, 168, 188)
             },
-            [AppTheme.DarkModernLabGreen] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = DefaultThemeId,
+                DisplayName = "Тёмная (зелёная)",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(18, 18, 18),
                 PanelBackground = Color.FromArgb(24, 34, 28),
                 ControlBackground = Color.FromArgb(34, 48, 39),
@@ -63,8 +77,11 @@ namespace FractalExplorer.Utilities.Theme
                 BorderColor = Color.FromArgb(72, 98, 79),
                 InputBorderColor = Color.FromArgb(90, 118, 98)
             },
-            [AppTheme.LightWarm] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = "light-warm",
+                DisplayName = "Тёплая",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(255, 249, 238),
                 PanelBackground = Color.FromArgb(255, 242, 214),
                 ControlBackground = Color.FromArgb(255, 252, 244),
@@ -77,8 +94,11 @@ namespace FractalExplorer.Utilities.Theme
                 BorderColor = Color.FromArgb(220, 183, 122),
                 InputBorderColor = Color.FromArgb(207, 165, 102)
             },
-            [AppTheme.LightFire] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = "light-fire",
+                DisplayName = "Огненная",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(255, 246, 238),
                 PanelBackground = Color.FromArgb(255, 227, 204),
                 ControlBackground = Color.FromArgb(255, 250, 243),
@@ -91,8 +111,11 @@ namespace FractalExplorer.Utilities.Theme
                 BorderColor = Color.FromArgb(224, 157, 119),
                 InputBorderColor = Color.FromArgb(212, 139, 102)
             },
-            [AppTheme.LightViolet] = new ThemeDefinition
+            new ThemeDefinition
             {
+                Id = "light-violet",
+                DisplayName = "Фиолетовая",
+                IsBuiltIn = true,
                 BaseBackground = Color.FromArgb(248, 244, 255),
                 PanelBackground = Color.FromArgb(235, 226, 250),
                 ControlBackground = Color.FromArgb(252, 248, 255),
@@ -107,38 +130,90 @@ namespace FractalExplorer.Utilities.Theme
             }
         };
 
+        private static readonly Dictionary<string, ThemeDefinition> BuiltInThemesById = BuiltInThemes.ToDictionary(
+            theme => theme.Id,
+            theme => theme,
+            StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, ThemeDefinition> CustomThemesById = new(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly Dictionary<string, string> LegacyThemeNameMap = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["DarkModernLabBlue"] = "dark-modern-lab-blue",
+            ["DarkModernLabViolet"] = "dark-modern-lab-violet",
+            ["Light"] = "light",
+            ["DarkModernLabGreen"] = DefaultThemeId,
+            ["LightWarm"] = "light-warm",
+            ["LightFire"] = "light-fire",
+            ["LightViolet"] = "light-violet"
+        };
+
         public static event EventHandler? ThemeChanged;
 
-        public static AppTheme CurrentTheme { get; private set; } = AppTheme.DarkModernLabGreen;
+        public static string CurrentThemeId { get; private set; } = DefaultThemeId;
 
-        public static ThemeDefinition CurrentDefinition => Themes[CurrentTheme];
+        public static ThemeDefinition CurrentDefinition =>
+            TryGetTheme(CurrentThemeId, out ThemeDefinition theme)
+                ? theme
+                : BuiltInThemesById[DefaultThemeId];
 
-        public static bool TryGetThemeByName(string? themeName, out AppTheme theme)
+        public static IReadOnlyList<ThemeDefinition> GetAllThemes()
         {
-            if (string.IsNullOrWhiteSpace(themeName))
-            {
-                theme = AppTheme.DarkModernLabGreen;
-                return false;
-            }
-
-            if (!Enum.TryParse(themeName, ignoreCase: true, out AppTheme parsedTheme) || !Themes.ContainsKey(parsedTheme))
-            {
-                theme = AppTheme.DarkModernLabGreen;
-                return false;
-            }
-
-            theme = parsedTheme;
-            return true;
+            List<ThemeDefinition> result = new(BuiltInThemes.Count + CustomThemesById.Count);
+            result.AddRange(BuiltInThemes);
+            result.AddRange(CustomThemesById.Values.OrderBy(theme => theme.DisplayName, StringComparer.CurrentCultureIgnoreCase));
+            return result;
         }
 
-        public static void SetTheme(AppTheme theme)
+        public static bool TryGetTheme(string id, out ThemeDefinition theme)
         {
-            if (CurrentTheme == theme)
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                if (CustomThemesById.TryGetValue(id, out theme))
+                {
+                    return true;
+                }
+
+                if (BuiltInThemesById.TryGetValue(id, out theme))
+                {
+                    return true;
+                }
+
+                if (TryMapLegacyThemeName(id, out string mappedId))
+                {
+                    return TryGetTheme(mappedId, out theme);
+                }
+            }
+
+            theme = BuiltInThemesById[DefaultThemeId];
+            return false;
+        }
+
+        public static bool TryResolveThemeId(string? rawValue, out string resolvedThemeId)
+        {
+            if (!string.IsNullOrWhiteSpace(rawValue) && TryGetTheme(rawValue, out ThemeDefinition theme))
+            {
+                resolvedThemeId = theme.Id;
+                return true;
+            }
+
+            resolvedThemeId = DefaultThemeId;
+            return false;
+        }
+
+        public static void SetTheme(string id)
+        {
+            if (!TryGetTheme(id, out ThemeDefinition theme))
             {
                 return;
             }
 
-            CurrentTheme = theme;
+            if (string.Equals(CurrentThemeId, theme.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            CurrentThemeId = theme.Id;
 
             foreach (Form form in Application.OpenForms)
             {
@@ -146,6 +221,59 @@ namespace FractalExplorer.Utilities.Theme
             }
 
             ThemeChanged?.Invoke(null, EventArgs.Empty);
+        }
+
+        public static void AddOrUpdateCustomTheme(ThemeDefinition theme)
+        {
+            if (theme is null)
+            {
+                throw new ArgumentNullException(nameof(theme));
+            }
+
+            if (string.IsNullOrWhiteSpace(theme.Id))
+            {
+                throw new ArgumentException("Theme id must be provided.", nameof(theme));
+            }
+
+            if (BuiltInThemesById.ContainsKey(theme.Id))
+            {
+                throw new InvalidOperationException("Cannot override built-in theme.");
+            }
+
+            ThemeDefinition customTheme = theme.CloneWith(theme.Id, theme.DisplayName, false);
+            CustomThemesById[customTheme.Id] = customTheme;
+
+            if (string.Equals(CurrentThemeId, customTheme.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                ThemeChanged?.Invoke(null, EventArgs.Empty);
+            }
+        }
+
+        public static bool RemoveCustomTheme(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id) || !CustomThemesById.Remove(id))
+            {
+                return false;
+            }
+
+            if (string.Equals(CurrentThemeId, id, StringComparison.OrdinalIgnoreCase))
+            {
+                SetTheme(DefaultThemeId);
+            }
+
+            return true;
+        }
+
+        public static ThemeDefinition DuplicateTheme(string sourceId, string newId, string newDisplayName)
+        {
+            if (!TryGetTheme(sourceId, out ThemeDefinition sourceTheme))
+            {
+                throw new KeyNotFoundException($"Theme with id '{sourceId}' was not found.");
+            }
+
+            ThemeDefinition duplicate = sourceTheme.CloneWith(newId, newDisplayName, false);
+            AddOrUpdateCustomTheme(duplicate);
+            return duplicate;
         }
 
         public static void RegisterForm(Form form)
@@ -170,6 +298,11 @@ namespace FractalExplorer.Utilities.Theme
 
             form.ResumeLayout(true);
             form.Invalidate(true);
+        }
+
+        private static bool TryMapLegacyThemeName(string rawThemeName, out string themeId)
+        {
+            return LegacyThemeNameMap.TryGetValue(rawThemeName, out themeId!);
         }
 
         private static void ApplyThemeToControl(Control control, ThemeDefinition theme)
