@@ -17,6 +17,7 @@ namespace FractalExplorer.Forms.Other
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ThemeEditorForm));
             splitMain = new SplitContainer();
             leftPanel = new TableLayoutPanel();
             lblThemes = new Label();
@@ -318,6 +319,7 @@ namespace FractalExplorer.Forms.Other
             ClientSize = new Size(1066, 620);
             Controls.Add(splitMain);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MinimumSize = new Size(980, 600);
             Name = "ThemeEditorForm";
