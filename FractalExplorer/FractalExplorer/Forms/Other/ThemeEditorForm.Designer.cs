@@ -65,8 +65,8 @@ namespace FractalExplorer.Forms.Other
             // splitMain.Panel2
             // 
             splitMain.Panel2.Controls.Add(rightPanel);
-            splitMain.Size = new Size(1040, 620);
-            splitMain.SplitterDistance = 280;
+            splitMain.Size = new Size(1066, 620);
+            splitMain.SplitterDistance = 287;
             splitMain.TabIndex = 0;
             // 
             // leftPanel
@@ -82,7 +82,7 @@ namespace FractalExplorer.Forms.Other
             leftPanel.RowCount = 2;
             leftPanel.RowStyles.Add(new RowStyle());
             leftPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            leftPanel.Size = new Size(280, 620);
+            leftPanel.Size = new Size(287, 620);
             leftPanel.TabIndex = 0;
             // 
             // lblThemes
@@ -93,7 +93,7 @@ namespace FractalExplorer.Forms.Other
             lblThemes.Location = new Point(10, 10);
             lblThemes.Margin = new Padding(0, 0, 0, 8);
             lblThemes.Name = "lblThemes";
-            lblThemes.Size = new Size(260, 19);
+            lblThemes.Size = new Size(267, 19);
             lblThemes.TabIndex = 0;
             lblThemes.Text = "Темы";
             // 
@@ -104,7 +104,7 @@ namespace FractalExplorer.Forms.Other
             lbThemes.Location = new Point(10, 37);
             lbThemes.Margin = new Padding(0);
             lbThemes.Name = "lbThemes";
-            lbThemes.Size = new Size(260, 573);
+            lbThemes.Size = new Size(267, 573);
             lbThemes.TabIndex = 1;
             lbThemes.SelectedIndexChanged += lbThemes_SelectedIndexChanged;
             // 
@@ -127,7 +127,7 @@ namespace FractalExplorer.Forms.Other
             rightPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F));
             rightPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
             rightPanel.RowStyles.Add(new RowStyle());
-            rightPanel.Size = new Size(756, 620);
+            rightPanel.Size = new Size(775, 620);
             rightPanel.TabIndex = 0;
             // 
             // lblThemeName
@@ -136,7 +136,7 @@ namespace FractalExplorer.Forms.Other
             lblThemeName.Location = new Point(12, 12);
             lblThemeName.Margin = new Padding(0, 0, 0, 6);
             lblThemeName.Name = "lblThemeName";
-            lblThemeName.Size = new Size(68, 15);
+            lblThemeName.Size = new Size(66, 15);
             lblThemeName.TabIndex = 0;
             lblThemeName.Text = "Имя темы:";
             // 
@@ -146,7 +146,7 @@ namespace FractalExplorer.Forms.Other
             txtThemeName.Location = new Point(12, 33);
             txtThemeName.Margin = new Padding(0, 0, 0, 10);
             txtThemeName.Name = "txtThemeName";
-            txtThemeName.Size = new Size(732, 23);
+            txtThemeName.Size = new Size(751, 23);
             txtThemeName.TabIndex = 1;
             txtThemeName.TextChanged += txtThemeName_TextChanged;
             // 
@@ -157,7 +157,7 @@ namespace FractalExplorer.Forms.Other
             grpColors.Location = new Point(12, 66);
             grpColors.Margin = new Padding(0, 0, 0, 10);
             grpColors.Name = "grpColors";
-            grpColors.Size = new Size(732, 316);
+            grpColors.Size = new Size(751, 295);
             grpColors.TabIndex = 2;
             grpColors.TabStop = false;
             grpColors.Text = "Цветовые свойства";
@@ -169,7 +169,7 @@ namespace FractalExplorer.Forms.Other
             flpColorProperties.FlowDirection = FlowDirection.TopDown;
             flpColorProperties.Location = new Point(3, 19);
             flpColorProperties.Name = "flpColorProperties";
-            flpColorProperties.Size = new Size(726, 294);
+            flpColorProperties.Size = new Size(745, 273);
             flpColorProperties.TabIndex = 0;
             flpColorProperties.WrapContents = false;
             // 
@@ -177,10 +177,10 @@ namespace FractalExplorer.Forms.Other
             // 
             grpPreview.Controls.Add(pnlPreview);
             grpPreview.Dock = DockStyle.Fill;
-            grpPreview.Location = new Point(12, 392);
+            grpPreview.Location = new Point(12, 371);
             grpPreview.Margin = new Padding(0, 0, 0, 10);
             grpPreview.Name = "grpPreview";
-            grpPreview.Size = new Size(732, 173);
+            grpPreview.Size = new Size(751, 193);
             grpPreview.TabIndex = 3;
             grpPreview.TabStop = false;
             grpPreview.Text = "Предпросмотр";
@@ -195,7 +195,7 @@ namespace FractalExplorer.Forms.Other
             pnlPreview.Location = new Point(3, 19);
             pnlPreview.Name = "pnlPreview";
             pnlPreview.Padding = new Padding(12);
-            pnlPreview.Size = new Size(726, 151);
+            pnlPreview.Size = new Size(745, 171);
             pnlPreview.TabIndex = 0;
             // 
             // txtPreviewInput
@@ -220,7 +220,7 @@ namespace FractalExplorer.Forms.Other
             lblPreviewSubText.AutoSize = true;
             lblPreviewSubText.Location = new Point(16, 44);
             lblPreviewSubText.Name = "lblPreviewSubText";
-            lblPreviewSubText.Size = new Size(104, 15);
+            lblPreviewSubText.Size = new Size(157, 15);
             lblPreviewSubText.TabIndex = 1;
             lblPreviewSubText.Text = "Пример вторичного текста";
             // 
@@ -230,7 +230,7 @@ namespace FractalExplorer.Forms.Other
             lblPreviewTitle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblPreviewTitle.Location = new Point(16, 16);
             lblPreviewTitle.Name = "lblPreviewTitle";
-            lblPreviewTitle.Size = new Size(150, 19);
+            lblPreviewTitle.Size = new Size(192, 19);
             lblPreviewTitle.TabIndex = 0;
             lblPreviewTitle.Text = "Пример основного текста";
             // 
@@ -245,15 +245,15 @@ namespace FractalExplorer.Forms.Other
             buttonsPanel.Controls.Add(btnClose);
             buttonsPanel.Dock = DockStyle.Fill;
             buttonsPanel.FlowDirection = FlowDirection.RightToLeft;
-            buttonsPanel.Location = new Point(12, 575);
+            buttonsPanel.Location = new Point(12, 574);
             buttonsPanel.Margin = new Padding(0);
             buttonsPanel.Name = "buttonsPanel";
-            buttonsPanel.Size = new Size(732, 33);
+            buttonsPanel.Size = new Size(751, 34);
             buttonsPanel.TabIndex = 4;
             // 
             // btnNew
             // 
-            btnNew.Location = new Point(654, 3);
+            btnNew.Location = new Point(673, 3);
             btnNew.Name = "btnNew";
             btnNew.Size = new Size(75, 27);
             btnNew.TabIndex = 0;
@@ -263,7 +263,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnCopy
             // 
-            btnCopy.Location = new Point(573, 3);
+            btnCopy.Location = new Point(572, 3);
             btnCopy.Name = "btnCopy";
             btnCopy.Size = new Size(95, 27);
             btnCopy.TabIndex = 1;
@@ -273,7 +273,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnDelete
             // 
-            btnDelete.Location = new Point(492, 3);
+            btnDelete.Location = new Point(481, 3);
             btnDelete.Name = "btnDelete";
             btnDelete.Size = new Size(85, 27);
             btnDelete.TabIndex = 2;
@@ -283,7 +283,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnSaveApply
             // 
-            btnSaveApply.Location = new Point(380, 3);
+            btnSaveApply.Location = new Point(305, 3);
             btnSaveApply.Name = "btnSaveApply";
             btnSaveApply.Size = new Size(170, 27);
             btnSaveApply.TabIndex = 3;
@@ -293,7 +293,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnCopyWindowsTheme
             // 
-            btnCopyWindowsTheme.Location = new Point(178, 3);
+            btnCopyWindowsTheme.Location = new Point(103, 3);
             btnCopyWindowsTheme.Name = "btnCopyWindowsTheme";
             btnCopyWindowsTheme.Size = new Size(196, 27);
             btnCopyWindowsTheme.TabIndex = 4;
@@ -303,7 +303,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnClose
             // 
-            btnClose.Location = new Point(82, 3);
+            btnClose.Location = new Point(7, 3);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(90, 27);
             btnClose.TabIndex = 5;
@@ -315,8 +315,10 @@ namespace FractalExplorer.Forms.Other
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1040, 620);
+            ClientSize = new Size(1066, 620);
             Controls.Add(splitMain);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             MinimumSize = new Size(980, 600);
             Name = "ThemeEditorForm";
             StartPosition = FormStartPosition.CenterParent;
