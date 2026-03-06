@@ -97,9 +97,16 @@ namespace FractalExplorer.Utilities.ColorPicking
 
     internal sealed class EyedropperColorSelectionHandler : IColorSelectionHandler
     {
+        private readonly ScreenEyedropper _screenEyedropper = new();
+
         public bool TrySelectColor(IWin32Window owner, Color initialColor, out Color selectedColor)
         {
-            MessageBox.Show(owner, "Режим пипетки пока не реализован.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (_screenEyedropper.TryPickColor(owner, out Color pickedColor))
+            {
+                selectedColor = pickedColor;
+                return true;
+            }
+
             selectedColor = initialColor;
             return false;
         }
