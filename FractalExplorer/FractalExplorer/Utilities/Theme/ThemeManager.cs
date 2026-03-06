@@ -152,6 +152,26 @@ namespace FractalExplorer.Utilities.Theme
 
         public static string CurrentThemeId { get; private set; } = DefaultThemeId;
 
+        static ThemeManager()
+        {
+            try
+            {
+                foreach (ThemeDefinition customTheme in ThemeStorage.LoadCustomThemes())
+                {
+                    if (string.IsNullOrWhiteSpace(customTheme.Id) || BuiltInThemesById.ContainsKey(customTheme.Id))
+                    {
+                        continue;
+                    }
+
+                    CustomThemesById[customTheme.Id] = customTheme.CloneWith(customTheme.Id, customTheme.DisplayName, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки пользовательских тем: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         public static ThemeDefinition CurrentDefinition =>
             TryGetTheme(CurrentThemeId, out ThemeDefinition theme)
                 ? theme
@@ -242,6 +262,7 @@ namespace FractalExplorer.Utilities.Theme
 
             ThemeDefinition customTheme = theme.CloneWith(theme.Id, theme.DisplayName, false);
             CustomThemesById[customTheme.Id] = customTheme;
+            SaveCustomThemes();
 
             if (string.Equals(CurrentThemeId, customTheme.Id, StringComparison.OrdinalIgnoreCase))
             {
@@ -255,6 +276,8 @@ namespace FractalExplorer.Utilities.Theme
             {
                 return false;
             }
+
+            SaveCustomThemes();
 
             if (string.Equals(CurrentThemeId, id, StringComparison.OrdinalIgnoreCase))
             {
@@ -298,6 +321,19 @@ namespace FractalExplorer.Utilities.Theme
 
             form.ResumeLayout(true);
             form.Invalidate(true);
+        }
+
+
+        private static void SaveCustomThemes()
+        {
+            try
+            {
+                ThemeStorage.SaveCustomThemes(CustomThemesById.Values);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка сохранения пользовательских тем: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static bool TryMapLegacyThemeName(string rawThemeName, out string themeId)
