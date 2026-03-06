@@ -61,6 +61,7 @@ namespace FractalExplorer
             InitializeFractalCatalog();
             PopulateTreeView();
             InitializeRenderPatternSelector();
+            InitializeThemeSelector();
             DisplayAppVersionInTitle();
         }
 
@@ -122,6 +123,46 @@ namespace FractalExplorer
                 7 => TileSchedulingStrategy.MortonCurve,
                 _ => TileSchedulingStrategy.Classic // Безопасное значение по умолчанию
             };
+        }
+
+        /// <summary>
+        /// Инициализирует селектор темы и синхронизирует его с активной темой приложения.
+        /// </summary>
+        private void InitializeThemeSelector()
+        {
+            cbTheme.SelectedIndexChanged -= cbTheme_SelectedIndexChanged;
+
+            cbTheme.Items.Clear();
+            cbTheme.Items.Add("Тёмная (синяя)");
+            cbTheme.Items.Add("Тёмная (фиолетовая)");
+            cbTheme.Items.Add("Светлая");
+
+            cbTheme.SelectedIndex = ThemeManager.CurrentTheme switch
+            {
+                AppTheme.DarkModernLabBlue => 0,
+                AppTheme.DarkModernLabViolet => 1,
+                AppTheme.Light => 2,
+                _ => 0
+            };
+
+            cbTheme.SelectedIndexChanged += cbTheme_SelectedIndexChanged;
+        }
+
+        /// <summary>
+        /// Применяет выбранную пользователем тему ко всем открытым формам и текущему окну.
+        /// </summary>
+        private void cbTheme_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            AppTheme selectedTheme = cbTheme.SelectedIndex switch
+            {
+                0 => AppTheme.DarkModernLabBlue,
+                1 => AppTheme.DarkModernLabViolet,
+                2 => AppTheme.Light,
+                _ => ThemeManager.CurrentTheme
+            };
+
+            ThemeManager.SetTheme(selectedTheme);
+            ThemeManager.ApplyTheme(this);
         }
 
         /// <summary>
@@ -347,6 +388,7 @@ namespace FractalExplorer
             // Используем Activator для создания экземпляра формы по её типу.
             if (Activator.CreateInstance(_selectedFractal.FormToLaunch) is Form form)
             {
+                ThemeManager.ApplyTheme(form);
                 form.Show();
             }
         }

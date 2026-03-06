@@ -37,6 +37,8 @@
             settingsPanel = new TableLayoutPanel();
             lblRenderPatternType = new Label();
             cbRenderPattern = new ComboBox();
+            lblTheme = new Label();
+            cbTheme = new ComboBox();
             btnLaunchSelected = new Button();
             richTextBoxDescription = new RichTextBox();
             ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
@@ -131,12 +133,16 @@
             settingsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             settingsPanel.Controls.Add(lblRenderPatternType, 0, 0);
             settingsPanel.Controls.Add(cbRenderPattern, 0, 1);
-            settingsPanel.Controls.Add(btnLaunchSelected, 0, 2);
+            settingsPanel.Controls.Add(lblTheme, 0, 2);
+            settingsPanel.Controls.Add(cbTheme, 0, 3);
+            settingsPanel.Controls.Add(btnLaunchSelected, 0, 4);
             settingsPanel.Dock = DockStyle.Fill;
             settingsPanel.Location = new Point(235, 60);
             settingsPanel.Margin = new Padding(0);
             settingsPanel.Name = "settingsPanel";
-            settingsPanel.RowCount = 3;
+            settingsPanel.RowCount = 5;
+            settingsPanel.RowStyles.Add(new RowStyle());
+            settingsPanel.RowStyles.Add(new RowStyle());
             settingsPanel.RowStyles.Add(new RowStyle());
             settingsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             settingsPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));
@@ -167,6 +173,30 @@
             cbRenderPattern.Size = new Size(308, 28);
             cbRenderPattern.TabIndex = 2;
             // 
+            // lblTheme
+            // 
+            lblTheme.AutoSize = true;
+            lblTheme.Dock = DockStyle.Fill;
+            lblTheme.Font = new Font("Segoe UI", 10F);
+            lblTheme.Location = new Point(0, 52);
+            lblTheme.Margin = new Padding(0, 10, 0, 5);
+            lblTheme.Name = "lblTheme";
+            lblTheme.Size = new Size(308, 19);
+            lblTheme.TabIndex = 3;
+            lblTheme.Text = "Тема:";
+            // 
+            // cbTheme
+            // 
+            cbTheme.Dock = DockStyle.Top;
+            cbTheme.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbTheme.Font = new Font("Segoe UI", 11F);
+            cbTheme.FormattingEnabled = true;
+            cbTheme.Location = new Point(0, 76);
+            cbTheme.Margin = new Padding(0);
+            cbTheme.Name = "cbTheme";
+            cbTheme.Size = new Size(308, 28);
+            cbTheme.TabIndex = 4;
+            // 
             // btnLaunchSelected
             // 
             btnLaunchSelected.Dock = DockStyle.Fill;
@@ -176,7 +206,7 @@
             btnLaunchSelected.Margin = new Padding(0, 5, 0, 0);
             btnLaunchSelected.Name = "btnLaunchSelected";
             btnLaunchSelected.Size = new Size(308, 45);
-            btnLaunchSelected.TabIndex = 3;
+            btnLaunchSelected.TabIndex = 5;
             btnLaunchSelected.Text = "Запустить";
             btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 
@@ -230,6 +260,8 @@
         private System.Windows.Forms.TableLayoutPanel settingsPanel;
         private System.Windows.Forms.Label lblRenderPatternType;
         private System.Windows.Forms.ComboBox cbRenderPattern;
+        private System.Windows.Forms.Label lblTheme;
+        private System.Windows.Forms.ComboBox cbTheme;
         private System.Windows.Forms.Button btnLaunchSelected;
     }
 }
