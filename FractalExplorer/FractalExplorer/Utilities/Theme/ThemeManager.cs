@@ -48,12 +48,68 @@ namespace FractalExplorer.Utilities.Theme
                 PressedBackground = Color.FromArgb(205, 211, 223),
                 BorderColor = Color.FromArgb(176, 185, 201),
                 InputBorderColor = Color.FromArgb(158, 168, 188)
+            },
+            [AppTheme.DarkModernLabGreen] = new ThemeDefinition
+            {
+                BaseBackground = Color.FromArgb(18, 18, 18),
+                PanelBackground = Color.FromArgb(24, 34, 28),
+                ControlBackground = Color.FromArgb(34, 48, 39),
+                PrimaryText = Color.FromArgb(236, 242, 236),
+                SecondaryText = Color.FromArgb(170, 188, 172),
+                AccentPrimary = Color.FromArgb(76, 175, 80),
+                AccentSecondary = Color.FromArgb(139, 195, 74),
+                HoverBackground = Color.FromArgb(48, 66, 54),
+                PressedBackground = Color.FromArgb(61, 83, 68),
+                BorderColor = Color.FromArgb(72, 98, 79),
+                InputBorderColor = Color.FromArgb(90, 118, 98)
+            },
+            [AppTheme.LightWarm] = new ThemeDefinition
+            {
+                BaseBackground = Color.FromArgb(255, 249, 238),
+                PanelBackground = Color.FromArgb(255, 242, 214),
+                ControlBackground = Color.FromArgb(255, 252, 244),
+                PrimaryText = Color.FromArgb(79, 57, 24),
+                SecondaryText = Color.FromArgb(130, 99, 57),
+                AccentPrimary = Color.FromArgb(235, 179, 52),
+                AccentSecondary = Color.FromArgb(214, 142, 35),
+                HoverBackground = Color.FromArgb(255, 234, 194),
+                PressedBackground = Color.FromArgb(247, 214, 162),
+                BorderColor = Color.FromArgb(220, 183, 122),
+                InputBorderColor = Color.FromArgb(207, 165, 102)
+            },
+            [AppTheme.LightFire] = new ThemeDefinition
+            {
+                BaseBackground = Color.FromArgb(255, 246, 238),
+                PanelBackground = Color.FromArgb(255, 227, 204),
+                ControlBackground = Color.FromArgb(255, 250, 243),
+                PrimaryText = Color.FromArgb(88, 45, 21),
+                SecondaryText = Color.FromArgb(140, 85, 56),
+                AccentPrimary = Color.FromArgb(238, 120, 52),
+                AccentSecondary = Color.FromArgb(214, 84, 36),
+                HoverBackground = Color.FromArgb(255, 216, 184),
+                PressedBackground = Color.FromArgb(248, 193, 152),
+                BorderColor = Color.FromArgb(224, 157, 119),
+                InputBorderColor = Color.FromArgb(212, 139, 102)
+            },
+            [AppTheme.LightViolet] = new ThemeDefinition
+            {
+                BaseBackground = Color.FromArgb(248, 244, 255),
+                PanelBackground = Color.FromArgb(235, 226, 250),
+                ControlBackground = Color.FromArgb(252, 248, 255),
+                PrimaryText = Color.FromArgb(62, 46, 96),
+                SecondaryText = Color.FromArgb(102, 84, 142),
+                AccentPrimary = Color.FromArgb(138, 92, 204),
+                AccentSecondary = Color.FromArgb(110, 72, 176),
+                HoverBackground = Color.FromArgb(224, 214, 244),
+                PressedBackground = Color.FromArgb(208, 196, 233),
+                BorderColor = Color.FromArgb(179, 163, 214),
+                InputBorderColor = Color.FromArgb(160, 142, 199)
             }
         };
 
         public static event EventHandler? ThemeChanged;
 
-        public static AppTheme CurrentTheme { get; private set; } = AppTheme.DarkModernLabBlue;
+        public static AppTheme CurrentTheme { get; private set; } = AppTheme.DarkModernLabGreen;
 
         public static ThemeDefinition CurrentDefinition => Themes[CurrentTheme];
 
@@ -61,13 +117,13 @@ namespace FractalExplorer.Utilities.Theme
         {
             if (string.IsNullOrWhiteSpace(themeName))
             {
-                theme = AppTheme.DarkModernLabBlue;
+                theme = AppTheme.DarkModernLabGreen;
                 return false;
             }
 
             if (!Enum.TryParse(themeName, ignoreCase: true, out AppTheme parsedTheme) || !Themes.ContainsKey(parsedTheme))
             {
-                theme = AppTheme.DarkModernLabBlue;
+                theme = AppTheme.DarkModernLabGreen;
                 return false;
             }
 

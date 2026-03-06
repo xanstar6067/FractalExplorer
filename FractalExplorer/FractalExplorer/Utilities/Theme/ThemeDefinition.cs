@@ -6,7 +6,11 @@ namespace FractalExplorer.Utilities.Theme
     {
         DarkModernLabBlue,
         DarkModernLabViolet,
-        Light
+        Light,
+        DarkModernLabGreen,
+        LightWarm,
+        LightFire,
+        LightViolet
     }
 
     public sealed class ThemeDefinition

@@ -19,7 +19,7 @@ namespace FractalExplorer.Main
             AppTheme startupTheme;
             if (!ThemeManager.TryGetThemeByName(Settings.Default.UiTheme, out startupTheme))
             {
-                startupTheme = AppTheme.DarkModernLabBlue;
+                startupTheme = AppTheme.DarkModernLabGreen;
                 Settings.Default.UiTheme = startupTheme.ToString();
                 Settings.Default.Save();
             }
