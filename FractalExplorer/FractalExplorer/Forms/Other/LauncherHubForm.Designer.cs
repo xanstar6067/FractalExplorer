@@ -39,6 +39,7 @@
             cbRenderPattern = new ComboBox();
             lblTheme = new Label();
             cbTheme = new ComboBox();
+            btnThemeEditor = new Button();
             btnLaunchSelected = new Button();
             richTextBoxDescription = new RichTextBox();
             ((System.ComponentModel.ISupportInitialize)splitContainerMain).BeginInit();
@@ -135,12 +136,14 @@
             settingsPanel.Controls.Add(cbRenderPattern, 0, 1);
             settingsPanel.Controls.Add(lblTheme, 0, 2);
             settingsPanel.Controls.Add(cbTheme, 0, 3);
-            settingsPanel.Controls.Add(btnLaunchSelected, 0, 4);
+            settingsPanel.Controls.Add(btnThemeEditor, 0, 4);
+            settingsPanel.Controls.Add(btnLaunchSelected, 0, 5);
             settingsPanel.Dock = DockStyle.Fill;
             settingsPanel.Location = new Point(235, 60);
             settingsPanel.Margin = new Padding(0);
             settingsPanel.Name = "settingsPanel";
-            settingsPanel.RowCount = 5;
+            settingsPanel.RowCount = 6;
+            settingsPanel.RowStyles.Add(new RowStyle());
             settingsPanel.RowStyles.Add(new RowStyle());
             settingsPanel.RowStyles.Add(new RowStyle());
             settingsPanel.RowStyles.Add(new RowStyle());
@@ -197,6 +200,19 @@
             cbTheme.Size = new Size(308, 28);
             cbTheme.TabIndex = 4;
             // 
+            // btnThemeEditor
+            // 
+            btnThemeEditor.Dock = DockStyle.Top;
+            btnThemeEditor.Font = new Font("Segoe UI", 10F);
+            btnThemeEditor.Location = new Point(0, 104);
+            btnThemeEditor.Margin = new Padding(0, 8, 0, 0);
+            btnThemeEditor.Name = "btnThemeEditor";
+            btnThemeEditor.Size = new Size(308, 30);
+            btnThemeEditor.TabIndex = 5;
+            btnThemeEditor.Text = "Редактор тем";
+            btnThemeEditor.UseVisualStyleBackColor = true;
+            btnThemeEditor.Click += btnThemeEditor_Click;
+            // 
             // btnLaunchSelected
             // 
             btnLaunchSelected.Dock = DockStyle.Fill;
@@ -206,7 +222,7 @@
             btnLaunchSelected.Margin = new Padding(0, 5, 0, 0);
             btnLaunchSelected.Name = "btnLaunchSelected";
             btnLaunchSelected.Size = new Size(308, 45);
-            btnLaunchSelected.TabIndex = 5;
+            btnLaunchSelected.TabIndex = 6;
             btnLaunchSelected.Text = "Запустить";
             btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 
@@ -262,6 +278,7 @@
         private System.Windows.Forms.ComboBox cbRenderPattern;
         private System.Windows.Forms.Label lblTheme;
         private System.Windows.Forms.ComboBox cbTheme;
+        private System.Windows.Forms.Button btnThemeEditor;
         private System.Windows.Forms.Button btnLaunchSelected;
     }
 }

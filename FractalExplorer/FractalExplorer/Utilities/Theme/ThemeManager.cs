@@ -149,6 +149,7 @@ namespace FractalExplorer.Utilities.Theme
         };
 
         public static event EventHandler? ThemeChanged;
+        public static event EventHandler? ThemesChanged;
 
         public static string CurrentThemeId { get; private set; } = DefaultThemeId;
 
@@ -263,6 +264,7 @@ namespace FractalExplorer.Utilities.Theme
             ThemeDefinition customTheme = theme.CloneWith(theme.Id, theme.DisplayName, false);
             CustomThemesById[customTheme.Id] = customTheme;
             SaveCustomThemes();
+            ThemesChanged?.Invoke(null, EventArgs.Empty);
 
             if (string.Equals(CurrentThemeId, customTheme.Id, StringComparison.OrdinalIgnoreCase))
             {
@@ -278,6 +280,7 @@ namespace FractalExplorer.Utilities.Theme
             }
 
             SaveCustomThemes();
+            ThemesChanged?.Invoke(null, EventArgs.Empty);
 
             if (string.Equals(CurrentThemeId, id, StringComparison.OrdinalIgnoreCase))
             {

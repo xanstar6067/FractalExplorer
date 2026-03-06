@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Forms;
 using FractalExplorer.Forms.Fractals;
+using FractalExplorer.Forms.Other;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
 using FractalExplorer.Properties;
@@ -68,6 +69,8 @@ namespace FractalExplorer
             PopulateTreeView();
             InitializeRenderPatternSelector();
             InitializeThemeSelector();
+            ThemeManager.ThemesChanged += ThemeManager_ThemesChanged;
+            Disposed += LauncherHubForm_Disposed;
             DisplayAppVersionInTitle();
         }
 
@@ -155,6 +158,30 @@ namespace FractalExplorer
             cbTheme.SelectedIndexChanged += cbTheme_SelectedIndexChanged;
         }
 
+
+
+        private void ThemeManager_ThemesChanged(object? sender, EventArgs e)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => InitializeThemeSelector()));
+                return;
+            }
+
+            InitializeThemeSelector();
+        }
+
+        private void LauncherHubForm_Disposed(object? sender, EventArgs e)
+        {
+            ThemeManager.ThemesChanged -= ThemeManager_ThemesChanged;
+            Disposed -= LauncherHubForm_Disposed;
+        }
+
         /// <summary>
         /// Применяет выбранную пользователем тему ко всем открытым формам и текущему окну.
         /// </summary>
@@ -172,6 +199,14 @@ namespace FractalExplorer
 
             Settings.Default.UiTheme = selectedTheme.Id;
             Settings.Default.Save();
+        }
+
+
+
+        private void btnThemeEditor_Click(object sender, EventArgs e)
+        {
+            using ThemeEditorForm themeEditorForm = new();
+            themeEditorForm.ShowDialog(this);
         }
 
         /// <summary>
