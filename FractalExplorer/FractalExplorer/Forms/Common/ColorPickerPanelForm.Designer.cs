@@ -23,11 +23,14 @@ namespace FractalExplorer.Forms.Common
             tableSelection = new TableLayoutPanel();
             btnOpenColorDialog = new Button();
             lblRed = new Label();
-            numRed = new NumericUpDown();
+            trkRed = new TrackBar();
+            lblRedValue = new Label();
             lblGreen = new Label();
-            numGreen = new NumericUpDown();
+            trkGreen = new TrackBar();
+            lblGreenValue = new Label();
             lblBlue = new Label();
-            numBlue = new NumericUpDown();
+            trkBlue = new TrackBar();
+            lblBlueValue = new Label();
             btnEyedropper = new Button();
             grpPreview = new GroupBox();
             tablePreview = new TableLayoutPanel();
@@ -43,9 +46,9 @@ namespace FractalExplorer.Forms.Common
             tableMain.SuspendLayout();
             grpSelectColor.SuspendLayout();
             tableSelection.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)numRed).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numGreen).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numBlue).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trkRed).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trkGreen).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trkBlue).BeginInit();
             grpPreview.SuspendLayout();
             tablePreview.SuspendLayout();
             panelButtons.SuspendLayout();
@@ -82,16 +85,20 @@ namespace FractalExplorer.Forms.Common
             // 
             // tableSelection
             // 
-            tableSelection.ColumnCount = 2;
-            tableSelection.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95F));
+            tableSelection.ColumnCount = 3;
+            tableSelection.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 35F));
             tableSelection.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableSelection.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
             tableSelection.Controls.Add(btnOpenColorDialog, 0, 0);
             tableSelection.Controls.Add(lblRed, 0, 1);
-            tableSelection.Controls.Add(numRed, 1, 1);
+            tableSelection.Controls.Add(trkRed, 1, 1);
+            tableSelection.Controls.Add(lblRedValue, 2, 1);
             tableSelection.Controls.Add(lblGreen, 0, 2);
-            tableSelection.Controls.Add(numGreen, 1, 2);
+            tableSelection.Controls.Add(trkGreen, 1, 2);
+            tableSelection.Controls.Add(lblGreenValue, 2, 2);
             tableSelection.Controls.Add(lblBlue, 0, 3);
-            tableSelection.Controls.Add(numBlue, 1, 3);
+            tableSelection.Controls.Add(trkBlue, 1, 3);
+            tableSelection.Controls.Add(lblBlueValue, 2, 3);
             tableSelection.Controls.Add(btnEyedropper, 0, 4);
             tableSelection.Dock = DockStyle.Fill;
             tableSelection.Location = new Point(3, 19);
@@ -108,7 +115,7 @@ namespace FractalExplorer.Forms.Common
             // 
             // btnOpenColorDialog
             // 
-            tableSelection.SetColumnSpan(btnOpenColorDialog, 2);
+            tableSelection.SetColumnSpan(btnOpenColorDialog, 3);
             btnOpenColorDialog.Dock = DockStyle.Top;
             btnOpenColorDialog.Location = new Point(6, 3);
             btnOpenColorDialog.Margin = new Padding(6, 3, 6, 10);
@@ -125,72 +132,114 @@ namespace FractalExplorer.Forms.Common
             lblRed.Dock = DockStyle.Fill;
             lblRed.Location = new Point(3, 40);
             lblRed.Name = "lblRed";
-            lblRed.Size = new Size(89, 29);
+            lblRed.Size = new Size(29, 45);
             lblRed.TabIndex = 1;
             lblRed.Text = "R";
             lblRed.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // numRed
+            // trkRed
             // 
-            numRed.Dock = DockStyle.Fill;
-            numRed.Location = new Point(98, 43);
-            numRed.Maximum = new decimal(new int[] { 255, 0, 0, 0 });
-            numRed.Name = "numRed";
-            numRed.Size = new Size(297, 23);
-            numRed.TabIndex = 2;
-            numRed.ValueChanged += numericColor_ValueChanged;
+            trkRed.AutoSize = false;
+            trkRed.Dock = DockStyle.Fill;
+            trkRed.LargeChange = 16;
+            trkRed.Location = new Point(38, 43);
+            trkRed.Maximum = 255;
+            trkRed.Name = "trkRed";
+            trkRed.Size = new Size(307, 24);
+            trkRed.TabIndex = 2;
+            trkRed.TickFrequency = 16;
+            trkRed.Scroll += trackColor_Scroll;
+            // 
+            // lblRedValue
+            // 
+            lblRedValue.AutoSize = true;
+            lblRedValue.Dock = DockStyle.Fill;
+            lblRedValue.Location = new Point(351, 40);
+            lblRedValue.Name = "lblRedValue";
+            lblRedValue.Size = new Size(44, 45);
+            lblRedValue.TabIndex = 3;
+            lblRedValue.Text = "0";
+            lblRedValue.TextAlign = ContentAlignment.MiddleRight;
             // 
             // lblGreen
             // 
             lblGreen.AutoSize = true;
             lblGreen.Dock = DockStyle.Fill;
-            lblGreen.Location = new Point(3, 69);
+            lblGreen.Location = new Point(3, 85);
             lblGreen.Name = "lblGreen";
-            lblGreen.Size = new Size(89, 29);
-            lblGreen.TabIndex = 3;
+            lblGreen.Size = new Size(29, 45);
+            lblGreen.TabIndex = 4;
             lblGreen.Text = "G";
             lblGreen.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // numGreen
+            // trkGreen
             // 
-            numGreen.Dock = DockStyle.Fill;
-            numGreen.Location = new Point(98, 72);
-            numGreen.Maximum = new decimal(new int[] { 255, 0, 0, 0 });
-            numGreen.Name = "numGreen";
-            numGreen.Size = new Size(297, 23);
-            numGreen.TabIndex = 4;
-            numGreen.ValueChanged += numericColor_ValueChanged;
+            trkGreen.AutoSize = false;
+            trkGreen.Dock = DockStyle.Fill;
+            trkGreen.LargeChange = 16;
+            trkGreen.Location = new Point(38, 88);
+            trkGreen.Maximum = 255;
+            trkGreen.Name = "trkGreen";
+            trkGreen.Size = new Size(307, 24);
+            trkGreen.TabIndex = 5;
+            trkGreen.TickFrequency = 16;
+            trkGreen.Scroll += trackColor_Scroll;
+            // 
+            // lblGreenValue
+            // 
+            lblGreenValue.AutoSize = true;
+            lblGreenValue.Dock = DockStyle.Fill;
+            lblGreenValue.Location = new Point(351, 85);
+            lblGreenValue.Name = "lblGreenValue";
+            lblGreenValue.Size = new Size(44, 45);
+            lblGreenValue.TabIndex = 6;
+            lblGreenValue.Text = "0";
+            lblGreenValue.TextAlign = ContentAlignment.MiddleRight;
             // 
             // lblBlue
             // 
             lblBlue.AutoSize = true;
             lblBlue.Dock = DockStyle.Fill;
-            lblBlue.Location = new Point(3, 98);
+            lblBlue.Location = new Point(3, 130);
             lblBlue.Name = "lblBlue";
-            lblBlue.Size = new Size(89, 29);
-            lblBlue.TabIndex = 5;
+            lblBlue.Size = new Size(29, 45);
+            lblBlue.TabIndex = 7;
             lblBlue.Text = "B";
             lblBlue.TextAlign = ContentAlignment.MiddleLeft;
             // 
-            // numBlue
+            // trkBlue
             // 
-            numBlue.Dock = DockStyle.Fill;
-            numBlue.Location = new Point(98, 101);
-            numBlue.Maximum = new decimal(new int[] { 255, 0, 0, 0 });
-            numBlue.Name = "numBlue";
-            numBlue.Size = new Size(297, 23);
-            numBlue.TabIndex = 6;
-            numBlue.ValueChanged += numericColor_ValueChanged;
+            trkBlue.AutoSize = false;
+            trkBlue.Dock = DockStyle.Fill;
+            trkBlue.LargeChange = 16;
+            trkBlue.Location = new Point(38, 133);
+            trkBlue.Maximum = 255;
+            trkBlue.Name = "trkBlue";
+            trkBlue.Size = new Size(307, 24);
+            trkBlue.TabIndex = 8;
+            trkBlue.TickFrequency = 16;
+            trkBlue.Scroll += trackColor_Scroll;
+            // 
+            // lblBlueValue
+            // 
+            lblBlueValue.AutoSize = true;
+            lblBlueValue.Dock = DockStyle.Fill;
+            lblBlueValue.Location = new Point(351, 130);
+            lblBlueValue.Name = "lblBlueValue";
+            lblBlueValue.Size = new Size(44, 45);
+            lblBlueValue.TabIndex = 9;
+            lblBlueValue.Text = "0";
+            lblBlueValue.TextAlign = ContentAlignment.MiddleRight;
             // 
             // btnEyedropper
             // 
-            tableSelection.SetColumnSpan(btnEyedropper, 2);
+            tableSelection.SetColumnSpan(btnEyedropper, 3);
             btnEyedropper.Dock = DockStyle.Top;
-            btnEyedropper.Location = new Point(6, 133);
+            btnEyedropper.Location = new Point(6, 181);
             btnEyedropper.Margin = new Padding(6, 6, 6, 0);
             btnEyedropper.Name = "btnEyedropper";
             btnEyedropper.Size = new Size(386, 27);
-            btnEyedropper.TabIndex = 7;
+            btnEyedropper.TabIndex = 10;
             btnEyedropper.Text = "Пипетка";
             btnEyedropper.UseVisualStyleBackColor = true;
             btnEyedropper.Click += btnEyedropper_Click;
@@ -208,10 +257,9 @@ namespace FractalExplorer.Forms.Common
             // 
             // tablePreview
             // 
-            tablePreview.ColumnCount = 3;
+            tablePreview.ColumnCount = 2;
             tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
             tablePreview.Controls.Add(lblCurrent, 0, 0);
             tablePreview.Controls.Add(pnlCurrentColor, 0, 1);
             tablePreview.Controls.Add(lblCurrentHexValue, 0, 2);
@@ -243,7 +291,7 @@ namespace FractalExplorer.Forms.Common
             pnlCurrentColor.Dock = DockStyle.Fill;
             pnlCurrentColor.Location = new Point(3, 18);
             pnlCurrentColor.Name = "pnlCurrentColor";
-            pnlCurrentColor.Size = new Size(143, 72);
+            pnlCurrentColor.Size = new Size(193, 72);
             pnlCurrentColor.TabIndex = 1;
             // 
             // lblCurrentHexValue
@@ -258,7 +306,7 @@ namespace FractalExplorer.Forms.Common
             // lblNew
             // 
             lblNew.AutoSize = true;
-            lblNew.Location = new Point(152, 0);
+            lblNew.Location = new Point(202, 0);
             lblNew.Name = "lblNew";
             lblNew.Size = new Size(72, 15);
             lblNew.TabIndex = 3;
@@ -267,16 +315,18 @@ namespace FractalExplorer.Forms.Common
             // pnlNewColor
             // 
             pnlNewColor.BorderStyle = BorderStyle.FixedSingle;
+            pnlNewColor.Cursor = Cursors.Hand;
             pnlNewColor.Dock = DockStyle.Fill;
-            pnlNewColor.Location = new Point(152, 18);
+            pnlNewColor.Location = new Point(202, 18);
             pnlNewColor.Name = "pnlNewColor";
-            pnlNewColor.Size = new Size(143, 72);
+            pnlNewColor.Size = new Size(193, 72);
             pnlNewColor.TabIndex = 4;
+            pnlNewColor.Click += pnlNewColor_Click;
             // 
             // lblNewHexValue
             // 
             lblNewHexValue.AutoSize = true;
-            lblNewHexValue.Location = new Point(152, 93);
+            lblNewHexValue.Location = new Point(202, 93);
             lblNewHexValue.Name = "lblNewHexValue";
             lblNewHexValue.Size = new Size(25, 15);
             lblNewHexValue.TabIndex = 5;
@@ -334,9 +384,9 @@ namespace FractalExplorer.Forms.Common
             grpSelectColor.ResumeLayout(false);
             tableSelection.ResumeLayout(false);
             tableSelection.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)numRed).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numGreen).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numBlue).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trkRed).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trkGreen).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trkBlue).EndInit();
             grpPreview.ResumeLayout(false);
             tablePreview.ResumeLayout(false);
             tablePreview.PerformLayout();
@@ -351,11 +401,14 @@ namespace FractalExplorer.Forms.Common
         private TableLayoutPanel tableSelection;
         private Button btnOpenColorDialog;
         private Label lblRed;
-        private NumericUpDown numRed;
+        private TrackBar trkRed;
+        private Label lblRedValue;
         private Label lblGreen;
-        private NumericUpDown numGreen;
+        private TrackBar trkGreen;
+        private Label lblGreenValue;
         private Label lblBlue;
-        private NumericUpDown numBlue;
+        private TrackBar trkBlue;
+        private Label lblBlueValue;
         private Button btnEyedropper;
         private GroupBox grpPreview;
         private TableLayoutPanel tablePreview;

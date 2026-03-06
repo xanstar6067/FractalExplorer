@@ -1,4 +1,5 @@
 using FractalExplorer.Utilities.ColorPicking;
+using FractalExplorer.Utilities.Theme;
 using System.Windows.Forms;
 
 namespace FractalExplorer.Forms.Common
@@ -16,8 +17,23 @@ namespace FractalExplorer.Forms.Common
         {
             InitializeComponent();
 
+            ThemeManager.RegisterForm(this);
+            ThemeManager.ThemeChanged += ThemeManager_ThemeChanged;
+            Disposed += ColorPickerPanelForm_Disposed;
+
             _originalColor = initialColor;
             ApplySelectedColor(initialColor);
+        }
+
+        private void ColorPickerPanelForm_Disposed(object? sender, EventArgs e)
+        {
+            ThemeManager.ThemeChanged -= ThemeManager_ThemeChanged;
+            Disposed -= ColorPickerPanelForm_Disposed;
+        }
+
+        private void ThemeManager_ThemeChanged(object? sender, EventArgs e)
+        {
+            ApplySelectedColor(_selectedColor);
         }
 
         private void btnOpenColorDialog_Click(object? sender, EventArgs e)
@@ -53,15 +69,20 @@ namespace FractalExplorer.Forms.Common
             }
         }
 
-        private void numericColor_ValueChanged(object? sender, EventArgs e)
+        private void trackColor_Scroll(object? sender, EventArgs e)
         {
             if (_isUpdatingControls)
             {
                 return;
             }
 
-            Color updatedColor = Color.FromArgb((int)numRed.Value, (int)numGreen.Value, (int)numBlue.Value);
+            Color updatedColor = Color.FromArgb(trkRed.Value, trkGreen.Value, trkBlue.Value);
             ApplySelectedColor(updatedColor);
+        }
+
+        private void pnlNewColor_Click(object? sender, EventArgs e)
+        {
+            btnOpenColorDialog_Click(sender, e);
         }
 
         private void ApplySelectedColor(Color color)
@@ -71,14 +92,18 @@ namespace FractalExplorer.Forms.Common
             _isUpdatingControls = true;
             try
             {
-                numRed.Value = color.R;
-                numGreen.Value = color.G;
-                numBlue.Value = color.B;
+                trkRed.Value = color.R;
+                trkGreen.Value = color.G;
+                trkBlue.Value = color.B;
             }
             finally
             {
                 _isUpdatingControls = false;
             }
+
+            lblRedValue.Text = color.R.ToString();
+            lblGreenValue.Text = color.G.ToString();
+            lblBlueValue.Text = color.B.ToString();
 
             pnlCurrentColor.BackColor = _originalColor;
             pnlNewColor.BackColor = _selectedColor;
