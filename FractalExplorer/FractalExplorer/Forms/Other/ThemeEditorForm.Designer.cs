@@ -37,6 +37,7 @@ namespace FractalExplorer.Forms.Other
             btnCopy = new Button();
             btnDelete = new Button();
             btnSaveApply = new Button();
+            btnCopyWindowsTheme = new Button();
             btnClose = new Button();
             colorDialogTheme = new ColorDialog();
             ((System.ComponentModel.ISupportInitialize)splitMain).BeginInit();
@@ -240,6 +241,7 @@ namespace FractalExplorer.Forms.Other
             buttonsPanel.Controls.Add(btnCopy);
             buttonsPanel.Controls.Add(btnDelete);
             buttonsPanel.Controls.Add(btnSaveApply);
+            buttonsPanel.Controls.Add(btnCopyWindowsTheme);
             buttonsPanel.Controls.Add(btnClose);
             buttonsPanel.Dock = DockStyle.Fill;
             buttonsPanel.FlowDirection = FlowDirection.RightToLeft;
@@ -289,12 +291,22 @@ namespace FractalExplorer.Forms.Other
             btnSaveApply.UseVisualStyleBackColor = true;
             btnSaveApply.Click += btnSaveApply_Click;
             // 
+            // btnCopyWindowsTheme
+            // 
+            btnCopyWindowsTheme.Location = new Point(178, 3);
+            btnCopyWindowsTheme.Name = "btnCopyWindowsTheme";
+            btnCopyWindowsTheme.Size = new Size(196, 27);
+            btnCopyWindowsTheme.TabIndex = 4;
+            btnCopyWindowsTheme.Text = "Скопировать тему Windows";
+            btnCopyWindowsTheme.UseVisualStyleBackColor = true;
+            btnCopyWindowsTheme.Click += btnCopyWindowsTheme_Click;
+            // 
             // btnClose
             // 
-            btnClose.Location = new Point(299, 3);
+            btnClose.Location = new Point(82, 3);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(90, 27);
-            btnClose.TabIndex = 4;
+            btnClose.TabIndex = 5;
             btnClose.Text = "Закрыть";
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
@@ -348,6 +360,7 @@ namespace FractalExplorer.Forms.Other
         private Button btnCopy;
         private Button btnDelete;
         private Button btnSaveApply;
+        private Button btnCopyWindowsTheme;
         private Button btnClose;
         private ColorDialog colorDialogTheme;
     }

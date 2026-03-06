@@ -30,6 +30,8 @@ namespace FractalExplorer.Forms.Other
         private readonly Dictionary<string, Button> _colorEditButtons = new(StringComparer.Ordinal);
         private readonly Dictionary<string, Color> _currentColors = new(StringComparer.Ordinal);
 
+        private readonly WindowsThemeImporter _windowsThemeImporter = new();
+
         private List<ThemeDefinition> _themes = new();
         private ThemeDefinition? _selectedTheme;
 
@@ -207,11 +209,17 @@ namespace FractalExplorer.Forms.Other
             btnDelete.Enabled = hasSelection && !isBuiltIn;
             btnSaveApply.Enabled = hasSelection && !isBuiltIn;
             btnCopy.Enabled = hasSelection;
+            btnCopyWindowsTheme.Enabled = IsWindowsThemeImportSupported();
 
             foreach (Button button in _colorEditButtons.Values)
             {
                 button.Enabled = hasSelection && !isBuiltIn;
             }
+        }
+
+        private static bool IsWindowsThemeImportSupported()
+        {
+            return OperatingSystem.IsWindowsVersionAtLeast(10);
         }
 
         private void EditColorButton_Click(object? sender, EventArgs e)
@@ -266,6 +274,38 @@ namespace FractalExplorer.Forms.Other
             ThemeDefinition duplicate = ThemeManager.DuplicateTheme(_selectedTheme.Id, newId, newName);
             ThemeManager.SetTheme(duplicate.Id);
             ReloadThemes(duplicate.Id);
+        }
+
+
+        private void btnCopyWindowsTheme_Click(object sender, EventArgs e)
+        {
+            if (!IsWindowsThemeImportSupported())
+            {
+                MessageBox.Show(
+                    "Импорт темы Windows поддерживается только в Windows 10 и новее.",
+                    "Импорт недоступен",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!_windowsThemeImporter.TryBuildThemeFromWindows(out ThemeDefinition windowsTheme, out string error))
+            {
+                MessageBox.Show(
+                    string.IsNullOrWhiteSpace(error) ? "Не удалось создать тему из настроек Windows." : error,
+                    "Ошибка импорта",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
+            string newThemeId = GenerateUniqueThemeId(windowsTheme.Id);
+            string newThemeName = GenerateUniqueThemeName(windowsTheme.DisplayName);
+            ThemeDefinition newTheme = windowsTheme.CloneWith(newThemeId, newThemeName, false);
+
+            ThemeManager.AddOrUpdateCustomTheme(newTheme);
+            ThemeManager.SetTheme(newTheme.Id);
+            ReloadThemes(newTheme.Id);
         }
 
         private void btnDelete_Click(object sender, EventArgs e)
