@@ -1,4 +1,5 @@
 using FractalExplorer.Resources;
+using FractalExplorer.Utilities.Theme;
 
 namespace FractalExplorer.Main
 {
@@ -13,6 +14,7 @@ namespace FractalExplorer.Main
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
+            ThemeManager.SetTheme(AppTheme.DarkModernLabBlue);
             Application.Run(new LauncherHubForm());
         }
     }

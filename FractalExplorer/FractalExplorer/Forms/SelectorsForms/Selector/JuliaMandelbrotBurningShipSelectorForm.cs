@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.SelectorsForms.Selector
 {
     /// <summary>
@@ -171,6 +172,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
+
+            ThemeManager.RegisterForm(this);
 
             // Сохраняем допустимые границы
             _validMinRe = validMinRe;

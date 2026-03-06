@@ -23,6 +23,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms
 {
     public partial class FractalNovaJuliaForm : Form, IFractalForm, IHighResRenderable, ISaveLoadCapableFractal
@@ -71,6 +72,7 @@ namespace FractalExplorer.Forms
         public FractalNovaJuliaForm()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             this.Load += FractalNovaJuliaForm_Load;
             this.FormClosed += FractalNovaJuliaForm_FormClosed;
         }

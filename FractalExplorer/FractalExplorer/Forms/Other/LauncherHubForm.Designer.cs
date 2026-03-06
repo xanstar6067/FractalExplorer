@@ -50,7 +50,6 @@
             // 
             // splitContainerMain
             // 
-            splitContainerMain.BackColor = SystemColors.ControlLight;
             splitContainerMain.Dock = DockStyle.Fill;
             splitContainerMain.IsSplitterFixed = true;
             splitContainerMain.Location = new Point(0, 0);
@@ -58,13 +57,11 @@
             // 
             // splitContainerMain.Panel1
             // 
-            splitContainerMain.Panel1.BackColor = SystemColors.Window;
             splitContainerMain.Panel1.Controls.Add(treeViewFractals);
             splitContainerMain.Panel1.Padding = new Padding(10);
             // 
             // splitContainerMain.Panel2
             // 
-            splitContainerMain.Panel2.BackColor = SystemColors.Control;
             splitContainerMain.Panel2.Controls.Add(pnlDetails);
             splitContainerMain.Size = new Size(844, 521);
             splitContainerMain.SplitterDistance = 284;
@@ -119,7 +116,6 @@
             // 
             // pictureBoxPreview
             // 
-            pictureBoxPreview.BackColor = SystemColors.ControlLight;
             pictureBoxPreview.Dock = DockStyle.Fill;
             pictureBoxPreview.Location = new Point(15, 60);
             pictureBoxPreview.Margin = new Padding(0, 0, 15, 0);
@@ -173,30 +169,23 @@
             // 
             // btnLaunchSelected
             // 
-            btnLaunchSelected.BackColor = SystemColors.Highlight;
             btnLaunchSelected.Dock = DockStyle.Fill;
             btnLaunchSelected.Enabled = false;
-            btnLaunchSelected.FlatAppearance.BorderSize = 0;
-            btnLaunchSelected.FlatStyle = FlatStyle.Flat;
             btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            btnLaunchSelected.ForeColor = Color.White;
             btnLaunchSelected.Location = new Point(0, 157);
             btnLaunchSelected.Margin = new Padding(0, 5, 0, 0);
             btnLaunchSelected.Name = "btnLaunchSelected";
             btnLaunchSelected.Size = new Size(308, 45);
             btnLaunchSelected.TabIndex = 3;
             btnLaunchSelected.Text = "Запустить";
-            btnLaunchSelected.UseVisualStyleBackColor = false;
             btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 
             // richTextBoxDescription
             // 
-            richTextBoxDescription.BackColor = SystemColors.Control;
             richTextBoxDescription.BorderStyle = BorderStyle.None;
             pnlDetails.SetColumnSpan(richTextBoxDescription, 2);
             richTextBoxDescription.Dock = DockStyle.Fill;
             richTextBoxDescription.Font = new Font("Segoe UI", 11F);
-            richTextBoxDescription.ForeColor = Color.FromArgb(60, 60, 60);
             richTextBoxDescription.Location = new Point(15, 277);
             richTextBoxDescription.Margin = new Padding(0, 15, 0, 0);
             richTextBoxDescription.Name = "richTextBoxDescription";

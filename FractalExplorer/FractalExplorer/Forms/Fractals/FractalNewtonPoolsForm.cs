@@ -11,6 +11,7 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer
 {
     /// <summary>
@@ -188,6 +189,7 @@ namespace FractalExplorer
         public NewtonPools()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _engine = new FractalNewtonEngine();
             _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 300 };
             _paletteManager = new NewtonPaletteManager();

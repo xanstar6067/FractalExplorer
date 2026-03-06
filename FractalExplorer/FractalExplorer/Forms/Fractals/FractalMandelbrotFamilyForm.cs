@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalDraving
 {
     /// <summary>
@@ -154,6 +155,7 @@ namespace FractalDraving
         protected FractalMandelbrotFamilyForm()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _centerX = InitialCenterX;
             _centerY = InitialCenterY;
         }

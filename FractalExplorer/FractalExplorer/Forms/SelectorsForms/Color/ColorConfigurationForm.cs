@@ -1,6 +1,7 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using System.Drawing.Drawing2D;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Utilities
 {
     /// <summary>
@@ -37,6 +38,7 @@ namespace FractalExplorer.Utilities
         public ColorConfigurationForm(PaletteManager paletteManager)
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _paletteManager = paletteManager;
 
             nudGamma.Minimum = 0.1m;

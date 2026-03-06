@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using FractalExplorer.Engines;
 using FractalExplorer.Resources;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.SelectorsForms
 {
     /// <summary>
@@ -63,6 +64,7 @@ namespace FractalExplorer.SelectorsForms
         public PhoenixCSelectorForm(FractalExplorer.Forms.FractalPhoenixForm owner, ComplexDecimal initialC1, ComplexDecimal initialC2)
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _ownerForm = owner;
 
             // Устанавливаем начальные значения для элементов управления из переданного C1.

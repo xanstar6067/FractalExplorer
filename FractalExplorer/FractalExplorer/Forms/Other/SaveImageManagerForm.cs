@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.Other
 {
     /// <summary>
@@ -65,6 +66,7 @@ namespace FractalExplorer.Forms.Other
         public SaveImageManagerForm(IHighResRenderable renderSource)
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _renderSource = renderSource ?? throw new ArgumentNullException(nameof(renderSource));
             _renderState = _renderSource.GetRenderState();
             _renderStopwatch = new Stopwatch();

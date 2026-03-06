@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.Fractals
 {
     /// <summary>
@@ -142,6 +143,7 @@ namespace FractalExplorer.Forms.Fractals
         public FractalCollatzForm()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             Text = "Фрактал Коллатца";
         }
         #endregion

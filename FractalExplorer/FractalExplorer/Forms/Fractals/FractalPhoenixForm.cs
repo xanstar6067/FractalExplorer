@@ -15,6 +15,7 @@ using FractalExplorer.Utilities.RenderUtilities;
 using System.Text;
 using System.Drawing.Drawing2D;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms
 {
     /// <summary>
@@ -139,6 +140,7 @@ namespace FractalExplorer.Forms
         public FractalPhoenixForm()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             Text = "Фрактал Феникс";
         }
         #endregion

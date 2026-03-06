@@ -4,6 +4,7 @@ using FractalExplorer.Projects;
 using FractalExplorer.Resources;
 using System.Reflection;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer
 {
     /// <summary>
@@ -54,6 +55,7 @@ namespace FractalExplorer
         public LauncherHubForm()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _fractalCatalog = new List<FractalInfo>();
 
             InitializeFractalCatalog();

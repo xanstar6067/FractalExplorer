@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.SelectorsForms.Selector
 {
     public class NovaMandelbrotSelectorForm : Form
@@ -69,6 +70,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterParent;
+
+            ThemeManager.RegisterForm(this);
 
             mandelbrotDisplay = new PictureBox
             {

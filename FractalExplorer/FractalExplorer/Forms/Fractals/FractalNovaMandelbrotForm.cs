@@ -21,6 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms
 {
     /// <summary>
@@ -67,6 +68,7 @@ namespace FractalExplorer.Forms
         public FractalNovaMandelbrotForm()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             this.Load += FractalNovaForm_Load;
             this.FormClosed += FractalNovaForm_FormClosed;
         }

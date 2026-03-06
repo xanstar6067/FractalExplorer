@@ -12,6 +12,7 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer
 {
     /// <summary>
@@ -103,6 +104,7 @@ namespace FractalExplorer
         public FractalSerpinski()
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _engine = new FractalSerpinskyEngine();
             _paletteManager = new SerpinskyPaletteManager();
             InitializeCustomComponents();

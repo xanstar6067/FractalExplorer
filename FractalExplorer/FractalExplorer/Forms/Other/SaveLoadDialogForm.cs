@@ -14,6 +14,7 @@ using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Projects; // Добавлено для доступа к классам превью-параметров
 using System.Text.Json; // Добавлено для десериализации
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms
 {
     /// <summary>
@@ -73,6 +74,7 @@ namespace FractalExplorer.Forms
         public SaveLoadDialogForm(ISaveLoadCapableFractal ownerFractalForm)
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _ownerFractalForm = ownerFractalForm ?? throw new ArgumentNullException(nameof(ownerFractalForm));
             this.Text = $"Сохранение/Загрузка: {_ownerFractalForm.FractalTypeIdentifier}";
 

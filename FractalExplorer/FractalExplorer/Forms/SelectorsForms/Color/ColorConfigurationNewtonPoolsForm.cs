@@ -1,6 +1,7 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using Microsoft.VisualBasic; // Для Interaction.InputBox
 
+using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer
 {
     /// <summary>
@@ -56,6 +57,7 @@ namespace FractalExplorer
         public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
             _paletteManager = manager;
             // Скрываем форму вместо закрытия при нажатии на кнопку закрытия окна
             FormClosing += ColorSetting_FormClosing;
