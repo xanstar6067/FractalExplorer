@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.ColorPicking;
+using FractalExplorer.Utilities.Theme;
 
 namespace FractalExplorer.SelectorsForms
 {
@@ -31,6 +32,9 @@ namespace FractalExplorer.SelectorsForms
         public ColorConfigurationSerpinskyForm(SerpinskyPaletteManager paletteManager)
         {
             InitializeComponent();
+            ThemeManager.RegisterForm(this);
+            ThemeManager.ThemeChanged += ThemeManager_ThemeChanged;
+            Disposed += ColorConfigurationSerpinskyForm_Disposed;
             _paletteManager = paletteManager;
         }
         #endregion
@@ -105,6 +109,20 @@ namespace FractalExplorer.SelectorsForms
             txtName.TextChanged -= txtName_TextChanged;
             txtName.Text = _selectedPalette.Name;
             txtName.TextChanged += txtName_TextChanged;
+
+            ApplySelectedPalettePreviewColors();
+        }
+
+        /// <summary>
+        /// Применяет цвета предпросмотра текущей выбранной палитры только к целевым панелям,
+        /// чтобы сохранить пользовательские цвета после смены темы.
+        /// </summary>
+        private void ApplySelectedPalettePreviewColors()
+        {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
 
             panelFractalColor.BackColor = _selectedPalette.FractalColor;
             panelBackgroundColor.BackColor = _selectedPalette.BackgroundColor;
@@ -273,6 +291,24 @@ namespace FractalExplorer.SelectorsForms
         private void btnClose_Click(object sender, EventArgs e)
         {
             this.Close();
+        }
+
+        /// <summary>
+        /// Обрабатывает изменение темы приложения и восстанавливает цвета предпросмотра палитры,
+        /// которые не должны быть заменены цветами темы.
+        /// </summary>
+        private void ThemeManager_ThemeChanged(object? sender, EventArgs e)
+        {
+            ApplySelectedPalettePreviewColors();
+        }
+
+        /// <summary>
+        /// Отписывает форму от глобальных событий темы при уничтожении.
+        /// </summary>
+        private void ColorConfigurationSerpinskyForm_Disposed(object? sender, EventArgs e)
+        {
+            ThemeManager.ThemeChanged -= ThemeManager_ThemeChanged;
+            Disposed -= ColorConfigurationSerpinskyForm_Disposed;
         }
         #endregion
     }
