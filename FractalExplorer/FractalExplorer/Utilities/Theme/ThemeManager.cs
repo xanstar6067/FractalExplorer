@@ -136,6 +136,7 @@ namespace FractalExplorer.Utilities.Theme
             StringComparer.OrdinalIgnoreCase);
 
         private static readonly Dictionary<string, ThemeDefinition> CustomThemesById = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<Control, ControlEventHandler> ControlAddedHandlers = new();
 
         private static readonly Dictionary<string, string> LegacyThemeNameMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -305,12 +306,12 @@ namespace FractalExplorer.Utilities.Theme
         public static void RegisterForm(Form form)
         {
             ApplyTheme(form);
+            RegisterDynamicControlTracking(form);
 
             EventHandler handler = (_, _) => ApplyTheme(form);
             ThemeChanged += handler;
 
             form.Disposed += (_, _) => ThemeChanged -= handler;
-            form.ControlAdded += (_, _) => ApplyTheme(form);
         }
 
         public static void ApplyTheme(Form form)
@@ -400,6 +401,38 @@ namespace FractalExplorer.Utilities.Theme
             foreach (Control child in control.Controls)
             {
                 ApplyThemeToControl(child, theme);
+            }
+        }
+
+        private static void RegisterDynamicControlTracking(Control control)
+        {
+            if (ControlAddedHandlers.ContainsKey(control))
+            {
+                return;
+            }
+
+            ControlEventHandler handler = (_, args) =>
+            {
+                ApplyThemeToControl(args.Control, CurrentDefinition);
+                RegisterDynamicControlTracking(args.Control);
+            };
+
+            ControlAddedHandlers[control] = handler;
+            control.ControlAdded += handler;
+            control.Disposed += (_, _) => UnregisterDynamicControlTracking(control);
+
+            foreach (Control child in control.Controls)
+            {
+                RegisterDynamicControlTracking(child);
+            }
+        }
+
+        private static void UnregisterDynamicControlTracking(Control control)
+        {
+            if (ControlAddedHandlers.TryGetValue(control, out ControlEventHandler? handler))
+            {
+                control.ControlAdded -= handler;
+                ControlAddedHandlers.Remove(control);
             }
         }
 
