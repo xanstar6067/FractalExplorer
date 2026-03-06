@@ -438,13 +438,15 @@ namespace FractalExplorer.Utilities.Theme
 
         private static void StyleButton(Button button, ThemeDefinition theme)
         {
+            bool isSecondaryAction = IsSecondaryButton(button);
+
             button.UseVisualStyleBackColor = false;
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 1;
             button.FlatAppearance.BorderColor = theme.BorderColor;
             button.FlatAppearance.MouseOverBackColor = theme.HoverBackground;
             button.FlatAppearance.MouseDownBackColor = theme.PressedBackground;
-            button.BackColor = theme.AccentPrimary;
+            button.BackColor = isSecondaryAction ? theme.AccentSecondary : theme.AccentPrimary;
             button.ForeColor = theme.PrimaryText;
         }
 
@@ -452,7 +454,36 @@ namespace FractalExplorer.Utilities.Theme
         {
             textBox.BackColor = theme.ControlBackground;
             textBox.ForeColor = theme.PrimaryText;
+
+            // WinForms TextBox не поддерживает отдельную настройку цвета стандартной рамки.
+            // Из-за платформенного ограничения InputBorderColor не может быть применён к TextBox.
             textBox.BorderStyle = BorderStyle.FixedSingle;
+        }
+
+        private static bool IsSecondaryButton(Button button)
+        {
+            if (button.DialogResult == DialogResult.Cancel)
+            {
+                return true;
+            }
+
+            string buttonName = button.Name ?? string.Empty;
+            string buttonText = button.Text ?? string.Empty;
+            return ContainsAny(buttonName, "close", "cancel", "delete", "remove", "back") ||
+                   ContainsAny(buttonText, "закры", "отмен", "удал", "назад", "close", "cancel", "delete", "back");
+        }
+
+        private static bool ContainsAny(string value, params string[] markers)
+        {
+            foreach (string marker in markers)
+            {
+                if (value.IndexOf(marker, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

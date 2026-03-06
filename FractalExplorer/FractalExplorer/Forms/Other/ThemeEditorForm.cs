@@ -23,8 +23,7 @@ namespace FractalExplorer.Forms.Other
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.AccentSecondary), DisplayName = "Акцент (дополнительный)", Getter = theme => theme.AccentSecondary },
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.HoverBackground), DisplayName = "Фон при наведении", Getter = theme => theme.HoverBackground },
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PressedBackground), DisplayName = "Фон при нажатии", Getter = theme => theme.PressedBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "Граница", Getter = theme => theme.BorderColor },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InputBorderColor), DisplayName = "Граница поля ввода", Getter = theme => theme.InputBorderColor }
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "Граница", Getter = theme => theme.BorderColor }
         };
 
         private readonly Dictionary<string, Panel> _colorPreviewPanels = new(StringComparer.Ordinal);
@@ -373,7 +372,7 @@ namespace FractalExplorer.Forms.Other
                 HoverBackground = _currentColors[nameof(ThemeDefinition.HoverBackground)],
                 PressedBackground = _currentColors[nameof(ThemeDefinition.PressedBackground)],
                 BorderColor = _currentColors[nameof(ThemeDefinition.BorderColor)],
-                InputBorderColor = _currentColors[nameof(ThemeDefinition.InputBorderColor)]
+                InputBorderColor = _selectedTheme?.InputBorderColor ?? _currentColors[nameof(ThemeDefinition.BorderColor)]
             };
         }
 
