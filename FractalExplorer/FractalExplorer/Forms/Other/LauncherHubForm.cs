@@ -237,7 +237,6 @@ namespace FractalExplorer
             }
 
             ThemeManager.SetTheme(selectedItem.ThemeId);
-            ThemeManager.ApplyTheme(this);
 
             Settings.Default.UiTheme = selectedItem.ThemeId;
             Settings.Default.Save();
