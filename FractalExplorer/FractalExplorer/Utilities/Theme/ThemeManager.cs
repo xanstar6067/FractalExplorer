@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities.Theme
@@ -56,6 +56,24 @@ namespace FractalExplorer.Utilities.Theme
         public static AppTheme CurrentTheme { get; private set; } = AppTheme.DarkModernLabBlue;
 
         public static ThemeDefinition CurrentDefinition => Themes[CurrentTheme];
+
+        public static bool TryGetThemeByName(string? themeName, out AppTheme theme)
+        {
+            if (string.IsNullOrWhiteSpace(themeName))
+            {
+                theme = AppTheme.DarkModernLabBlue;
+                return false;
+            }
+
+            if (!Enum.TryParse(themeName, ignoreCase: true, out AppTheme parsedTheme) || !Themes.ContainsKey(parsedTheme))
+            {
+                theme = AppTheme.DarkModernLabBlue;
+                return false;
+            }
+
+            theme = parsedTheme;
+            return true;
+        }
 
         public static void SetTheme(AppTheme theme)
         {

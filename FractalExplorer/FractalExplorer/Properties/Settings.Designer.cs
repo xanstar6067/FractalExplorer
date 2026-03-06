@@ -130,5 +130,17 @@ namespace FractalExplorer.Properties {
                 this["SaveForm_LanczosFactorIndex"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("DarkModernLabBlue")]
+        public string UiTheme {
+            get {
+                return ((string)(this["UiTheme"]));
+            }
+            set {
+                this["UiTheme"] = value;
+            }
+        }
     }
 }

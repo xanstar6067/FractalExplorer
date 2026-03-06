@@ -2,6 +2,7 @@
 using FractalExplorer.Forms.Fractals;
 using FractalExplorer.Projects;
 using FractalExplorer.Resources;
+using FractalExplorer.Properties;
 using System.Reflection;
 
 using FractalExplorer.Utilities.Theme;
@@ -163,6 +164,9 @@ namespace FractalExplorer
 
             ThemeManager.SetTheme(selectedTheme);
             ThemeManager.ApplyTheme(this);
+
+            Settings.Default.UiTheme = selectedTheme.ToString();
+            Settings.Default.Save();
         }
 
         /// <summary>
