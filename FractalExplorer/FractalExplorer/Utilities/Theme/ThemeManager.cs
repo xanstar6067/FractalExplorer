@@ -358,16 +358,13 @@ namespace FractalExplorer.Utilities.Theme
                     StyleButton(button, theme);
                     break;
                 case Label label:
-                    label.BackColor = Color.Transparent;
-                    label.ForeColor = theme.PrimaryText;
+                    StyleLabel(label, theme);
                     break;
                 case TableLayoutPanel tableLayoutPanel:
-                    tableLayoutPanel.BackColor = theme.PanelBackground;
-                    tableLayoutPanel.ForeColor = theme.PrimaryText;
+                    StyleTableLayoutPanel(tableLayoutPanel, theme);
                     break;
                 case Panel panel:
-                    panel.BackColor = theme.PanelBackground;
-                    panel.ForeColor = theme.PrimaryText;
+                    StylePanel(panel, theme);
                     break;
                 case TextBox textBox:
                     StyleTextBox(textBox, theme);
@@ -375,23 +372,32 @@ namespace FractalExplorer.Utilities.Theme
                 case ComboBox comboBox:
                     StyleComboBox(comboBox, theme);
                     break;
+                case NumericUpDown numericUpDown:
+                    StyleNumericUpDown(numericUpDown, theme);
+                    break;
+                case ListBox listBox:
+                    StyleListBox(listBox, theme);
+                    break;
+                case GroupBox groupBox:
+                    StyleGroupBox(groupBox, theme);
+                    break;
+                case SplitContainer splitContainer:
+                    StyleSplitContainer(splitContainer, theme);
+                    break;
+                case TrackBar trackBar:
+                    StyleTrackBar(trackBar, theme);
+                    break;
                 case RichTextBox richTextBox:
-                    richTextBox.BackColor = theme.ControlBackground;
-                    richTextBox.ForeColor = theme.SecondaryText;
-                    richTextBox.BorderStyle = BorderStyle.FixedSingle;
+                    StyleRichTextBox(richTextBox, theme);
                     break;
                 case TreeView treeView:
-                    treeView.BackColor = theme.PanelBackground;
-                    treeView.ForeColor = theme.PrimaryText;
-                    treeView.BorderStyle = BorderStyle.FixedSingle;
+                    StyleTreeView(treeView, theme);
                     break;
                 case ProgressBar progressBar:
-                    progressBar.BackColor = theme.PanelBackground;
-                    progressBar.ForeColor = theme.AccentPrimary;
+                    StyleProgressBar(progressBar, theme);
                     break;
                 case CheckBox checkBox:
-                    checkBox.BackColor = theme.PanelBackground;
-                    checkBox.ForeColor = theme.PrimaryText;
+                    StyleCheckBox(checkBox, theme);
                     break;
                 default:
                     if (control is not PictureBox)
@@ -454,6 +460,24 @@ namespace FractalExplorer.Utilities.Theme
             button.ForeColor = theme.PrimaryText;
         }
 
+        private static void StyleLabel(Label label, ThemeDefinition theme)
+        {
+            label.BackColor = Color.Transparent;
+            label.ForeColor = theme.SecondaryText;
+        }
+
+        private static void StyleTableLayoutPanel(TableLayoutPanel tableLayoutPanel, ThemeDefinition theme)
+        {
+            tableLayoutPanel.BackColor = theme.PanelBackground;
+            tableLayoutPanel.ForeColor = theme.PrimaryText;
+        }
+
+        private static void StylePanel(Panel panel, ThemeDefinition theme)
+        {
+            panel.BackColor = theme.PanelBackground;
+            panel.ForeColor = theme.PrimaryText;
+        }
+
         private static void StyleTextBox(TextBox textBox, ThemeDefinition theme)
         {
             textBox.BackColor = theme.ControlBackground;
@@ -488,6 +512,69 @@ namespace FractalExplorer.Utilities.Theme
 
             UnregisterComboBoxDrawHandler(comboBox);
             comboBox.DrawMode = DrawMode.Normal;
+        }
+
+        private static void StyleNumericUpDown(NumericUpDown numericUpDown, ThemeDefinition theme)
+        {
+            numericUpDown.BackColor = theme.ControlBackground;
+            numericUpDown.ForeColor = theme.PrimaryText;
+            numericUpDown.BorderStyle = BorderStyle.FixedSingle;
+        }
+
+        private static void StyleListBox(ListBox listBox, ThemeDefinition theme)
+        {
+            listBox.BackColor = theme.ControlBackground;
+            listBox.ForeColor = theme.PrimaryText;
+            listBox.BorderStyle = BorderStyle.FixedSingle;
+        }
+
+        private static void StyleGroupBox(GroupBox groupBox, ThemeDefinition theme)
+        {
+            groupBox.BackColor = theme.PanelBackground;
+            groupBox.ForeColor = theme.SecondaryText;
+        }
+
+        private static void StyleSplitContainer(SplitContainer splitContainer, ThemeDefinition theme)
+        {
+            splitContainer.BackColor = theme.PanelBackground;
+            splitContainer.ForeColor = theme.PrimaryText;
+
+            splitContainer.Panel1.BackColor = theme.PanelBackground;
+            splitContainer.Panel1.ForeColor = theme.PrimaryText;
+            splitContainer.Panel2.BackColor = theme.PanelBackground;
+            splitContainer.Panel2.ForeColor = theme.PrimaryText;
+        }
+
+        private static void StyleTrackBar(TrackBar trackBar, ThemeDefinition theme)
+        {
+            trackBar.BackColor = theme.PanelBackground;
+            trackBar.ForeColor = theme.PrimaryText;
+        }
+
+        private static void StyleRichTextBox(RichTextBox richTextBox, ThemeDefinition theme)
+        {
+            richTextBox.BackColor = theme.ControlBackground;
+            richTextBox.ForeColor = theme.SecondaryText;
+            richTextBox.BorderStyle = BorderStyle.FixedSingle;
+        }
+
+        private static void StyleTreeView(TreeView treeView, ThemeDefinition theme)
+        {
+            treeView.BackColor = theme.PanelBackground;
+            treeView.ForeColor = theme.PrimaryText;
+            treeView.BorderStyle = BorderStyle.FixedSingle;
+        }
+
+        private static void StyleProgressBar(ProgressBar progressBar, ThemeDefinition theme)
+        {
+            progressBar.BackColor = theme.PanelBackground;
+            progressBar.ForeColor = theme.AccentPrimary;
+        }
+
+        private static void StyleCheckBox(CheckBox checkBox, ThemeDefinition theme)
+        {
+            checkBox.BackColor = theme.PanelBackground;
+            checkBox.ForeColor = theme.PrimaryText;
         }
 
         private static void DrawComboBoxItem(ComboBox comboBox, DrawItemEventArgs args, ThemeDefinition theme)
