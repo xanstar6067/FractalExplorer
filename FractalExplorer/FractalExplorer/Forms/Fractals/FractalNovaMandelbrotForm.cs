@@ -369,8 +369,10 @@ namespace FractalExplorer.Forms
             renderEngineCopy.CopyParametersFrom(_fractalEngine);
 
             var threadCount = GetThreadCount();
+            int tileConcurrency = threadCount;
+            int inTileConcurrency = 1;
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
-            var dispatcher = new TileRenderDispatcher(tiles, threadCount, RenderPatternSettings.SelectedPattern);
+            var dispatcher = new TileRenderDispatcher(tiles, tileConcurrency, RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -388,7 +390,8 @@ namespace FractalExplorer.Forms
                     byte[] tileBuffer;
                     if (ssaaFactor > 1)
                     {
-                        tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, threadCount, out int _);
+                        // Не допускаем вложенный oversubscription: параллелим по плиткам, внутри плитки — один поток.
+                        tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, inTileConcurrency, out int _);
                     }
                     else
                     {

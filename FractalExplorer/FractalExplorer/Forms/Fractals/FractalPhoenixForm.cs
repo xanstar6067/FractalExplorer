@@ -474,8 +474,10 @@ namespace FractalExplorer.Forms
             };
 
             var threadCount = GetThreadCount();
+            int tileConcurrency = threadCount;
+            int inTileConcurrency = 1;
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, threadCount, RenderPatternSettings.SelectedPattern);
+            var dispatcher = new TileRenderDispatcher(tiles, tileConcurrency, RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -489,7 +491,8 @@ namespace FractalExplorer.Forms
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    var tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, currentWidth, currentHeight, ssaaFactor, threadCount, out int bytesPerPixel);
+                    // Не допускаем вложенный oversubscription: параллелим по плиткам, внутри плитки — один поток.
+                    var tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, currentWidth, currentHeight, ssaaFactor, inTileConcurrency, out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
                     lock (_bitmapLock)
@@ -617,8 +620,9 @@ namespace FractalExplorer.Forms
             };
 
             var threadCount = GetThreadCount();
+            int tileConcurrency = threadCount;
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, threadCount, RenderPatternSettings.SelectedPattern);
+            var dispatcher = new TileRenderDispatcher(tiles, tileConcurrency, RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
