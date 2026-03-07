@@ -208,9 +208,10 @@ namespace FractalExplorer.Engines
         /// <param name="supersamplingFactor">Фактор суперсэмплинга (например, 2 для 2x2 SSAA).</param>
         /// <param name="bytesPerPixel">Выходной параметр: количество байт на пиксель (BGRA).</param>
         /// <returns>Массив байт с пиксельными данными плитки в формате BGRA.</returns>
-        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
+        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int numThreads, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
+            numThreads = Math.Max(1, numThreads);
             if (supersamplingFactor <= 1)
             {
                 return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
@@ -221,11 +222,11 @@ namespace FractalExplorer.Engines
 
             if (Scale < SCALE_THRESHOLD_FOR_DECIMAL)
             {
-                RenderTileSSAA_Decimal(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, bytesPerPixel);
+                RenderTileSSAA_Decimal(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, numThreads, bytesPerPixel);
             }
             else
             {
-                RenderTileSSAA_Double(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, bytesPerPixel);
+                RenderTileSSAA_Double(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, numThreads, bytesPerPixel);
             }
 
             return finalTileBuffer;
@@ -673,7 +674,7 @@ namespace FractalExplorer.Engines
         /// <param name="canvasHeight">Высота холста.</param>
         /// <param name="supersamplingFactor">Фактор суперсэмплинга.</param>
         /// <param name="bytesPerPixel">Количество байт на пиксель.</param>
-        private void RenderTileSSAA_Decimal(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int bytesPerPixel)
+        private void RenderTileSSAA_Decimal(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int numThreads, int bytesPerPixel)
         {
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
             int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
@@ -687,7 +688,9 @@ namespace FractalExplorer.Engines
             decimal centerY = CenterY;
             IterationCalculatorDecimal iterationCalculator = CreateDecimalIterationCalculator();
 
-            Parallel.For(0, highResTileHeight, y =>
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+
+            Parallel.For(0, highResTileHeight, po, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {
@@ -742,7 +745,7 @@ namespace FractalExplorer.Engines
         /// <param name="canvasHeight">Высота холста.</param>
         /// <param name="supersamplingFactor">Фактор суперсэмплинга.</param>
         /// <param name="bytesPerPixel">Количество байт на пиксель.</param>
-        private void RenderTileSSAA_Double(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int bytesPerPixel)
+        private void RenderTileSSAA_Double(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int numThreads, int bytesPerPixel)
         {
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
             int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
@@ -756,7 +759,9 @@ namespace FractalExplorer.Engines
             double centerY_d = (double)CenterY;
             IterationCalculatorDouble iterationCalculator = CreateDoubleIterationCalculator();
 
-            Parallel.For(0, highResTileHeight, y =>
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+
+            Parallel.For(0, highResTileHeight, po, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {

@@ -555,7 +555,7 @@ namespace FractalDraving
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    var tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, currentWidth, currentHeight, ssaaFactor, out int bytesPerPixel);
+                    var tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, currentWidth, currentHeight, ssaaFactor, GetThreadCount(), out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
                     lock (_bitmapLock)

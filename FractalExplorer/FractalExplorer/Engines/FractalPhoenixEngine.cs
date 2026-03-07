@@ -293,9 +293,10 @@ namespace FractalExplorer.Engines
         /// Отрисовывает одну плитку с использованием суперсэмплинга (SSAA).
         /// </summary>
         // MODIFIED: Добавлена логика переключения точности
-        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int ssaaFactor, out int bytesPerPixel)
+        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int ssaaFactor, int numThreads, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
+            numThreads = Math.Max(1, numThreads);
             if (ssaaFactor <= 1)
             {
                 return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
@@ -318,7 +319,9 @@ namespace FractalExplorer.Engines
                 decimal highResHalfHeightPixels = (long)canvasHeight * ssaaFactor / 2.0m;
                 ComplexDecimal c1_local = this.C1;
 
-                Parallel.For(0, highResTileHeight, y =>
+                ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+
+                Parallel.For(0, highResTileHeight, po, y =>
                 {
                     for (int x = 0; x < highResTileWidth; x++)
                     {
@@ -357,7 +360,9 @@ namespace FractalExplorer.Engines
                 double highResHalfWidthPixels = highResCanvasWidth / 2.0;
                 double highResHalfHeightPixels = (double)canvasHeight * ssaaFactor / 2.0;
 
-                Parallel.For(0, highResTileHeight, y =>
+                ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+
+                Parallel.For(0, highResTileHeight, po, y =>
                 {
                     for (int x = 0; x < highResTileWidth; x++)
                     {

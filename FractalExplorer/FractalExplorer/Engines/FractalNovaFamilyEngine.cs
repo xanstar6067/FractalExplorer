@@ -226,9 +226,10 @@ namespace FractalExplorer.Engines
             return buffer;
         }
 
-        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, out int bytesPerPixel)
+        public byte[] RenderSingleTileSSAA(TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int numThreads, out int bytesPerPixel)
         {
             bytesPerPixel = 4;
+            numThreads = Math.Max(1, numThreads);
             if (supersamplingFactor <= 1)
                 return RenderSingleTile(tile, canvasWidth, canvasHeight, out bytesPerPixel);
 
@@ -236,9 +237,9 @@ namespace FractalExplorer.Engines
             if (canvasWidth <= 0 || canvasHeight <= 0) return finalTileBuffer;
 
             if (Scale < SCALE_THRESHOLD_FOR_DECIMAL)
-                RenderTileSSAA_Decimal(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, bytesPerPixel);
+                RenderTileSSAA_Decimal(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, numThreads, bytesPerPixel);
             else
-                RenderTileSSAA_Double(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, bytesPerPixel);
+                RenderTileSSAA_Double(finalTileBuffer, tile, canvasWidth, canvasHeight, supersamplingFactor, numThreads, bytesPerPixel);
 
             return finalTileBuffer;
         }
@@ -436,7 +437,7 @@ namespace FractalExplorer.Engines
             }
         }
 
-        private void RenderTileSSAA_Decimal(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int bytesPerPixel)
+        private void RenderTileSSAA_Decimal(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int numThreads, int bytesPerPixel)
         {
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
             int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
@@ -447,7 +448,9 @@ namespace FractalExplorer.Engines
             decimal highResHalfWidthPixels = highResCanvasWidth / 2.0m;
             decimal highResHalfHeightPixels = (long)canvasHeight * supersamplingFactor / 2.0m;
 
-            Parallel.For(0, highResTileHeight, y =>
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+
+            Parallel.For(0, highResTileHeight, po, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {
@@ -493,7 +496,7 @@ namespace FractalExplorer.Engines
             }
         }
 
-        private void RenderTileSSAA_Double(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int bytesPerPixel)
+        private void RenderTileSSAA_Double(byte[] finalTileBuffer, TileInfo tile, int canvasWidth, int canvasHeight, int supersamplingFactor, int numThreads, int bytesPerPixel)
         {
             int highResTileWidth = tile.Bounds.Width * supersamplingFactor;
             int highResTileHeight = tile.Bounds.Height * supersamplingFactor;
@@ -506,7 +509,9 @@ namespace FractalExplorer.Engines
             double centerX_d = (double)CenterX;
             double centerY_d = (double)CenterY;
 
-            Parallel.For(0, highResTileHeight, y =>
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
+
+            Parallel.For(0, highResTileHeight, po, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
                 {

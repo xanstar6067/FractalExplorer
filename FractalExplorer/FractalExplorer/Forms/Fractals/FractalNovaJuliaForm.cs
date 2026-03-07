@@ -521,7 +521,7 @@ namespace FractalExplorer.Forms
                     byte[] tileBuffer;
                     if (ssaaFactor > 1)
                     {
-                        tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, out _);
+                        tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, GetThreadCount(), out _);
                     }
                     else
                     {
