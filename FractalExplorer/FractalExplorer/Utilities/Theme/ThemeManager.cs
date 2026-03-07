@@ -5,6 +5,7 @@ namespace FractalExplorer.Utilities.Theme
 {
     public static class ThemeManager
     {
+        private const string PreserveBackColorTag = "preserve-backcolor";
         public const string DefaultThemeId = "dark-modern-lab-green";
 
         private static readonly List<ThemeDefinition> BuiltInThemes = new()
@@ -402,7 +403,11 @@ namespace FractalExplorer.Utilities.Theme
                 default:
                     if (control is not PictureBox)
                     {
-                        control.BackColor = theme.PanelBackground;
+                        if (!ShouldSkipBackColorTheming(control))
+                        {
+                            control.BackColor = theme.PanelBackground;
+                        }
+
                         control.ForeColor = theme.PrimaryText;
                     }
                     break;
@@ -474,8 +479,27 @@ namespace FractalExplorer.Utilities.Theme
 
         private static void StylePanel(Panel panel, ThemeDefinition theme)
         {
-            panel.BackColor = theme.PanelBackground;
+            if (!ShouldSkipBackColorTheming(panel))
+            {
+                panel.BackColor = theme.PanelBackground;
+            }
+
             panel.ForeColor = theme.PrimaryText;
+        }
+
+        private static bool ShouldSkipBackColorTheming(Control control)
+        {
+            if (control.Tag is string stringTag)
+            {
+                return string.Equals(stringTag, PreserveBackColorTag, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (control.Tag is ValueTuple<int, string> taggedInfo)
+            {
+                return string.Equals(taggedInfo.Item2, PreserveBackColorTag, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
         }
 
         private static void StyleTextBox(TextBox textBox, ThemeDefinition theme)

@@ -59,6 +59,7 @@ namespace FractalExplorer
         public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
             InitializeComponent();
+            panelBackgroundColor.Tag = "preserve-backcolor";
             ThemeManager.RegisterForm(this);
             _paletteManager = manager;
             // Скрываем форму вместо закрытия при нажатии на кнопку закрытия окна
@@ -144,7 +145,7 @@ namespace FractalExplorer
                         Size = new Size(25, 25),
                         BorderStyle = BorderStyle.FixedSingle,
                         BackColor = color,
-                        Tag = i, // Сохраняем индекс корня в Tag
+                        Tag = (i, "preserve-backcolor"), // Сохраняем индекс корня и признак сохранения цвета
                         Cursor = Cursors.Hand,
                         Margin = new Padding(5)
                     };
@@ -193,7 +194,9 @@ namespace FractalExplorer
             }
 
             Panel clickedPanel = sender as Panel;
-            int colorIndex = (int)clickedPanel.Tag;
+            int colorIndex = clickedPanel.Tag is ValueTuple<int, string> taggedInfo
+                ? taggedInfo.Item1
+                : (int)clickedPanel.Tag;
 
             Color initialColor = clickedPanel.BackColor;
             if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
