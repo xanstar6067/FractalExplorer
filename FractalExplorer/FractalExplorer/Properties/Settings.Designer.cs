@@ -133,6 +133,18 @@ namespace FractalExplorer.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int RenderPatternIndex {
+            get {
+                return ((int)(this["RenderPatternIndex"]));
+            }
+            set {
+                this["RenderPatternIndex"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("DarkModernLabBlue")]
         public string UiTheme {
             get {

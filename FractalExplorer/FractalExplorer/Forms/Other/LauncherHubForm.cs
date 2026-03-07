@@ -90,6 +90,38 @@ namespace FractalExplorer
 
 
 
+        private static int GetRenderPatternIndex(TileSchedulingStrategy strategy)
+        {
+            return strategy switch
+            {
+                TileSchedulingStrategy.Classic => 0,
+                TileSchedulingStrategy.Linear => 1,
+                TileSchedulingStrategy.Spiral => 2,
+                TileSchedulingStrategy.Randomized => 3,
+                TileSchedulingStrategy.Checkerboard => 4,
+                TileSchedulingStrategy.Diagonal => 5,
+                TileSchedulingStrategy.EdgesInward => 6,
+                TileSchedulingStrategy.MortonCurve => 7,
+                _ => 0
+            };
+        }
+
+        private static TileSchedulingStrategy GetRenderPatternStrategy(int selectedIndex)
+        {
+            return selectedIndex switch
+            {
+                0 => TileSchedulingStrategy.Classic,
+                1 => TileSchedulingStrategy.Linear,
+                2 => TileSchedulingStrategy.Spiral,
+                3 => TileSchedulingStrategy.Randomized,
+                4 => TileSchedulingStrategy.Checkerboard,
+                5 => TileSchedulingStrategy.Diagonal,
+                6 => TileSchedulingStrategy.EdgesInward,
+                7 => TileSchedulingStrategy.MortonCurve,
+                _ => TileSchedulingStrategy.Classic
+            };
+        }
+
         /// <summary>
         /// Инициализирует список шаблонов рендера и синхронизирует его с глобальными настройками.
         /// </summary>
@@ -112,18 +144,9 @@ namespace FractalExplorer
             cbRenderPattern.Items.Add("От краев к центру");
             cbRenderPattern.Items.Add("Z-кривая (Мортон)");
 
-            cbRenderPattern.SelectedIndex = RenderPatternSettings.SelectedPattern switch
-            {
-                TileSchedulingStrategy.Classic => 0,
-                TileSchedulingStrategy.Linear => 1,
-                TileSchedulingStrategy.Spiral => 2,
-                TileSchedulingStrategy.Randomized => 3,
-                TileSchedulingStrategy.Checkerboard => 4,
-                TileSchedulingStrategy.Diagonal => 5,
-                TileSchedulingStrategy.EdgesInward => 6,
-                TileSchedulingStrategy.MortonCurve => 7,
-                _ => 0 // По умолчанию — классический
-            };
+            TileSchedulingStrategy savedStrategy = GetRenderPatternStrategy(Settings.Default.RenderPatternIndex);
+            RenderPatternSettings.SelectedPattern = savedStrategy;
+            cbRenderPattern.SelectedIndex = GetRenderPatternIndex(savedStrategy);
 
             // Подписываемся на событие обратно
             cbRenderPattern.SelectedIndexChanged += cbRenderPattern_SelectedIndexChanged;
@@ -134,18 +157,10 @@ namespace FractalExplorer
         /// </summary>
         private void cbRenderPattern_SelectedIndexChanged(object sender, EventArgs e)
         {
-            RenderPatternSettings.SelectedPattern = cbRenderPattern.SelectedIndex switch
-            {
-                0 => TileSchedulingStrategy.Classic,
-                1 => TileSchedulingStrategy.Linear,
-                2 => TileSchedulingStrategy.Spiral,
-                3 => TileSchedulingStrategy.Randomized,
-                4 => TileSchedulingStrategy.Checkerboard,
-                5 => TileSchedulingStrategy.Diagonal,
-                6 => TileSchedulingStrategy.EdgesInward,
-                7 => TileSchedulingStrategy.MortonCurve,
-                _ => TileSchedulingStrategy.Classic // Безопасное значение по умолчанию
-            };
+            TileSchedulingStrategy selectedStrategy = GetRenderPatternStrategy(cbRenderPattern.SelectedIndex);
+            RenderPatternSettings.SelectedPattern = selectedStrategy;
+            Settings.Default.RenderPatternIndex = GetRenderPatternIndex(selectedStrategy);
+            Settings.Default.Save();
         }
 
         /// <summary>
