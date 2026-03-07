@@ -137,6 +137,7 @@ namespace FractalExplorer.Utilities.Theme
 
         private static readonly Dictionary<string, ThemeDefinition> CustomThemesById = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<Control, ControlEventHandler> ControlAddedHandlers = new();
+        private static readonly Dictionary<ComboBox, DrawItemEventHandler> ComboBoxDrawHandlers = new();
 
         private static readonly Dictionary<string, string> LegacyThemeNameMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -371,6 +372,9 @@ namespace FractalExplorer.Utilities.Theme
                 case TextBox textBox:
                     StyleTextBox(textBox, theme);
                     break;
+                case ComboBox comboBox:
+                    StyleComboBox(comboBox, theme);
+                    break;
                 case RichTextBox richTextBox:
                     richTextBox.BackColor = theme.ControlBackground;
                     richTextBox.ForeColor = theme.SecondaryText;
@@ -458,6 +462,64 @@ namespace FractalExplorer.Utilities.Theme
             // WinForms TextBox не поддерживает отдельную настройку цвета стандартной рамки.
             // Из-за платформенного ограничения InputBorderColor не может быть применён к TextBox.
             textBox.BorderStyle = BorderStyle.FixedSingle;
+        }
+
+        private static void StyleComboBox(ComboBox comboBox, ThemeDefinition theme)
+        {
+            comboBox.BackColor = theme.ControlBackground;
+            comboBox.ForeColor = theme.PrimaryText;
+            comboBox.FlatStyle = FlatStyle.Flat;
+
+            if (comboBox.DropDownStyle == ComboBoxStyle.DropDownList)
+            {
+                comboBox.DrawMode = DrawMode.OwnerDrawFixed;
+
+                if (!ComboBoxDrawHandlers.TryGetValue(comboBox, out DrawItemEventHandler? drawHandler))
+                {
+                    drawHandler = (_, args) => DrawComboBoxItem(comboBox, args, CurrentDefinition);
+                    ComboBoxDrawHandlers[comboBox] = drawHandler;
+                    comboBox.DrawItem += drawHandler;
+                    comboBox.Disposed += (_, _) => UnregisterComboBoxDrawHandler(comboBox);
+                }
+
+                comboBox.Invalidate();
+                return;
+            }
+
+            UnregisterComboBoxDrawHandler(comboBox);
+            comboBox.DrawMode = DrawMode.Normal;
+        }
+
+        private static void DrawComboBoxItem(ComboBox comboBox, DrawItemEventArgs args, ThemeDefinition theme)
+        {
+            if (args.Index < 0)
+            {
+                return;
+            }
+
+            bool isSelected = (args.State & DrawItemState.Selected) == DrawItemState.Selected;
+            Color backgroundColor = isSelected ? theme.HoverBackground : theme.ControlBackground;
+
+            using SolidBrush backgroundBrush = new(backgroundColor);
+            using SolidBrush textBrush = new(theme.PrimaryText);
+
+            args.Graphics.FillRectangle(backgroundBrush, args.Bounds);
+
+            string itemText = comboBox.GetItemText(comboBox.Items[args.Index]);
+            args.Graphics.DrawString(itemText, args.Font ?? comboBox.Font, textBrush, args.Bounds);
+
+            args.DrawFocusRectangle();
+        }
+
+        private static void UnregisterComboBoxDrawHandler(ComboBox comboBox)
+        {
+            if (!ComboBoxDrawHandlers.TryGetValue(comboBox, out DrawItemEventHandler? drawHandler))
+            {
+                return;
+            }
+
+            comboBox.DrawItem -= drawHandler;
+            ComboBoxDrawHandlers.Remove(comboBox);
         }
 
         private static bool IsSecondaryButton(Button button)
