@@ -1219,7 +1219,6 @@ namespace FractalExplorer.Forms
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
 
                 previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-                previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
 
                 if (previewEngine.UseSmoothColoring)
                 {
@@ -1266,7 +1265,6 @@ namespace FractalExplorer.Forms
             previewEngine.MaxColorIterations = effectiveMaxColorIterations;
 
             previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-            previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
 
             if (previewEngine.UseSmoothColoring)
             {

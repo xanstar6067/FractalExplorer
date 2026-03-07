@@ -1298,6 +1298,10 @@ namespace FractalDraving
             /// </summary>
             public decimal CIm { get; set; }
             /// <summary>
+            /// Использовать ли плавную раскраску.
+            /// </summary>
+            public bool UseSmoothColoring { get; set; }
+            /// <summary>
             /// Тип движка для рендеринга превью.
             /// </summary>
             public string PreviewEngineType { get; set; }
@@ -1341,6 +1345,7 @@ namespace FractalDraving
                 Iterations = (int)nudIterations.Value,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
+                UseSmoothColoring = cbSmooth.Checked,
                 PreviewEngineType = state.PreviewEngineType
             };
 
@@ -1440,15 +1445,13 @@ namespace FractalDraving
                         ? previewEngine.MaxIterations
                         : paletteForPreview.MaxColorIterations;
 
-                previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
+                previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
                 if (previewEngine.UseSmoothColoring)
                 {
-                    previewEngine.UseSmoothColoring = true;
                     previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
                 }
                 else
                 {
-                    previewEngine.UseSmoothColoring = false;
                     previewEngine.MaxColorIterations = effectiveMaxColorIterations;
                     previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
                 }
@@ -1499,15 +1502,13 @@ namespace FractalDraving
                     ? previewEngine.MaxIterations
                     : paletteForPreview.MaxColorIterations;
 
-            previewEngine.UseSmoothColoring = false; //так надо, пока мне просто не нужно автоматическое управление.
+            previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
             if (previewEngine.UseSmoothColoring)
             {
-                previewEngine.UseSmoothColoring = true;
                 previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
             }
             else
             {
-                previewEngine.UseSmoothColoring = false;
                 previewEngine.MaxColorIterations = effectiveMaxColorIterations;
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
             }
