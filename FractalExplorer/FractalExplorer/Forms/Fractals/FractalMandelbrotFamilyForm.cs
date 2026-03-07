@@ -540,8 +540,9 @@ namespace FractalDraving
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
+            var threadCount = GetThreadCount();
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
+            var dispatcher = new TileRenderDispatcher(tiles, threadCount, RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -555,7 +556,7 @@ namespace FractalDraving
                     ct.ThrowIfCancellationRequested();
                     _renderVisualizer?.NotifyTileRenderStart(tile.Bounds);
 
-                    var tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, currentWidth, currentHeight, ssaaFactor, GetThreadCount(), out int bytesPerPixel);
+                    var tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, currentWidth, currentHeight, ssaaFactor, threadCount, out int bytesPerPixel);
 
                     ct.ThrowIfCancellationRequested();
                     lock (_bitmapLock)
@@ -620,6 +621,13 @@ namespace FractalDraving
             }
             catch (Exception ex)
             {
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
                 newRenderingBitmap?.Dispose();
                 if (IsHandleCreated && !IsDisposed) MessageBox.Show($"Ошибка рендеринга SSAA: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -671,8 +679,9 @@ namespace FractalDraving
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
+            var threadCount = GetThreadCount();
             var tiles = GenerateTiles(currentWidth, currentHeight);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
+            var dispatcher = new TileRenderDispatcher(tiles, threadCount, RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated && !pbRenderProgress.IsDisposed)
             {
@@ -752,6 +761,13 @@ namespace FractalDraving
             }
             catch (Exception ex)
             {
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
                 newRenderingBitmap?.Dispose();
                 if (IsHandleCreated && !IsDisposed) MessageBox.Show($"Ошибка рендеринга: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }

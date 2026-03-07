@@ -502,8 +502,9 @@ namespace FractalExplorer.Forms
             var renderEngineCopy = new NovaJuliaEngine();
             renderEngineCopy.CopyParametersFrom(_fractalEngine);
 
+            var threadCount = GetThreadCount();
             var tiles = GenerateTiles(canvas.Width, canvas.Height);
-            var dispatcher = new TileRenderDispatcher(tiles, GetThreadCount(), RenderPatternSettings.SelectedPattern);
+            var dispatcher = new TileRenderDispatcher(tiles, threadCount, RenderPatternSettings.SelectedPattern);
 
             if (pbRenderProgress.IsHandleCreated)
             {
@@ -521,7 +522,7 @@ namespace FractalExplorer.Forms
                     byte[] tileBuffer;
                     if (ssaaFactor > 1)
                     {
-                        tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, GetThreadCount(), out _);
+                        tileBuffer = renderEngineCopy.RenderSingleTileSSAA(tile, canvas.Width, canvas.Height, ssaaFactor, threadCount, out _);
                     }
                     else
                     {
@@ -611,6 +612,18 @@ namespace FractalExplorer.Forms
                     }
                 }
                 newRenderingBitmap.Dispose();
+            }
+            catch (Exception)
+            {
+                lock (_bitmapLock)
+                {
+                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    {
+                        _currentRenderingBitmap = null;
+                    }
+                }
+                newRenderingBitmap?.Dispose();
+                throw;
             }
             finally
             {
