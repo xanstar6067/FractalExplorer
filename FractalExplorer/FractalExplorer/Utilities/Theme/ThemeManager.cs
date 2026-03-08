@@ -6,6 +6,7 @@ namespace FractalExplorer.Utilities.Theme
     public static class ThemeManager
     {
         public const double NonTextUiContrastRatio = 3.0d;
+        public const double InteractiveStateMinDifferenceContrastRatio = 1.35d;
 
         private const string PreserveBackColorTag = "preserve-backcolor";
         public const string DefaultThemeId = "dark-modern-lab-green";
@@ -323,13 +324,38 @@ namespace FractalExplorer.Utilities.Theme
 
         public static Color GetInteractiveStateColor(Color background, bool hovered)
         {
-            Color accessibleAccent = GetAccessibleAccentOn(background, NonTextUiContrastRatio);
-            if (hovered)
+            (Color normal, Color hover) = GetInteractiveStateColors(background);
+            return hovered ? hover : normal;
+        }
+
+        public static (Color Normal, Color Hover) GetInteractiveStateColors(Color background)
+        {
+            Color hover = GetAccessibleAccentOn(background, NonTextUiContrastRatio);
+            Color normal = MixColors(hover, background, 0.35f);
+            double stateDifference = CalculateContrastRatio(normal, hover);
+            if (stateDifference >= InteractiveStateMinDifferenceContrastRatio)
             {
-                return accessibleAccent;
+                return (normal, hover);
             }
 
-            return MixColors(accessibleAccent, background, 0.35f);
+            double backgroundLuminance = CalculateRelativeLuminance(background);
+            Color hoverTarget = backgroundLuminance < 0.5d ? Color.White : Color.Black;
+
+            for (int iteration = 0; iteration < 8 && stateDifference < InteractiveStateMinDifferenceContrastRatio; iteration++)
+            {
+                normal = MixColors(normal, background, 0.45f);
+                stateDifference = CalculateContrastRatio(normal, hover);
+                if (stateDifference >= InteractiveStateMinDifferenceContrastRatio)
+                {
+                    break;
+                }
+
+                hover = MixColors(hover, hoverTarget, 0.22f);
+                hover = EnsureMinimumContrast(hover, background, NonTextUiContrastRatio);
+                stateDifference = CalculateContrastRatio(normal, hover);
+            }
+
+            return (normal, hover);
         }
 
         public static Color GetInteractiveBorderColor(Color background, bool hovered)
