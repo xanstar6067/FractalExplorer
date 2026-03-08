@@ -94,6 +94,7 @@ namespace FractalExplorer.Projects
         protected override void OnPostInitialize()
         {
             mandelbrotPreviewPanel.Visible = true;
+            SetMandelbrotPreviewInteractive(true);
             lblRe.Visible = true;
             nudRe.Visible = true;
             lblIm.Visible = true;

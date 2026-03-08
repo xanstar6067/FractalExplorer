@@ -145,6 +145,26 @@ namespace FractalDraving
         /// </summary>
         private string _baseTitle;
 
+        /// <summary>
+        /// Подсказка для интерактивного предпросмотра множества.
+        /// </summary>
+        private Label _previewInteractionHintLabel;
+
+        /// <summary>
+        /// Обертка-рамка вокруг канваса предпросмотра для акцентирования интерактивности.
+        /// </summary>
+        private Panel _previewCanvasBorderPanel;
+
+        /// <summary>
+        /// Флаг наведения курсора на канвас предпросмотра.
+        /// </summary>
+        private bool _isPreviewCanvasHovered;
+
+        /// <summary>
+        /// Обработчик изменения темы, применяющий стили интерактивного предпросмотра.
+        /// </summary>
+        private EventHandler? _previewThemeChangedHandler;
+
         #endregion
 
         #region Constructor
@@ -156,8 +176,107 @@ namespace FractalDraving
         {
             InitializeComponent();
             ThemeManager.RegisterForm(this);
+            InitializePreviewCanvasInteractionUi();
             _centerX = InitialCenterX;
             _centerY = InitialCenterY;
+        }
+
+        /// <summary>
+        /// Настраивает UI-элементы интерактивного предпросмотра множества Мандельброта.
+        /// </summary>
+        private void InitializePreviewCanvasInteractionUi()
+        {
+            _previewInteractionHintLabel = new Label
+            {
+                Dock = DockStyle.Top,
+                AutoSize = false,
+                Height = 20,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = "Кликните по изображению для выбора точки",
+                Padding = new Padding(0, 0, 0, 4),
+                Visible = false
+            };
+
+            _previewCanvasBorderPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1)
+            };
+
+            mandelbrotPreviewCanvas.BorderStyle = BorderStyle.None;
+            mandelbrotPreviewCanvas.Cursor = Cursors.Default;
+            mandelbrotPreviewCanvas.MouseEnter += MandelbrotPreviewCanvas_MouseEnter;
+            mandelbrotPreviewCanvas.MouseLeave += MandelbrotPreviewCanvas_MouseLeave;
+
+            mandelbrotPreviewPanel.Controls.Remove(mandelbrotPreviewCanvas);
+            _previewCanvasBorderPanel.Controls.Add(mandelbrotPreviewCanvas);
+            mandelbrotPreviewPanel.Controls.Add(_previewCanvasBorderPanel);
+            mandelbrotPreviewPanel.Controls.Add(_previewInteractionHintLabel);
+
+            _previewThemeChangedHandler = (_, _) => ApplyPreviewCanvasInteractiveStyles();
+            ThemeManager.ThemeChanged += _previewThemeChangedHandler;
+            ApplyPreviewCanvasInteractiveStyles();
+        }
+
+        /// <summary>
+        /// Включает или отключает акцентированное интерактивное оформление канваса предпросмотра.
+        /// </summary>
+        /// <param name="enabled">True, если предпросмотр в текущем фрактале интерактивен.</param>
+        protected void SetMandelbrotPreviewInteractive(bool enabled)
+        {
+            if (_previewInteractionHintLabel == null || _previewCanvasBorderPanel == null)
+            {
+                return;
+            }
+
+            _previewInteractionHintLabel.Visible = enabled;
+            if (!enabled)
+            {
+                _isPreviewCanvasHovered = false;
+            }
+
+            mandelbrotPreviewCanvas.Cursor = enabled ? Cursors.Cross : Cursors.Default;
+            ApplyPreviewCanvasInteractiveStyles();
+        }
+
+        private void MandelbrotPreviewCanvas_MouseEnter(object? sender, EventArgs e)
+        {
+            if (_previewInteractionHintLabel is null || !_previewInteractionHintLabel.Visible)
+            {
+                return;
+            }
+
+            _isPreviewCanvasHovered = true;
+            ApplyPreviewCanvasInteractiveStyles();
+        }
+
+        private void MandelbrotPreviewCanvas_MouseLeave(object? sender, EventArgs e)
+        {
+            if (_previewInteractionHintLabel is null || !_previewInteractionHintLabel.Visible)
+            {
+                return;
+            }
+
+            _isPreviewCanvasHovered = false;
+            ApplyPreviewCanvasInteractiveStyles();
+        }
+
+        private void ApplyPreviewCanvasInteractiveStyles()
+        {
+            if (_previewInteractionHintLabel == null || _previewCanvasBorderPanel == null)
+            {
+                return;
+            }
+
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            _previewInteractionHintLabel.ForeColor = theme.SecondaryText;
+            _previewInteractionHintLabel.BackColor = Color.Transparent;
+
+            bool interactiveEnabled = _previewInteractionHintLabel.Visible;
+            _previewCanvasBorderPanel.BackColor = interactiveEnabled
+                ? (_isPreviewCanvasHovered ? theme.AccentPrimary : theme.BorderColor)
+                : theme.BorderColor;
+            mandelbrotPreviewCanvas.BackColor = theme.ControlBackground;
         }
 
         #endregion
@@ -1262,6 +1381,12 @@ namespace FractalDraving
             {
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;
                 _renderVisualizer.Dispose();
+            }
+
+            if (_previewThemeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= _previewThemeChangedHandler;
+                _previewThemeChangedHandler = null;
             }
         }
 
