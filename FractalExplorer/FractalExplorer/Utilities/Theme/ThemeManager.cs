@@ -539,11 +539,6 @@ namespace FractalExplorer.Utilities.Theme
                 return string.Equals(stringTag, PreserveBackColorTag, StringComparison.OrdinalIgnoreCase);
             }
 
-            if (control.Tag is ValueTuple<int, string> taggedInfo)
-            {
-                return string.Equals(taggedInfo.Item2, PreserveBackColorTag, StringComparison.OrdinalIgnoreCase);
-            }
-
             return false;
         }
 
