@@ -862,7 +862,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             ThemeDefinition theme = ThemeManager.CurrentDefinition;
             hintLabel.ForeColor = theme.SecondaryText;
             hintLabel.BackColor = Color.Transparent;
-            canvasBorderPanel.BackColor = isCanvasHovered ? theme.AccentPrimary : theme.BorderColor;
+            Color borderBackground = canvasBorderPanel.Parent?.BackColor ?? theme.PanelBackground;
+            canvasBorderPanel.BackColor = ThemeManager.GetInteractiveStateColor(borderBackground, isCanvasHovered);
             displayPictureBox.BackColor = theme.ControlBackground;
         }
 

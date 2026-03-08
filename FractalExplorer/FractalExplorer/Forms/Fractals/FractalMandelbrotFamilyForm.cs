@@ -273,8 +273,9 @@ namespace FractalDraving
             _previewInteractionHintLabel.BackColor = Color.Transparent;
 
             bool interactiveEnabled = _previewInteractionHintLabel.Visible;
+            Color previewBorderBackground = _previewCanvasBorderPanel.Parent?.BackColor ?? theme.PanelBackground;
             _previewCanvasBorderPanel.BackColor = interactiveEnabled
-                ? (_isPreviewCanvasHovered ? theme.AccentPrimary : theme.BorderColor)
+                ? ThemeManager.GetInteractiveStateColor(previewBorderBackground, _isPreviewCanvasHovered)
                 : theme.BorderColor;
             mandelbrotPreviewCanvas.BackColor = theme.ControlBackground;
         }

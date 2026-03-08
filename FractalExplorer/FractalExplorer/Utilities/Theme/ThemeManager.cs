@@ -5,6 +5,8 @@ namespace FractalExplorer.Utilities.Theme
 {
     public static class ThemeManager
     {
+        public const double NonTextUiContrastRatio = 3.0d;
+
         private const string PreserveBackColorTag = "preserve-backcolor";
         public const string DefaultThemeId = "dark-modern-lab-green";
 
@@ -319,9 +321,9 @@ namespace FractalExplorer.Utilities.Theme
             form.Disposed += (_, _) => ThemeChanged -= handler;
         }
 
-        public static Color GetInteractiveBorderColor(Color background, bool hovered)
+        public static Color GetInteractiveStateColor(Color background, bool hovered)
         {
-            Color accessibleAccent = GetAccessibleAccentOn(background, 3.2d);
+            Color accessibleAccent = GetAccessibleAccentOn(background, NonTextUiContrastRatio);
             if (hovered)
             {
                 return accessibleAccent;
@@ -330,7 +332,12 @@ namespace FractalExplorer.Utilities.Theme
             return MixColors(accessibleAccent, background, 0.35f);
         }
 
-        public static Color GetAccessibleAccentOn(Color background, double minContrast = 3.0d)
+        public static Color GetInteractiveBorderColor(Color background, bool hovered)
+        {
+            return GetInteractiveStateColor(background, hovered);
+        }
+
+        public static Color GetAccessibleAccentOn(Color background, double minContrast = NonTextUiContrastRatio)
         {
             ThemeDefinition theme = CurrentDefinition;
             double backgroundLuminance = CalculateRelativeLuminance(background);
