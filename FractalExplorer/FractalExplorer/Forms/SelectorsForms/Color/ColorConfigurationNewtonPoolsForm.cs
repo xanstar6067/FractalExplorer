@@ -29,6 +29,7 @@ namespace FractalExplorer
         public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
             InitializeComponent();
+            EnableDoubleBuffering(panelPreview);
             _paletteManager = manager;
 
             ThemeManager.RegisterForm(this);
@@ -36,6 +37,13 @@ namespace FractalExplorer
             ThemeManager.ThemeChanged += _themeChangedHandler;
 
             FormClosing += ColorSetting_FormClosing;
+        }
+
+
+        private static void EnableDoubleBuffering(Control control)
+        {
+            var doubleBufferedProperty = typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            doubleBufferedProperty?.SetValue(control, true);
         }
 
         public void ShowWithRootCount(int rootCount)
@@ -349,57 +357,67 @@ namespace FractalExplorer
 
         private void panelPreview_MouseMove(object sender, MouseEventArgs e)
         {
-            if (!TryGetRootBoundsAtPreviewPoint(e.Location, out int rootIndex, out Rectangle rootBounds))
+            if (TryGetRootBoundsAtPreviewPoint(e.Location, out int rootIndex, out Rectangle rootBounds))
             {
-                if (TryGetBackgroundBoundsAtPreviewPoint(e.Location, out Rectangle backgroundBounds))
-                {
-                    bool backgroundHoverChanged = !_previewBackgroundHovered || _previewHoveredBounds != backgroundBounds;
-                    _previewHoveredRootIndex = null;
-                    _previewBackgroundHovered = true;
-                    _previewHoveredBounds = backgroundBounds;
-                    panelPreview.Cursor = _selectedPalette?.IsBuiltIn == false ? Cursors.Hand : Cursors.Default;
-                    toolTip1.SetToolTip(panelPreview, "Изменить цвет не сходящихся корней");
-
-                    if (backgroundHoverChanged)
-                    {
-                        panelPreview.Invalidate();
-                    }
-
-                    return;
-                }
-
-                if (_previewHoveredRootIndex.HasValue || _previewBackgroundHovered)
-                {
-                    ResetPreviewHoverState();
-                    panelPreview.Invalidate();
-                }
-
-                panelPreview.Cursor = Cursors.Default;
+                UpdatePreviewHoverState(rootIndex, false, rootBounds);
+                panelPreview.Cursor = _selectedPalette?.IsBuiltIn == false ? Cursors.Hand : Cursors.Default;
+                toolTip1.SetToolTip(panelPreview, $"Изменить цвет корня {rootIndex + 1}");
                 return;
             }
 
-            bool hoverChanged = _previewHoveredRootIndex != rootIndex || _previewHoveredBounds != rootBounds;
-            _previewHoveredRootIndex = rootIndex;
-            _previewBackgroundHovered = false;
-            _previewHoveredBounds = rootBounds;
-            panelPreview.Cursor = _selectedPalette?.IsBuiltIn == false ? Cursors.Hand : Cursors.Default;
-            toolTip1.SetToolTip(panelPreview, $"Изменить цвет корня {rootIndex + 1}");
-
-            if (hoverChanged)
+            if (TryGetBackgroundBoundsAtPreviewPoint(e.Location, out Rectangle backgroundBounds))
             {
-                panelPreview.Invalidate();
+                UpdatePreviewHoverState(null, true, backgroundBounds);
+                panelPreview.Cursor = _selectedPalette?.IsBuiltIn == false ? Cursors.Hand : Cursors.Default;
+                toolTip1.SetToolTip(panelPreview, "Изменить цвет не сходящихся корней");
+                return;
             }
+
+            UpdatePreviewHoverState(null, false, Rectangle.Empty);
+            panelPreview.Cursor = Cursors.Default;
+            toolTip1.SetToolTip(panelPreview, string.Empty);
         }
 
         private void panelPreview_MouseLeave(object sender, EventArgs e)
         {
-            if (_previewHoveredRootIndex.HasValue || _previewBackgroundHovered)
+            UpdatePreviewHoverState(null, false, Rectangle.Empty);
+            panelPreview.Cursor = Cursors.Default;
+            toolTip1.SetToolTip(panelPreview, string.Empty);
+        }
+
+        private void UpdatePreviewHoverState(int? hoveredRootIndex, bool backgroundHovered, Rectangle hoveredBounds)
+        {
+            bool stateUnchanged = _previewHoveredRootIndex == hoveredRootIndex
+                && _previewBackgroundHovered == backgroundHovered
+                && _previewHoveredBounds == hoveredBounds;
+
+            if (stateUnchanged)
             {
-                ResetPreviewHoverState();
-                panelPreview.Invalidate();
+                return;
             }
 
-            panelPreview.Cursor = Cursors.Default;
+            Rectangle previousBounds = _previewHoveredBounds;
+            _previewHoveredRootIndex = hoveredRootIndex;
+            _previewBackgroundHovered = backgroundHovered;
+            _previewHoveredBounds = hoveredBounds;
+
+            InvalidatePreviewBounds(previousBounds);
+            InvalidatePreviewBounds(_previewHoveredBounds);
+        }
+
+        private void InvalidatePreviewBounds(Rectangle bounds)
+        {
+            if (bounds.IsEmpty)
+            {
+                return;
+            }
+
+            Rectangle invalidationRect = Rectangle.Inflate(bounds, 2, 2);
+            invalidationRect.Intersect(panelPreview.ClientRectangle);
+            if (!invalidationRect.IsEmpty)
+            {
+                panelPreview.Invalidate(invalidationRect);
+            }
         }
 
         private void panelPreview_MouseClick(object sender, MouseEventArgs e)
@@ -504,9 +522,7 @@ namespace FractalExplorer
 
         private void ResetPreviewHoverState()
         {
-            _previewHoveredRootIndex = null;
-            _previewBackgroundHovered = false;
-            _previewHoveredBounds = Rectangle.Empty;
+            UpdatePreviewHoverState(null, false, Rectangle.Empty);
             toolTip1.SetToolTip(panelPreview, string.Empty);
         }
 
