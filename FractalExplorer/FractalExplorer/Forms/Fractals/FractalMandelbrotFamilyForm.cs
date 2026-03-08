@@ -154,6 +154,7 @@ namespace FractalDraving
         /// Обертка-рамка вокруг канваса предпросмотра для акцентирования интерактивности.
         /// </summary>
         private Panel _previewCanvasBorderPanel;
+        private Panel _previewCanvasHoverBorderPanel;
 
         /// <summary>
         /// Флаг наведения курсора на канвас предпросмотра.
@@ -203,13 +204,21 @@ namespace FractalDraving
                 Padding = new Padding(1)
             };
 
+            _previewCanvasHoverBorderPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1),
+                Margin = new Padding(0)
+            };
+
             mandelbrotPreviewCanvas.BorderStyle = BorderStyle.None;
             mandelbrotPreviewCanvas.Cursor = Cursors.Default;
             mandelbrotPreviewCanvas.MouseEnter += MandelbrotPreviewCanvas_MouseEnter;
             mandelbrotPreviewCanvas.MouseLeave += MandelbrotPreviewCanvas_MouseLeave;
 
             mandelbrotPreviewPanel.Controls.Remove(mandelbrotPreviewCanvas);
-            _previewCanvasBorderPanel.Controls.Add(mandelbrotPreviewCanvas);
+            _previewCanvasHoverBorderPanel.Controls.Add(mandelbrotPreviewCanvas);
+            _previewCanvasBorderPanel.Controls.Add(_previewCanvasHoverBorderPanel);
             mandelbrotPreviewPanel.Controls.Add(_previewCanvasBorderPanel);
             mandelbrotPreviewPanel.Controls.Add(_previewInteractionHintLabel);
 
@@ -224,7 +233,7 @@ namespace FractalDraving
         /// <param name="enabled">True, если предпросмотр в текущем фрактале интерактивен.</param>
         protected void SetMandelbrotPreviewInteractive(bool enabled)
         {
-            if (_previewInteractionHintLabel == null || _previewCanvasBorderPanel == null)
+            if (_previewInteractionHintLabel == null || _previewCanvasBorderPanel == null || _previewCanvasHoverBorderPanel == null)
             {
                 return;
             }
@@ -263,7 +272,7 @@ namespace FractalDraving
 
         private void ApplyPreviewCanvasInteractiveStyles()
         {
-            if (_previewInteractionHintLabel == null || _previewCanvasBorderPanel == null)
+            if (_previewInteractionHintLabel == null || _previewCanvasBorderPanel == null || _previewCanvasHoverBorderPanel == null)
             {
                 return;
             }
@@ -274,9 +283,13 @@ namespace FractalDraving
 
             bool interactiveEnabled = _previewInteractionHintLabel.Visible;
             Color previewBorderBackground = _previewCanvasBorderPanel.Parent?.BackColor ?? theme.PanelBackground;
-            _previewCanvasBorderPanel.BackColor = interactiveEnabled
+            Color borderColor = interactiveEnabled
                 ? ThemeManager.GetInteractiveStateColor(previewBorderBackground, _isPreviewCanvasHovered)
                 : theme.BorderColor;
+            _previewCanvasBorderPanel.BackColor = borderColor;
+            _previewCanvasHoverBorderPanel.BackColor = interactiveEnabled && _isPreviewCanvasHovered
+                ? borderColor
+                : previewBorderBackground;
             mandelbrotPreviewCanvas.BackColor = theme.ControlBackground;
         }
 

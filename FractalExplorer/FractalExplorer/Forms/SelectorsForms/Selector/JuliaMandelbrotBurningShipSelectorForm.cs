@@ -45,6 +45,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         private PictureBox displayPictureBox;
         private Panel canvasBorderPanel;
+        private Panel canvasHoverBorderPanel;
         private Label hintLabel;
         private bool isCanvasHovered = false;
         private EventHandler? themeChangedHandler;
@@ -203,6 +204,13 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                 Margin = new Padding(0)
             };
 
+            canvasHoverBorderPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1),
+                Margin = new Padding(0)
+            };
+
             // Сохраняем допустимые границы
             _validMinRe = validMinRe;
             _validMaxRe = validMaxRe;
@@ -215,7 +223,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                 SizeMode = PictureBoxSizeMode.StretchImage,
                 Cursor = Cursors.Cross
             };
-            canvasBorderPanel.Controls.Add(displayPictureBox);
+            canvasHoverBorderPanel.Controls.Add(displayPictureBox);
+            canvasBorderPanel.Controls.Add(canvasHoverBorderPanel);
             layout.Controls.Add(hintLabel, 0, 0);
             layout.Controls.Add(canvasBorderPanel, 0, 1);
             Controls.Add(layout);
@@ -863,7 +872,9 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             hintLabel.ForeColor = theme.SecondaryText;
             hintLabel.BackColor = Color.Transparent;
             Color borderBackground = canvasBorderPanel.Parent?.BackColor ?? theme.PanelBackground;
-            canvasBorderPanel.BackColor = ThemeManager.GetInteractiveStateColor(borderBackground, isCanvasHovered);
+            Color borderColor = ThemeManager.GetInteractiveStateColor(borderBackground, isCanvasHovered);
+            canvasBorderPanel.BackColor = borderColor;
+            canvasHoverBorderPanel.BackColor = isCanvasHovered ? borderColor : borderBackground;
             displayPictureBox.BackColor = theme.ControlBackground;
         }
 

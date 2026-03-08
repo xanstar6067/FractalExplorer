@@ -70,6 +70,7 @@ namespace FractalExplorer.Forms
 
         private Label _mapPreviewHintLabel;
         private Panel _mapPreviewBorderPanel;
+        private Panel _mapPreviewHoverBorderPanel;
         private bool _isMapPreviewHovered;
         private EventHandler? _mapPreviewThemeChangedHandler;
         #endregion
@@ -102,13 +103,21 @@ namespace FractalExplorer.Forms
                 Padding = new Padding(1)
             };
 
+            _mapPreviewHoverBorderPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1),
+                Margin = new Padding(0)
+            };
+
             pbMandelbrotPreview.BorderStyle = BorderStyle.None;
             pbMandelbrotPreview.Cursor = Cursors.Cross;
             pbMandelbrotPreview.MouseEnter += PbMandelbrotPreview_MouseEnter;
             pbMandelbrotPreview.MouseLeave += PbMandelbrotPreview_MouseLeave;
 
             pnlMapPreview.Controls.Remove(pbMandelbrotPreview);
-            _mapPreviewBorderPanel.Controls.Add(pbMandelbrotPreview);
+            _mapPreviewHoverBorderPanel.Controls.Add(pbMandelbrotPreview);
+            _mapPreviewBorderPanel.Controls.Add(_mapPreviewHoverBorderPanel);
             pnlMapPreview.Controls.Add(_mapPreviewBorderPanel);
             pnlMapPreview.Controls.Add(_mapPreviewHintLabel);
 
@@ -131,7 +140,7 @@ namespace FractalExplorer.Forms
 
         private void ApplyMandelbrotPreviewInteractiveStyles()
         {
-            if (_mapPreviewHintLabel == null || _mapPreviewBorderPanel == null)
+            if (_mapPreviewHintLabel == null || _mapPreviewBorderPanel == null || _mapPreviewHoverBorderPanel == null)
             {
                 return;
             }
@@ -140,7 +149,9 @@ namespace FractalExplorer.Forms
             _mapPreviewHintLabel.ForeColor = theme.SecondaryText;
             _mapPreviewHintLabel.BackColor = Color.Transparent;
             Color previewBorderBackground = _mapPreviewBorderPanel.Parent?.BackColor ?? theme.PanelBackground;
-            _mapPreviewBorderPanel.BackColor = ThemeManager.GetInteractiveStateColor(previewBorderBackground, _isMapPreviewHovered);
+            Color borderColor = ThemeManager.GetInteractiveStateColor(previewBorderBackground, _isMapPreviewHovered);
+            _mapPreviewBorderPanel.BackColor = borderColor;
+            _mapPreviewHoverBorderPanel.BackColor = _isMapPreviewHovered ? borderColor : previewBorderBackground;
             pbMandelbrotPreview.BackColor = theme.ControlBackground;
         }
 

@@ -45,6 +45,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         private PictureBox mandelbrotDisplay;
         private Panel mandelbrotCanvasBorder;
+        private Panel mandelbrotCanvasHoverBorder;
         private Label mandelbrotHintLabel;
         private bool isCanvasHovered = false;
         private EventHandler? themeChangedHandler;
@@ -203,6 +204,13 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                 Margin = new Padding(0)
             };
 
+            mandelbrotCanvasHoverBorder = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1),
+                Margin = new Padding(0)
+            };
+
             // Сохраняем допустимые границы
             _validMinRe = validMinRe;
             _validMaxRe = validMaxRe;
@@ -215,7 +223,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                 SizeMode = PictureBoxSizeMode.StretchImage, // Используется для заполнения PictureBox, но рисование происходит в Paint
                 Cursor = Cursors.Cross
             };
-            mandelbrotCanvasBorder.Controls.Add(mandelbrotDisplay);
+            mandelbrotCanvasHoverBorder.Controls.Add(mandelbrotDisplay);
+            mandelbrotCanvasBorder.Controls.Add(mandelbrotCanvasHoverBorder);
             layout.Controls.Add(mandelbrotHintLabel, 0, 0);
             layout.Controls.Add(mandelbrotCanvasBorder, 0, 1);
             Controls.Add(layout);
@@ -882,7 +891,9 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             mandelbrotHintLabel.ForeColor = theme.SecondaryText;
             mandelbrotHintLabel.BackColor = Color.Transparent;
             Color borderBackground = mandelbrotCanvasBorder.Parent?.BackColor ?? theme.PanelBackground;
-            mandelbrotCanvasBorder.BackColor = ThemeManager.GetInteractiveStateColor(borderBackground, isCanvasHovered);
+            Color borderColor = ThemeManager.GetInteractiveStateColor(borderBackground, isCanvasHovered);
+            mandelbrotCanvasBorder.BackColor = borderColor;
+            mandelbrotCanvasHoverBorder.BackColor = isCanvasHovered ? borderColor : borderBackground;
             mandelbrotDisplay.BackColor = theme.ControlBackground;
         }
 

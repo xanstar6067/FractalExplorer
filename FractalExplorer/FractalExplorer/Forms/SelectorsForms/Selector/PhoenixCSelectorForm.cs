@@ -640,9 +640,13 @@ namespace FractalExplorer.SelectorsForms
         {
             bool isHovered = isPSliceTarget ? _isSlicePHovered : _isSliceQHovered;
             Color borderColor = ThemeManager.GetInteractiveStateColor(canvas.BackColor, isHovered);
+            float borderWidth = isHovered ? 2f : 1f;
 
-            using Pen borderPen = new Pen(borderColor, 1f);
-            graphics.DrawRectangle(borderPen, 0, 0, Math.Max(0, canvas.Width - 1), Math.Max(0, canvas.Height - 1));
+            using Pen borderPen = new Pen(borderColor, borderWidth);
+            int inset = (int)Math.Floor(borderWidth / 2f);
+            int width = Math.Max(1, canvas.Width - 1 - inset * 2);
+            int height = Math.Max(1, canvas.Height - 1 - inset * 2);
+            graphics.DrawRectangle(borderPen, inset, inset, width, height);
         }
 
         private void SliceCanvas_MouseEnter(object? sender, EventArgs e, bool isPSliceTarget)
