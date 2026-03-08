@@ -179,12 +179,12 @@
             lblTheme.AutoSize = true;
             lblTheme.Dock = DockStyle.Fill;
             lblTheme.Font = new Font("Segoe UI", 10F);
-            lblTheme.Location = new Point(0, 52);
+            lblTheme.Location = new Point(0, 62);
             lblTheme.Margin = new Padding(0, 10, 0, 5);
             lblTheme.Name = "lblTheme";
             lblTheme.Size = new Size(308, 19);
             lblTheme.TabIndex = 3;
-            lblTheme.Text = "Тема:";
+            lblTheme.Text = "Тема оформления приложения:";
             // 
             // cbTheme
             // 
@@ -192,7 +192,7 @@
             cbTheme.DropDownStyle = ComboBoxStyle.DropDownList;
             cbTheme.Font = new Font("Segoe UI", 11F);
             cbTheme.FormattingEnabled = true;
-            cbTheme.Location = new Point(0, 76);
+            cbTheme.Location = new Point(0, 86);
             cbTheme.Margin = new Padding(0);
             cbTheme.Name = "cbTheme";
             cbTheme.Size = new Size(308, 28);
@@ -203,7 +203,7 @@
             btnLaunchSelected.Dock = DockStyle.Fill;
             btnLaunchSelected.Enabled = false;
             btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            btnLaunchSelected.Location = new Point(0, 152);
+            btnLaunchSelected.Location = new Point(0, 157);
             btnLaunchSelected.Margin = new Padding(0, 5, 0, 0);
             btnLaunchSelected.Name = "btnLaunchSelected";
             btnLaunchSelected.Size = new Size(308, 45);
