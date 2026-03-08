@@ -108,7 +108,7 @@ namespace FractalExplorer.SelectorsForms
             // 
             nudQReal.DecimalPlaces = 4;
             nudQReal.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            nudQReal.Location = new Point(378, 435);
+            nudQReal.Location = new Point(507, 435);
             nudQReal.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
             nudQReal.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
             nudQReal.Name = "nudQReal";
@@ -119,7 +119,7 @@ namespace FractalExplorer.SelectorsForms
             // 
             nudQImaginary.DecimalPlaces = 4;
             nudQImaginary.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            nudQImaginary.Location = new Point(515, 435);
+            nudQImaginary.Location = new Point(378, 435);
             nudQImaginary.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
             nudQImaginary.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
             nudQImaginary.Name = "nudQImaginary";
@@ -147,7 +147,7 @@ namespace FractalExplorer.SelectorsForms
             // lblQReal
             // 
             lblQReal.AutoSize = true;
-            lblQReal.Location = new Point(375, 417);
+            lblQReal.Location = new Point(504, 417);
             lblQReal.Name = "lblQReal";
             lblQReal.Size = new Size(134, 15);
             lblQReal.TabIndex = 10;
@@ -156,7 +156,7 @@ namespace FractalExplorer.SelectorsForms
             // lblQImaginary
             // 
             lblQImaginary.AutoSize = true;
-            lblQImaginary.Location = new Point(515, 417);
+            lblQImaginary.Location = new Point(378, 417);
             lblQImaginary.Name = "lblQImaginary";
             lblQImaginary.Size = new Size(107, 15);
             lblQImaginary.TabIndex = 11;
