@@ -721,7 +721,7 @@ namespace FractalExplorer.SelectorsForms
         private void SliceCanvas_MouseClick(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             PictureBox canvas = sender as PictureBox;
-            if (e.Button != MouseButtons.Left || canvas.Width <= 0 || canvas.Height <= 0)
+            if (e.Button != MouseButtons.Right || canvas.Width <= 0 || canvas.Height <= 0)
             {
                 return;
             }
@@ -835,7 +835,7 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
         private void SliceCanvas_MouseDown(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Middle)
             {
                 if (isPSliceTarget)
                 {
@@ -847,7 +847,10 @@ namespace FractalExplorer.SelectorsForms
                     _panningSliceQ = true;
                     _panStartSliceQ = e.Location;
                 }
-                (sender as PictureBox).Cursor = Cursors.Hand; // Меняем курсор на руку, чтобы показать режим панорамирования.
+                if (sender is PictureBox canvas)
+                {
+                    canvas.Cursor = Cursors.Hand; // Меняем курсор на руку, чтобы показать режим панорамирования.
+                }
             }
         }
 
@@ -907,6 +910,11 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
         private void SliceCanvas_MouseUp(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
+            if (e.Button != MouseButtons.Middle)
+            {
+                return;
+            }
+
             bool wasPanning;
             var timerToStart = isPSliceTarget ? _renderDebounceTimerSliceP : _renderDebounceTimerSliceQ;
 
@@ -921,7 +929,12 @@ namespace FractalExplorer.SelectorsForms
                 _panningSliceQ = false;
             }
 
-            (sender as PictureBox).Cursor = Cursors.Cross; // Возвращаем курсор выбора.
+            if (!(sender is PictureBox canvas))
+            {
+                return;
+            }
+
+            canvas.Cursor = Cursors.Cross; // Возвращаем курсор выбора.
 
             if (wasPanning)
             {

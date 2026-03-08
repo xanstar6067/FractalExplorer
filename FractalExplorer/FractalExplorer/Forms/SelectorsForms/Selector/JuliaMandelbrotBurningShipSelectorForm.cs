@@ -193,7 +193,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 AutoSize = true,
                 Margin = new Padding(0, 0, 0, 8),
-                Text = "Кликните по изображению для выбора точки"
+                Text = "ПКМ: выбор точки C, зажмите колесо: панорамирование, колесо: масштаб"
             };
 
             canvasBorderPanel = new Panel
@@ -558,7 +558,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="e">Аргументы события мыши.</param>
         private void DisplayPictureBox_MouseClick(object sender, MouseEventArgs e)
         {
-            if (e.Button != MouseButtons.Left || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
+            if (e.Button != MouseButtons.Right || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
             {
                 return;
             }
@@ -778,7 +778,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="e">Аргументы события мыши.</param>
         private void DisplayPictureBox_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Middle)
             {
                 panning = true;
                 panStart = e.Location;
@@ -838,7 +838,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="e">Аргументы события мыши.</param>
         private void DisplayPictureBox_MouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Middle)
             {
                 panning = false;
                 displayPictureBox.Cursor = Cursors.Cross;

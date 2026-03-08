@@ -67,14 +67,80 @@ namespace FractalExplorer.Forms
         private const double MAP_MAX_RE = 2.0;
         private const double MAP_MIN_IM = -2.0;
         private const double MAP_MAX_IM = 2.0;
+
+        private Label _mapPreviewHintLabel;
+        private Panel _mapPreviewBorderPanel;
+        private bool _isMapPreviewHovered;
+        private EventHandler? _mapPreviewThemeChangedHandler;
         #endregion
 
         public FractalNovaJuliaForm()
         {
             InitializeComponent();
             ThemeManager.RegisterForm(this);
+            InitializeMandelbrotPreviewInteractionUi();
             this.Load += FractalNovaJuliaForm_Load;
             this.FormClosed += FractalNovaJuliaForm_FormClosed;
+        }
+
+
+        private void InitializeMandelbrotPreviewInteractionUi()
+        {
+            _mapPreviewHintLabel = new Label
+            {
+                Dock = DockStyle.Top,
+                AutoSize = false,
+                Height = 20,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = "Кликните по изображению для выбора точки",
+                Padding = new Padding(0, 0, 0, 4)
+            };
+
+            _mapPreviewBorderPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1)
+            };
+
+            pbMandelbrotPreview.BorderStyle = BorderStyle.None;
+            pbMandelbrotPreview.Cursor = Cursors.Cross;
+            pbMandelbrotPreview.MouseEnter += PbMandelbrotPreview_MouseEnter;
+            pbMandelbrotPreview.MouseLeave += PbMandelbrotPreview_MouseLeave;
+
+            pnlMapPreview.Controls.Remove(pbMandelbrotPreview);
+            _mapPreviewBorderPanel.Controls.Add(pbMandelbrotPreview);
+            pnlMapPreview.Controls.Add(_mapPreviewBorderPanel);
+            pnlMapPreview.Controls.Add(_mapPreviewHintLabel);
+
+            _mapPreviewThemeChangedHandler = (_, _) => ApplyMandelbrotPreviewInteractiveStyles();
+            ThemeManager.ThemeChanged += _mapPreviewThemeChangedHandler;
+            ApplyMandelbrotPreviewInteractiveStyles();
+        }
+
+        private void PbMandelbrotPreview_MouseEnter(object? sender, EventArgs e)
+        {
+            _isMapPreviewHovered = true;
+            ApplyMandelbrotPreviewInteractiveStyles();
+        }
+
+        private void PbMandelbrotPreview_MouseLeave(object? sender, EventArgs e)
+        {
+            _isMapPreviewHovered = false;
+            ApplyMandelbrotPreviewInteractiveStyles();
+        }
+
+        private void ApplyMandelbrotPreviewInteractiveStyles()
+        {
+            if (_mapPreviewHintLabel == null || _mapPreviewBorderPanel == null)
+            {
+                return;
+            }
+
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            _mapPreviewHintLabel.ForeColor = theme.SecondaryText;
+            _mapPreviewHintLabel.BackColor = Color.Transparent;
+            _mapPreviewBorderPanel.BackColor = _isMapPreviewHovered ? theme.AccentPrimary : theme.BorderColor;
+            pbMandelbrotPreview.BackColor = theme.ControlBackground;
         }
 
         #region Initialization
@@ -1001,6 +1067,12 @@ namespace FractalExplorer.Forms
                 _renderVisualizer.Dispose();
             }
             _colorConfigForm?.Close();
+
+            if (_mapPreviewThemeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= _mapPreviewThemeChangedHandler;
+                _mapPreviewThemeChangedHandler = null;
+            }
         }
         #endregion
 
