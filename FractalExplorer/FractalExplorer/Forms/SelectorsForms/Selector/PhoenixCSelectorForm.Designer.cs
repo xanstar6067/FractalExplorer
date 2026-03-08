@@ -40,6 +40,7 @@ namespace FractalExplorer.SelectorsForms
             progressBarSliceQ = new ProgressBar();
             lblSlicePHint = new Label();
             lblSliceQHint = new Label();
+            chkAdvancedMode = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)sliceCanvasP).BeginInit();
             ((System.ComponentModel.ISupportInitialize)sliceCanvasQ).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudPReal).BeginInit();
@@ -71,18 +72,18 @@ namespace FractalExplorer.SelectorsForms
             lblSliceP.AutoSize = true;
             lblSliceP.Location = new Point(12, 9);
             lblSliceP.Name = "lblSliceP";
-            lblSliceP.Size = new Size(175, 15);
+            lblSliceP.Size = new Size(281, 15);
             lblSliceP.TabIndex = 2;
-            lblSliceP.Text = "Срез по C1.P (Q фиксировано)";
+            lblSliceP.Text = "Срез C1 по оси P (фиксирована мнимая часть C1)";
             // 
             // lblSliceQ
             // 
             lblSliceQ.AutoSize = true;
             lblSliceQ.Location = new Point(375, 9);
             lblSliceQ.Name = "lblSliceQ";
-            lblSliceQ.Size = new Size(175, 15);
+            lblSliceQ.Size = new Size(278, 15);
             lblSliceQ.TabIndex = 3;
-            lblSliceQ.Text = "Срез по C1.Q (P фиксировано)";
+            lblSliceQ.Text = "Срез C1 по оси Q (фиксирована действительная часть C1)";
             // 
             // nudPReal
             // 
@@ -135,7 +136,7 @@ namespace FractalExplorer.SelectorsForms
             lblPReal.Name = "lblPReal";
             lblPReal.Size = new Size(58, 15);
             lblPReal.TabIndex = 8;
-            lblPReal.Text = "C1.P (Re):";
+            lblPReal.Text = "Параметр C1 (Re):";
             // 
             // lblPImaginary
             // 
@@ -144,7 +145,7 @@ namespace FractalExplorer.SelectorsForms
             lblPImaginary.Name = "lblPImaginary";
             lblPImaginary.Size = new Size(59, 15);
             lblPImaginary.TabIndex = 9;
-            lblPImaginary.Text = "C1.P (Im):";
+            lblPImaginary.Text = "Координата оси P (Im):";
             // 
             // lblQReal
             // 
@@ -153,7 +154,7 @@ namespace FractalExplorer.SelectorsForms
             lblQReal.Name = "lblQReal";
             lblQReal.Size = new Size(60, 15);
             lblQReal.TabIndex = 10;
-            lblQReal.Text = "C1.Q (Re):";
+            lblQReal.Text = "Координата оси Q (Re):";
             // 
             // lblQImaginary
             // 
@@ -162,7 +163,7 @@ namespace FractalExplorer.SelectorsForms
             lblQImaginary.Name = "lblQImaginary";
             lblQImaginary.Size = new Size(61, 15);
             lblQImaginary.TabIndex = 11;
-            lblQImaginary.Text = "C1.Q (Im):";
+            lblQImaginary.Text = "Параметр C1 (Im):";
             // 
             // btnApply
             // 
@@ -224,24 +225,36 @@ namespace FractalExplorer.SelectorsForms
             lblSlicePHint.AutoSize = true;
             lblSlicePHint.Location = new Point(12, 30);
             lblSlicePHint.Name = "lblSlicePHint";
-            lblSlicePHint.Size = new Size(278, 15);
+            lblSlicePHint.Size = new Size(342, 15);
             lblSlicePHint.TabIndex = 18;
-            lblSlicePHint.Text = "Кликните по изображению для выбора точки";
+            lblSlicePHint.Text = "ЛКМ — выбрать точку, колесо — масштаб, зажмите ЛКМ для панорамирования";
             // 
             // lblSliceQHint
             // 
             lblSliceQHint.AutoSize = true;
             lblSliceQHint.Location = new Point(378, 30);
             lblSliceQHint.Name = "lblSliceQHint";
-            lblSliceQHint.Size = new Size(278, 15);
+            lblSliceQHint.Size = new Size(342, 15);
             lblSliceQHint.TabIndex = 19;
-            lblSliceQHint.Text = "Кликните по изображению для выбора точки";
+            lblSliceQHint.Text = "ЛКМ — выбрать точку, колесо — масштаб, зажмите ЛКМ для панорамирования";
             // 
+            // 
+            // chkAdvancedMode
+            // 
+            chkAdvancedMode.AutoSize = true;
+            chkAdvancedMode.Location = new Point(12, 456);
+            chkAdvancedMode.Name = "chkAdvancedMode";
+            chkAdvancedMode.Size = new Size(183, 19);
+            chkAdvancedMode.TabIndex = 20;
+            chkAdvancedMode.Text = "Расширенный режим (оси P/Q)";
+            chkAdvancedMode.UseVisualStyleBackColor = true;
+            chkAdvancedMode.CheckedChanged += chkAdvancedMode_CheckedChanged;
             // PhoenixCSelectorForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(740, 508);
+            Controls.Add(chkAdvancedMode);
             Controls.Add(lblSliceQHint);
             Controls.Add(lblSlicePHint);
             Controls.Add(progressBarSliceQ);
@@ -268,7 +281,7 @@ namespace FractalExplorer.SelectorsForms
             Name = "PhoenixCSelectorForm";
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
-            Text = "Выбор параметров C1 для Феникса";
+            Text = "Настройка C1/C2 для фрактала Феникс";
             ((System.ComponentModel.ISupportInitialize)sliceCanvasP).EndInit();
             ((System.ComponentModel.ISupportInitialize)sliceCanvasQ).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudPReal).EndInit();
@@ -301,5 +314,6 @@ namespace FractalExplorer.SelectorsForms
         private System.Windows.Forms.ProgressBar progressBarSliceQ;
         private System.Windows.Forms.Label lblSlicePHint;
         private System.Windows.Forms.Label lblSliceQHint;
+        private System.Windows.Forms.CheckBox chkAdvancedMode;
     }
 }

@@ -108,6 +108,8 @@ namespace FractalExplorer.SelectorsForms
             nudQReal.ValueChanged += NudValues_Changed;
             nudQImaginary.ValueChanged += NudValues_Changed;
 
+            ConfigureTooltips();
+            ApplyBasicMode(isAdvanced: false);
             UpdateFixedValueLabels();
         }
 
@@ -163,6 +165,35 @@ namespace FractalExplorer.SelectorsForms
             var pb = isPSliceTarget ? progressBarSliceP : progressBarSliceQ;
             pb.Visible = false; // Скрываем прогресс-бар по умолчанию.
         }
+        /// <summary>
+        /// Настраивает всплывающие подсказки для обозначений P/Q и взаимодействия с канвасом.
+        /// </summary>
+        private void ConfigureTooltips()
+        {
+            toolTipSelector.SetToolTip(lblSliceP, "Ось P: по горизонтали — Re(C1), по вертикали — служебная ось визуализации Im(z0).");
+            toolTipSelector.SetToolTip(lblSliceQ, "Ось Q: по горизонтали — служебная ось визуализации Re(z0), по вертикали — Im(C1).");
+            toolTipSelector.SetToolTip(lblPImaginary, "Служебная координата для среза P (мнимая часть z0), не является отдельным параметром C2.");
+            toolTipSelector.SetToolTip(lblQReal, "Служебная координата для среза Q (действительная часть z0), не является отдельным параметром C2.");
+            toolTipSelector.SetToolTip(sliceCanvasP, "ЛКМ — выбрать точку C1 на срезе P. Колесо — масштаб, перетаскивание ЛКМ — панорамирование.");
+            toolTipSelector.SetToolTip(sliceCanvasQ, "ЛКМ — выбрать точку C1 на срезе Q. Колесо — масштаб, перетаскивание ЛКМ — панорамирование.");
+        }
+
+        /// <summary>
+        /// Переключает видимость элементов расширенного режима.
+        /// </summary>
+        private void ApplyBasicMode(bool isAdvanced)
+        {
+            nudPImaginary.Visible = isAdvanced;
+            nudQReal.Visible = isAdvanced;
+            lblPImaginary.Visible = isAdvanced;
+            lblQReal.Visible = isAdvanced;
+        }
+
+        private void chkAdvancedMode_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyBasicMode(chkAdvancedMode.Checked);
+        }
+
         #endregion
 
         #region UI Update and Value Handling
