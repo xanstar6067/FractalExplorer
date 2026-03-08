@@ -139,6 +139,8 @@ namespace FractalExplorer.Utilities.Theme
         private static readonly Dictionary<string, ThemeDefinition> CustomThemesById = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<Control, ControlEventHandler> ControlAddedHandlers = new();
         private static readonly Dictionary<ComboBox, DrawItemEventHandler> ComboBoxDrawHandlers = new();
+        private static readonly Dictionary<CheckBox, PaintEventHandler> CheckBoxPaintHandlers = new();
+        private static readonly Dictionary<CheckBox, EventHandler> CheckBoxRefreshHandlers = new();
 
         private static readonly Dictionary<string, string> LegacyThemeNameMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -599,6 +601,119 @@ namespace FractalExplorer.Utilities.Theme
         {
             checkBox.BackColor = theme.PanelBackground;
             checkBox.ForeColor = theme.PrimaryText;
+
+            AttachDisabledCheckBoxTextRenderer(checkBox);
+            checkBox.Invalidate();
+        }
+
+        private static void AttachDisabledCheckBoxTextRenderer(CheckBox checkBox)
+        {
+            if (!CheckBoxPaintHandlers.TryGetValue(checkBox, out PaintEventHandler? paintHandler))
+            {
+                paintHandler = (_, args) => DrawCheckBoxDisabledTextOverride(checkBox, args, CurrentDefinition);
+                CheckBoxPaintHandlers[checkBox] = paintHandler;
+                checkBox.Paint += paintHandler;
+                checkBox.Disposed += (_, _) => UnregisterCheckBoxHandlers(checkBox);
+            }
+
+            if (!CheckBoxRefreshHandlers.TryGetValue(checkBox, out EventHandler? refreshHandler))
+            {
+                refreshHandler = (_, _) => checkBox.Invalidate();
+                CheckBoxRefreshHandlers[checkBox] = refreshHandler;
+                checkBox.EnabledChanged += refreshHandler;
+                checkBox.TextChanged += refreshHandler;
+                checkBox.AppearanceChanged += refreshHandler;
+                checkBox.SizeChanged += refreshHandler;
+                checkBox.RightToLeftChanged += refreshHandler;
+                checkBox.FontChanged += refreshHandler;
+            }
+        }
+
+        private static void DrawCheckBoxDisabledTextOverride(CheckBox checkBox, PaintEventArgs args, ThemeDefinition theme)
+        {
+            if (checkBox.Enabled || string.IsNullOrEmpty(checkBox.Text))
+            {
+                return;
+            }
+
+            Color disabledTextColor = MixColors(theme.PrimaryText, theme.PanelBackground, 0.58f);
+            Rectangle textBounds = GetCheckBoxTextBounds(checkBox, args.Graphics);
+            if (textBounds.Width <= 0 || textBounds.Height <= 0)
+            {
+                return;
+            }
+
+            using SolidBrush backgroundBrush = new(checkBox.BackColor);
+            args.Graphics.FillRectangle(backgroundBrush, textBounds);
+
+            TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+            if (checkBox.RightToLeft == RightToLeft.Yes)
+            {
+                flags |= TextFormatFlags.RightToLeft;
+            }
+
+            if (IsCheckGlyphOnRight(checkBox.CheckAlign))
+            {
+                flags |= TextFormatFlags.Right;
+            }
+            else
+            {
+                flags |= TextFormatFlags.Left;
+            }
+
+            TextRenderer.DrawText(args.Graphics, checkBox.Text, checkBox.Font, textBounds, disabledTextColor, flags);
+        }
+
+        private static Rectangle GetCheckBoxTextBounds(CheckBox checkBox, Graphics graphics)
+        {
+            Size glyphSize = CheckBoxRenderer.GetGlyphSize(graphics, System.Windows.Forms.VisualStyles.CheckBoxState.UncheckedNormal);
+            int spacing = 4;
+            Rectangle client = checkBox.ClientRectangle;
+
+            if (IsCheckGlyphOnRight(checkBox.CheckAlign))
+            {
+                return new Rectangle(client.Left, client.Top, Math.Max(0, client.Width - glyphSize.Width - spacing), client.Height);
+            }
+
+            return new Rectangle(client.Left + glyphSize.Width + spacing, client.Top, Math.Max(0, client.Width - glyphSize.Width - spacing), client.Height);
+        }
+
+        private static bool IsCheckGlyphOnRight(ContentAlignment checkAlign)
+        {
+            return checkAlign == ContentAlignment.TopRight ||
+                   checkAlign == ContentAlignment.MiddleRight ||
+                   checkAlign == ContentAlignment.BottomRight;
+        }
+
+        private static void UnregisterCheckBoxHandlers(CheckBox checkBox)
+        {
+            if (CheckBoxPaintHandlers.TryGetValue(checkBox, out PaintEventHandler? paintHandler))
+            {
+                checkBox.Paint -= paintHandler;
+                CheckBoxPaintHandlers.Remove(checkBox);
+            }
+
+            if (CheckBoxRefreshHandlers.TryGetValue(checkBox, out EventHandler? refreshHandler))
+            {
+                checkBox.EnabledChanged -= refreshHandler;
+                checkBox.TextChanged -= refreshHandler;
+                checkBox.AppearanceChanged -= refreshHandler;
+                checkBox.SizeChanged -= refreshHandler;
+                checkBox.RightToLeftChanged -= refreshHandler;
+                checkBox.FontChanged -= refreshHandler;
+                CheckBoxRefreshHandlers.Remove(checkBox);
+            }
+        }
+
+        private static Color MixColors(Color source, Color target, float targetWeight)
+        {
+            float clampedWeight = targetWeight < 0f ? 0f : targetWeight > 1f ? 1f : targetWeight;
+            float sourceWeight = 1f - clampedWeight;
+
+            return Color.FromArgb(
+                (int)Math.Round(source.R * sourceWeight + target.R * clampedWeight),
+                (int)Math.Round(source.G * sourceWeight + target.G * clampedWeight),
+                (int)Math.Round(source.B * sourceWeight + target.B * clampedWeight));
         }
 
         private static void DrawComboBoxItem(ComboBox comboBox, DrawItemEventArgs args, ThemeDefinition theme)
