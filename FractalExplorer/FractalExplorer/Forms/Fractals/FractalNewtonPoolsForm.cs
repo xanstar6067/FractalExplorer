@@ -37,6 +37,7 @@ namespace FractalExplorer
         /// Компонент для визуализации процесса рендеринга плиток.
         /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
+        private EventHandler? _themeChangedHandler;
 
         /// <summary>
         /// Менеджер палитр, специфичный для фракталов Ньютона.
@@ -231,8 +232,18 @@ namespace FractalExplorer
             cbThreads.SelectedIndexChanged += (s, e) => ScheduleRender();
             nudZoom.ValueChanged += (s, e) => { _zoom = (double)nudZoom.Value; ScheduleRender(); };
             cbSelector.SelectedIndexChanged += cbSelector_SelectedIndexChanged;
-            richTextInput.TextChanged += (s, e) => ScheduleRender();
+            richTextInput.TextChanged += (s, e) => UpdateFormulaAccentState();
+            btnApplyFormula.Click += btnApplyFormula_Click;
             btnRender.Click += (s, e) => ScheduleRender();
+
+            toolTipFormula.SetToolTip(richTextInput,
+                "Синтаксис: используйте z, числа, i, +, -, *, /, ^ и скобки.\n" +
+                "Пример: (z^3-1)/(z^2+1)");
+            toolTipFormula.SetToolTip(lblFormulaExample, "Поддерживаются комплексные коэффициенты, например: (2+3*i)*z^2 - 1");
+
+            _themeChangedHandler = (_, _) => ApplyFormulaInputTheme();
+            ThemeManager.ThemeChanged += _themeChangedHandler;
+            ApplyFormulaInputTheme();
 
             fractal_bitmap.MouseWheel += Canvas_MouseWheel;
             fractal_bitmap.MouseDown += Canvas_MouseDown;
@@ -247,6 +258,42 @@ namespace FractalExplorer
 
             ApplyActivePalette();
             ScheduleRender();
+        }
+
+        private void btnApplyFormula_Click(object? sender, EventArgs e)
+        {
+            if (!_engine.SetFormula(richTextInput.Text, out string debugInfo))
+            {
+                richTextDebugOutput.Text = debugInfo;
+                MessageBox.Show("Проверьте формулу: есть синтаксическая ошибка.", "Ошибка формулы", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                UpdateFormulaAccentState();
+                return;
+            }
+
+            richTextDebugOutput.Text = debugInfo;
+            ScheduleRender();
+            UpdateFormulaAccentState();
+        }
+
+        private void ApplyFormulaInputTheme()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+
+            pnlFormulaInput.BackColor = theme.InputBorderColor;
+            richTextInput.BackColor = theme.ControlBackground;
+            richTextInput.ForeColor = theme.PrimaryText;
+            lblFormulaExample.ForeColor = theme.SecondaryText;
+            lblFormula.ForeColor = theme.AccentPrimary;
+
+            UpdateFormulaAccentState();
+        }
+
+        private void UpdateFormulaAccentState()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            bool hasText = !string.IsNullOrWhiteSpace(richTextInput.Text);
+            lblFormulaExample.Visible = !hasText;
+            pnlFormulaInput.BackColor = hasText ? theme.InputBorderColor : theme.AccentSecondary;
         }
 
         #endregion
@@ -609,7 +656,11 @@ namespace FractalExplorer
         /// </summary>
         private void cbSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (cbSelector.SelectedIndex >= 0) richTextInput.Text = cbSelector.SelectedItem.ToString();
+            if (cbSelector.SelectedIndex >= 0)
+            {
+                richTextInput.Text = cbSelector.SelectedItem.ToString();
+                btnApplyFormula_Click(this, EventArgs.Empty);
+            }
         }
 
         #endregion
@@ -736,6 +787,11 @@ namespace FractalExplorer
             }
             _colorSettingsForm?.Close();
             _colorSettingsForm?.Dispose();
+            if (_themeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= _themeChangedHandler;
+                _themeChangedHandler = null;
+            }
             if (_renderVisualizer != null)
             {
                 _renderVisualizer.NeedsRedraw -= OnVisualizerNeedsRedraw;

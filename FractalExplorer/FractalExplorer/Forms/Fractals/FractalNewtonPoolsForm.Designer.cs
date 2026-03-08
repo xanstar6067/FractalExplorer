@@ -28,11 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NewtonPools));
             pnlControls = new TableLayoutPanel();
             lblFormula = new Label();
             cbSelector = new ComboBox();
+            pnlFormulaInput = new Panel();
             richTextInput = new RichTextBox();
+            lblFormulaExample = new Label();
+            btnApplyFormula = new Button();
             nudIterations = new NumericUpDown();
             lblIterations = new Label();
             nudZoom = new NumericUpDown();
@@ -48,7 +52,9 @@
             lblDebug = new Label();
             richTextDebugOutput = new RichTextBox();
             fractal_bitmap = new PictureBox();
+            toolTipFormula = new ToolTip(components);
             pnlControls.SuspendLayout();
+            pnlFormulaInput.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).BeginInit();
@@ -61,28 +67,30 @@
             pnlControls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
             pnlControls.Controls.Add(lblFormula, 0, 0);
             pnlControls.Controls.Add(cbSelector, 0, 1);
-            pnlControls.Controls.Add(richTextInput, 0, 2);
-            pnlControls.Controls.Add(nudIterations, 0, 3);
-            pnlControls.Controls.Add(lblIterations, 1, 3);
-            pnlControls.Controls.Add(nudZoom, 0, 4);
-            pnlControls.Controls.Add(lblZoom, 1, 4);
-            pnlControls.Controls.Add(cbThreads, 0, 5);
-            pnlControls.Controls.Add(lblThreads, 1, 5);
-            pnlControls.Controls.Add(btnSave, 0, 6);
-            pnlControls.Controls.Add(btnConfigurePalette, 0, 7);
-            pnlControls.Controls.Add(btnRender, 0, 8);
-            pnlControls.Controls.Add(btnStateManager, 0, 9);
-            pnlControls.Controls.Add(lblProgress, 0, 10);
-            pnlControls.Controls.Add(progressBar, 0, 11);
-            pnlControls.Controls.Add(lblDebug, 0, 12);
-            pnlControls.Controls.Add(richTextDebugOutput, 0, 13);
+            pnlControls.Controls.Add(pnlFormulaInput, 0, 2);
+            pnlControls.Controls.Add(btnApplyFormula, 0, 3);
+            pnlControls.Controls.Add(nudIterations, 0, 4);
+            pnlControls.Controls.Add(lblIterations, 1, 4);
+            pnlControls.Controls.Add(nudZoom, 0, 5);
+            pnlControls.Controls.Add(lblZoom, 1, 5);
+            pnlControls.Controls.Add(cbThreads, 0, 6);
+            pnlControls.Controls.Add(lblThreads, 1, 6);
+            pnlControls.Controls.Add(btnSave, 0, 7);
+            pnlControls.Controls.Add(btnConfigurePalette, 0, 8);
+            pnlControls.Controls.Add(btnRender, 0, 9);
+            pnlControls.Controls.Add(btnStateManager, 0, 10);
+            pnlControls.Controls.Add(lblProgress, 0, 11);
+            pnlControls.Controls.Add(progressBar, 0, 12);
+            pnlControls.Controls.Add(lblDebug, 0, 13);
+            pnlControls.Controls.Add(richTextDebugOutput, 0, 14);
             pnlControls.Dock = DockStyle.Left;
             pnlControls.Location = new Point(0, 0);
             pnlControls.Name = "pnlControls";
-            pnlControls.RowCount = 15;
+            pnlControls.RowCount = 16;
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 25F));
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 115F));
+            pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
             pnlControls.RowStyles.Add(new RowStyle());
@@ -107,7 +115,7 @@
             lblFormula.Name = "lblFormula";
             lblFormula.Size = new Size(225, 25);
             lblFormula.TabIndex = 0;
-            lblFormula.Text = "Выбери полином/формулу";
+            lblFormula.Text = "Выбрать полином/формулу";
             lblFormula.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // cbSelector
@@ -121,37 +129,72 @@
             cbSelector.Size = new Size(219, 23);
             cbSelector.TabIndex = 1;
             // 
+            // pnlFormulaInput
+            // 
+            pnlFormulaInput.BorderStyle = BorderStyle.FixedSingle;
+            pnlControls.SetColumnSpan(pnlFormulaInput, 2);
+            pnlFormulaInput.Controls.Add(richTextInput);
+            pnlFormulaInput.Controls.Add(lblFormulaExample);
+            pnlFormulaInput.Dock = DockStyle.Fill;
+            pnlFormulaInput.Location = new Point(6, 57);
+            pnlFormulaInput.Margin = new Padding(6, 3, 6, 3);
+            pnlFormulaInput.Name = "pnlFormulaInput";
+            pnlFormulaInput.Padding = new Padding(6);
+            pnlFormulaInput.Size = new Size(219, 109);
+            pnlFormulaInput.TabIndex = 2;
+            // 
             // richTextInput
             // 
-            pnlControls.SetColumnSpan(richTextInput, 2);
+            richTextInput.BorderStyle = BorderStyle.None;
             richTextInput.Dock = DockStyle.Fill;
-            richTextInput.Location = new Point(6, 57);
-            richTextInput.Margin = new Padding(6, 3, 6, 3);
+            richTextInput.Location = new Point(6, 28);
             richTextInput.Name = "richTextInput";
-            richTextInput.Size = new Size(219, 109);
-            richTextInput.TabIndex = 2;
+            richTextInput.Size = new Size(205, 73);
+            richTextInput.TabIndex = 1;
             richTextInput.Text = "z^3 - 1";
+            // 
+            // lblFormulaExample
+            // 
+            lblFormulaExample.Dock = DockStyle.Top;
+            lblFormulaExample.Location = new Point(6, 6);
+            lblFormulaExample.Name = "lblFormulaExample";
+            lblFormulaExample.Size = new Size(205, 22);
+            lblFormulaExample.TabIndex = 0;
+            lblFormulaExample.Text = "Пример: z^3 - 1";
+            lblFormulaExample.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // btnApplyFormula
+            // 
+            pnlControls.SetColumnSpan(btnApplyFormula, 2);
+            btnApplyFormula.Dock = DockStyle.Fill;
+            btnApplyFormula.Location = new Point(6, 172);
+            btnApplyFormula.Margin = new Padding(6, 3, 6, 3);
+            btnApplyFormula.Name = "btnApplyFormula";
+            btnApplyFormula.Size = new Size(219, 23);
+            btnApplyFormula.TabIndex = 3;
+            btnApplyFormula.Text = "Применить формулу";
+            btnApplyFormula.UseVisualStyleBackColor = true;
             // 
             // nudIterations
             // 
             nudIterations.Dock = DockStyle.Fill;
-            nudIterations.Location = new Point(6, 172);
+            nudIterations.Location = new Point(6, 201);
             nudIterations.Margin = new Padding(6, 3, 3, 3);
             nudIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             nudIterations.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudIterations.Name = "nudIterations";
             nudIterations.Size = new Size(118, 23);
-            nudIterations.TabIndex = 3;
+            nudIterations.TabIndex = 4;
             nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
             // lblIterations
             // 
             lblIterations.AutoSize = true;
             lblIterations.Dock = DockStyle.Fill;
-            lblIterations.Location = new Point(130, 169);
+            lblIterations.Location = new Point(130, 198);
             lblIterations.Name = "lblIterations";
             lblIterations.Size = new Size(98, 29);
-            lblIterations.TabIndex = 4;
+            lblIterations.TabIndex = 5;
             lblIterations.Text = "Итерации";
             lblIterations.TextAlign = ContentAlignment.MiddleLeft;
             // 
@@ -160,22 +203,22 @@
             nudZoom.DecimalPlaces = 2;
             nudZoom.Dock = DockStyle.Fill;
             nudZoom.Increment = new decimal(new int[] { 10, 0, 0, 0 });
-            nudZoom.Location = new Point(6, 201);
+            nudZoom.Location = new Point(6, 230);
             nudZoom.Margin = new Padding(6, 3, 3, 3);
             nudZoom.Maximum = new decimal(new int[] { 268435455, 1042612833, 542101086, 0 });
             nudZoom.Name = "nudZoom";
             nudZoom.Size = new Size(118, 23);
-            nudZoom.TabIndex = 5;
+            nudZoom.TabIndex = 6;
             nudZoom.Value = new decimal(new int[] { 100, 0, 0, 0 });
             // 
             // lblZoom
             // 
             lblZoom.AutoSize = true;
             lblZoom.Dock = DockStyle.Fill;
-            lblZoom.Location = new Point(130, 198);
+            lblZoom.Location = new Point(130, 227);
             lblZoom.Name = "lblZoom";
             lblZoom.Size = new Size(98, 29);
-            lblZoom.TabIndex = 6;
+            lblZoom.TabIndex = 7;
             lblZoom.Text = "Приближение";
             lblZoom.TextAlign = ContentAlignment.MiddleLeft;
             // 
@@ -183,20 +226,20 @@
             // 
             cbThreads.Dock = DockStyle.Fill;
             cbThreads.FormattingEnabled = true;
-            cbThreads.Location = new Point(6, 230);
+            cbThreads.Location = new Point(6, 259);
             cbThreads.Margin = new Padding(6, 3, 3, 3);
             cbThreads.Name = "cbThreads";
             cbThreads.Size = new Size(118, 23);
-            cbThreads.TabIndex = 7;
+            cbThreads.TabIndex = 8;
             // 
             // lblThreads
             // 
             lblThreads.AutoSize = true;
             lblThreads.Dock = DockStyle.Fill;
-            lblThreads.Location = new Point(130, 227);
+            lblThreads.Location = new Point(130, 256);
             lblThreads.Name = "lblThreads";
             lblThreads.Size = new Size(98, 29);
-            lblThreads.TabIndex = 8;
+            lblThreads.TabIndex = 9;
             lblThreads.Text = "Потоки ЦП";
             lblThreads.TextAlign = ContentAlignment.MiddleLeft;
             // 
@@ -204,11 +247,11 @@
             // 
             pnlControls.SetColumnSpan(btnSave, 2);
             btnSave.Dock = DockStyle.Fill;
-            btnSave.Location = new Point(6, 259);
+            btnSave.Location = new Point(6, 288);
             btnSave.Margin = new Padding(6, 3, 6, 3);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(219, 39);
-            btnSave.TabIndex = 9;
+            btnSave.TabIndex = 10;
             btnSave.Text = "Сохранить изображение";
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnOpenSaveManager_Click;
@@ -217,11 +260,11 @@
             // 
             pnlControls.SetColumnSpan(btnConfigurePalette, 2);
             btnConfigurePalette.Dock = DockStyle.Fill;
-            btnConfigurePalette.Location = new Point(6, 304);
+            btnConfigurePalette.Location = new Point(6, 333);
             btnConfigurePalette.Margin = new Padding(6, 3, 6, 3);
             btnConfigurePalette.Name = "btnConfigurePalette";
             btnConfigurePalette.Size = new Size(219, 39);
-            btnConfigurePalette.TabIndex = 10;
+            btnConfigurePalette.TabIndex = 11;
             btnConfigurePalette.Text = "Настроить палитру";
             btnConfigurePalette.UseVisualStyleBackColor = true;
             // 
@@ -229,11 +272,11 @@
             // 
             pnlControls.SetColumnSpan(btnRender, 2);
             btnRender.Dock = DockStyle.Fill;
-            btnRender.Location = new Point(6, 349);
+            btnRender.Location = new Point(6, 378);
             btnRender.Margin = new Padding(6, 3, 6, 3);
             btnRender.Name = "btnRender";
             btnRender.Size = new Size(219, 39);
-            btnRender.TabIndex = 11;
+            btnRender.TabIndex = 12;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
             // 
@@ -241,11 +284,11 @@
             // 
             pnlControls.SetColumnSpan(btnStateManager, 2);
             btnStateManager.Dock = DockStyle.Fill;
-            btnStateManager.Location = new Point(6, 394);
+            btnStateManager.Location = new Point(6, 423);
             btnStateManager.Margin = new Padding(6, 3, 6, 3);
             btnStateManager.Name = "btnStateManager";
             btnStateManager.Size = new Size(219, 39);
-            btnStateManager.TabIndex = 12;
+            btnStateManager.TabIndex = 13;
             btnStateManager.Text = "Менеджер сохранений";
             btnStateManager.UseVisualStyleBackColor = true;
             btnStateManager.Click += btnStateManager_Click;
@@ -255,10 +298,10 @@
             lblProgress.AutoSize = true;
             pnlControls.SetColumnSpan(lblProgress, 2);
             lblProgress.Dock = DockStyle.Fill;
-            lblProgress.Location = new Point(3, 436);
+            lblProgress.Location = new Point(3, 465);
             lblProgress.Name = "lblProgress";
             lblProgress.Size = new Size(225, 20);
-            lblProgress.TabIndex = 13;
+            lblProgress.TabIndex = 14;
             lblProgress.Text = "Обработка";
             lblProgress.TextAlign = ContentAlignment.BottomCenter;
             // 
@@ -266,21 +309,21 @@
             // 
             pnlControls.SetColumnSpan(progressBar, 2);
             progressBar.Dock = DockStyle.Fill;
-            progressBar.Location = new Point(6, 459);
+            progressBar.Location = new Point(6, 488);
             progressBar.Margin = new Padding(6, 3, 6, 3);
             progressBar.Name = "progressBar";
             progressBar.Size = new Size(219, 24);
-            progressBar.TabIndex = 14;
+            progressBar.TabIndex = 15;
             // 
             // lblDebug
             // 
             lblDebug.AutoSize = true;
             pnlControls.SetColumnSpan(lblDebug, 2);
             lblDebug.Dock = DockStyle.Fill;
-            lblDebug.Location = new Point(3, 486);
+            lblDebug.Location = new Point(3, 515);
             lblDebug.Name = "lblDebug";
             lblDebug.Size = new Size(225, 20);
-            lblDebug.TabIndex = 15;
+            lblDebug.TabIndex = 16;
             lblDebug.Text = "Отладка";
             lblDebug.TextAlign = ContentAlignment.BottomCenter;
             // 
@@ -288,12 +331,12 @@
             // 
             pnlControls.SetColumnSpan(richTextDebugOutput, 2);
             richTextDebugOutput.Dock = DockStyle.Fill;
-            richTextDebugOutput.Location = new Point(6, 509);
+            richTextDebugOutput.Location = new Point(6, 538);
             richTextDebugOutput.Margin = new Padding(6, 3, 6, 3);
             richTextDebugOutput.Name = "richTextDebugOutput";
             richTextDebugOutput.ReadOnly = true;
-            richTextDebugOutput.Size = new Size(219, 104);
-            richTextDebugOutput.TabIndex = 16;
+            richTextDebugOutput.Size = new Size(219, 75);
+            richTextDebugOutput.TabIndex = 17;
             richTextDebugOutput.Text = "";
             // 
             // fractal_bitmap
@@ -318,6 +361,7 @@
             Text = "Бассейны Ньютона";
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
+            pnlFormulaInput.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).EndInit();
@@ -329,7 +373,10 @@
         private System.Windows.Forms.TableLayoutPanel pnlControls;
         private System.Windows.Forms.Label lblFormula;
         private System.Windows.Forms.ComboBox cbSelector;
+        private System.Windows.Forms.Panel pnlFormulaInput;
         private System.Windows.Forms.RichTextBox richTextInput;
+        private System.Windows.Forms.Label lblFormulaExample;
+        private System.Windows.Forms.Button btnApplyFormula;
         private System.Windows.Forms.NumericUpDown nudIterations;
         private System.Windows.Forms.Label lblIterations;
         private System.Windows.Forms.NumericUpDown nudZoom;
@@ -345,5 +392,6 @@
         private System.Windows.Forms.Label lblDebug;
         private System.Windows.Forms.RichTextBox richTextDebugOutput;
         private System.Windows.Forms.PictureBox fractal_bitmap;
+        private System.Windows.Forms.ToolTip toolTipFormula;
     }
 }
