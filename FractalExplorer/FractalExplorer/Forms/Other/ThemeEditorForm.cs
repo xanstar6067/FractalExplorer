@@ -214,10 +214,53 @@ namespace FractalExplorer.Forms.Other
             btnPreviewAction.FlatAppearance.BorderSize = 1;
             btnPreviewAction.FlatAppearance.BorderColor = previewTheme.BorderColor;
             btnPreviewAction.BackColor = previewTheme.AccentPrimary;
-            btnPreviewAction.ForeColor = previewTheme.PrimaryText;
+            btnPreviewAction.ForeColor = ResolvePreviewButtonTextColor(previewTheme, previewTheme.AccentPrimary);
 
             txtPreviewInput.BackColor = previewTheme.ControlBackground;
             txtPreviewInput.ForeColor = previewTheme.PrimaryText;
+        }
+
+        private static Color ResolvePreviewButtonTextColor(ThemeDefinition theme, Color buttonBackground)
+        {
+            if (!theme.Id.StartsWith("windows-system", StringComparison.OrdinalIgnoreCase))
+            {
+                return theme.PrimaryText;
+            }
+
+            const double minimumTextContrast = 4.5d;
+            if (CalculateContrastRatio(theme.PrimaryText, buttonBackground) >= minimumTextContrast)
+            {
+                return theme.PrimaryText;
+            }
+
+            double whiteContrast = CalculateContrastRatio(Color.White, buttonBackground);
+            double blackContrast = CalculateContrastRatio(Color.Black, buttonBackground);
+            return whiteContrast >= blackContrast ? Color.White : Color.Black;
+        }
+
+        private static double CalculateContrastRatio(Color first, Color second)
+        {
+            double firstLuminance = CalculateRelativeLuminance(first);
+            double secondLuminance = CalculateRelativeLuminance(second);
+            double lighter = Math.Max(firstLuminance, secondLuminance);
+            double darker = Math.Min(firstLuminance, secondLuminance);
+            return (lighter + 0.05d) / (darker + 0.05d);
+        }
+
+        private static double CalculateRelativeLuminance(Color color)
+        {
+            static double ConvertChannel(byte channel)
+            {
+                double normalized = channel / 255d;
+                return normalized <= 0.03928d
+                    ? normalized / 12.92d
+                    : Math.Pow((normalized + 0.055d) / 1.055d, 2.4d);
+            }
+
+            double red = ConvertChannel(color.R);
+            double green = ConvertChannel(color.G);
+            double blue = ConvertChannel(color.B);
+            return 0.2126d * red + 0.7152d * green + 0.0722d * blue;
         }
 
         private void UpdateControlsState()

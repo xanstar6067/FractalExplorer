@@ -591,7 +591,7 @@ namespace FractalExplorer.Utilities.Theme
             {
                 button.FlatAppearance.BorderColor = theme.BorderColor;
                 button.BackColor = isSecondaryAction ? theme.AccentSecondary : theme.AccentPrimary;
-                button.ForeColor = theme.PrimaryText;
+                button.ForeColor = ResolveButtonTextColor(theme, button.BackColor);
             }
             else
             {
@@ -601,6 +601,29 @@ namespace FractalExplorer.Utilities.Theme
             }
 
             button.Invalidate();
+        }
+
+        private static Color ResolveButtonTextColor(ThemeDefinition theme, Color buttonBackground)
+        {
+            if (!IsWindowsImportedTheme(theme))
+            {
+                return theme.PrimaryText;
+            }
+
+            const double minimumTextContrast = 4.5d;
+            if (CalculateContrastRatio(theme.PrimaryText, buttonBackground) >= minimumTextContrast)
+            {
+                return theme.PrimaryText;
+            }
+
+            double whiteContrast = CalculateContrastRatio(Color.White, buttonBackground);
+            double blackContrast = CalculateContrastRatio(Color.Black, buttonBackground);
+            return whiteContrast >= blackContrast ? Color.White : Color.Black;
+        }
+
+        private static bool IsWindowsImportedTheme(ThemeDefinition theme)
+        {
+            return theme.Id.StartsWith("windows-system", StringComparison.OrdinalIgnoreCase);
         }
 
         private static void AttachButtonRefreshHandler(Button button)
