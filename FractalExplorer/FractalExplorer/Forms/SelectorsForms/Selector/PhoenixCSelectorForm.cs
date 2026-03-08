@@ -679,9 +679,7 @@ namespace FractalExplorer.SelectorsForms
             ThemeDefinition theme = ThemeManager.CurrentDefinition;
 
             lblSlicePHint.ForeColor = theme.SecondaryText;
-            lblSliceQHint.ForeColor = theme.SecondaryText;
             lblSlicePHint.BackColor = Color.Transparent;
-            lblSliceQHint.BackColor = Color.Transparent;
 
             sliceCanvasP.BackColor = theme.ControlBackground;
             sliceCanvasQ.BackColor = theme.ControlBackground;
