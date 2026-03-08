@@ -1,293 +1,366 @@
-﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using Microsoft.VisualBasic; // Для Interaction.InputBox
-using FractalExplorer.Utilities.ColorPicking;
-
+﻿using FractalExplorer.Utilities.ColorPicking;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.Theme;
+using Microsoft.VisualBasic;
+using System.Drawing.Drawing2D;
+
 namespace FractalExplorer
 {
     /// <summary>
     /// Форма для настройки цветовых палитр для фракталов Ньютона.
-    /// Позволяет пользователю выбирать, изменять, сохранять и удалять палитры,
-    /// а также настраивать цвета для корней и фон, и режим градиента.
+    /// Совмещает общий UX редактора палитр (список, превью, стопы)
+    /// и специфику бассейнов Ньютона (корневые цвета + служебный фон).
     /// </summary>
     public partial class ColorConfigurationNewtonPoolsForm : Form
     {
-        #region Delegates and Events
-
-        /// <summary>
-        /// Делегат для события, возникающего при изменении активной палитры.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="activePalette">Активная палитра после изменения.</param>
         public delegate void PaletteChangedEventHandler(object sender, NewtonColorPalette activePalette);
-
-        /// <summary>
-        /// Событие, которое возникает при изменении активной палитры.
-        /// </summary>
         public event PaletteChangedEventHandler PaletteChanged;
 
-        #endregion
-
-        #region Fields
-
-        /// <summary>
-        /// Менеджер палитр, управляющий доступными палитрами Ньютона.
-        /// </summary>
-        private NewtonPaletteManager _paletteManager;
-
-        /// <summary>
-        /// Требуемое количество корней для текущей формулы фрактала,
-        /// используемое для отображения соответствующего количества пикеров цветов.
-        /// </summary>
-        private int _requiredRootCount;
-
-        /// <summary>
-        /// Флаг, указывающий, происходит ли изменение элементов UI программно,
-        /// чтобы избежать рекурсивных вызовов обработчиков событий.
-        /// </summary>
-        private bool _isProgrammaticChange = false;
+        private readonly NewtonPaletteManager _paletteManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
 
-        #endregion
+        private NewtonColorPalette? _selectedPalette;
+        private int _requiredRootCount;
+        private bool _isProgrammaticChange;
+        private EventHandler? _themeChangedHandler;
 
-        #region Constructor
-
-        /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationNewtonPoolsForm"/>.
-        /// </summary>
-        /// <param name="manager">Менеджер палитр для управления палитрами.</param>
         public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
             InitializeComponent();
             panelBackgroundColor.Tag = "preserve-backcolor";
-            ThemeManager.RegisterForm(this);
             _paletteManager = manager;
-            // Скрываем форму вместо закрытия при нажатии на кнопку закрытия окна
+
+            ThemeManager.RegisterForm(this);
+            _themeChangedHandler = (_, _) => ApplyNewtonPaletteThemeHints();
+            ThemeManager.ThemeChanged += _themeChangedHandler;
+
             FormClosing += ColorSetting_FormClosing;
         }
 
-        #endregion
-
-        #region Public Methods
-
-        /// <summary>
-        /// Отображает форму настроек палитры, устанавливая требуемое количество пикеров цветов
-        /// в соответствии с количеством найденных корней для фрактала Ньютона.
-        /// </summary>
-        /// <param name="rootCount">Количество корней для отображения.</param>
         public void ShowWithRootCount(int rootCount)
         {
-            _requiredRootCount = rootCount;
+            _requiredRootCount = Math.Max(0, rootCount);
             PopulatePaletteList();
             Show();
             Activate();
         }
 
-        #endregion
-
-        #region UI Update Methods
-
-        /// <summary>
-        /// Заполняет выпадающий список палитр и устанавливает активную палитру.
-        /// </summary>
         private void PopulatePaletteList()
         {
             _isProgrammaticChange = true;
-            cbPalettes.Items.Clear();
-            foreach (var palette in _paletteManager.Palettes)
+            lbPalettes.Items.Clear();
+            foreach (NewtonColorPalette palette in _paletteManager.Palettes)
             {
-                cbPalettes.Items.Add(palette.Name);
+                string displayName = palette.IsBuiltIn ? $"{palette.Name} [Встроенная]" : palette.Name;
+                lbPalettes.Items.Add(displayName);
             }
-            cbPalettes.SelectedItem = _paletteManager.ActivePalette.Name;
+
+            string activeName = _paletteManager.ActivePalette.IsBuiltIn
+                ? $"{_paletteManager.ActivePalette.Name} [Встроенная]"
+                : _paletteManager.ActivePalette.Name;
+            lbPalettes.SelectedItem = activeName;
             _isProgrammaticChange = false;
 
             RefreshUIFromPalette(_paletteManager.ActivePalette);
         }
 
-        /// <summary>
-        /// Обновляет элементы пользовательского интерфейса в соответствии с данными предоставленной палитры.
-        /// </summary>
-        /// <param name="palette">Палитра, данные которой будут использованы для обновления UI.</param>
         private void RefreshUIFromPalette(NewtonColorPalette palette)
         {
             _isProgrammaticChange = true;
+            _selectedPalette = palette;
 
-            // Обновляем состояние чекбокса градиента и цвета фона
+            txtName.Text = palette.Name;
             chkIsGradient.Checked = palette.IsGradient;
             panelBackgroundColor.BackColor = palette.BackgroundColor;
+            lblRootCountValue.Text = _requiredRootCount.ToString();
 
-            // Управляем доступностью кнопок сохранения и удаления
-            btnSave.Enabled = !palette.IsBuiltIn;
-            btnDelete.Enabled = !palette.IsBuiltIn;
+            List<Color> effectiveColors = BuildAutoAdjustedColors(palette, _requiredRootCount);
+            lbColorStops.Items.Clear();
+            for (int i = 0; i < effectiveColors.Count; i++)
+            {
+                Color color = effectiveColors[i];
+                lbColorStops.Items.Add($"Корень {i + 1}: #{color.R:X2}{color.G:X2}{color.B:X2}");
+            }
 
-            // Очищаем и заново заполняем панель с пикерами цветов корней
-            flpRootColorPickers.Controls.Clear();
             if (_requiredRootCount == 0)
             {
-                flpRootColorPickers.Controls.Add(new Label { Text = "Корни не найдены, цвета не требуются.", ForeColor = Color.Gray, AutoSize = true });
+                lbColorStops.Items.Add("Корни не найдены — используются только служебные оттенки.");
             }
-            else
-            {
-                // Используем цвета из палитры, если они есть, иначе генерируем гармонические цвета по умолчанию
-                List<Color> colorsToUse = palette.RootColors;
-                if (colorsToUse == null || colorsToUse.Count == 0)
-                {
-                    colorsToUse = GenerateHarmonicColors(_requiredRootCount);
-                }
 
-                for (int i = 0; i < _requiredRootCount; i++)
-                {
-                    // Зацикливаем цвета, если их количество меньше, чем количество корней
-                    Color color = colorsToUse[i % colorsToUse.Count];
-
-                    Panel colorPanel = new Panel
-                    {
-                        Size = new Size(25, 25),
-                        BorderStyle = BorderStyle.FixedSingle,
-                        BackColor = color,
-                        Tag = (i, "preserve-backcolor"), // Сохраняем индекс корня и признак сохранения цвета
-                        Cursor = Cursors.Hand,
-                        Margin = new Padding(5)
-                    };
-                    toolTip1.SetToolTip(colorPanel, $"Цвет для корня №{i + 1}\nНажмите, чтобы изменить");
-                    colorPanel.Click += RootColorPanel_Click;
-                    flpRootColorPickers.Controls.Add(colorPanel);
-                }
-            }
+            UpdateControlsState();
+            ApplyNewtonPaletteThemeHints();
+            panelPreview.Invalidate();
             _isProgrammaticChange = false;
         }
 
-        #endregion
-
-        #region Event Handlers
-
-        /// <summary>
-        /// Обработчик события изменения выбранного элемента в выпадающем списке палитр.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
-        private void cbPalettes_SelectedIndexChanged(object sender, EventArgs e)
+        private void UpdateControlsState()
         {
-            if (_isProgrammaticChange)
-            {
-                return;
-            }
+            bool hasPalette = _selectedPalette != null;
+            bool isCustom = hasPalette && !_selectedPalette!.IsBuiltIn;
 
-            string selectedName = cbPalettes.SelectedItem.ToString();
-            _paletteManager.ActivePalette = _paletteManager.Palettes.First(p => p.Name == selectedName);
-            RefreshUIFromPalette(_paletteManager.ActivePalette);
-            PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+            txtName.Enabled = isCustom;
+            chkIsGradient.Enabled = isCustom;
+            panelBackgroundColor.Enabled = isCustom;
+            panelBackgroundColor.Cursor = isCustom ? Cursors.Hand : Cursors.Default;
+
+            lbColorStops.Enabled = hasPalette;
+            btnAddColor.Enabled = isCustom;
+            btnEditColor.Enabled = isCustom && lbColorStops.SelectedIndex >= 0 && _requiredRootCount > 0;
+            btnRemoveColor.Enabled = isCustom && lbColorStops.SelectedIndex >= 0 && _requiredRootCount > 0;
+            btnAutoAdjustRoots.Enabled = isCustom;
+
+            btnSave.Enabled = isCustom;
+            btnDelete.Enabled = isCustom;
+            btnSaveAs.Enabled = hasPalette;
         }
 
-        /// <summary>
-        /// Обработчик события клика по панели выбора цвета для корня.
-        /// Открывает диалог выбора цвета и обновляет цвет корня в активной палитре.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
-        private void RootColorPanel_Click(object sender, EventArgs e)
+        private List<Color> BuildAutoAdjustedColors(NewtonColorPalette palette, int requiredCount)
         {
-            if (_paletteManager.ActivePalette.IsBuiltIn)
+            if (requiredCount <= 0)
             {
-                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                return new List<Color>();
             }
 
-            Panel clickedPanel = sender as Panel;
-            int colorIndex = clickedPanel.Tag is ValueTuple<int, string> taggedInfo
-                ? taggedInfo.Item1
-                : (int)clickedPanel.Tag;
+            List<Color> baseColors = palette.RootColors?.Count > 0
+                ? new List<Color>(palette.RootColors)
+                : new List<Color>();
 
-            Color initialColor = clickedPanel.BackColor;
-            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
+            List<Color> harmonic = GenerateHarmonicColors(requiredCount);
+            List<Color> result = new(requiredCount);
+
+            for (int i = 0; i < requiredCount; i++)
             {
-                clickedPanel.BackColor = selectedColor;
-
-                // Убеждаемся, что список цветов в палитре достаточно большой
-                while (_paletteManager.ActivePalette.RootColors.Count <= colorIndex)
+                if (i < baseColors.Count)
                 {
-                    _paletteManager.ActivePalette.RootColors.Add(Color.Black);
+                    result.Add(baseColors[i]);
                 }
-                _paletteManager.ActivePalette.RootColors[colorIndex] = selectedColor;
-                PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+                else
+                {
+                    result.Add(harmonic[i]);
+                }
+            }
+
+            return result;
+        }
+
+        private bool EnsureEditablePaletteOrWarn()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните её как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            return true;
+        }
+
+        private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_isProgrammaticChange || lbPalettes.SelectedItem is null)
+            {
+                return;
+            }
+
+            string selectedName = lbPalettes.SelectedItem.ToString()!.Replace(" [Встроенная]", string.Empty);
+            NewtonColorPalette selected = _paletteManager.Palettes.First(p => p.Name == selectedName);
+            _paletteManager.ActivePalette = selected;
+
+            RefreshUIFromPalette(selected);
+            PaletteChanged?.Invoke(this, selected);
+        }
+
+        private void lbColorStops_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateControlsState();
+        }
+
+        private void txtName_TextChanged(object sender, EventArgs e)
+        {
+            if (_isProgrammaticChange || _selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            _selectedPalette.Name = txtName.Text;
+            int idx = lbPalettes.SelectedIndex;
+            if (idx >= 0)
+            {
+                lbPalettes.Items[idx] = _selectedPalette.Name;
             }
         }
 
-        /// <summary>
-        /// Обработчик события клика по панели выбора цвета фона.
-        /// Открывает диалог выбора цвета и обновляет цвет фона в активной палитре.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        private void btnAddColor_Click(object sender, EventArgs e)
+        {
+            if (!EnsureEditablePaletteOrWarn())
+            {
+                return;
+            }
+
+            Color initial = _selectedPalette!.RootColors.Count > 0
+                ? _selectedPalette.RootColors[_selectedPalette.RootColors.Count - 1]
+                : Color.White;
+            if (_colorSelectionService.TrySelectColor(this, initial, out Color selectedColor))
+            {
+                _selectedPalette.RootColors.Add(selectedColor);
+                RefreshUIFromPalette(_selectedPalette);
+                PaletteChanged?.Invoke(this, _selectedPalette);
+            }
+        }
+
+        private void btnEditColor_Click(object sender, EventArgs e)
+        {
+            if (!EnsureEditablePaletteOrWarn())
+            {
+                return;
+            }
+
+            int selectedIndex = lbColorStops.SelectedIndex;
+            if (selectedIndex < 0 || selectedIndex >= _requiredRootCount)
+            {
+                return;
+            }
+
+            List<Color> colors = BuildAutoAdjustedColors(_selectedPalette!, _requiredRootCount);
+            if (_colorSelectionService.TrySelectColor(this, colors[selectedIndex], out Color selectedColor))
+            {
+                while (_selectedPalette!.RootColors.Count <= selectedIndex)
+                {
+                    _selectedPalette.RootColors.Add(Color.Black);
+                }
+
+                _selectedPalette.RootColors[selectedIndex] = selectedColor;
+                RefreshUIFromPalette(_selectedPalette);
+                lbColorStops.SelectedIndex = selectedIndex;
+                PaletteChanged?.Invoke(this, _selectedPalette);
+            }
+        }
+
+        private void btnRemoveColor_Click(object sender, EventArgs e)
+        {
+            if (!EnsureEditablePaletteOrWarn())
+            {
+                return;
+            }
+
+            int selectedIndex = lbColorStops.SelectedIndex;
+            if (selectedIndex < 0)
+            {
+                return;
+            }
+
+            if (selectedIndex < _selectedPalette!.RootColors.Count)
+            {
+                _selectedPalette.RootColors.RemoveAt(selectedIndex);
+                RefreshUIFromPalette(_selectedPalette);
+                PaletteChanged?.Invoke(this, _selectedPalette);
+            }
+        }
+
         private void panelBackgroundColor_Click(object sender, EventArgs e)
         {
-            if (_paletteManager.ActivePalette.IsBuiltIn)
+            if (!EnsureEditablePaletteOrWarn())
             {
-                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            Color initialColor = panelBackgroundColor.BackColor;
-            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
+
+            if (_colorSelectionService.TrySelectColor(this, panelBackgroundColor.BackColor, out Color selectedColor))
             {
                 panelBackgroundColor.BackColor = selectedColor;
-                _paletteManager.ActivePalette.BackgroundColor = selectedColor;
-                PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+                _selectedPalette!.BackgroundColor = selectedColor;
+                panelPreview.Invalidate();
+                PaletteChanged?.Invoke(this, _selectedPalette);
             }
         }
 
-        /// <summary>
-        /// Обработчик события изменения состояния чекбокса "IsGradient".
-        /// Обновляет режим градиента в активной палитре.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
         private void chkIsGradient_CheckedChanged(object sender, EventArgs e)
         {
             if (_isProgrammaticChange)
             {
                 return;
             }
-            if (_paletteManager.ActivePalette.IsBuiltIn)
+
+            if (!EnsureEditablePaletteOrWarn())
             {
-                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните ее как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 _isProgrammaticChange = true;
-                chkIsGradient.Checked = !chkIsGradient.Checked; // Возвращаем состояние чекбокса обратно
+                chkIsGradient.Checked = !chkIsGradient.Checked;
                 _isProgrammaticChange = false;
                 return;
             }
-            _paletteManager.ActivePalette.IsGradient = chkIsGradient.Checked;
-            PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+
+            _selectedPalette!.IsGradient = chkIsGradient.Checked;
+            PaletteChanged?.Invoke(this, _selectedPalette);
         }
 
-        #endregion
+        private void btnAutoAdjustRoots_Click(object sender, EventArgs e)
+        {
+            if (!EnsureEditablePaletteOrWarn())
+            {
+                return;
+            }
 
-        #region Palette Management Actions
+            _selectedPalette!.RootColors = BuildAutoAdjustedColors(_selectedPalette, _requiredRootCount);
+            RefreshUIFromPalette(_selectedPalette);
+            PaletteChanged?.Invoke(this, _selectedPalette);
+        }
 
-        /// <summary>
-        /// Обработчик события клика по кнопке "Save".
-        /// Сохраняет текущую активную палитру в файл.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
+        private void panelPreview_Paint(object sender, PaintEventArgs e)
+        {
+            Rectangle rect = panelPreview.ClientRectangle;
+            if (rect.Width <= 0 || rect.Height <= 0 || _selectedPalette == null)
+            {
+                return;
+            }
+
+            List<Color> colors = BuildAutoAdjustedColors(_selectedPalette, Math.Max(_requiredRootCount, 1));
+            float serviceSegment = 0.16f;
+            int rootsWidth = (int)Math.Round(rect.Width * (1f - serviceSegment));
+            rootsWidth = Math.Max(1, Math.Min(rect.Width, rootsWidth));
+
+            Rectangle rootsRect = new(rect.X, rect.Y, rootsWidth, rect.Height);
+            Rectangle backgroundRect = new(rect.X + rootsWidth, rect.Y, rect.Width - rootsWidth, rect.Height);
+
+            if (colors.Count == 1)
+            {
+                using SolidBrush brush = new(colors[0]);
+                e.Graphics.FillRectangle(brush, rootsRect);
+            }
+            else
+            {
+                using LinearGradientBrush brush = new(rootsRect, Color.Black, Color.Black, 0f);
+                ColorBlend blend = new(colors.Count)
+                {
+                    Colors = colors.ToArray(),
+                    Positions = Enumerable.Range(0, colors.Count)
+                        .Select(i => (float)i / (colors.Count - 1))
+                        .ToArray()
+                };
+                brush.InterpolationColors = blend;
+                e.Graphics.FillRectangle(brush, rootsRect);
+            }
+
+            using SolidBrush backgroundBrush = new(_selectedPalette.BackgroundColor);
+            e.Graphics.FillRectangle(backgroundBrush, backgroundRect);
+        }
+
         private void btnSave_Click(object sender, EventArgs e)
         {
-            if (_paletteManager.ActivePalette.IsBuiltIn)
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
                 MessageBox.Show("Нельзя сохранить изменения во встроенной палитре.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+
             _paletteManager.SavePalettes();
             MessageBox.Show("Палитра сохранена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        /// <summary>
-        /// Обработчик события клика по кнопке "Save As".
-        /// Позволяет сохранить текущую палитру под новым именем.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
         private void btnSaveAs_Click(object sender, EventArgs e)
         {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
             string newName = Interaction.InputBox("Введите имя для новой палитры:", "Сохранить палитру как", "Моя палитра");
             if (string.IsNullOrWhiteSpace(newName))
             {
@@ -300,156 +373,140 @@ namespace FractalExplorer
                 return;
             }
 
-            var currentPalette = _paletteManager.ActivePalette;
-            var newPalette = new NewtonColorPalette
+            NewtonColorPalette newPalette = new()
             {
                 Name = newName,
-                BackgroundColor = currentPalette.BackgroundColor,
-                IsGradient = currentPalette.IsGradient,
+                BackgroundColor = _selectedPalette.BackgroundColor,
+                IsGradient = _selectedPalette.IsGradient,
                 IsBuiltIn = false,
-                RootColors = new List<Color>()
+                RootColors = BuildAutoAdjustedColors(_selectedPalette, _requiredRootCount)
             };
-
-            // Копируем текущие цвета пикеров в новую палитру
-            foreach (Panel panel in flpRootColorPickers.Controls.OfType<Panel>())
-            {
-                newPalette.RootColors.Add(panel.BackColor);
-            }
 
             _paletteManager.Palettes.Add(newPalette);
             _paletteManager.ActivePalette = newPalette;
             _paletteManager.SavePalettes();
-            PopulatePaletteList(); // Обновляем список палитр в UI
+            PopulatePaletteList();
             MessageBox.Show($"Палитра '{newName}' создана и сохранена.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        /// <summary>
-        /// Обработчик события клика по кнопке "Delete".
-        /// Удаляет текущую активную палитру (если она не встроенная).
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события.</param>
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            var paletteToDelete = _paletteManager.ActivePalette;
-            if (paletteToDelete.IsBuiltIn)
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
                 return;
             }
 
-            DialogResult confirmResult = MessageBox.Show($"Вы уверены, что хотите удалить палитру '{paletteToDelete.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (confirmResult == DialogResult.Yes)
+            DialogResult confirmResult = MessageBox.Show($"Вы уверены, что хотите удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirmResult != DialogResult.Yes)
             {
-                _paletteManager.Palettes.Remove(paletteToDelete);
-                _paletteManager.ActivePalette = _paletteManager.Palettes.First(); // Активируем первую оставшуюся палитру
-                _paletteManager.SavePalettes();
-                PopulatePaletteList(); // Обновляем список палитр в UI
-                PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+                return;
             }
+
+            _paletteManager.Palettes.Remove(_selectedPalette);
+            _paletteManager.ActivePalette = _paletteManager.Palettes.First();
+            _paletteManager.SavePalettes();
+            PopulatePaletteList();
+            PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
         }
 
-        #endregion
+        private void ApplyNewtonPaletteThemeHints()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            lblEditHint.ForeColor = theme.SecondaryText;
+            lblRootCountValue.ForeColor = theme.PrimaryText;
+            lblEditHint.Text = _selectedPalette?.IsBuiltIn == true
+                ? "Встроенная палитра доступна только для просмотра"
+                : "Текущая палитра редактируема";
+        }
 
-        #region Color Conversion / Generation
-
-        /// <summary>
-        /// Генерирует список гармоничных цветов на основе количества.
-        /// </summary>
-        /// <param name="count">Требуемое количество цветов.</param>
-        /// <returns>Список сгенерированных цветов.</returns>
         public static List<Color> GenerateHarmonicColors(int count)
         {
-            var colors = new List<Color>();
-            if (count == 0)
+            List<Color> colors = new();
+            if (count <= 0)
             {
                 return colors;
             }
+
             for (int i = 0; i < count; i++)
             {
-                float hue = (360f * i) / count; // Равномерное распределение по оттенку (Hue)
-                colors.Add(ColorFromHSL(hue, 0.85f, 0.6f)); // Фиксированная насыщенность (Saturation) и яркость (Lightness)
+                float hue = (360f * i) / count;
+                colors.Add(ColorFromHSL(hue, 0.85f, 0.6f));
             }
+
             return colors;
         }
 
-        /// <summary>
-        /// Преобразует цвет из цветового пространства HSL (оттенок, насыщенность, яркость) в RGB.
-        /// </summary>
-        /// <param name="h">Оттенок (0-360).</param>
-        /// <param name="s">Насыщенность (0-1).</param>
-        /// <param name="l">Яркость (0-1).</param>
-        /// <returns>Цвет в формате RGB.</returns>
         public static Color ColorFromHSL(float h, float s, float l)
         {
-            float r, g, b;
+            float r;
+            float g;
+            float b;
+
             if (s == 0)
             {
-                r = g = b = l; // Оттенки серого
+                r = g = b = l;
             }
             else
             {
                 float q = l < 0.5f ? l * (1 + s) : l + s - l * s;
                 float p = 2 * l - q;
-                h /= 360f; // Нормализуем оттенок к [0, 1]
+                h /= 360f;
                 r = HueToRgb(p, q, h + 1 / 3f);
                 g = HueToRgb(p, q, h);
                 b = HueToRgb(p, q, h - 1 / 3f);
             }
+
             return Color.FromArgb(255, (int)(r * 255), (int)(g * 255), (int)(b * 255));
         }
 
-        /// <summary>
-        /// Вспомогательный метод для преобразования оттенка (Hue) в компонент RGB.
-        /// Используется в HSL-to-RGB преобразовании.
-        /// </summary>
-        /// <param name="p">Параметр p из HSL-преобразования.</param>
-        /// <param name="q">Параметр q из HSL-преобразования.</param>
-        /// <param name="t">Нормализованный компонент оттенка.</param>
-        /// <returns>Значение компонента RGB (от 0 до 1).</returns>
         private static float HueToRgb(float p, float q, float t)
         {
             if (t < 0)
             {
                 t += 1;
             }
+
             if (t > 1)
             {
                 t -= 1;
             }
+
             if (t < 1 / 6f)
             {
                 return p + (q - p) * 6 * t;
             }
+
             if (t < 1 / 2f)
             {
                 return q;
             }
+
             if (t < 2 / 3f)
             {
                 return p + (q - p) * (2 / 3f - t) * 6;
             }
+
             return p;
         }
 
-        #endregion
-
-        #region Form Lifecycle
-
-        /// <summary>
-        /// Обработчик события закрытия формы.
-        /// Скрывает форму вместо полного закрытия, чтобы ее можно было повторно использовать.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Аргументы события закрытия формы.</param>
         private void ColorSetting_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
-                e.Cancel = true; // Отменяем стандартное закрытие
-                Hide(); // Скрываем форму
+                e.Cancel = true;
+                Hide();
             }
         }
 
-        #endregion
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (_themeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= _themeChangedHandler;
+                _themeChangedHandler = null;
+            }
+
+            base.OnFormClosed(e);
+        }
     }
 }

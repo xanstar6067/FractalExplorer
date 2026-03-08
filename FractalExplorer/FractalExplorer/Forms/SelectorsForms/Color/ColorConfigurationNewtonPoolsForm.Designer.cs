@@ -18,179 +18,319 @@
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorConfigurationNewtonPoolsForm));
-            groupBox1 = new GroupBox();
-            flpRootColorPickers = new FlowLayoutPanel();
-            groupBox2 = new GroupBox();
-            panelBackgroundColor = new Panel();
-            label1 = new Label();
-            btnSave = new Button();
-            cbPalettes = new ComboBox();
-            label2 = new Label();
-            btnSaveAs = new Button();
+            groupBoxPalettes = new GroupBox();
             btnDelete = new Button();
+            btnSaveAs = new Button();
+            btnSave = new Button();
+            lbPalettes = new ListBox();
+            groupBoxEditor = new GroupBox();
+            lblEditHint = new Label();
+            btnAutoAdjustRoots = new Button();
+            lblRootCountValue = new Label();
+            lblRootCountCaption = new Label();
+            panelBackgroundColor = new Panel();
+            labelBackground = new Label();
             chkIsGradient = new CheckBox();
+            btnRemoveColor = new Button();
+            btnEditColor = new Button();
+            btnAddColor = new Button();
+            lbColorStops = new ListBox();
+            labelStops = new Label();
+            panelPreview = new Panel();
+            labelPreview = new Label();
+            txtName = new TextBox();
+            labelName = new Label();
             toolTip1 = new ToolTip(components);
-            groupBox1.SuspendLayout();
-            groupBox2.SuspendLayout();
+            groupBoxPalettes.SuspendLayout();
+            groupBoxEditor.SuspendLayout();
             SuspendLayout();
             // 
-            // groupBox1
+            // groupBoxPalettes
             // 
-            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            groupBox1.Controls.Add(flpRootColorPickers);
-            groupBox1.Location = new Point(12, 85);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(460, 169);
-            groupBox1.TabIndex = 0;
-            groupBox1.TabStop = false;
-            groupBox1.Text = "Цвета для корней";
+            groupBoxPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            groupBoxPalettes.Controls.Add(btnDelete);
+            groupBoxPalettes.Controls.Add(btnSaveAs);
+            groupBoxPalettes.Controls.Add(btnSave);
+            groupBoxPalettes.Controls.Add(lbPalettes);
+            groupBoxPalettes.Location = new Point(12, 12);
+            groupBoxPalettes.Name = "groupBoxPalettes";
+            groupBoxPalettes.Size = new Size(254, 457);
+            groupBoxPalettes.TabIndex = 0;
+            groupBoxPalettes.TabStop = false;
+            groupBoxPalettes.Text = "Список палитр";
             // 
-            // flpRootColorPickers
+            // btnDelete
             // 
-            flpRootColorPickers.AutoScroll = true;
-            flpRootColorPickers.Dock = DockStyle.Fill;
-            flpRootColorPickers.Location = new Point(3, 19);
-            flpRootColorPickers.Name = "flpRootColorPickers";
-            flpRootColorPickers.Size = new Size(454, 147);
-            flpRootColorPickers.TabIndex = 0;
+            btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            btnDelete.Location = new Point(7, 421);
+            btnDelete.Name = "btnDelete";
+            btnDelete.Size = new Size(241, 28);
+            btnDelete.TabIndex = 3;
+            btnDelete.Text = "Удалить";
+            btnDelete.UseVisualStyleBackColor = true;
+            btnDelete.Click += btnDelete_Click;
             // 
-            // groupBox2
+            // btnSaveAs
             // 
-            groupBox2.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            groupBox2.Controls.Add(panelBackgroundColor);
-            groupBox2.Controls.Add(label1);
-            groupBox2.Location = new Point(12, 260);
-            groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(460, 58);
-            groupBox2.TabIndex = 1;
-            groupBox2.TabStop = false;
-            groupBox2.Text = "Цвет фона";
+            btnSaveAs.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            btnSaveAs.Location = new Point(7, 387);
+            btnSaveAs.Name = "btnSaveAs";
+            btnSaveAs.Size = new Size(241, 28);
+            btnSaveAs.TabIndex = 2;
+            btnSaveAs.Text = "Копировать";
+            btnSaveAs.UseVisualStyleBackColor = true;
+            btnSaveAs.Click += btnSaveAs_Click;
+            // 
+            // btnSave
+            // 
+            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            btnSave.Location = new Point(7, 353);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(241, 28);
+            btnSave.TabIndex = 1;
+            btnSave.Text = "Сохранить";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnSave_Click;
+            // 
+            // lbPalettes
+            // 
+            lbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lbPalettes.FormattingEnabled = true;
+            lbPalettes.Location = new Point(7, 22);
+            lbPalettes.Name = "lbPalettes";
+            lbPalettes.Size = new Size(241, 319);
+            lbPalettes.TabIndex = 0;
+            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
+            // 
+            // groupBoxEditor
+            // 
+            groupBoxEditor.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBoxEditor.Controls.Add(lblEditHint);
+            groupBoxEditor.Controls.Add(btnAutoAdjustRoots);
+            groupBoxEditor.Controls.Add(lblRootCountValue);
+            groupBoxEditor.Controls.Add(lblRootCountCaption);
+            groupBoxEditor.Controls.Add(panelBackgroundColor);
+            groupBoxEditor.Controls.Add(labelBackground);
+            groupBoxEditor.Controls.Add(chkIsGradient);
+            groupBoxEditor.Controls.Add(btnRemoveColor);
+            groupBoxEditor.Controls.Add(btnEditColor);
+            groupBoxEditor.Controls.Add(btnAddColor);
+            groupBoxEditor.Controls.Add(lbColorStops);
+            groupBoxEditor.Controls.Add(labelStops);
+            groupBoxEditor.Controls.Add(panelPreview);
+            groupBoxEditor.Controls.Add(labelPreview);
+            groupBoxEditor.Controls.Add(txtName);
+            groupBoxEditor.Controls.Add(labelName);
+            groupBoxEditor.Location = new Point(272, 12);
+            groupBoxEditor.Name = "groupBoxEditor";
+            groupBoxEditor.Size = new Size(478, 457);
+            groupBoxEditor.TabIndex = 1;
+            groupBoxEditor.TabStop = false;
+            groupBoxEditor.Text = "Редактор палитры Ньютона";
+            // 
+            // lblEditHint
+            // 
+            lblEditHint.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            lblEditHint.AutoSize = true;
+            lblEditHint.Location = new Point(9, 432);
+            lblEditHint.Name = "lblEditHint";
+            lblEditHint.Size = new Size(183, 15);
+            lblEditHint.TabIndex = 15;
+            lblEditHint.Text = "Текущая палитра редактируема";
+            // 
+            // btnAutoAdjustRoots
+            // 
+            btnAutoAdjustRoots.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnAutoAdjustRoots.Location = new Point(283, 384);
+            btnAutoAdjustRoots.Name = "btnAutoAdjustRoots";
+            btnAutoAdjustRoots.Size = new Size(188, 28);
+            btnAutoAdjustRoots.TabIndex = 14;
+            btnAutoAdjustRoots.Text = "Подстроить под число корней";
+            toolTip1.SetToolTip(btnAutoAdjustRoots, "Сохраняет в палитре ровно столько корневых цветов, сколько найдено корней");
+            btnAutoAdjustRoots.UseVisualStyleBackColor = true;
+            btnAutoAdjustRoots.Click += btnAutoAdjustRoots_Click;
+            // 
+            // lblRootCountValue
+            // 
+            lblRootCountValue.AutoSize = true;
+            lblRootCountValue.Location = new Point(165, 126);
+            lblRootCountValue.Name = "lblRootCountValue";
+            lblRootCountValue.Size = new Size(13, 15);
+            lblRootCountValue.TabIndex = 13;
+            lblRootCountValue.Text = "0";
+            // 
+            // lblRootCountCaption
+            // 
+            lblRootCountCaption.AutoSize = true;
+            lblRootCountCaption.Location = new Point(9, 126);
+            lblRootCountCaption.Name = "lblRootCountCaption";
+            lblRootCountCaption.Size = new Size(164, 15);
+            lblRootCountCaption.TabIndex = 12;
+            lblRootCountCaption.Text = "Найдено корней в формуле:";
             // 
             // panelBackgroundColor
             // 
             panelBackgroundColor.BorderStyle = BorderStyle.FixedSingle;
             panelBackgroundColor.Cursor = Cursors.Hand;
-            panelBackgroundColor.Location = new Point(180, 22);
+            panelBackgroundColor.Location = new Point(109, 352);
             panelBackgroundColor.Name = "panelBackgroundColor";
-            panelBackgroundColor.Size = new Size(50, 23);
-            panelBackgroundColor.TabIndex = 1;
-            toolTip1.SetToolTip(panelBackgroundColor, "Нажмите, чтобы изменить цвет");
+            panelBackgroundColor.Size = new Size(52, 24);
+            panelBackgroundColor.TabIndex = 10;
+            toolTip1.SetToolTip(panelBackgroundColor, "Нажмите, чтобы изменить цвет служебных точек");
             panelBackgroundColor.Click += panelBackgroundColor_Click;
             // 
-            // label1
+            // labelBackground
             // 
-            label1.AutoSize = true;
-            label1.Location = new Point(6, 26);
-            label1.Name = "label1";
-            label1.Size = new Size(149, 15);
-            label1.TabIndex = 0;
-            label1.Text = "Цвет для \"далеких\" точек:";
-            // 
-            // btnSave
-            // 
-            btnSave.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnSave.Location = new Point(172, 56);
-            btnSave.Name = "btnSave";
-            btnSave.Size = new Size(88, 23);
-            btnSave.TabIndex = 2;
-            btnSave.Text = "Сохранить";
-            btnSave.UseVisualStyleBackColor = true;
-            btnSave.Click += btnSave_Click;
-            // 
-            // cbPalettes
-            // 
-            cbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            cbPalettes.DropDownStyle = ComboBoxStyle.DropDownList;
-            cbPalettes.FormattingEnabled = true;
-            cbPalettes.Location = new Point(15, 27);
-            cbPalettes.Name = "cbPalettes";
-            cbPalettes.Size = new Size(454, 23);
-            cbPalettes.TabIndex = 3;
-            cbPalettes.SelectedIndexChanged += cbPalettes_SelectedIndexChanged;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(15, 9);
-            label2.Name = "label2";
-            label2.Size = new Size(105, 15);
-            label2.TabIndex = 4;
-            label2.Text = "Текущая палитра:";
-            // 
-            // btnSaveAs
-            // 
-            btnSaveAs.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnSaveAs.Location = new Point(266, 56);
-            btnSaveAs.Name = "btnSaveAs";
-            btnSaveAs.Size = new Size(119, 23);
-            btnSaveAs.TabIndex = 5;
-            btnSaveAs.Text = "Сохранить как...";
-            btnSaveAs.UseVisualStyleBackColor = true;
-            btnSaveAs.Click += btnSaveAs_Click;
-            // 
-            // btnDelete
-            // 
-            btnDelete.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnDelete.Location = new Point(391, 56);
-            btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(78, 23);
-            btnDelete.TabIndex = 6;
-            btnDelete.Text = "Удалить";
-            btnDelete.UseVisualStyleBackColor = true;
-            btnDelete.Click += btnDelete_Click;
+            labelBackground.AutoSize = true;
+            labelBackground.Location = new Point(9, 357);
+            labelBackground.Name = "labelBackground";
+            labelBackground.Size = new Size(103, 15);
+            labelBackground.TabIndex = 9;
+            labelBackground.Text = "Служебный цвет:";
             // 
             // chkIsGradient
             // 
             chkIsGradient.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             chkIsGradient.AutoSize = true;
-            chkIsGradient.Location = new Point(15, 324);
+            chkIsGradient.Location = new Point(9, 389);
             chkIsGradient.Name = "chkIsGradient";
             chkIsGradient.Size = new Size(267, 19);
-            chkIsGradient.TabIndex = 7;
+            chkIsGradient.TabIndex = 11;
             chkIsGradient.Text = "Использовать градиент (иначе - дискретно)";
-            toolTip1.SetToolTip(chkIsGradient, "Если включено, цвет бассейна будет плавно меняться в зависимости от числа итераций");
             chkIsGradient.UseVisualStyleBackColor = true;
             chkIsGradient.CheckedChanged += chkIsGradient_CheckedChanged;
+            // 
+            // btnRemoveColor
+            // 
+            btnRemoveColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnRemoveColor.Location = new Point(364, 289);
+            btnRemoveColor.Name = "btnRemoveColor";
+            btnRemoveColor.Size = new Size(107, 28);
+            btnRemoveColor.TabIndex = 8;
+            btnRemoveColor.Text = "Удалить цвет";
+            btnRemoveColor.UseVisualStyleBackColor = true;
+            btnRemoveColor.Click += btnRemoveColor_Click;
+            // 
+            // btnEditColor
+            // 
+            btnEditColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnEditColor.Location = new Point(364, 255);
+            btnEditColor.Name = "btnEditColor";
+            btnEditColor.Size = new Size(107, 28);
+            btnEditColor.TabIndex = 7;
+            btnEditColor.Text = "Изменить...";
+            btnEditColor.UseVisualStyleBackColor = true;
+            btnEditColor.Click += btnEditColor_Click;
+            // 
+            // btnAddColor
+            // 
+            btnAddColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnAddColor.Location = new Point(364, 221);
+            btnAddColor.Name = "btnAddColor";
+            btnAddColor.Size = new Size(107, 28);
+            btnAddColor.TabIndex = 6;
+            btnAddColor.Text = "Добавить...";
+            btnAddColor.UseVisualStyleBackColor = true;
+            btnAddColor.Click += btnAddColor_Click;
+            // 
+            // lbColorStops
+            // 
+            lbColorStops.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lbColorStops.FormattingEnabled = true;
+            lbColorStops.Location = new Point(9, 221);
+            lbColorStops.Name = "lbColorStops";
+            lbColorStops.Size = new Size(349, 124);
+            lbColorStops.TabIndex = 5;
+            lbColorStops.SelectedIndexChanged += lbColorStops_SelectedIndexChanged;
+            // 
+            // labelStops
+            // 
+            labelStops.AutoSize = true;
+            labelStops.Location = new Point(9, 203);
+            labelStops.Name = "labelStops";
+            labelStops.Size = new Size(85, 15);
+            labelStops.TabIndex = 4;
+            labelStops.Text = "Цвета корней:";
+            // 
+            // panelPreview
+            // 
+            panelPreview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panelPreview.BorderStyle = BorderStyle.FixedSingle;
+            panelPreview.Location = new Point(9, 81);
+            panelPreview.Name = "panelPreview";
+            panelPreview.Size = new Size(462, 38);
+            panelPreview.TabIndex = 3;
+            panelPreview.Paint += panelPreview_Paint;
+            // 
+            // labelPreview
+            // 
+            labelPreview.AutoSize = true;
+            labelPreview.Location = new Point(9, 63);
+            labelPreview.Name = "labelPreview";
+            labelPreview.Size = new Size(54, 15);
+            labelPreview.TabIndex = 2;
+            labelPreview.Text = "Превью:";
+            // 
+            // txtName
+            // 
+            txtName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtName.Location = new Point(9, 37);
+            txtName.Name = "txtName";
+            txtName.Size = new Size(462, 23);
+            txtName.TabIndex = 1;
+            txtName.TextChanged += txtName_TextChanged;
+            // 
+            // labelName
+            // 
+            labelName.AutoSize = true;
+            labelName.Location = new Point(9, 19);
+            labelName.Name = "labelName";
+            labelName.Size = new Size(113, 15);
+            labelName.TabIndex = 0;
+            labelName.Text = "Название палитры:";
             // 
             // ColorConfigurationNewtonPoolsForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(484, 351);
-            Controls.Add(chkIsGradient);
-            Controls.Add(btnDelete);
-            Controls.Add(btnSaveAs);
-            Controls.Add(label2);
-            Controls.Add(cbPalettes);
-            Controls.Add(btnSave);
-            Controls.Add(groupBox2);
-            Controls.Add(groupBox1);
+            ClientSize = new Size(762, 481);
+            Controls.Add(groupBoxEditor);
+            Controls.Add(groupBoxPalettes);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MaximizeBox = false;
-            MinimumSize = new Size(500, 390);
+            MinimumSize = new Size(778, 520);
             Name = "ColorConfigurationNewtonPoolsForm";
             Text = "Настройка палитры для Бассейнов Ньютона";
             FormClosing += ColorSetting_FormClosing;
-            groupBox1.ResumeLayout(false);
-            groupBox2.ResumeLayout(false);
-            groupBox2.PerformLayout();
+            groupBoxPalettes.ResumeLayout(false);
+            groupBoxEditor.ResumeLayout(false);
+            groupBoxEditor.PerformLayout();
             ResumeLayout(false);
-            PerformLayout();
         }
 
         #endregion
 
-        private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.FlowLayoutPanel flpRootColorPickers;
-        private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.Panel panelBackgroundColor;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.ComboBox cbPalettes;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Button btnSaveAs;
-        private System.Windows.Forms.Button btnDelete;
-        private System.Windows.Forms.CheckBox chkIsGradient;
-        private System.Windows.Forms.ToolTip toolTip1;
+        private GroupBox groupBoxPalettes;
+        private Button btnDelete;
+        private Button btnSaveAs;
+        private Button btnSave;
+        private ListBox lbPalettes;
+        private GroupBox groupBoxEditor;
+        private TextBox txtName;
+        private Label labelName;
+        private Label labelPreview;
+        private Panel panelPreview;
+        private Label labelStops;
+        private ListBox lbColorStops;
+        private Button btnRemoveColor;
+        private Button btnEditColor;
+        private Button btnAddColor;
+        private CheckBox chkIsGradient;
+        private Panel panelBackgroundColor;
+        private Label labelBackground;
+        private Label lblRootCountValue;
+        private Label lblRootCountCaption;
+        private Button btnAutoAdjustRoots;
+        private Label lblEditHint;
+        private ToolTip toolTip1;
     }
 }
