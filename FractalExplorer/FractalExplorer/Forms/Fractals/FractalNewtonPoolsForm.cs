@@ -280,6 +280,7 @@ namespace FractalExplorer
             }
 
             richTextDebugOutput.Text = debugInfo;
+            RefreshColorSettingsRootCount();
             ScheduleRender();
             UpdateFormulaAccentState();
         }
@@ -375,6 +376,16 @@ namespace FractalExplorer
             _engine.UseGradient = palette.IsGradient;
         }
 
+        private void RefreshColorSettingsRootCount()
+        {
+            if (_colorSettingsForm == null || _colorSettingsForm.IsDisposed || !_colorSettingsForm.Visible)
+            {
+                return;
+            }
+
+            _colorSettingsForm.UpdateRootCount(_engine.Roots.Count);
+        }
+
         #endregion
 
         #region Rendering Logic
@@ -444,6 +455,7 @@ namespace FractalExplorer
                 return;
             }
             richTextDebugOutput.Text = debugInfo;
+            RefreshColorSettingsRootCount();
 
             var newRenderingBitmap = new Bitmap(fractal_bitmap.Width, fractal_bitmap.Height, PixelFormat.Format32bppArgb);
             lock (_bitmapLock)

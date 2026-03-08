@@ -2,7 +2,6 @@
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.Theme;
 using Microsoft.VisualBasic;
-using System.Drawing.Drawing2D;
 
 namespace FractalExplorer
 {
@@ -43,6 +42,21 @@ namespace FractalExplorer
             PopulatePaletteList();
             Show();
             Activate();
+        }
+
+        public void UpdateRootCount(int rootCount)
+        {
+            int normalizedCount = Math.Max(0, rootCount);
+            if (_requiredRootCount == normalizedCount)
+            {
+                return;
+            }
+
+            _requiredRootCount = normalizedCount;
+            if (_selectedPalette != null)
+            {
+                RefreshUIFromPalette(_selectedPalette);
+            }
         }
 
         private void PopulatePaletteList()
@@ -104,9 +118,7 @@ namespace FractalExplorer
             panelBackgroundColor.Cursor = isCustom ? Cursors.Hand : Cursors.Default;
 
             lbColorStops.Enabled = hasPalette;
-            btnAddColor.Enabled = isCustom;
             btnEditColor.Enabled = isCustom && lbColorStops.SelectedIndex >= 0 && _requiredRootCount > 0;
-            btnRemoveColor.Enabled = isCustom && lbColorStops.SelectedIndex >= 0 && _requiredRootCount > 0;
             btnAutoAdjustRoots.Enabled = isCustom;
 
             btnSave.Enabled = isCustom;
@@ -191,20 +203,7 @@ namespace FractalExplorer
 
         private void btnAddColor_Click(object sender, EventArgs e)
         {
-            if (!EnsureEditablePaletteOrWarn())
-            {
-                return;
-            }
-
-            Color initial = _selectedPalette!.RootColors.Count > 0
-                ? _selectedPalette.RootColors[_selectedPalette.RootColors.Count - 1]
-                : Color.White;
-            if (_colorSelectionService.TrySelectColor(this, initial, out Color selectedColor))
-            {
-                _selectedPalette.RootColors.Add(selectedColor);
-                RefreshUIFromPalette(_selectedPalette);
-                PaletteChanged?.Invoke(this, _selectedPalette);
-            }
+            // Кнопка удалена из UX: для корней число цветов определяется формулой.
         }
 
         private void btnEditColor_Click(object sender, EventArgs e)
@@ -237,23 +236,7 @@ namespace FractalExplorer
 
         private void btnRemoveColor_Click(object sender, EventArgs e)
         {
-            if (!EnsureEditablePaletteOrWarn())
-            {
-                return;
-            }
-
-            int selectedIndex = lbColorStops.SelectedIndex;
-            if (selectedIndex < 0)
-            {
-                return;
-            }
-
-            if (selectedIndex < _selectedPalette!.RootColors.Count)
-            {
-                _selectedPalette.RootColors.RemoveAt(selectedIndex);
-                RefreshUIFromPalette(_selectedPalette);
-                PaletteChanged?.Invoke(this, _selectedPalette);
-            }
+            // Кнопка удалена из UX: для корней число цветов определяется формулой.
         }
 
         private void panelBackgroundColor_Click(object sender, EventArgs e)
@@ -326,16 +309,22 @@ namespace FractalExplorer
             }
             else
             {
-                using LinearGradientBrush brush = new(rootsRect, Color.Black, Color.Black, 0f);
-                ColorBlend blend = new(colors.Count)
+                int baseWidth = rootsRect.Width / colors.Count;
+                int remainder = rootsRect.Width % colors.Count;
+                int currentX = rootsRect.X;
+
+                for (int i = 0; i < colors.Count; i++)
                 {
-                    Colors = colors.ToArray(),
-                    Positions = Enumerable.Range(0, colors.Count)
-                        .Select(i => (float)i / (colors.Count - 1))
-                        .ToArray()
-                };
-                brush.InterpolationColors = blend;
-                e.Graphics.FillRectangle(brush, rootsRect);
+                    int segmentWidth = baseWidth + (i < remainder ? 1 : 0);
+                    if (segmentWidth <= 0)
+                    {
+                        continue;
+                    }
+
+                    using SolidBrush segmentBrush = new(colors[i]);
+                    e.Graphics.FillRectangle(segmentBrush, currentX, rootsRect.Y, segmentWidth, rootsRect.Height);
+                    currentX += segmentWidth;
+                }
             }
 
             using SolidBrush backgroundBrush = new(_selectedPalette.BackgroundColor);
@@ -407,6 +396,22 @@ namespace FractalExplorer
             _paletteManager.SavePalettes();
             PopulatePaletteList();
             PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
+        }
+
+        private void btnApply_Click(object sender, EventArgs e)
+        {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
+            _paletteManager.ActivePalette = _selectedPalette;
+            PaletteChanged?.Invoke(this, _selectedPalette);
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Hide();
         }
 
         private void ApplyNewtonPaletteThemeHints()

@@ -31,9 +31,9 @@
             panelBackgroundColor = new Panel();
             labelBackground = new Label();
             chkIsGradient = new CheckBox();
-            btnRemoveColor = new Button();
+            btnApply = new Button();
+            btnClose = new Button();
             btnEditColor = new Button();
-            btnAddColor = new Button();
             lbColorStops = new ListBox();
             labelStops = new Label();
             panelPreview = new Panel();
@@ -112,9 +112,9 @@
             groupBoxEditor.Controls.Add(panelBackgroundColor);
             groupBoxEditor.Controls.Add(labelBackground);
             groupBoxEditor.Controls.Add(chkIsGradient);
-            groupBoxEditor.Controls.Add(btnRemoveColor);
+            groupBoxEditor.Controls.Add(btnApply);
+            groupBoxEditor.Controls.Add(btnClose);
             groupBoxEditor.Controls.Add(btnEditColor);
-            groupBoxEditor.Controls.Add(btnAddColor);
             groupBoxEditor.Controls.Add(lbColorStops);
             groupBoxEditor.Controls.Add(labelStops);
             groupBoxEditor.Controls.Add(panelPreview);
@@ -132,7 +132,7 @@
             // 
             lblEditHint.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             lblEditHint.AutoSize = true;
-            lblEditHint.Location = new Point(9, 432);
+            lblEditHint.Location = new Point(9, 400);
             lblEditHint.Name = "lblEditHint";
             lblEditHint.Size = new Size(183, 15);
             lblEditHint.TabIndex = 15;
@@ -141,7 +141,7 @@
             // btnAutoAdjustRoots
             // 
             btnAutoAdjustRoots.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnAutoAdjustRoots.Location = new Point(283, 384);
+            btnAutoAdjustRoots.Location = new Point(283, 355);
             btnAutoAdjustRoots.Name = "btnAutoAdjustRoots";
             btnAutoAdjustRoots.Size = new Size(188, 28);
             btnAutoAdjustRoots.TabIndex = 14;
@@ -172,7 +172,7 @@
             // 
             panelBackgroundColor.BorderStyle = BorderStyle.FixedSingle;
             panelBackgroundColor.Cursor = Cursors.Hand;
-            panelBackgroundColor.Location = new Point(109, 352);
+            panelBackgroundColor.Location = new Point(109, 323);
             panelBackgroundColor.Name = "panelBackgroundColor";
             panelBackgroundColor.Size = new Size(52, 24);
             panelBackgroundColor.TabIndex = 10;
@@ -182,7 +182,7 @@
             // labelBackground
             // 
             labelBackground.AutoSize = true;
-            labelBackground.Location = new Point(9, 357);
+            labelBackground.Location = new Point(9, 328);
             labelBackground.Name = "labelBackground";
             labelBackground.Size = new Size(103, 15);
             labelBackground.TabIndex = 9;
@@ -192,7 +192,7 @@
             // 
             chkIsGradient.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             chkIsGradient.AutoSize = true;
-            chkIsGradient.Location = new Point(9, 389);
+            chkIsGradient.Location = new Point(9, 360);
             chkIsGradient.Name = "chkIsGradient";
             chkIsGradient.Size = new Size(267, 19);
             chkIsGradient.TabIndex = 11;
@@ -200,44 +200,44 @@
             chkIsGradient.UseVisualStyleBackColor = true;
             chkIsGradient.CheckedChanged += chkIsGradient_CheckedChanged;
             // 
-            // btnRemoveColor
+            // btnApply
             // 
-            btnRemoveColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnRemoveColor.Location = new Point(364, 289);
-            btnRemoveColor.Name = "btnRemoveColor";
-            btnRemoveColor.Size = new Size(107, 28);
-            btnRemoveColor.TabIndex = 8;
-            btnRemoveColor.Text = "Удалить цвет";
-            btnRemoveColor.UseVisualStyleBackColor = true;
-            btnRemoveColor.Click += btnRemoveColor_Click;
+            btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnApply.Location = new Point(251, 421);
+            btnApply.Name = "btnApply";
+            btnApply.Size = new Size(107, 28);
+            btnApply.TabIndex = 16;
+            btnApply.Text = "Применить";
+            btnApply.UseVisualStyleBackColor = true;
+            btnApply.Click += btnApply_Click;
+            // 
+            // btnClose
+            // 
+            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnClose.Location = new Point(364, 421);
+            btnClose.Name = "btnClose";
+            btnClose.Size = new Size(107, 28);
+            btnClose.TabIndex = 17;
+            btnClose.Text = "Закрыть";
+            btnClose.UseVisualStyleBackColor = true;
+            btnClose.Click += btnClose_Click;
             // 
             // btnEditColor
             // 
             btnEditColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnEditColor.Location = new Point(364, 255);
+            btnEditColor.Location = new Point(364, 192);
             btnEditColor.Name = "btnEditColor";
             btnEditColor.Size = new Size(107, 28);
-            btnEditColor.TabIndex = 7;
+            btnEditColor.TabIndex = 6;
             btnEditColor.Text = "Изменить...";
             btnEditColor.UseVisualStyleBackColor = true;
             btnEditColor.Click += btnEditColor_Click;
-            // 
-            // btnAddColor
-            // 
-            btnAddColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAddColor.Location = new Point(364, 221);
-            btnAddColor.Name = "btnAddColor";
-            btnAddColor.Size = new Size(107, 28);
-            btnAddColor.TabIndex = 6;
-            btnAddColor.Text = "Добавить...";
-            btnAddColor.UseVisualStyleBackColor = true;
-            btnAddColor.Click += btnAddColor_Click;
             // 
             // lbColorStops
             // 
             lbColorStops.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             lbColorStops.FormattingEnabled = true;
-            lbColorStops.Location = new Point(9, 221);
+            lbColorStops.Location = new Point(9, 192);
             lbColorStops.Name = "lbColorStops";
             lbColorStops.Size = new Size(349, 124);
             lbColorStops.TabIndex = 5;
@@ -246,7 +246,7 @@
             // labelStops
             // 
             labelStops.AutoSize = true;
-            labelStops.Location = new Point(9, 203);
+            labelStops.Location = new Point(9, 174);
             labelStops.Name = "labelStops";
             labelStops.Size = new Size(85, 15);
             labelStops.TabIndex = 4;
@@ -321,9 +321,9 @@
         private Panel panelPreview;
         private Label labelStops;
         private ListBox lbColorStops;
-        private Button btnRemoveColor;
         private Button btnEditColor;
-        private Button btnAddColor;
+        private Button btnApply;
+        private Button btnClose;
         private CheckBox chkIsGradient;
         private Panel panelBackgroundColor;
         private Label labelBackground;
