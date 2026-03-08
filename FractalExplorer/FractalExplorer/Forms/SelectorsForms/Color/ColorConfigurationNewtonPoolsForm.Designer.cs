@@ -28,8 +28,6 @@
             btnAutoAdjustRoots = new Button();
             lblRootCountValue = new Label();
             lblRootCountCaption = new Label();
-            panelBackgroundColor = new Panel();
-            labelBackground = new Label();
             chkIsGradient = new CheckBox();
             btnApply = new Button();
             btnClose = new Button();
@@ -109,8 +107,6 @@
             groupBoxEditor.Controls.Add(btnAutoAdjustRoots);
             groupBoxEditor.Controls.Add(lblRootCountValue);
             groupBoxEditor.Controls.Add(lblRootCountCaption);
-            groupBoxEditor.Controls.Add(panelBackgroundColor);
-            groupBoxEditor.Controls.Add(labelBackground);
             groupBoxEditor.Controls.Add(chkIsGradient);
             groupBoxEditor.Controls.Add(btnApply);
             groupBoxEditor.Controls.Add(btnClose);
@@ -167,26 +163,6 @@
             lblRootCountCaption.Size = new Size(164, 15);
             lblRootCountCaption.TabIndex = 12;
             lblRootCountCaption.Text = "Найдено корней в формуле:";
-            // 
-            // panelBackgroundColor
-            // 
-            panelBackgroundColor.BorderStyle = BorderStyle.FixedSingle;
-            panelBackgroundColor.Cursor = Cursors.Hand;
-            panelBackgroundColor.Location = new Point(109, 323);
-            panelBackgroundColor.Name = "panelBackgroundColor";
-            panelBackgroundColor.Size = new Size(52, 24);
-            panelBackgroundColor.TabIndex = 10;
-            toolTip1.SetToolTip(panelBackgroundColor, "Нажмите, чтобы изменить цвет служебных точек");
-            panelBackgroundColor.Click += panelBackgroundColor_Click;
-            // 
-            // labelBackground
-            // 
-            labelBackground.AutoSize = true;
-            labelBackground.Location = new Point(9, 328);
-            labelBackground.Name = "labelBackground";
-            labelBackground.Size = new Size(103, 15);
-            labelBackground.TabIndex = 9;
-            labelBackground.Text = "Служебный цвет:";
             // 
             // chkIsGradient
             // 
@@ -328,8 +304,6 @@
         private Button btnApply;
         private Button btnClose;
         private CheckBox chkIsGradient;
-        private Panel panelBackgroundColor;
-        private Label labelBackground;
         private Label lblRootCountValue;
         private Label lblRootCountCaption;
         private Button btnAutoAdjustRoots;
