@@ -174,8 +174,8 @@ namespace FractalExplorer.SelectorsForms
             toolTipSelector.SetToolTip(lblSliceQ, "Ось Q: по горизонтали — служебная ось визуализации Re(z0), по вертикали — Im(C1).");
             toolTipSelector.SetToolTip(lblPImaginary, "Служебная координата для среза P (мнимая часть z0), не является отдельным параметром C2.");
             toolTipSelector.SetToolTip(lblQReal, "Служебная координата для среза Q (действительная часть z0), не является отдельным параметром C2.");
-            toolTipSelector.SetToolTip(sliceCanvasP, "ЛКМ — выбрать точку C1 на срезе P. Колесо — масштаб, перетаскивание ЛКМ — панорамирование.");
-            toolTipSelector.SetToolTip(sliceCanvasQ, "ЛКМ — выбрать точку C1 на срезе Q. Колесо — масштаб, перетаскивание ЛКМ — панорамирование.");
+            toolTipSelector.SetToolTip(sliceCanvasP, "ЛКМ — выбрать точку C1 на срезе P. Колесо — масштаб, перетаскивание СКМ — панорамирование.");
+            toolTipSelector.SetToolTip(sliceCanvasQ, "ЛКМ — выбрать точку C1 на срезе Q. Колесо — масштаб, перетаскивание СКМ — панорамирование.");
         }
 
         /// <summary>

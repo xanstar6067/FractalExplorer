@@ -193,7 +193,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 AutoSize = true,
                 Margin = new Padding(0, 0, 0, 8),
-                Text = "ЛКМ: выбор точки C, зажмите колесо: панорамирование, колесо: масштаб"
+                Text = "ЛКМ: выбор точки C, зажмите СКМ: панорамирование, колесо: масштаб"
             };
 
             canvasBorderPanel = new Panel
