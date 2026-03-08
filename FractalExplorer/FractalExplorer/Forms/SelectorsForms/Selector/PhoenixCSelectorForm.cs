@@ -721,7 +721,7 @@ namespace FractalExplorer.SelectorsForms
         private void SliceCanvas_MouseClick(object sender, MouseEventArgs e, bool isPSliceTarget)
         {
             PictureBox canvas = sender as PictureBox;
-            if (e.Button != MouseButtons.Right || canvas.Width <= 0 || canvas.Height <= 0)
+            if (e.Button != MouseButtons.Left || canvas.Width <= 0 || canvas.Height <= 0)
             {
                 return;
             }

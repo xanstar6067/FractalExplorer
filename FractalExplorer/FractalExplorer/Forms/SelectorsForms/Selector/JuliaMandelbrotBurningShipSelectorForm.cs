@@ -193,7 +193,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 AutoSize = true,
                 Margin = new Padding(0, 0, 0, 8),
-                Text = "ПКМ: выбор точки C, зажмите колесо: панорамирование, колесо: масштаб"
+                Text = "ЛКМ: выбор точки C, зажмите колесо: панорамирование, колесо: масштаб"
             };
 
             canvasBorderPanel = new Panel
@@ -558,7 +558,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="e">Аргументы события мыши.</param>
         private void DisplayPictureBox_MouseClick(object sender, MouseEventArgs e)
         {
-            if (e.Button != MouseButtons.Right || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
+            if (e.Button != MouseButtons.Left || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
             {
                 return;
             }

@@ -193,7 +193,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 AutoSize = true,
                 Margin = new Padding(0, 0, 0, 8),
-                Text = "ПКМ: выбор точки C, зажмите колесо: панорамирование, колесо: масштаб"
+                Text = "ЛКМ: выбор точки C, зажмите колесо: панорамирование, колесо: масштаб"
             };
 
             mandelbrotCanvasBorder = new Panel
@@ -562,7 +562,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <param name="e">Аргументы события мыши.</param>
         private void MandelbrotDisplay_MouseClick(object sender, MouseEventArgs e)
         {
-            if (e.Button != MouseButtons.Right || mandelbrotDisplay.Width <= 0 || mandelbrotDisplay.Height <= 0)
+            if (e.Button != MouseButtons.Left || mandelbrotDisplay.Width <= 0 || mandelbrotDisplay.Height <= 0)
             {
                 return;
             }
