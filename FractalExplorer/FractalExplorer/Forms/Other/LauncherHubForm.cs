@@ -52,6 +52,11 @@ namespace FractalExplorer
         private FractalInfo _selectedFractal;
 
         /// <summary>
+        /// Узел, над которым находится курсор мыши.
+        /// </summary>
+        private TreeNode? _hoveredNode;
+
+        /// <summary>
         /// Пункты селектора тем (реальные темы и действия управления).
         /// </summary>
         private readonly List<ThemeSelectorItem> _themeOptions = new();
@@ -81,11 +86,29 @@ namespace FractalExplorer
 
             InitializeFractalCatalog();
             PopulateTreeView();
+            InitializeFractalTreeVisualStates();
             InitializeRenderPatternSelector();
             InitializeThemeSelector();
             ThemeManager.ThemesChanged += ThemeManager_ThemesChanged;
+            ThemeManager.ThemeChanged += ThemeManager_ThemeChanged;
             Disposed += LauncherHubForm_Disposed;
             DisplayAppVersionInTitle();
+        }
+
+        private void InitializeFractalTreeVisualStates()
+        {
+            treeViewFractals.DrawMode = TreeViewDrawMode.OwnerDrawText;
+            treeViewFractals.HideSelection = false;
+            EnableDoubleBuffering(treeViewFractals);
+            treeViewFractals.DrawNode += treeViewFractals_DrawNode;
+            treeViewFractals.MouseMove += treeViewFractals_MouseMove;
+            treeViewFractals.MouseLeave += treeViewFractals_MouseLeave;
+        }
+
+        private static void EnableDoubleBuffering(Control control)
+        {
+            PropertyInfo? doubleBufferedProperty = typeof(Control).GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
+            doubleBufferedProperty?.SetValue(control, true);
         }
 
 
@@ -214,9 +237,26 @@ namespace FractalExplorer
             InitializeThemeSelector();
         }
 
+        private void ThemeManager_ThemeChanged(object? sender, EventArgs e)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => treeViewFractals.Invalidate()));
+                return;
+            }
+
+            treeViewFractals.Invalidate();
+        }
+
         private void LauncherHubForm_Disposed(object? sender, EventArgs e)
         {
             ThemeManager.ThemesChanged -= ThemeManager_ThemesChanged;
+            ThemeManager.ThemeChanged -= ThemeManager_ThemeChanged;
             Disposed -= LauncherHubForm_Disposed;
         }
 
@@ -456,8 +496,7 @@ namespace FractalExplorer
                 lblFractalName.Text = selected.DisplayName;
                 richTextBoxDescription.Text = selected.Description;
                 pictureBoxPreview.Image = selected.PreviewImage;
-                btnLaunchSelected.Enabled = true;
-                btnLaunchSelected.Invalidate();
+                btnLaunchSelected.Visible = true;
             }
             else // Выбран узел категории.
             {
@@ -465,9 +504,71 @@ namespace FractalExplorer
                 lblFractalName.Text = "Выберите фрактал";
                 richTextBoxDescription.Text = "Выберите конкретный фрактал из списка слева, чтобы увидеть его описание и запустить.";
                 pictureBoxPreview.Image = Properties.Resources.base_img_CHAT_GPT_01;
-                btnLaunchSelected.Enabled = false;
-                btnLaunchSelected.Invalidate();
+                btnLaunchSelected.Visible = false;
             }
+        }
+
+        private void treeViewFractals_DrawNode(object? sender, DrawTreeNodeEventArgs e)
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            bool isSelected = (e.State & TreeNodeStates.Selected) == TreeNodeStates.Selected;
+            bool isHovered = e.Node == _hoveredNode;
+
+            Color background = treeViewFractals.BackColor;
+            if (isSelected)
+            {
+                background = theme.AccentPrimary;
+            }
+            else if (isHovered)
+            {
+                background = theme.HoverBackground;
+            }
+
+            Color textColor = isSelected ? theme.PrimaryText : treeViewFractals.ForeColor;
+
+            using SolidBrush backgroundBrush = new(background);
+
+            e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
+            TextRenderer.DrawText(e.Graphics, e.Node.Text, treeViewFractals.Font, e.Bounds, textColor, TextFormatFlags.VerticalCenter);
+
+            if ((e.State & TreeNodeStates.Focused) == TreeNodeStates.Focused)
+            {
+                ControlPaint.DrawFocusRectangle(e.Graphics, e.Bounds, textColor, background);
+            }
+        }
+
+        private void treeViewFractals_MouseMove(object? sender, MouseEventArgs e)
+        {
+            UpdateHoveredNode(treeViewFractals.GetNodeAt(e.Location));
+        }
+
+        private void treeViewFractals_MouseLeave(object? sender, EventArgs e)
+        {
+            UpdateHoveredNode(null);
+        }
+
+        private void UpdateHoveredNode(TreeNode? node)
+        {
+            if (_hoveredNode == node)
+            {
+                return;
+            }
+
+            TreeNode? previousNode = _hoveredNode;
+            _hoveredNode = node;
+
+            InvalidateNode(previousNode);
+            InvalidateNode(_hoveredNode);
+        }
+
+        private void InvalidateNode(TreeNode? node)
+        {
+            if (node is null)
+            {
+                return;
+            }
+
+            treeViewFractals.Invalidate(node.Bounds);
         }
 
         /// <summary>

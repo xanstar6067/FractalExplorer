@@ -201,7 +201,6 @@
             // btnLaunchSelected
             // 
             btnLaunchSelected.Dock = DockStyle.Fill;
-            btnLaunchSelected.Enabled = false;
             btnLaunchSelected.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
             btnLaunchSelected.Location = new Point(0, 157);
             btnLaunchSelected.Margin = new Padding(0, 5, 0, 0);
@@ -209,6 +208,7 @@
             btnLaunchSelected.Size = new Size(308, 45);
             btnLaunchSelected.TabIndex = 6;
             btnLaunchSelected.Text = "Запустить";
+            btnLaunchSelected.Visible = false;
             btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 
             // richTextBoxDescription
