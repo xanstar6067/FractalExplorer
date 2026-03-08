@@ -139,6 +139,7 @@ namespace FractalExplorer.Utilities.Theme
         private static readonly Dictionary<string, ThemeDefinition> CustomThemesById = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<Control, ControlEventHandler> ControlAddedHandlers = new();
         private static readonly Dictionary<ComboBox, DrawItemEventHandler> ComboBoxDrawHandlers = new();
+        private static readonly Dictionary<Button, EventHandler> ButtonRefreshHandlers = new();
         private static readonly Dictionary<CheckBox, PaintEventHandler> CheckBoxPaintHandlers = new();
         private static readonly Dictionary<CheckBox, EventHandler> CheckBoxRefreshHandlers = new();
 
@@ -456,15 +457,57 @@ namespace FractalExplorer.Utilities.Theme
         private static void StyleButton(Button button, ThemeDefinition theme)
         {
             bool isSecondaryAction = IsSecondaryButton(button);
+            AttachButtonRefreshHandler(button);
 
             button.UseVisualStyleBackColor = false;
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 1;
-            button.FlatAppearance.BorderColor = theme.BorderColor;
             button.FlatAppearance.MouseOverBackColor = theme.HoverBackground;
             button.FlatAppearance.MouseDownBackColor = theme.PressedBackground;
-            button.BackColor = isSecondaryAction ? theme.AccentSecondary : theme.AccentPrimary;
-            button.ForeColor = theme.PrimaryText;
+
+            if (button.Enabled)
+            {
+                button.FlatAppearance.BorderColor = theme.BorderColor;
+                button.BackColor = isSecondaryAction ? theme.AccentSecondary : theme.AccentPrimary;
+                button.ForeColor = theme.PrimaryText;
+            }
+            else
+            {
+                button.FlatAppearance.BorderColor = MixColors(theme.BorderColor, theme.PanelBackground, 0.45f);
+                button.BackColor = MixColors(theme.ControlBackground, theme.PanelBackground, 0.35f);
+                button.ForeColor = MixColors(theme.PrimaryText, theme.PanelBackground, 0.55f);
+            }
+
+            button.Invalidate();
+        }
+
+        private static void AttachButtonRefreshHandler(Button button)
+        {
+            if (ButtonRefreshHandlers.ContainsKey(button))
+            {
+                return;
+            }
+
+            EventHandler refreshHandler = (_, _) =>
+            {
+                StyleButton(button, CurrentDefinition);
+                button.Invalidate();
+            };
+
+            ButtonRefreshHandlers[button] = refreshHandler;
+            button.EnabledChanged += refreshHandler;
+            button.Disposed += (_, _) => UnregisterButtonRefreshHandler(button);
+        }
+
+        private static void UnregisterButtonRefreshHandler(Button button)
+        {
+            if (!ButtonRefreshHandlers.TryGetValue(button, out EventHandler? refreshHandler))
+            {
+                return;
+            }
+
+            button.EnabledChanged -= refreshHandler;
+            ButtonRefreshHandlers.Remove(button);
         }
 
         private static void StyleLabel(Label label, ThemeDefinition theme)

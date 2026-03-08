@@ -457,6 +457,7 @@ namespace FractalExplorer
                 richTextBoxDescription.Text = selected.Description;
                 pictureBoxPreview.Image = selected.PreviewImage;
                 btnLaunchSelected.Enabled = true;
+                btnLaunchSelected.Invalidate();
             }
             else // Выбран узел категории.
             {
@@ -465,6 +466,7 @@ namespace FractalExplorer
                 richTextBoxDescription.Text = "Выберите конкретный фрактал из списка слева, чтобы увидеть его описание и запустить.";
                 pictureBoxPreview.Image = Properties.Resources.base_img_CHAT_GPT_01;
                 btnLaunchSelected.Enabled = false;
+                btnLaunchSelected.Invalidate();
             }
         }
 
