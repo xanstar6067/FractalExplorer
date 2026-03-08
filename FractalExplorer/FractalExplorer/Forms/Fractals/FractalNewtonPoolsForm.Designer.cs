@@ -33,6 +33,7 @@
             pnlControls = new TableLayoutPanel();
             lblFormula = new Label();
             cbSelector = new ComboBox();
+            pnlFormulaGlow = new Panel();
             pnlFormulaInput = new Panel();
             richTextInput = new RichTextBox();
             lblFormulaExample = new Label();
@@ -54,6 +55,7 @@
             fractal_bitmap = new PictureBox();
             toolTipFormula = new ToolTip(components);
             pnlControls.SuspendLayout();
+            pnlFormulaGlow.SuspendLayout();
             pnlFormulaInput.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
@@ -67,7 +69,7 @@
             pnlControls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
             pnlControls.Controls.Add(lblFormula, 0, 0);
             pnlControls.Controls.Add(cbSelector, 0, 1);
-            pnlControls.Controls.Add(pnlFormulaInput, 0, 2);
+            pnlControls.Controls.Add(pnlFormulaGlow, 0, 2);
             pnlControls.Controls.Add(btnApplyFormula, 0, 3);
             pnlControls.Controls.Add(nudIterations, 0, 4);
             pnlControls.Controls.Add(lblIterations, 1, 4);
@@ -129,19 +131,30 @@
             cbSelector.Size = new Size(219, 23);
             cbSelector.TabIndex = 1;
             // 
+            // 
+            // pnlFormulaGlow
+            // 
+            pnlControls.SetColumnSpan(pnlFormulaGlow, 2);
+            pnlFormulaGlow.Controls.Add(pnlFormulaInput);
+            pnlFormulaGlow.Dock = DockStyle.Fill;
+            pnlFormulaGlow.Location = new Point(6, 57);
+            pnlFormulaGlow.Margin = new Padding(6, 3, 6, 3);
+            pnlFormulaGlow.Name = "pnlFormulaGlow";
+            pnlFormulaGlow.Padding = new Padding(3);
+            pnlFormulaGlow.Size = new Size(219, 109);
+            pnlFormulaGlow.TabIndex = 2;
+            // 
             // pnlFormulaInput
             // 
-            pnlFormulaInput.BorderStyle = BorderStyle.FixedSingle;
-            pnlControls.SetColumnSpan(pnlFormulaInput, 2);
             pnlFormulaInput.Controls.Add(richTextInput);
             pnlFormulaInput.Controls.Add(lblFormulaExample);
             pnlFormulaInput.Dock = DockStyle.Fill;
-            pnlFormulaInput.Location = new Point(6, 57);
-            pnlFormulaInput.Margin = new Padding(6, 3, 6, 3);
+            pnlFormulaInput.Location = new Point(3, 3);
+            pnlFormulaInput.Margin = new Padding(0);
             pnlFormulaInput.Name = "pnlFormulaInput";
             pnlFormulaInput.Padding = new Padding(6);
-            pnlFormulaInput.Size = new Size(219, 109);
-            pnlFormulaInput.TabIndex = 2;
+            pnlFormulaInput.Size = new Size(213, 103);
+            pnlFormulaInput.TabIndex = 0;
             // 
             // richTextInput
             // 
@@ -361,6 +374,7 @@
             Text = "Бассейны Ньютона";
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
+            pnlFormulaGlow.ResumeLayout(false);
             pnlFormulaInput.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
@@ -373,6 +387,7 @@
         private System.Windows.Forms.TableLayoutPanel pnlControls;
         private System.Windows.Forms.Label lblFormula;
         private System.Windows.Forms.ComboBox cbSelector;
+        private System.Windows.Forms.Panel pnlFormulaGlow;
         private System.Windows.Forms.Panel pnlFormulaInput;
         private System.Windows.Forms.RichTextBox richTextInput;
         private System.Windows.Forms.Label lblFormulaExample;

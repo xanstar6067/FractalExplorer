@@ -38,6 +38,7 @@ namespace FractalExplorer
         /// </summary>
         private RenderVisualizerComponent _renderVisualizer;
         private EventHandler? _themeChangedHandler;
+        private bool _isFormulaInputHovered;
 
         /// <summary>
         /// Менеджер палитр, специфичный для фракталов Ньютона.
@@ -233,6 +234,14 @@ namespace FractalExplorer
             nudZoom.ValueChanged += (s, e) => { _zoom = (double)nudZoom.Value; ScheduleRender(); };
             cbSelector.SelectedIndexChanged += cbSelector_SelectedIndexChanged;
             richTextInput.TextChanged += (s, e) => UpdateFormulaAccentState();
+            richTextInput.MouseEnter += FormulaInput_MouseEnter;
+            richTextInput.MouseLeave += FormulaInput_MouseLeave;
+            pnlFormulaInput.MouseEnter += FormulaInput_MouseEnter;
+            pnlFormulaInput.MouseLeave += FormulaInput_MouseLeave;
+            pnlFormulaGlow.MouseEnter += FormulaInput_MouseEnter;
+            pnlFormulaGlow.MouseLeave += FormulaInput_MouseLeave;
+            lblFormulaExample.MouseEnter += FormulaInput_MouseEnter;
+            lblFormulaExample.MouseLeave += FormulaInput_MouseLeave;
             btnApplyFormula.Click += btnApplyFormula_Click;
             btnRender.Click += (s, e) => ScheduleRender();
 
@@ -280,6 +289,7 @@ namespace FractalExplorer
             ThemeDefinition theme = ThemeManager.CurrentDefinition;
 
             pnlFormulaInput.BackColor = theme.InputBorderColor;
+            pnlFormulaGlow.BackColor = theme.ControlBackground;
             richTextInput.BackColor = theme.ControlBackground;
             richTextInput.ForeColor = theme.PrimaryText;
             lblFormulaExample.ForeColor = theme.SecondaryText;
@@ -294,6 +304,26 @@ namespace FractalExplorer
             bool hasText = !string.IsNullOrWhiteSpace(richTextInput.Text);
             lblFormulaExample.Visible = !hasText;
             pnlFormulaInput.BackColor = hasText ? theme.InputBorderColor : theme.AccentSecondary;
+            pnlFormulaGlow.BackColor = _isFormulaInputHovered ? theme.AccentPrimary : theme.ControlBackground;
+        }
+
+        private void FormulaInput_MouseEnter(object? sender, EventArgs e)
+        {
+            _isFormulaInputHovered = true;
+            UpdateFormulaAccentState();
+        }
+
+        private void FormulaInput_MouseLeave(object? sender, EventArgs e)
+        {
+            Point mouseScreen = Control.MousePosition;
+            bool isStillInside = pnlFormulaGlow.RectangleToScreen(pnlFormulaGlow.ClientRectangle).Contains(mouseScreen);
+            if (isStillInside)
+            {
+                return;
+            }
+
+            _isFormulaInputHovered = false;
+            UpdateFormulaAccentState();
         }
 
         #endregion
