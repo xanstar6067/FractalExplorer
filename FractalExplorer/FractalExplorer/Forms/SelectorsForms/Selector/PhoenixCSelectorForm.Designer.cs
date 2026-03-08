@@ -38,6 +38,8 @@ namespace FractalExplorer.SelectorsForms
             toolTipSelector = new ToolTip(components);
             progressBarSliceP = new ProgressBar();
             progressBarSliceQ = new ProgressBar();
+            lblSlicePHint = new Label();
+            lblSliceQHint = new Label();
             ((System.ComponentModel.ISupportInitialize)sliceCanvasP).BeginInit();
             ((System.ComponentModel.ISupportInitialize)sliceCanvasQ).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudPReal).BeginInit();
@@ -48,8 +50,8 @@ namespace FractalExplorer.SelectorsForms
             // 
             // sliceCanvasP
             // 
-            sliceCanvasP.BorderStyle = BorderStyle.FixedSingle;
-            sliceCanvasP.Location = new Point(12, 30);
+            sliceCanvasP.BorderStyle = BorderStyle.None;
+            sliceCanvasP.Location = new Point(12, 48);
             sliceCanvasP.Name = "sliceCanvasP";
             sliceCanvasP.Size = new Size(350, 350);
             sliceCanvasP.TabIndex = 0;
@@ -57,8 +59,8 @@ namespace FractalExplorer.SelectorsForms
             // 
             // sliceCanvasQ
             // 
-            sliceCanvasQ.BorderStyle = BorderStyle.FixedSingle;
-            sliceCanvasQ.Location = new Point(378, 30);
+            sliceCanvasQ.BorderStyle = BorderStyle.None;
+            sliceCanvasQ.Location = new Point(378, 48);
             sliceCanvasQ.Name = "sliceCanvasQ";
             sliceCanvasQ.Size = new Size(350, 350);
             sliceCanvasQ.TabIndex = 1;
@@ -202,7 +204,7 @@ namespace FractalExplorer.SelectorsForms
             // 
             // progressBarSliceP
             // 
-            progressBarSliceP.Location = new Point(12, 386);
+            progressBarSliceP.Location = new Point(12, 404);
             progressBarSliceP.Name = "progressBarSliceP";
             progressBarSliceP.Size = new Size(350, 10);
             progressBarSliceP.Style = ProgressBarStyle.Continuous;
@@ -210,17 +212,38 @@ namespace FractalExplorer.SelectorsForms
             // 
             // progressBarSliceQ
             // 
-            progressBarSliceQ.Location = new Point(378, 386);
+            progressBarSliceQ.Location = new Point(378, 404);
             progressBarSliceQ.Name = "progressBarSliceQ";
             progressBarSliceQ.Size = new Size(350, 10);
             progressBarSliceQ.Style = ProgressBarStyle.Continuous;
             progressBarSliceQ.TabIndex = 17;
             // 
+            // 
+            // lblSlicePHint
+            // 
+            lblSlicePHint.AutoSize = true;
+            lblSlicePHint.Location = new Point(12, 30);
+            lblSlicePHint.Name = "lblSlicePHint";
+            lblSlicePHint.Size = new Size(278, 15);
+            lblSlicePHint.TabIndex = 18;
+            lblSlicePHint.Text = "Кликните по изображению для выбора точки";
+            // 
+            // lblSliceQHint
+            // 
+            lblSliceQHint.AutoSize = true;
+            lblSliceQHint.Location = new Point(378, 30);
+            lblSliceQHint.Name = "lblSliceQHint";
+            lblSliceQHint.Size = new Size(278, 15);
+            lblSliceQHint.TabIndex = 19;
+            lblSliceQHint.Text = "Кликните по изображению для выбора точки";
+            // 
             // PhoenixCSelectorForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(740, 490);
+            ClientSize = new Size(740, 508);
+            Controls.Add(lblSliceQHint);
+            Controls.Add(lblSlicePHint);
             Controls.Add(progressBarSliceQ);
             Controls.Add(progressBarSliceP);
             Controls.Add(lblFixedPForQSlice);
@@ -276,5 +299,7 @@ namespace FractalExplorer.SelectorsForms
         private System.Windows.Forms.ToolTip toolTipSelector;
         private System.Windows.Forms.ProgressBar progressBarSliceP;
         private System.Windows.Forms.ProgressBar progressBarSliceQ;
+        private System.Windows.Forms.Label lblSlicePHint;
+        private System.Windows.Forms.Label lblSliceQHint;
     }
 }

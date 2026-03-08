@@ -44,6 +44,10 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// Элемент PictureBox для отображения множества "Пылающий корабль".
         /// </summary>
         private PictureBox displayPictureBox;
+        private Panel canvasBorderPanel;
+        private Label hintLabel;
+        private bool isCanvasHovered = false;
+        private EventHandler? themeChangedHandler;
 
         /// <summary>
         /// Bitmap с текущим отрисованным изображением множества.
@@ -175,6 +179,30 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
 
             ThemeManager.RegisterForm(this);
 
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                RowCount = 2,
+                ColumnCount = 1,
+                Padding = new Padding(10)
+            };
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            hintLabel = new Label
+            {
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 8),
+                Text = "Кликните по изображению для выбора точки"
+            };
+
+            canvasBorderPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1),
+                Margin = new Padding(0)
+            };
+
             // Сохраняем допустимые границы
             _validMinRe = validMinRe;
             _validMaxRe = validMaxRe;
@@ -184,9 +212,13 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             displayPictureBox = new PictureBox
             {
                 Dock = DockStyle.Fill,
-                SizeMode = PictureBoxSizeMode.StretchImage
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Cursor = Cursors.Cross
             };
-            Controls.Add(displayPictureBox);
+            canvasBorderPanel.Controls.Add(displayPictureBox);
+            layout.Controls.Add(hintLabel, 0, 0);
+            layout.Controls.Add(canvasBorderPanel, 0, 1);
+            Controls.Add(layout);
 
             // Подписка на события.
             Load += SelectorForm_Load;
@@ -197,6 +229,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             displayPictureBox.MouseMove += DisplayPictureBox_MouseMove;
             displayPictureBox.MouseUp += DisplayPictureBox_MouseUp;
             displayPictureBox.Resize += DisplayPictureBox_Resize;
+            displayPictureBox.MouseEnter += DisplayPictureBox_MouseEnter;
+            displayPictureBox.MouseLeave += DisplayPictureBox_MouseLeave;
 
             renderDebounceTimer = new System.Windows.Forms.Timer { Interval = RENDER_DEBOUNCE_MILLISECONDS };
             renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
@@ -205,6 +239,10 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             renderedMaxRe = currentMaxRe;
             renderedMinIm = currentMinIm;
             renderedMaxIm = currentMaxIm;
+
+            themeChangedHandler = (_, _) => ApplyInteractiveStyles();
+            ThemeManager.ThemeChanged += themeChangedHandler;
+            ApplyInteractiveStyles();
 
             SetSelectedCoordinates(initialRe, initialIm, true);
         }
@@ -744,6 +782,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 panning = true;
                 panStart = e.Location;
+                displayPictureBox.Cursor = Cursors.Hand;
             }
         }
 
@@ -802,7 +841,29 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             if (e.Button == MouseButtons.Left)
             {
                 panning = false;
+                displayPictureBox.Cursor = Cursors.Cross;
             }
+        }
+
+        private void DisplayPictureBox_MouseEnter(object? sender, EventArgs e)
+        {
+            isCanvasHovered = true;
+            ApplyInteractiveStyles();
+        }
+
+        private void DisplayPictureBox_MouseLeave(object? sender, EventArgs e)
+        {
+            isCanvasHovered = false;
+            ApplyInteractiveStyles();
+        }
+
+        private void ApplyInteractiveStyles()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            hintLabel.ForeColor = theme.SecondaryText;
+            hintLabel.BackColor = Color.Transparent;
+            canvasBorderPanel.BackColor = isCanvasHovered ? theme.AccentPrimary : theme.BorderColor;
+            displayPictureBox.BackColor = theme.ControlBackground;
         }
 
         #endregion
@@ -822,6 +883,12 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
 
             renderedBitmap?.Dispose();
             renderedBitmap = null;
+
+            if (themeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= themeChangedHandler;
+                themeChangedHandler = null;
+            }
 
             base.OnFormClosed(e);
         }

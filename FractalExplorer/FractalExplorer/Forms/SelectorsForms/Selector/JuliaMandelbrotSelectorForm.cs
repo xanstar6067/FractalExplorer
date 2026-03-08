@@ -44,6 +44,10 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// Элемент PictureBox для отображения множества Мандельброта.
         /// </summary>
         private PictureBox mandelbrotDisplay;
+        private Panel mandelbrotCanvasBorder;
+        private Label mandelbrotHintLabel;
+        private bool isCanvasHovered = false;
+        private EventHandler? themeChangedHandler;
 
         /// <summary>
         /// Bitmap с текущим отрисованным изображением множества Мандельброта.
@@ -175,6 +179,30 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
 
             ThemeManager.RegisterForm(this);
 
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                RowCount = 2,
+                ColumnCount = 1,
+                Padding = new Padding(10)
+            };
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
+            mandelbrotHintLabel = new Label
+            {
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 8),
+                Text = "Кликните по изображению для выбора точки"
+            };
+
+            mandelbrotCanvasBorder = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(1),
+                Margin = new Padding(0)
+            };
+
             // Сохраняем допустимые границы
             _validMinRe = validMinRe;
             _validMaxRe = validMaxRe;
@@ -184,9 +212,13 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             mandelbrotDisplay = new PictureBox
             {
                 Dock = DockStyle.Fill,
-                SizeMode = PictureBoxSizeMode.StretchImage // Используется для заполнения PictureBox, но рисование происходит в Paint
+                SizeMode = PictureBoxSizeMode.StretchImage, // Используется для заполнения PictureBox, но рисование происходит в Paint
+                Cursor = Cursors.Cross
             };
-            Controls.Add(mandelbrotDisplay);
+            mandelbrotCanvasBorder.Controls.Add(mandelbrotDisplay);
+            layout.Controls.Add(mandelbrotHintLabel, 0, 0);
+            layout.Controls.Add(mandelbrotCanvasBorder, 0, 1);
+            Controls.Add(layout);
 
             // Подписка на события.
             Load += MandelbrotSelectorForm_Load;
@@ -197,6 +229,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             mandelbrotDisplay.MouseMove += MandelbrotDisplay_MouseMove;
             mandelbrotDisplay.MouseUp += MandelbrotDisplay_MouseUp;
             mandelbrotDisplay.Resize += MandelbrotDisplay_Resize;
+            mandelbrotDisplay.MouseEnter += MandelbrotDisplay_MouseEnter;
+            mandelbrotDisplay.MouseLeave += MandelbrotDisplay_MouseLeave;
 
             // Инициализация таймера
             renderDebounceTimer = new System.Windows.Forms.Timer { Interval = RENDER_DEBOUNCE_MILLISECONDS };
@@ -210,6 +244,10 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
 
             // Corrected initialization of renderedMaxIm based on currentMaxIm
             renderedMaxIm = currentMaxIm;
+
+            themeChangedHandler = (_, _) => ApplyInteractiveStyles();
+            ThemeManager.ThemeChanged += themeChangedHandler;
+            ApplyInteractiveStyles();
 
             SetSelectedCoordinates(initialRe, initialIm, true);
         }
@@ -763,6 +801,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             {
                 panning = true;
                 panStart = e.Location;
+                mandelbrotDisplay.Cursor = Cursors.Hand;
             }
         }
 
@@ -821,7 +860,29 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             if (e.Button == MouseButtons.Left)
             {
                 panning = false;
+                mandelbrotDisplay.Cursor = Cursors.Cross;
             }
+        }
+
+        private void MandelbrotDisplay_MouseEnter(object? sender, EventArgs e)
+        {
+            isCanvasHovered = true;
+            ApplyInteractiveStyles();
+        }
+
+        private void MandelbrotDisplay_MouseLeave(object? sender, EventArgs e)
+        {
+            isCanvasHovered = false;
+            ApplyInteractiveStyles();
+        }
+
+        private void ApplyInteractiveStyles()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            mandelbrotHintLabel.ForeColor = theme.SecondaryText;
+            mandelbrotHintLabel.BackColor = Color.Transparent;
+            mandelbrotCanvasBorder.BackColor = isCanvasHovered ? theme.AccentPrimary : theme.BorderColor;
+            mandelbrotDisplay.BackColor = theme.ControlBackground;
         }
 
         #endregion
@@ -841,6 +902,12 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
 
             mandelbrotBitmap?.Dispose();
             mandelbrotBitmap = null;
+
+            if (themeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= themeChangedHandler;
+                themeChangedHandler = null;
+            }
 
             base.OnFormClosed(e);
         }

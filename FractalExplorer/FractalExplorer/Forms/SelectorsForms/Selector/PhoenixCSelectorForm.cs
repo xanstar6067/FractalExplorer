@@ -45,6 +45,9 @@ namespace FractalExplorer.SelectorsForms
         private const int SLICE_ITERATIONS = 275;
         private const int RENDER_DEBOUNCE_MILLISECONDS = 300;
         private readonly PhoenixEngine _sliceRenderEngine;
+        private bool _isSlicePHovered;
+        private bool _isSliceQHovered;
+        private EventHandler? _themeChangedHandler;
         #endregion
 
         #region Events
@@ -88,6 +91,10 @@ namespace FractalExplorer.SelectorsForms
 
             SetupSliceCanvasEvents(sliceCanvasP, true);
             SetupSliceCanvasEvents(sliceCanvasQ, false);
+
+            _themeChangedHandler = (_, _) => ApplyInteractiveCanvasStyles();
+            ThemeManager.ThemeChanged += _themeChangedHandler;
+            ApplyInteractiveCanvasStyles();
 
             _renderDebounceTimerSliceP = new System.Windows.Forms.Timer { Interval = RENDER_DEBOUNCE_MILLISECONDS };
             _renderDebounceTimerSliceP.Tick += RenderDebounceTimerSliceP_Tick;
@@ -133,12 +140,15 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
         private void SetupSliceCanvasEvents(PictureBox canvas, bool isPSliceTarget)
         {
+            canvas.Cursor = Cursors.Cross;
             canvas.Paint += (s, e) => SliceCanvas_Paint(s, e, isPSliceTarget);
             canvas.MouseClick += (s, e) => SliceCanvas_MouseClick(s, e, isPSliceTarget);
             canvas.MouseWheel += (s, e) => SliceCanvas_MouseWheel(s, e, isPSliceTarget);
             canvas.MouseDown += (s, e) => SliceCanvas_MouseDown(s, e, isPSliceTarget);
             canvas.MouseMove += (s, e) => SliceCanvas_MouseMove(s, e, isPSliceTarget);
             canvas.MouseUp += (s, e) => SliceCanvas_MouseUp(s, e, isPSliceTarget);
+            canvas.MouseEnter += (s, e) => SliceCanvas_MouseEnter(s, e, isPSliceTarget);
+            canvas.MouseLeave += (s, e) => SliceCanvas_MouseLeave(s, e, isPSliceTarget);
             canvas.Resize += (s, e) =>
             {
                 // Запускаем рендер при изменении размера канваса,
@@ -592,6 +602,61 @@ namespace FractalExplorer.SelectorsForms
                 }
             }
             DrawMarker(e.Graphics, canvas, isPSliceTarget);
+            DrawInteractiveBorder(e.Graphics, canvas, isPSliceTarget);
+        }
+
+        private void DrawInteractiveBorder(Graphics graphics, PictureBox canvas, bool isPSliceTarget)
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            bool isHovered = isPSliceTarget ? _isSlicePHovered : _isSliceQHovered;
+            Color borderColor = isHovered ? theme.AccentPrimary : theme.BorderColor;
+
+            using Pen borderPen = new Pen(borderColor, 1f);
+            graphics.DrawRectangle(borderPen, 0, 0, Math.Max(0, canvas.Width - 1), Math.Max(0, canvas.Height - 1));
+        }
+
+        private void SliceCanvas_MouseEnter(object? sender, EventArgs e, bool isPSliceTarget)
+        {
+            if (isPSliceTarget)
+            {
+                _isSlicePHovered = true;
+            }
+            else
+            {
+                _isSliceQHovered = true;
+            }
+
+            (sender as PictureBox)?.Invalidate();
+        }
+
+        private void SliceCanvas_MouseLeave(object? sender, EventArgs e, bool isPSliceTarget)
+        {
+            if (isPSliceTarget)
+            {
+                _isSlicePHovered = false;
+            }
+            else
+            {
+                _isSliceQHovered = false;
+            }
+
+            (sender as PictureBox)?.Invalidate();
+        }
+
+        private void ApplyInteractiveCanvasStyles()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+
+            lblSlicePHint.ForeColor = theme.SecondaryText;
+            lblSliceQHint.ForeColor = theme.SecondaryText;
+            lblSlicePHint.BackColor = Color.Transparent;
+            lblSliceQHint.BackColor = Color.Transparent;
+
+            sliceCanvasP.BackColor = theme.ControlBackground;
+            sliceCanvasQ.BackColor = theme.ControlBackground;
+
+            sliceCanvasP.Invalidate();
+            sliceCanvasQ.Invalidate();
         }
 
         /// <summary>
@@ -856,7 +921,7 @@ namespace FractalExplorer.SelectorsForms
                 _panningSliceQ = false;
             }
 
-            (sender as PictureBox).Cursor = Cursors.Default; // Возвращаем обычный курсор.
+            (sender as PictureBox).Cursor = Cursors.Cross; // Возвращаем курсор выбора.
 
             if (wasPanning)
             {
@@ -954,6 +1019,12 @@ namespace FractalExplorer.SelectorsForms
             _slicePBitmap = null;
             _sliceQBitmap?.Dispose();
             _sliceQBitmap = null;
+
+            if (_themeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= _themeChangedHandler;
+                _themeChangedHandler = null;
+            }
 
             base.OnFormClosed(e);
         }
