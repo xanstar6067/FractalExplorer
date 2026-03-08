@@ -22,6 +22,8 @@ namespace FractalExplorer
         private int _requiredRootCount;
         private bool _isProgrammaticChange;
         private EventHandler? _themeChangedHandler;
+        private int? _previewHoveredRootIndex;
+        private Rectangle _previewHoveredRootBounds;
 
         public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
@@ -103,6 +105,7 @@ namespace FractalExplorer
 
             UpdateControlsState();
             ApplyNewtonPaletteThemeHints();
+            ResetPreviewHoverState();
             panelPreview.Invalidate();
             _isProgrammaticChange = false;
         }
@@ -216,17 +219,27 @@ namespace FractalExplorer
                 return;
             }
 
-            List<Color> colors = BuildAutoAdjustedColors(_selectedPalette!, _requiredRootCount);
-            if (_colorSelectionService.TrySelectColor(this, colors[selectedIndex], out Color selectedColor))
+            EditRootColorAt(selectedIndex);
+        }
+
+        private void EditRootColorAt(int rootIndex)
+        {
+            if (_selectedPalette == null || rootIndex < 0 || rootIndex >= _requiredRootCount)
             {
-                while (_selectedPalette!.RootColors.Count <= selectedIndex)
+                return;
+            }
+
+            List<Color> colors = BuildAutoAdjustedColors(_selectedPalette!, _requiredRootCount);
+            if (_colorSelectionService.TrySelectColor(this, colors[rootIndex], out Color selectedColor))
+            {
+                while (_selectedPalette.RootColors.Count <= rootIndex)
                 {
                     _selectedPalette.RootColors.Add(Color.Black);
                 }
 
-                _selectedPalette.RootColors[selectedIndex] = selectedColor;
+                _selectedPalette.RootColors[rootIndex] = selectedColor;
                 RefreshUIFromPalette(_selectedPalette);
-                lbColorStops.SelectedIndex = selectedIndex;
+                lbColorStops.SelectedIndex = rootIndex;
             }
         }
 
@@ -320,8 +333,131 @@ namespace FractalExplorer
                 }
             }
 
+            if (_previewHoveredRootIndex.HasValue && !_previewHoveredRootBounds.IsEmpty)
+            {
+                using Pen hoverPen = new(Color.White, 2f);
+                Rectangle hoverRect = _previewHoveredRootBounds;
+                hoverRect.Width = Math.Max(1, hoverRect.Width - 1);
+                hoverRect.Height = Math.Max(1, hoverRect.Height - 1);
+                e.Graphics.DrawRectangle(hoverPen, hoverRect);
+            }
+
             using SolidBrush backgroundBrush = new(_selectedPalette.BackgroundColor);
             e.Graphics.FillRectangle(backgroundBrush, backgroundRect);
+        }
+
+        private void panelPreview_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!TryGetRootBoundsAtPreviewPoint(e.Location, out int rootIndex, out Rectangle rootBounds))
+            {
+                if (_previewHoveredRootIndex.HasValue)
+                {
+                    ResetPreviewHoverState();
+                    panelPreview.Invalidate();
+                }
+
+                panelPreview.Cursor = Cursors.Default;
+                return;
+            }
+
+            bool hoverChanged = _previewHoveredRootIndex != rootIndex || _previewHoveredRootBounds != rootBounds;
+            _previewHoveredRootIndex = rootIndex;
+            _previewHoveredRootBounds = rootBounds;
+            panelPreview.Cursor = _selectedPalette?.IsBuiltIn == false ? Cursors.Hand : Cursors.Default;
+            toolTip1.SetToolTip(panelPreview, $"Изменить цвет корня {rootIndex + 1}");
+
+            if (hoverChanged)
+            {
+                panelPreview.Invalidate();
+            }
+        }
+
+        private void panelPreview_MouseLeave(object sender, EventArgs e)
+        {
+            if (_previewHoveredRootIndex.HasValue)
+            {
+                ResetPreviewHoverState();
+                panelPreview.Invalidate();
+            }
+
+            panelPreview.Cursor = Cursors.Default;
+        }
+
+        private void panelPreview_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            if (!TryGetRootBoundsAtPreviewPoint(e.Location, out int rootIndex, out _))
+            {
+                return;
+            }
+
+            if (!EnsureEditablePaletteOrWarn())
+            {
+                return;
+            }
+
+            lbColorStops.SelectedIndex = rootIndex;
+            EditRootColorAt(rootIndex);
+        }
+
+        private bool TryGetRootBoundsAtPreviewPoint(Point location, out int rootIndex, out Rectangle rootBounds)
+        {
+            rootIndex = -1;
+            rootBounds = Rectangle.Empty;
+
+            if (_selectedPalette == null || _requiredRootCount <= 0)
+            {
+                return false;
+            }
+
+            Rectangle rect = panelPreview.ClientRectangle;
+            if (!rect.Contains(location))
+            {
+                return false;
+            }
+
+            int rootsWidth = (int)Math.Round(rect.Width * 0.84f);
+            rootsWidth = Math.Max(1, Math.Min(rect.Width, rootsWidth));
+            if (location.X >= rootsWidth)
+            {
+                return false;
+            }
+
+            int baseWidth = rootsWidth / _requiredRootCount;
+            int remainder = rootsWidth % _requiredRootCount;
+            int currentX = rect.X;
+
+            for (int i = 0; i < _requiredRootCount; i++)
+            {
+                int segmentWidth = baseWidth + (i < remainder ? 1 : 0);
+                if (segmentWidth <= 0)
+                {
+                    continue;
+                }
+
+                Rectangle segment = new(currentX, rect.Y, segmentWidth, rect.Height);
+                if (segment.Contains(location))
+                {
+                    rootIndex = i;
+                    rootBounds = segment;
+                    return true;
+                }
+
+                currentX += segmentWidth;
+            }
+
+            return false;
+        }
+
+        private void ResetPreviewHoverState()
+        {
+            _previewHoveredRootIndex = null;
+            _previewHoveredRootBounds = Rectangle.Empty;
+            toolTip1.SetToolTip(panelPreview, string.Empty);
         }
 
         private void btnSave_Click(object sender, EventArgs e)

@@ -261,6 +261,9 @@
             panelPreview.Size = new Size(462, 38);
             panelPreview.TabIndex = 3;
             panelPreview.Paint += panelPreview_Paint;
+            panelPreview.MouseClick += panelPreview_MouseClick;
+            panelPreview.MouseLeave += panelPreview_MouseLeave;
+            panelPreview.MouseMove += panelPreview_MouseMove;
             // 
             // labelPreview
             // 
