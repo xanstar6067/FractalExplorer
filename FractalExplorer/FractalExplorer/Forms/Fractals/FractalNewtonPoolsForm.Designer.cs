@@ -102,7 +102,7 @@
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
+            pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 8F));
             pnlControls.Size = new Size(231, 636);
             pnlControls.TabIndex = 0;
             // 
@@ -335,7 +335,7 @@
             richTextDebugOutput.Margin = new Padding(6, 3, 6, 3);
             richTextDebugOutput.Name = "richTextDebugOutput";
             richTextDebugOutput.ReadOnly = true;
-            richTextDebugOutput.Size = new Size(219, 75);
+            richTextDebugOutput.Size = new Size(219, 87);
             richTextDebugOutput.TabIndex = 17;
             richTextDebugOutput.Text = "";
             // 
