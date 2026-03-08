@@ -18,6 +18,9 @@ namespace FractalExplorer.Utilities.Theme
         public required Color PressedBackground { get; init; }
         public required Color BorderColor { get; init; }
         public required Color InputBorderColor { get; init; }
+        public Color InteractiveBorderNormal { get; init; } = Color.Empty;
+        public Color InteractiveBorderHover { get; init; } = Color.Empty;
+        public bool HighVisibilityInteractiveStates { get; init; }
 
         public ThemeDefinition CloneWith(string id, string displayName, bool? isBuiltIn = null)
         {
@@ -36,7 +39,10 @@ namespace FractalExplorer.Utilities.Theme
                 HoverBackground = HoverBackground,
                 PressedBackground = PressedBackground,
                 BorderColor = BorderColor,
-                InputBorderColor = InputBorderColor
+                InputBorderColor = InputBorderColor,
+                InteractiveBorderNormal = InteractiveBorderNormal,
+                InteractiveBorderHover = InteractiveBorderHover,
+                HighVisibilityInteractiveStates = HighVisibilityInteractiveStates
             };
         }
     }

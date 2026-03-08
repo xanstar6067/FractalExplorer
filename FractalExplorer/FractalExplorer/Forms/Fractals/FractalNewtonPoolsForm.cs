@@ -306,7 +306,7 @@ namespace FractalExplorer
             lblFormulaExample.Visible = !hasText;
             pnlFormulaInput.BackColor = hasText ? theme.InputBorderColor : theme.AccentSecondary;
             Color glowBackground = pnlFormulaGlow.Parent?.BackColor ?? theme.PanelBackground;
-            pnlFormulaGlow.BackColor = ThemeManager.GetInteractiveStateColor(glowBackground, _isFormulaInputHovered);
+            pnlFormulaGlow.BackColor = ThemeManager.GetInteractiveStateColor(theme, glowBackground, _isFormulaInputHovered);
         }
 
         private void FormulaInput_MouseEnter(object? sender, EventArgs e)

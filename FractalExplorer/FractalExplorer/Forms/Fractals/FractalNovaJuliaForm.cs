@@ -149,7 +149,7 @@ namespace FractalExplorer.Forms
             _mapPreviewHintLabel.ForeColor = theme.SecondaryText;
             _mapPreviewHintLabel.BackColor = Color.Transparent;
             Color previewBorderBackground = _mapPreviewBorderPanel.Parent?.BackColor ?? theme.PanelBackground;
-            Color borderColor = ThemeManager.GetInteractiveStateColor(previewBorderBackground, _isMapPreviewHovered);
+            Color borderColor = ThemeManager.GetInteractiveStateColor(theme, previewBorderBackground, _isMapPreviewHovered);
             _mapPreviewBorderPanel.BackColor = borderColor;
             _mapPreviewHoverBorderPanel.BackColor = _isMapPreviewHovered ? borderColor : previewBorderBackground;
             pbMandelbrotPreview.BackColor = theme.ControlBackground;

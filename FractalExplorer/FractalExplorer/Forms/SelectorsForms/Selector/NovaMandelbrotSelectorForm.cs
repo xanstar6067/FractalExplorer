@@ -606,7 +606,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             mandelbrotHintLabel.ForeColor = theme.SecondaryText;
             mandelbrotHintLabel.BackColor = Color.Transparent;
             Color borderBackground = mandelbrotCanvasBorder.Parent?.BackColor ?? theme.PanelBackground;
-            Color borderColor = ThemeManager.GetInteractiveStateColor(borderBackground, isCanvasHovered);
+            Color borderColor = ThemeManager.GetInteractiveStateColor(theme, borderBackground, isCanvasHovered);
             mandelbrotCanvasBorder.BackColor = borderColor;
             mandelbrotCanvasHoverBorder.BackColor = isCanvasHovered ? borderColor : borderBackground;
             mandelbrotDisplay.BackColor = theme.ControlBackground;

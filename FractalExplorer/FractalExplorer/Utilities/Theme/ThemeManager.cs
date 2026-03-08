@@ -7,6 +7,10 @@ namespace FractalExplorer.Utilities.Theme
     {
         public const double NonTextUiContrastRatio = 3.0d;
         public const double InteractiveStateMinDifferenceContrastRatio = 1.35d;
+        public const double HighVisibilityInteractiveContrastRatio = 4.5d;
+
+        private static readonly Color HighVisibilityNormalDark = Color.FromArgb(24, 24, 24);
+        private static readonly Color HighVisibilityHoverBright = Color.FromArgb(255, 214, 0);
 
         private const string PreserveBackColorTag = "preserve-backcolor";
         public const string DefaultThemeId = "dark-modern-lab-green";
@@ -328,7 +332,65 @@ namespace FractalExplorer.Utilities.Theme
             return hovered ? hover : normal;
         }
 
+        public static Color GetInteractiveStateColor(ThemeDefinition theme, Color background, bool hovered)
+        {
+            (Color normal, Color hover) = GetInteractiveStateColors(theme, background);
+            return hovered ? hover : normal;
+        }
+
         public static (Color Normal, Color Hover) GetInteractiveStateColors(Color background)
+        {
+            return GetInteractiveStateColors(CurrentDefinition, background);
+        }
+
+        public static (Color Normal, Color Hover) GetInteractiveStateColors(ThemeDefinition theme, Color background)
+        {
+            ArgumentNullException.ThrowIfNull(theme);
+
+            if (theme.HighVisibilityInteractiveStates)
+            {
+                return GetHighVisibilityInteractiveStateColors(background);
+            }
+
+            bool hasNormal = !theme.InteractiveBorderNormal.IsEmpty;
+            bool hasHover = !theme.InteractiveBorderHover.IsEmpty;
+            if (hasNormal && hasHover)
+            {
+                Color tokenNormal = EnsureMinimumContrast(theme.InteractiveBorderNormal, background, NonTextUiContrastRatio);
+                Color tokenHover = EnsureMinimumContrast(theme.InteractiveBorderHover, background, NonTextUiContrastRatio);
+                if (CalculateContrastRatio(tokenNormal, tokenHover) >= InteractiveStateMinDifferenceContrastRatio)
+                {
+                    return (tokenNormal, tokenHover);
+                }
+            }
+
+            return GetAutoInteractiveStateColors(background);
+        }
+
+        private static (Color Normal, Color Hover) GetHighVisibilityInteractiveStateColors(Color background)
+        {
+            Color hover = EnsureMinimumContrast(HighVisibilityHoverBright, background, HighVisibilityInteractiveContrastRatio);
+            if (CalculateContrastRatio(hover, background) < HighVisibilityInteractiveContrastRatio)
+            {
+                hover = EnsureMinimumContrast(Color.White, background, HighVisibilityInteractiveContrastRatio);
+            }
+
+            Color normal = EnsureMinimumContrast(HighVisibilityNormalDark, background, NonTextUiContrastRatio);
+            if (CalculateContrastRatio(normal, background) < NonTextUiContrastRatio)
+            {
+                normal = EnsureMinimumContrast(Color.Black, background, NonTextUiContrastRatio);
+            }
+
+            if (CalculateContrastRatio(normal, hover) < InteractiveStateMinDifferenceContrastRatio)
+            {
+                normal = MixColors(normal, background, 0.3f);
+                normal = EnsureMinimumContrast(normal, background, NonTextUiContrastRatio);
+            }
+
+            return (normal, hover);
+        }
+
+        private static (Color Normal, Color Hover) GetAutoInteractiveStateColors(Color background)
         {
             Color hover = GetAccessibleAccentOn(background, NonTextUiContrastRatio);
             Color normal = MixColors(hover, background, 0.35f);
@@ -361,6 +423,11 @@ namespace FractalExplorer.Utilities.Theme
         public static Color GetInteractiveBorderColor(Color background, bool hovered)
         {
             return GetInteractiveStateColor(background, hovered);
+        }
+
+        public static Color GetInteractiveBorderColor(ThemeDefinition theme, Color background, bool hovered)
+        {
+            return GetInteractiveStateColor(theme, background, hovered);
         }
 
         public static Color GetAccessibleAccentOn(Color background, double minContrast = NonTextUiContrastRatio)

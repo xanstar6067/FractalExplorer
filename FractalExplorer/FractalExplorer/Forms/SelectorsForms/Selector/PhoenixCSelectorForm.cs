@@ -639,7 +639,7 @@ namespace FractalExplorer.SelectorsForms
         private void DrawInteractiveBorder(Graphics graphics, PictureBox canvas, bool isPSliceTarget)
         {
             bool isHovered = isPSliceTarget ? _isSlicePHovered : _isSliceQHovered;
-            Color borderColor = ThemeManager.GetInteractiveStateColor(canvas.BackColor, isHovered);
+            Color borderColor = ThemeManager.GetInteractiveStateColor(ThemeManager.CurrentDefinition, canvas.BackColor, isHovered);
             float borderWidth = isHovered ? 2f : 1f;
 
             using Pen borderPen = new Pen(borderColor, borderWidth);

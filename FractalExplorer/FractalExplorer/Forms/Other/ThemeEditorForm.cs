@@ -23,7 +23,9 @@ namespace FractalExplorer.Forms.Other
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.AccentSecondary), DisplayName = "Акцент (дополнительный)", Getter = theme => theme.AccentSecondary },
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.HoverBackground), DisplayName = "Фон при наведении", Getter = theme => theme.HoverBackground },
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PressedBackground), DisplayName = "Фон при нажатии", Getter = theme => theme.PressedBackground },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "Граница", Getter = theme => theme.BorderColor }
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "Граница", Getter = theme => theme.BorderColor },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InteractiveBorderNormal), DisplayName = "Интерактивная граница (обыч.)", Getter = theme => theme.InteractiveBorderNormal.IsEmpty ? theme.BorderColor : theme.InteractiveBorderNormal },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InteractiveBorderHover), DisplayName = "Интерактивная граница (hover)", Getter = theme => theme.InteractiveBorderHover.IsEmpty ? theme.AccentPrimary : theme.InteractiveBorderHover }
         };
 
         private readonly Dictionary<string, Panel> _colorPreviewPanels = new(StringComparer.Ordinal);
@@ -35,11 +37,27 @@ namespace FractalExplorer.Forms.Other
 
         private List<ThemeDefinition> _themes = new();
         private ThemeDefinition? _selectedTheme;
+        private readonly CheckBox _chkHighVisibilityInteractiveStates = new()
+        {
+            AutoSize = true,
+            Text = "Усиленная интерактивная подсветка",
+            Margin = new Padding(0, 0, 0, 10)
+        };
 
         public ThemeEditorForm()
         {
             InitializeComponent();
             ThemeManager.RegisterForm(this);
+
+            _chkHighVisibilityInteractiveStates.CheckedChanged += (_, _) => ApplyPreviewTheme();
+            rightPanel.RowCount += 1;
+            rightPanel.RowStyles.Insert(2, new RowStyle());
+            rightPanel.Controls.Add(_chkHighVisibilityInteractiveStates, 0, 2);
+            rightPanel.SetColumnSpan(_chkHighVisibilityInteractiveStates, 1);
+            rightPanel.Controls.SetChildIndex(grpColors, 3);
+            rightPanel.Controls.SetChildIndex(grpPreview, 4);
+            rightPanel.Controls.SetChildIndex(buttonsPanel, 5);
+
             BuildColorEditors();
         }
 
@@ -153,6 +171,7 @@ namespace FractalExplorer.Forms.Other
         {
             _selectedTheme = theme;
             txtThemeName.Text = theme.DisplayName;
+            _chkHighVisibilityInteractiveStates.Checked = theme.HighVisibilityInteractiveStates;
 
             _currentColors.Clear();
             foreach (ThemeColorBinding binding in _colorBindings)
@@ -211,6 +230,7 @@ namespace FractalExplorer.Forms.Other
             btnSaveApply.Enabled = hasSelection && !isBuiltIn;
             btnCopy.Enabled = hasSelection;
             btnCopyWindowsTheme.Enabled = IsWindowsThemeImportSupported();
+            _chkHighVisibilityInteractiveStates.Enabled = hasSelection && !isBuiltIn;
 
             foreach (Button button in _colorEditButtons.Values)
             {
@@ -372,7 +392,10 @@ namespace FractalExplorer.Forms.Other
                 HoverBackground = _currentColors[nameof(ThemeDefinition.HoverBackground)],
                 PressedBackground = _currentColors[nameof(ThemeDefinition.PressedBackground)],
                 BorderColor = _currentColors[nameof(ThemeDefinition.BorderColor)],
-                InputBorderColor = _selectedTheme?.InputBorderColor ?? _currentColors[nameof(ThemeDefinition.BorderColor)]
+                InputBorderColor = _selectedTheme?.InputBorderColor ?? _currentColors[nameof(ThemeDefinition.BorderColor)],
+                InteractiveBorderNormal = _currentColors[nameof(ThemeDefinition.InteractiveBorderNormal)],
+                InteractiveBorderHover = _currentColors[nameof(ThemeDefinition.InteractiveBorderHover)],
+                HighVisibilityInteractiveStates = _chkHighVisibilityInteractiveStates.Checked
             };
         }
 

@@ -339,7 +339,7 @@ namespace FractalExplorer
 
             if ((_previewHoveredRootIndex.HasValue || _previewBackgroundHovered) && !_previewHoveredBounds.IsEmpty)
             {
-                using Pen hoverPen = new(ThemeManager.GetInteractiveBorderColor(ThemeManager.CurrentDefinition.PanelBackground, hovered: true), 2f);
+                using Pen hoverPen = new(ThemeManager.GetInteractiveBorderColor(ThemeManager.CurrentDefinition, ThemeManager.CurrentDefinition.PanelBackground, hovered: true), 2f);
                 Rectangle hoverRect = _previewHoveredBounds;
                 hoverRect.Width = Math.Max(1, hoverRect.Width - 1);
                 hoverRect.Height = Math.Max(1, hoverRect.Height - 1);
