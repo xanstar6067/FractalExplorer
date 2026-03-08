@@ -319,6 +319,28 @@ namespace FractalExplorer.Utilities.Theme
             form.Disposed += (_, _) => ThemeChanged -= handler;
         }
 
+        public static Color GetInteractiveBorderColor(Color background, bool hovered)
+        {
+            Color accessibleAccent = GetAccessibleAccentOn(background, 3.2d);
+            if (hovered)
+            {
+                return accessibleAccent;
+            }
+
+            return MixColors(accessibleAccent, background, 0.35f);
+        }
+
+        public static Color GetAccessibleAccentOn(Color background, double minContrast = 3.0d)
+        {
+            ThemeDefinition theme = CurrentDefinition;
+            double backgroundLuminance = CalculateRelativeLuminance(background);
+            Color accentAdjusted = backgroundLuminance < 0.5d
+                ? MixColors(theme.AccentPrimary, Color.White, 0.38f)
+                : MixColors(theme.AccentPrimary, Color.Black, 0.42f);
+
+            return EnsureMinimumContrast(accentAdjusted, background, minContrast);
+        }
+
         public static void ApplyTheme(Form form)
         {
             var theme = CurrentDefinition;
@@ -752,6 +774,53 @@ namespace FractalExplorer.Utilities.Theme
                 (int)Math.Round(source.R * sourceWeight + target.R * clampedWeight),
                 (int)Math.Round(source.G * sourceWeight + target.G * clampedWeight),
                 (int)Math.Round(source.B * sourceWeight + target.B * clampedWeight));
+        }
+
+        private static Color EnsureMinimumContrast(Color accent, Color background, double minContrast)
+        {
+            double contrast = CalculateContrastRatio(accent, background);
+            if (contrast >= minContrast)
+            {
+                return accent;
+            }
+
+            double backgroundLuminance = CalculateRelativeLuminance(background);
+            float adjustmentWeight = 0.55f;
+            Color target = backgroundLuminance < 0.5d ? Color.White : Color.Black;
+            Color adjustedAccent = accent;
+
+            for (int iteration = 0; iteration < 8 && contrast < minContrast; iteration++)
+            {
+                adjustedAccent = MixColors(adjustedAccent, target, adjustmentWeight);
+                contrast = CalculateContrastRatio(adjustedAccent, background);
+            }
+
+            return adjustedAccent;
+        }
+
+        private static double CalculateContrastRatio(Color first, Color second)
+        {
+            double firstLuminance = CalculateRelativeLuminance(first);
+            double secondLuminance = CalculateRelativeLuminance(second);
+            double lighter = Math.Max(firstLuminance, secondLuminance);
+            double darker = Math.Min(firstLuminance, secondLuminance);
+            return (lighter + 0.05d) / (darker + 0.05d);
+        }
+
+        private static double CalculateRelativeLuminance(Color color)
+        {
+            static double ConvertChannel(byte channel)
+            {
+                double normalized = channel / 255d;
+                return normalized <= 0.03928d
+                    ? normalized / 12.92d
+                    : Math.Pow((normalized + 0.055d) / 1.055d, 2.4d);
+            }
+
+            double red = ConvertChannel(color.R);
+            double green = ConvertChannel(color.G);
+            double blue = ConvertChannel(color.B);
+            return 0.2126d * red + 0.7152d * green + 0.0722d * blue;
         }
 
         private static void DrawComboBoxItem(ComboBox comboBox, DrawItemEventArgs args, ThemeDefinition theme)
