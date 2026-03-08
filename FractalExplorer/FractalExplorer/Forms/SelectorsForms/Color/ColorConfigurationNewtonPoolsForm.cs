@@ -335,7 +335,7 @@ namespace FractalExplorer
 
             if (_previewHoveredRootIndex.HasValue && !_previewHoveredRootBounds.IsEmpty)
             {
-                using Pen hoverPen = new(Color.White, 2f);
+                using Pen hoverPen = new(GetPreviewHoverBorderColor(), 2f);
                 Rectangle hoverRect = _previewHoveredRootBounds;
                 hoverRect.Width = Math.Max(1, hoverRect.Width - 1);
                 hoverRect.Height = Math.Max(1, hoverRect.Height - 1);
@@ -344,6 +344,63 @@ namespace FractalExplorer
 
             using SolidBrush backgroundBrush = new(_selectedPalette.BackgroundColor);
             e.Graphics.FillRectangle(backgroundBrush, backgroundRect);
+        }
+
+        private static Color GetPreviewHoverBorderColor()
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            Color panelBackground = theme.PanelBackground;
+
+            double panelLuminance = CalculateRelativeLuminance(panelBackground);
+            Color accentAdjusted = panelLuminance < 0.5d
+                ? MixColors(theme.AccentPrimary, Color.White, 0.38f)
+                : MixColors(theme.AccentPrimary, Color.Black, 0.42f);
+
+            double contrastToPanel = CalculateContrastRatio(accentAdjusted, panelBackground);
+            if (contrastToPanel < 3.2d)
+            {
+                accentAdjusted = panelLuminance < 0.5d
+                    ? MixColors(accentAdjusted, Color.White, 0.55f)
+                    : MixColors(accentAdjusted, Color.Black, 0.55f);
+            }
+
+            return accentAdjusted;
+        }
+
+        private static Color MixColors(Color source, Color target, float targetWeight)
+        {
+            float clampedWeight = targetWeight < 0f ? 0f : targetWeight > 1f ? 1f : targetWeight;
+            float sourceWeight = 1f - clampedWeight;
+
+            return Color.FromArgb(
+                (int)Math.Round(source.R * sourceWeight + target.R * clampedWeight),
+                (int)Math.Round(source.G * sourceWeight + target.G * clampedWeight),
+                (int)Math.Round(source.B * sourceWeight + target.B * clampedWeight));
+        }
+
+        private static double CalculateContrastRatio(Color first, Color second)
+        {
+            double firstLuminance = CalculateRelativeLuminance(first);
+            double secondLuminance = CalculateRelativeLuminance(second);
+            double lighter = Math.Max(firstLuminance, secondLuminance);
+            double darker = Math.Min(firstLuminance, secondLuminance);
+            return (lighter + 0.05d) / (darker + 0.05d);
+        }
+
+        private static double CalculateRelativeLuminance(Color color)
+        {
+            static double ConvertChannel(byte channel)
+            {
+                double normalized = channel / 255d;
+                return normalized <= 0.03928d
+                    ? normalized / 12.92d
+                    : Math.Pow((normalized + 0.055d) / 1.055d, 2.4d);
+            }
+
+            double red = ConvertChannel(color.R);
+            double green = ConvertChannel(color.G);
+            double blue = ConvertChannel(color.B);
+            return 0.2126d * red + 0.7152d * green + 0.0722d * blue;
         }
 
         private void panelPreview_MouseMove(object sender, MouseEventArgs e)
