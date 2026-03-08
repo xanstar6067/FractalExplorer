@@ -175,10 +175,7 @@ namespace FractalExplorer
 
             string selectedName = lbPalettes.SelectedItem.ToString()!.Replace(" [Встроенная]", string.Empty);
             NewtonColorPalette selected = _paletteManager.Palettes.First(p => p.Name == selectedName);
-            _paletteManager.ActivePalette = selected;
-
             RefreshUIFromPalette(selected);
-            PaletteChanged?.Invoke(this, selected);
         }
 
         private void lbColorStops_SelectedIndexChanged(object sender, EventArgs e)
@@ -230,7 +227,6 @@ namespace FractalExplorer
                 _selectedPalette.RootColors[selectedIndex] = selectedColor;
                 RefreshUIFromPalette(_selectedPalette);
                 lbColorStops.SelectedIndex = selectedIndex;
-                PaletteChanged?.Invoke(this, _selectedPalette);
             }
         }
 
@@ -251,7 +247,6 @@ namespace FractalExplorer
                 panelBackgroundColor.BackColor = selectedColor;
                 _selectedPalette!.BackgroundColor = selectedColor;
                 panelPreview.Invalidate();
-                PaletteChanged?.Invoke(this, _selectedPalette);
             }
         }
 
@@ -271,7 +266,6 @@ namespace FractalExplorer
             }
 
             _selectedPalette!.IsGradient = chkIsGradient.Checked;
-            PaletteChanged?.Invoke(this, _selectedPalette);
         }
 
         private void btnAutoAdjustRoots_Click(object sender, EventArgs e)
@@ -283,7 +277,6 @@ namespace FractalExplorer
 
             _selectedPalette!.RootColors = BuildAutoAdjustedColors(_selectedPalette, _requiredRootCount);
             RefreshUIFromPalette(_selectedPalette);
-            PaletteChanged?.Invoke(this, _selectedPalette);
         }
 
         private void panelPreview_Paint(object sender, PaintEventArgs e)
@@ -372,9 +365,10 @@ namespace FractalExplorer
             };
 
             _paletteManager.Palettes.Add(newPalette);
-            _paletteManager.ActivePalette = newPalette;
             _paletteManager.SavePalettes();
             PopulatePaletteList();
+            string newDisplayName = newPalette.IsBuiltIn ? $"{newPalette.Name} [Встроенная]" : newPalette.Name;
+            lbPalettes.SelectedItem = newDisplayName;
             MessageBox.Show($"Палитра '{newName}' создана и сохранена.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -391,11 +385,15 @@ namespace FractalExplorer
                 return;
             }
 
+            bool deletedWasActive = ReferenceEquals(_paletteManager.ActivePalette, _selectedPalette);
             _paletteManager.Palettes.Remove(_selectedPalette);
-            _paletteManager.ActivePalette = _paletteManager.Palettes.First();
+            if (deletedWasActive)
+            {
+                _paletteManager.ActivePalette = _paletteManager.Palettes.First();
+            }
+
             _paletteManager.SavePalettes();
             PopulatePaletteList();
-            PaletteChanged?.Invoke(this, _paletteManager.ActivePalette);
         }
 
         private void btnApply_Click(object sender, EventArgs e)
