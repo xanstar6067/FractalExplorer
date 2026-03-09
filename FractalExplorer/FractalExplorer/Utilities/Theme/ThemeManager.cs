@@ -364,7 +364,7 @@ namespace FractalExplorer.Utilities.Theme
                 }
             }
 
-            return GetAutoInteractiveStateColors(background);
+            return GetAutoInteractiveStateColors(theme, background);
         }
 
         private static (Color Normal, Color Hover) GetHighVisibilityInteractiveStateColors(Color background)
@@ -390,9 +390,9 @@ namespace FractalExplorer.Utilities.Theme
             return (normal, hover);
         }
 
-        private static (Color Normal, Color Hover) GetAutoInteractiveStateColors(Color background)
+        private static (Color Normal, Color Hover) GetAutoInteractiveStateColors(ThemeDefinition theme, Color background)
         {
-            Color hover = GetAccessibleAccentOn(background, NonTextUiContrastRatio);
+            Color hover = GetAccessibleAccentOn(theme, background, NonTextUiContrastRatio);
             Color normal = MixColors(hover, background, 0.35f);
             double stateDifference = CalculateContrastRatio(normal, hover);
             if (stateDifference >= InteractiveStateMinDifferenceContrastRatio)
@@ -432,7 +432,13 @@ namespace FractalExplorer.Utilities.Theme
 
         public static Color GetAccessibleAccentOn(Color background, double minContrast = NonTextUiContrastRatio)
         {
-            ThemeDefinition theme = CurrentDefinition;
+            return GetAccessibleAccentOn(CurrentDefinition, background, minContrast);
+        }
+
+        public static Color GetAccessibleAccentOn(ThemeDefinition theme, Color background, double minContrast = NonTextUiContrastRatio)
+        {
+            ArgumentNullException.ThrowIfNull(theme);
+
             double backgroundLuminance = CalculateRelativeLuminance(background);
             Color accentAdjusted = backgroundLuminance < 0.5d
                 ? MixColors(theme.AccentPrimary, Color.White, 0.38f)

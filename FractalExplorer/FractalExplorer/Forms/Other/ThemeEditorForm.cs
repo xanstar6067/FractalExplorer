@@ -38,6 +38,7 @@ namespace FractalExplorer.Forms.Other
 
         private List<ThemeDefinition> _themes = new();
         private ThemeDefinition? _selectedTheme;
+        private ThemeDefinition? _previewTheme;
         private bool _isInteractivePreviewHovered;
         private readonly CheckBox _chkHighVisibilityInteractiveStates = new()
         {
@@ -206,6 +207,7 @@ namespace FractalExplorer.Forms.Other
             }
 
             ThemeDefinition previewTheme = BuildThemeFromCurrentValues(_selectedTheme.Id, txtThemeName.Text, _selectedTheme.IsBuiltIn);
+            _previewTheme = previewTheme;
 
             pnlPreview.BackColor = previewTheme.PanelBackground;
             lblPreviewTitle.ForeColor = previewTheme.PrimaryText;
@@ -215,8 +217,13 @@ namespace FractalExplorer.Forms.Other
             btnPreviewAction.FlatStyle = FlatStyle.Flat;
             btnPreviewAction.FlatAppearance.BorderSize = 1;
             btnPreviewAction.FlatAppearance.BorderColor = previewTheme.BorderColor;
+            btnPreviewAction.FlatAppearance.MouseOverBackColor = previewTheme.AccentSecondary;
+            btnPreviewAction.FlatAppearance.MouseDownBackColor = previewTheme.PressedBackground;
             btnPreviewAction.BackColor = previewTheme.AccentPrimary;
             btnPreviewAction.ForeColor = ResolvePreviewButtonTextColor(previewTheme, previewTheme.AccentPrimary);
+
+            pnlInteractiveBorderPreview.BackColor = previewTheme.ControlBackground;
+            label1.ForeColor = previewTheme.SecondaryText;
 
             pnlInteractiveBorderPreview.Invalidate();
 
@@ -492,14 +499,15 @@ namespace FractalExplorer.Forms.Other
 
         private void pnlInteractiveBorderPreview_Paint(object sender, PaintEventArgs e)
         {
-            if (_selectedTheme is null || _currentColors.Count == 0)
+            if (_previewTheme is null)
             {
                 return;
             }
 
-            Color borderColor = _isInteractivePreviewHovered
-                ? _currentColors[nameof(ThemeDefinition.InteractiveBorderHover)]
-                : _currentColors[nameof(ThemeDefinition.InteractiveBorderNormal)];
+            Color borderColor = ThemeManager.GetInteractiveBorderColor(
+                _previewTheme,
+                pnlInteractiveBorderPreview.BackColor,
+                _isInteractivePreviewHovered);
 
             Rectangle borderRectangle = new(1, 1, pnlInteractiveBorderPreview.Width - 3, pnlInteractiveBorderPreview.Height - 3);
             using Pen pen = new(borderColor, 2f);
