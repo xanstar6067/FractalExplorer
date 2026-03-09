@@ -42,7 +42,7 @@ namespace FractalExplorer.Forms.Other
         private readonly CheckBox _chkHighVisibilityInteractiveStates = new()
         {
             AutoSize = true,
-            Text = "Усиленная интерактивная подсветка",
+            Text = "Высококонтрастная интерактивная подсветка",
             Margin = new Padding(0, 0, 0, 10)
         };
 
