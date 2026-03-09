@@ -1,5 +1,6 @@
 using FractalExplorer.Utilities.Theme;
 using FractalExplorer.Utilities.ColorPicking;
+using FractalExplorer.Properties;
 
 namespace FractalExplorer.Forms.Other
 {
@@ -37,6 +38,7 @@ namespace FractalExplorer.Forms.Other
 
         private List<ThemeDefinition> _themes = new();
         private ThemeDefinition? _selectedTheme;
+        private bool _isInteractivePreviewHovered;
         private readonly CheckBox _chkHighVisibilityInteractiveStates = new()
         {
             AutoSize = true,
@@ -49,7 +51,7 @@ namespace FractalExplorer.Forms.Other
             InitializeComponent();
             ThemeManager.RegisterForm(this);
 
-            _chkHighVisibilityInteractiveStates.CheckedChanged += (_, _) => ApplyPreviewTheme();
+            _chkHighVisibilityInteractiveStates.CheckedChanged += (_, _) => { ApplyPreviewTheme(); UpdateControlsState(); };
             rightPanel.RowCount += 1;
             rightPanel.RowStyles.Insert(2, new RowStyle());
             rightPanel.Controls.Add(_chkHighVisibilityInteractiveStates, 0, 2);
@@ -216,6 +218,8 @@ namespace FractalExplorer.Forms.Other
             btnPreviewAction.BackColor = previewTheme.AccentPrimary;
             btnPreviewAction.ForeColor = ResolvePreviewButtonTextColor(previewTheme, previewTheme.AccentPrimary);
 
+            pnlInteractiveBorderPreview.Invalidate();
+
             txtPreviewInput.BackColor = previewTheme.ControlBackground;
             txtPreviewInput.ForeColor = previewTheme.PrimaryText;
         }
@@ -267,10 +271,12 @@ namespace FractalExplorer.Forms.Other
         {
             bool hasSelection = _selectedTheme != null;
             bool isBuiltIn = _selectedTheme?.IsBuiltIn == true;
+            bool hasPendingChanges = HasPendingChanges();
 
             txtThemeName.ReadOnly = !hasSelection || isBuiltIn;
             btnDelete.Enabled = hasSelection && !isBuiltIn;
-            btnSaveApply.Enabled = hasSelection && !isBuiltIn;
+            btnSaveChanges.Enabled = hasSelection && !isBuiltIn && hasPendingChanges;
+            btnApplyTheme.Enabled = hasSelection;
             btnCopy.Enabled = hasSelection;
             btnCopyWindowsTheme.Enabled = IsWindowsThemeImportSupported();
             _chkHighVisibilityInteractiveStates.Enabled = hasSelection && !isBuiltIn;
@@ -306,22 +312,27 @@ namespace FractalExplorer.Forms.Other
             _currentColors[propertyName] = selectedColor;
             RefreshColorPreviews();
             ApplyPreviewTheme();
+            UpdateControlsState();
         }
 
         private void txtThemeName_TextChanged(object sender, EventArgs e)
         {
             ApplyPreviewTheme();
+            UpdateControlsState();
         }
 
         private void btnNew_Click(object sender, EventArgs e)
         {
-            ThemeDefinition source = _selectedTheme ?? ThemeManager.CurrentDefinition;
+            if (!ThemeManager.TryGetTheme("light", out ThemeDefinition source))
+            {
+                source = ThemeManager.CurrentDefinition;
+            }
+
             string newId = GenerateUniqueThemeId("custom-theme");
             string newName = GenerateUniqueThemeName("Новая тема");
 
-            ThemeDefinition newTheme = BuildThemeFromCurrentValues(source.Id, source.DisplayName, source.IsBuiltIn).CloneWith(newId, newName, false);
+            ThemeDefinition newTheme = source.CloneWith(newId, newName, false);
             ThemeManager.AddOrUpdateCustomTheme(newTheme);
-            ThemeManager.SetTheme(newTheme.Id);
             ReloadThemes(newTheme.Id);
         }
 
@@ -335,7 +346,6 @@ namespace FractalExplorer.Forms.Other
             string newId = GenerateUniqueThemeId($"{_selectedTheme.Id}-copy");
             string newName = GenerateUniqueThemeName($"{_selectedTheme.DisplayName} (копия)");
             ThemeDefinition duplicate = ThemeManager.DuplicateTheme(_selectedTheme.Id, newId, newName);
-            ThemeManager.SetTheme(duplicate.Id);
             ReloadThemes(duplicate.Id);
         }
 
@@ -367,7 +377,6 @@ namespace FractalExplorer.Forms.Other
             ThemeDefinition newTheme = windowsTheme.CloneWith(newThemeId, newThemeName, false);
 
             ThemeManager.AddOrUpdateCustomTheme(newTheme);
-            ThemeManager.SetTheme(newTheme.Id);
             ReloadThemes(newTheme.Id);
         }
 
@@ -393,28 +402,120 @@ namespace FractalExplorer.Forms.Other
             bool removed = ThemeManager.RemoveCustomTheme(deletedId);
             if (removed)
             {
+                if (string.Equals(Settings.Default.UiTheme, deletedId, StringComparison.OrdinalIgnoreCase))
+                {
+                    Settings.Default.UiTheme = ThemeManager.DefaultThemeId;
+                    Settings.Default.Save();
+                }
+
                 ReloadThemes(ThemeManager.CurrentThemeId);
             }
         }
 
-        private void btnSaveApply_Click(object sender, EventArgs e)
+        private void btnSaveChanges_Click(object sender, EventArgs e)
         {
-            if (_selectedTheme is null || _selectedTheme.IsBuiltIn)
+            if (!TrySaveCurrentTheme(out ThemeDefinition? savedTheme) || savedTheme is null)
             {
                 return;
+            }
+
+            ReloadThemes(savedTheme.Id);
+        }
+
+        private void btnApplyTheme_Click(object sender, EventArgs e)
+        {
+            if (_selectedTheme is null)
+            {
+                return;
+            }
+
+            ThemeDefinition themeToApply = _selectedTheme;
+
+            if (!_selectedTheme.IsBuiltIn)
+            {
+                if (!TrySaveCurrentTheme(out ThemeDefinition? savedTheme) || savedTheme is null)
+                {
+                    return;
+                }
+
+                themeToApply = savedTheme;
+            }
+
+            ThemeManager.SetTheme(themeToApply.Id);
+            Settings.Default.UiTheme = themeToApply.Id;
+            Settings.Default.Save();
+            ReloadThemes(themeToApply.Id);
+        }
+
+        private bool TrySaveCurrentTheme(out ThemeDefinition? updatedTheme)
+        {
+            updatedTheme = null;
+
+            if (_selectedTheme is null || _selectedTheme.IsBuiltIn)
+            {
+                return false;
             }
 
             string displayName = txtThemeName.Text.Trim();
             if (string.IsNullOrWhiteSpace(displayName))
             {
                 MessageBox.Show("Имя темы не может быть пустым.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            updatedTheme = BuildThemeFromCurrentValues(_selectedTheme.Id, displayName, false);
+            ThemeManager.AddOrUpdateCustomTheme(updatedTheme);
+            return true;
+        }
+
+        private bool HasPendingChanges()
+        {
+            if (_selectedTheme is null || _selectedTheme.IsBuiltIn || _currentColors.Count == 0)
+            {
+                return false;
+            }
+
+            if (!string.Equals(txtThemeName.Text.Trim(), _selectedTheme.DisplayName, StringComparison.CurrentCulture))
+            {
+                return true;
+            }
+
+            if (_chkHighVisibilityInteractiveStates.Checked != _selectedTheme.HighVisibilityInteractiveStates)
+            {
+                return true;
+            }
+
+            return _colorBindings.Any(binding =>
+                _currentColors.TryGetValue(binding.PropertyName, out Color editedColor) &&
+                editedColor.ToArgb() != binding.Getter(_selectedTheme).ToArgb());
+        }
+
+        private void pnlInteractiveBorderPreview_Paint(object sender, PaintEventArgs e)
+        {
+            if (_selectedTheme is null || _currentColors.Count == 0)
+            {
                 return;
             }
 
-            ThemeDefinition updatedTheme = BuildThemeFromCurrentValues(_selectedTheme.Id, displayName, false);
-            ThemeManager.AddOrUpdateCustomTheme(updatedTheme);
-            ThemeManager.SetTheme(updatedTheme.Id);
-            ReloadThemes(updatedTheme.Id);
+            Color borderColor = _isInteractivePreviewHovered
+                ? _currentColors[nameof(ThemeDefinition.InteractiveBorderHover)]
+                : _currentColors[nameof(ThemeDefinition.InteractiveBorderNormal)];
+
+            Rectangle borderRectangle = new(1, 1, pnlInteractiveBorderPreview.Width - 3, pnlInteractiveBorderPreview.Height - 3);
+            using Pen pen = new(borderColor, 2f);
+            e.Graphics.DrawRectangle(pen, borderRectangle);
+        }
+
+        private void pnlInteractiveBorderPreview_MouseEnter(object sender, EventArgs e)
+        {
+            _isInteractivePreviewHovered = true;
+            pnlInteractiveBorderPreview.Invalidate();
+        }
+
+        private void pnlInteractiveBorderPreview_MouseLeave(object sender, EventArgs e)
+        {
+            _isInteractivePreviewHovered = false;
+            pnlInteractiveBorderPreview.Invalidate();
         }
 
         private ThemeDefinition BuildThemeFromCurrentValues(string id, string displayName, bool isBuiltIn)

@@ -33,11 +33,14 @@ namespace FractalExplorer.Forms.Other
             btnPreviewAction = new Button();
             lblPreviewSubText = new Label();
             lblPreviewTitle = new Label();
+            lblInteractiveBorderPreview = new Label();
+            pnlInteractiveBorderPreview = new Panel();
             buttonsPanel = new FlowLayoutPanel();
             btnNew = new Button();
             btnCopy = new Button();
             btnDelete = new Button();
-            btnSaveApply = new Button();
+            btnSaveChanges = new Button();
+            btnApplyTheme = new Button();
             btnCopyWindowsTheme = new Button();
             btnClose = new Button();
             ((System.ComponentModel.ISupportInitialize)splitMain).BeginInit();
@@ -176,6 +179,8 @@ namespace FractalExplorer.Forms.Other
             // grpPreview
             // 
             grpPreview.Controls.Add(pnlPreview);
+            grpPreview.Controls.Add(pnlInteractiveBorderPreview);
+            grpPreview.Controls.Add(lblInteractiveBorderPreview);
             grpPreview.Dock = DockStyle.Fill;
             grpPreview.Location = new Point(12, 371);
             grpPreview.Margin = new Padding(0, 0, 0, 10);
@@ -191,11 +196,11 @@ namespace FractalExplorer.Forms.Other
             pnlPreview.Controls.Add(btnPreviewAction);
             pnlPreview.Controls.Add(lblPreviewSubText);
             pnlPreview.Controls.Add(lblPreviewTitle);
-            pnlPreview.Dock = DockStyle.Fill;
+            pnlPreview.Dock = DockStyle.Top;
             pnlPreview.Location = new Point(3, 19);
             pnlPreview.Name = "pnlPreview";
             pnlPreview.Padding = new Padding(12);
-            pnlPreview.Size = new Size(745, 171);
+            pnlPreview.Size = new Size(745, 122);
             pnlPreview.TabIndex = 0;
             // 
             // txtPreviewInput
@@ -234,26 +239,47 @@ namespace FractalExplorer.Forms.Other
             lblPreviewTitle.TabIndex = 0;
             lblPreviewTitle.Text = "Пример основного текста";
             // 
+            // lblInteractiveBorderPreview
+            // 
+            lblInteractiveBorderPreview.AutoSize = true;
+            lblInteractiveBorderPreview.Location = new Point(19, 154);
+            lblInteractiveBorderPreview.Name = "lblInteractiveBorderPreview";
+            lblInteractiveBorderPreview.Size = new Size(282, 15);
+            lblInteractiveBorderPreview.TabIndex = 1;
+            lblInteractiveBorderPreview.Text = "Интерактивная граница (наведите курсор на область):";
+            // 
+            // pnlInteractiveBorderPreview
+            // 
+            pnlInteractiveBorderPreview.Location = new Point(307, 147);
+            pnlInteractiveBorderPreview.Name = "pnlInteractiveBorderPreview";
+            pnlInteractiveBorderPreview.Size = new Size(150, 28);
+            pnlInteractiveBorderPreview.TabIndex = 2;
+            pnlInteractiveBorderPreview.Paint += pnlInteractiveBorderPreview_Paint;
+            pnlInteractiveBorderPreview.MouseEnter += pnlInteractiveBorderPreview_MouseEnter;
+            pnlInteractiveBorderPreview.MouseLeave += pnlInteractiveBorderPreview_MouseLeave;
+            // 
             // buttonsPanel
             // 
             buttonsPanel.AutoSize = true;
             buttonsPanel.Controls.Add(btnNew);
             buttonsPanel.Controls.Add(btnCopy);
             buttonsPanel.Controls.Add(btnDelete);
-            buttonsPanel.Controls.Add(btnSaveApply);
+            buttonsPanel.Controls.Add(btnSaveChanges);
+            buttonsPanel.Controls.Add(btnApplyTheme);
             buttonsPanel.Controls.Add(btnCopyWindowsTheme);
             buttonsPanel.Controls.Add(btnClose);
             buttonsPanel.Dock = DockStyle.Fill;
-            buttonsPanel.FlowDirection = FlowDirection.RightToLeft;
-            buttonsPanel.Location = new Point(12, 574);
+            buttonsPanel.FlowDirection = FlowDirection.LeftToRight;
+            buttonsPanel.WrapContents = true;
+            buttonsPanel.Location = new Point(12, 540);
             buttonsPanel.Margin = new Padding(0);
             buttonsPanel.Name = "buttonsPanel";
-            buttonsPanel.Size = new Size(751, 34);
+            buttonsPanel.Size = new Size(751, 68);
             buttonsPanel.TabIndex = 4;
             // 
             // btnNew
             // 
-            btnNew.Location = new Point(673, 3);
+            btnNew.Location = new Point(3, 3);
             btnNew.Name = "btnNew";
             btnNew.Size = new Size(75, 27);
             btnNew.TabIndex = 0;
@@ -263,7 +289,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnCopy
             // 
-            btnCopy.Location = new Point(572, 3);
+            btnCopy.Location = new Point(84, 3);
             btnCopy.Name = "btnCopy";
             btnCopy.Size = new Size(95, 27);
             btnCopy.TabIndex = 1;
@@ -273,7 +299,7 @@ namespace FractalExplorer.Forms.Other
             // 
             // btnDelete
             // 
-            btnDelete.Location = new Point(481, 3);
+            btnDelete.Location = new Point(189, 3);
             btnDelete.Name = "btnDelete";
             btnDelete.Size = new Size(85, 27);
             btnDelete.TabIndex = 2;
@@ -281,32 +307,42 @@ namespace FractalExplorer.Forms.Other
             btnDelete.UseVisualStyleBackColor = true;
             btnDelete.Click += btnDelete_Click;
             // 
-            // btnSaveApply
+            // btnSaveChanges
             // 
-            btnSaveApply.Location = new Point(305, 3);
-            btnSaveApply.Name = "btnSaveApply";
-            btnSaveApply.Size = new Size(170, 27);
-            btnSaveApply.TabIndex = 3;
-            btnSaveApply.Text = "Сохранить и применить";
-            btnSaveApply.UseVisualStyleBackColor = true;
-            btnSaveApply.Click += btnSaveApply_Click;
+            btnSaveChanges.Location = new Point(280, 3);
+            btnSaveChanges.Name = "btnSaveChanges";
+            btnSaveChanges.Size = new Size(150, 27);
+            btnSaveChanges.TabIndex = 3;
+            btnSaveChanges.Text = "Сохранить изменения";
+            btnSaveChanges.UseVisualStyleBackColor = true;
+            btnSaveChanges.Click += btnSaveChanges_Click;
+            // 
+            // btnApplyTheme
+            // 
+            btnApplyTheme.Location = new Point(436, 3);
+            btnApplyTheme.Name = "btnApplyTheme";
+            btnApplyTheme.Size = new Size(115, 27);
+            btnApplyTheme.TabIndex = 4;
+            btnApplyTheme.Text = "Применить тему";
+            btnApplyTheme.UseVisualStyleBackColor = true;
+            btnApplyTheme.Click += btnApplyTheme_Click;
             // 
             // btnCopyWindowsTheme
             // 
-            btnCopyWindowsTheme.Location = new Point(103, 3);
+            btnCopyWindowsTheme.Location = new Point(557, 3);
             btnCopyWindowsTheme.Name = "btnCopyWindowsTheme";
-            btnCopyWindowsTheme.Size = new Size(196, 27);
-            btnCopyWindowsTheme.TabIndex = 4;
-            btnCopyWindowsTheme.Text = "Скопировать тему Windows";
+            btnCopyWindowsTheme.Size = new Size(170, 27);
+            btnCopyWindowsTheme.TabIndex = 5;
+            btnCopyWindowsTheme.Text = "Импорт темы Windows";
             btnCopyWindowsTheme.UseVisualStyleBackColor = true;
             btnCopyWindowsTheme.Click += btnCopyWindowsTheme_Click;
             // 
             // btnClose
             // 
-            btnClose.Location = new Point(7, 3);
+            btnClose.Location = new Point(3, 36);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(90, 27);
-            btnClose.TabIndex = 5;
+            btnClose.TabIndex = 6;
             btnClose.Text = "Закрыть";
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
@@ -362,8 +398,11 @@ namespace FractalExplorer.Forms.Other
         private Button btnNew;
         private Button btnCopy;
         private Button btnDelete;
-        private Button btnSaveApply;
+        private Button btnSaveChanges;
+        private Button btnApplyTheme;
         private Button btnCopyWindowsTheme;
         private Button btnClose;
+        private Label lblInteractiveBorderPreview;
+        private Panel pnlInteractiveBorderPreview;
     }
 }
