@@ -31,6 +31,7 @@ namespace FractalExplorer.Utilities.Theme
                 case TextBox textBox: StyleTextBox(textBox, theme); break;
                 case ComboBox comboBox: StyleComboBox(comboBox, theme); break;
                 case Button button: StyleButton(button, theme); break;
+                case CheckBox checkBox: StyleCheckBox(checkBox, theme); break;
                 default:
                     control.BackColor = theme.PanelBackground;
                     control.ForeColor = theme.PrimaryText;
@@ -80,6 +81,12 @@ namespace FractalExplorer.Utilities.Theme
             comboBox.BackColor = theme.ControlBackground;
             comboBox.ForeColor = theme.PrimaryText;
             comboBox.FlatStyle = FlatStyle.Flat;
+        }
+
+        public void StyleCheckBox(CheckBox checkBox, ThemeDefinition theme)
+        {
+            checkBox.BackColor = theme.PanelBackground;
+            checkBox.ForeColor = theme.PrimaryText;
         }
     }
 }

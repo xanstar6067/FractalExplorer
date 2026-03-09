@@ -8,6 +8,7 @@ namespace FractalExplorer.Utilities.Theme
         private static readonly ThemeCatalog Catalog = new();
         private static readonly ThemeStateService State = new(BuiltInThemeProvider.DefaultThemeId);
         private static readonly ThemeControlStyler Styler = new(() => CurrentDefinition);
+        private static readonly ThemeControlSubscriptionManager SubscriptionManager = new(Styler, () => CurrentDefinition);
 
         public static event EventHandler? ThemeChanged
         {
@@ -78,9 +79,15 @@ namespace FractalExplorer.Utilities.Theme
         public static void RegisterForm(Form form)
         {
             ApplyTheme(form);
+            SubscriptionManager.Attach(form);
+
             EventHandler handler = (_, _) => ApplyTheme(form);
             ThemeChanged += handler;
-            form.Disposed += (_, _) => ThemeChanged -= handler;
+            form.Disposed += (_, _) =>
+            {
+                ThemeChanged -= handler;
+                SubscriptionManager.Detach(form);
+            };
         }
 
         public static void ApplyTheme(Form form) => Styler.ApplyThemeToForm(form);
