@@ -208,7 +208,6 @@
             btnLaunchSelected.Size = new Size(308, 45);
             btnLaunchSelected.TabIndex = 6;
             btnLaunchSelected.Text = "Запустить";
-            btnLaunchSelected.Tag = "theme-role:primary";
             btnLaunchSelected.Visible = false;
             btnLaunchSelected.Click += btnLaunchSelected_Click;
             // 

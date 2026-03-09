@@ -320,13 +320,7 @@ namespace FractalExplorer.Forms.Other
             string newName = GenerateUniqueThemeName("Новая тема");
 
             ThemeDefinition newTheme = BuildThemeFromCurrentValues(source.Id, source.DisplayName, source.IsBuiltIn).CloneWith(newId, newName, false);
-            ThemeOperationResult result = ThemeManager.AddOrUpdateCustomTheme(newTheme);
-            if (!result.IsSuccess)
-            {
-                ShowThemeOperationError(result, "Не удалось создать тему.");
-                return;
-            }
-
+            ThemeManager.AddOrUpdateCustomTheme(newTheme);
             ThemeManager.SetTheme(newTheme.Id);
             ReloadThemes(newTheme.Id);
         }
@@ -340,15 +334,9 @@ namespace FractalExplorer.Forms.Other
 
             string newId = GenerateUniqueThemeId($"{_selectedTheme.Id}-copy");
             string newName = GenerateUniqueThemeName($"{_selectedTheme.DisplayName} (копия)");
-            ThemeOperationResult<ThemeDefinition> duplicateResult = ThemeManager.DuplicateTheme(_selectedTheme.Id, newId, newName);
-            if (!duplicateResult.IsSuccess || duplicateResult.Value is null)
-            {
-                ShowThemeOperationError(duplicateResult, "Не удалось скопировать тему.");
-                return;
-            }
-
-            ThemeManager.SetTheme(duplicateResult.Value.Id);
-            ReloadThemes(duplicateResult.Value.Id);
+            ThemeDefinition duplicate = ThemeManager.DuplicateTheme(_selectedTheme.Id, newId, newName);
+            ThemeManager.SetTheme(duplicate.Id);
+            ReloadThemes(duplicate.Id);
         }
 
 
@@ -378,13 +366,7 @@ namespace FractalExplorer.Forms.Other
             string newThemeName = GenerateUniqueThemeName(windowsTheme.DisplayName);
             ThemeDefinition newTheme = windowsTheme.CloneWith(newThemeId, newThemeName, false);
 
-            ThemeOperationResult result = ThemeManager.AddOrUpdateCustomTheme(newTheme);
-            if (!result.IsSuccess)
-            {
-                ShowThemeOperationError(result, "Не удалось импортировать тему Windows.");
-                return;
-            }
-
+            ThemeManager.AddOrUpdateCustomTheme(newTheme);
             ThemeManager.SetTheme(newTheme.Id);
             ReloadThemes(newTheme.Id);
         }
@@ -408,14 +390,8 @@ namespace FractalExplorer.Forms.Other
             }
 
             string deletedId = _selectedTheme.Id;
-            ThemeOperationResult<bool> removeResult = ThemeManager.RemoveCustomTheme(deletedId);
-            if (!removeResult.IsSuccess)
-            {
-                ShowThemeOperationError(removeResult, "Не удалось удалить тему.");
-                return;
-            }
-
-            if (removeResult.Value == true)
+            bool removed = ThemeManager.RemoveCustomTheme(deletedId);
+            if (removed)
             {
                 ReloadThemes(ThemeManager.CurrentThemeId);
             }
@@ -436,28 +412,9 @@ namespace FractalExplorer.Forms.Other
             }
 
             ThemeDefinition updatedTheme = BuildThemeFromCurrentValues(_selectedTheme.Id, displayName, false);
-            ThemeOperationResult result = ThemeManager.AddOrUpdateCustomTheme(updatedTheme);
-            if (!result.IsSuccess)
-            {
-                ShowThemeOperationError(result, "Не удалось сохранить тему.");
-                return;
-            }
-
+            ThemeManager.AddOrUpdateCustomTheme(updatedTheme);
             ThemeManager.SetTheme(updatedTheme.Id);
             ReloadThemes(updatedTheme.Id);
-        }
-
-
-        private void ShowThemeOperationError(ThemeOperationResult result, string defaultMessage)
-        {
-            string message = string.IsNullOrWhiteSpace(result.ErrorMessage) ? defaultMessage : result.ErrorMessage;
-            MessageBox.Show(message, "Ошибка темы", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-
-        private void ShowThemeOperationError<T>(ThemeOperationResult<T> result, string defaultMessage)
-        {
-            string message = string.IsNullOrWhiteSpace(result.ErrorMessage) ? defaultMessage : result.ErrorMessage;
-            MessageBox.Show(message, "Ошибка темы", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private ThemeDefinition BuildThemeFromCurrentValues(string id, string displayName, bool isBuiltIn)

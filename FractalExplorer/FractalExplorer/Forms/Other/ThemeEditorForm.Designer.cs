@@ -278,7 +278,6 @@ namespace FractalExplorer.Forms.Other
             btnDelete.Size = new Size(85, 27);
             btnDelete.TabIndex = 2;
             btnDelete.Text = "Удалить";
-            btnDelete.Tag = "theme-role:secondary";
             btnDelete.UseVisualStyleBackColor = true;
             btnDelete.Click += btnDelete_Click;
             // 
@@ -309,7 +308,6 @@ namespace FractalExplorer.Forms.Other
             btnClose.Size = new Size(90, 27);
             btnClose.TabIndex = 5;
             btnClose.Text = "Закрыть";
-            btnClose.Tag = "theme-role:secondary";
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
             // 
