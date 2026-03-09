@@ -45,10 +45,14 @@ namespace FractalExplorer.Utilities.Theme
 
         public void StyleButton(Button button, ThemeDefinition theme)
         {
+            ThemeControlRole role = ThemeControlRoleResolver.TryResolve(button, out ThemeControlRole explicitRole)
+                ? explicitRole
+                : LegacyControlRoleResolver.Resolve(button);
+
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderSize = 1;
             button.FlatAppearance.BorderColor = theme.BorderColor;
-            button.BackColor = theme.AccentPrimary;
+            button.BackColor = role == ThemeControlRole.Secondary ? theme.AccentSecondary : theme.AccentPrimary;
             button.ForeColor = theme.PrimaryText;
         }
 
