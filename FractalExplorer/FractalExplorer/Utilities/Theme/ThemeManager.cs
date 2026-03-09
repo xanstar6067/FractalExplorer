@@ -47,16 +47,17 @@ namespace FractalExplorer.Utilities.Theme
             }
         }
 
-        public static void AddOrUpdateCustomTheme(ThemeDefinition theme)
+        public static ThemeOperationResult AddOrUpdateCustomTheme(ThemeDefinition theme)
         {
             ThemeOperationResult result = Catalog.AddOrUpdateCustomTheme(theme);
             if (result.IsSuccess) State.NotifyThemesChanged();
+            return result;
         }
 
-        public static bool RemoveCustomTheme(string id)
+        public static ThemeOperationResult<bool> RemoveCustomTheme(string id)
         {
             ThemeOperationResult<bool> result = Catalog.RemoveCustomTheme(id);
-            if (!result.IsSuccess || result.Value != true) return false;
+            if (!result.IsSuccess || result.Value != true) return result;
 
             State.NotifyThemesChanged();
             if (string.Equals(CurrentThemeId, id, StringComparison.OrdinalIgnoreCase))
@@ -64,19 +65,14 @@ namespace FractalExplorer.Utilities.Theme
                 SetTheme(DefaultThemeId);
             }
 
-            return true;
+            return result;
         }
 
-        public static ThemeDefinition DuplicateTheme(string sourceId, string newId, string newDisplayName)
+        public static ThemeOperationResult<ThemeDefinition> DuplicateTheme(string sourceId, string newId, string newDisplayName)
         {
             ThemeOperationResult<ThemeDefinition> result = Catalog.DuplicateTheme(sourceId, newId, newDisplayName);
-            if (!result.IsSuccess || result.Value is null)
-            {
-                throw new InvalidOperationException(result.ErrorMessage, result.Exception);
-            }
-
-            State.NotifyThemesChanged();
-            return result.Value;
+            if (result.IsSuccess && result.Value is not null) State.NotifyThemesChanged();
+            return result;
         }
 
         public static void RegisterForm(Form form)
