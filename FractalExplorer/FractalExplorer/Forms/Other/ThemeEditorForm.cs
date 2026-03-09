@@ -411,7 +411,7 @@ namespace FractalExplorer.Forms.Other
             {
                 if (string.Equals(Settings.Default.UiTheme, deletedId, StringComparison.OrdinalIgnoreCase))
                 {
-                    Settings.Default.UiTheme = ThemeManager.DefaultThemeId;
+                    Settings.Default.UiTheme = ThemeManager.GetThemeIdFromSettingsDefault();
                     Settings.Default.Save();
                 }
 

@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using FractalExplorer.Properties;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities.Theme
@@ -235,6 +236,15 @@ namespace FractalExplorer.Utilities.Theme
             return false;
         }
 
+        public static string GetThemeIdFromSettingsDefault()
+        {
+            object? defaultValue = Settings.Default.Properties[nameof(Settings.UiTheme)]?.DefaultValue;
+            string? configuredTheme = defaultValue as string;
+
+            TryResolveThemeId(configuredTheme, out string resolvedThemeId);
+            return resolvedThemeId;
+        }
+
         public static void SetTheme(string id)
         {
             if (!TryGetTheme(id, out ThemeDefinition theme))
@@ -297,7 +307,7 @@ namespace FractalExplorer.Utilities.Theme
 
             if (string.Equals(CurrentThemeId, id, StringComparison.OrdinalIgnoreCase))
             {
-                SetTheme(DefaultThemeId);
+                SetTheme(GetThemeIdFromSettingsDefault());
             }
 
             return true;
