@@ -200,7 +200,7 @@ namespace FractalExplorer.Forms.Other
             pnlPreview.Location = new Point(3, 19);
             pnlPreview.Name = "pnlPreview";
             pnlPreview.Padding = new Padding(12);
-            pnlPreview.Size = new Size(745, 161);
+            pnlPreview.Size = new Size(745, 145);
             pnlPreview.TabIndex = 0;
             // 
             // txtPreviewInput
