@@ -130,7 +130,7 @@ namespace FractalExplorer.Properties {
                 this["SaveForm_LanczosFactorIndex"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
@@ -142,10 +142,10 @@ namespace FractalExplorer.Properties {
                 this["RenderPatternIndex"] = value;
             }
         }
-
+        
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("DarkModernLabBlue")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Light")]
         public string UiTheme {
             get {
                 return ((string)(this["UiTheme"]));
