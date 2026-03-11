@@ -53,13 +53,14 @@ namespace FractalExplorer.Forms.Other
             ThemeManager.RegisterForm(this);
 
             _chkHighVisibilityInteractiveStates.CheckedChanged += (_, _) => { ApplyPreviewTheme(); UpdateControlsState(); };
-            rightPanel.RowCount += 1;
-            rightPanel.RowStyles.Insert(2, new RowStyle());
+            rightPanel.RowCount = 6;
+            rightPanel.RowStyles.Insert(2, new RowStyle(SizeType.AutoSize));
             rightPanel.Controls.Add(_chkHighVisibilityInteractiveStates, 0, 2);
             rightPanel.SetColumnSpan(_chkHighVisibilityInteractiveStates, 1);
-            rightPanel.Controls.SetChildIndex(grpColors, 3);
-            rightPanel.Controls.SetChildIndex(grpPreview, 4);
-            rightPanel.Controls.SetChildIndex(buttonsPanel, 5);
+            rightPanel.SetRow(_chkHighVisibilityInteractiveStates, 2);
+            rightPanel.SetRow(grpColors, 3);
+            rightPanel.SetRow(grpPreview, 4);
+            rightPanel.SetRow(buttonsPanel, 5);
 
             BuildColorEditors();
         }
