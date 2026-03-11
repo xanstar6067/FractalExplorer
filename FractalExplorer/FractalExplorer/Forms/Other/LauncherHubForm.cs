@@ -101,6 +101,7 @@ namespace FractalExplorer
             treeViewFractals.HideSelection = false;
             EnableDoubleBuffering(treeViewFractals);
             treeViewFractals.DrawNode += treeViewFractals_DrawNode;
+            treeViewFractals.NodeMouseDoubleClick += treeViewFractals_NodeMouseDoubleClick;
             treeViewFractals.MouseMove += treeViewFractals_MouseMove;
             treeViewFractals.MouseLeave += treeViewFractals_MouseLeave;
         }
@@ -547,6 +548,16 @@ namespace FractalExplorer
             UpdateHoveredNode(null);
         }
 
+        private void treeViewFractals_NodeMouseDoubleClick(object? sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Node.Tag is not FractalInfo)
+            {
+                return;
+            }
+
+            LaunchFractal(_selectedFractal);
+        }
+
         private void UpdateHoveredNode(TreeNode? node)
         {
             if (_hoveredNode == node)
@@ -578,10 +589,18 @@ namespace FractalExplorer
         /// <param name="e">Данные события.</param>
         private void btnLaunchSelected_Click(object sender, EventArgs e)
         {
-            if (_selectedFractal?.FormToLaunch == null) return;
+            LaunchFractal(_selectedFractal);
+        }
+
+        private void LaunchFractal(FractalInfo? fractalToLaunch)
+        {
+            if (fractalToLaunch?.FormToLaunch == null)
+            {
+                return;
+            }
 
             // Используем Activator для создания экземпляра формы по её типу.
-            if (Activator.CreateInstance(_selectedFractal.FormToLaunch) is Form form)
+            if (Activator.CreateInstance(fractalToLaunch.FormToLaunch) is Form form)
             {
                 ThemeManager.ApplyTheme(form);
                 form.Show();
