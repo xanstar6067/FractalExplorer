@@ -26,7 +26,8 @@ namespace FractalExplorer.Forms.Other
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.PressedBackground), DisplayName = "Фон при нажатии", Getter = theme => theme.PressedBackground },
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.BorderColor), DisplayName = "Граница", Getter = theme => theme.BorderColor },
             new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InteractiveBorderNormal), DisplayName = "Интерактивная граница (обыч.)", Getter = theme => theme.InteractiveBorderNormal.IsEmpty ? theme.BorderColor : theme.InteractiveBorderNormal },
-            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InteractiveBorderHover), DisplayName = "Интерактивная граница (hover)", Getter = theme => theme.InteractiveBorderHover.IsEmpty ? theme.AccentPrimary : theme.InteractiveBorderHover }
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.InteractiveBorderHover), DisplayName = "Интерактивная граница (hover)", Getter = theme => theme.InteractiveBorderHover.IsEmpty ? theme.AccentPrimary : theme.InteractiveBorderHover },
+            new ThemeColorBinding { PropertyName = nameof(ThemeDefinition.HighVisibilityInteractiveHover), DisplayName = "Высококонтрастная подсветка (hover)", Getter = theme => theme.HighVisibilityInteractiveHover.IsEmpty ? theme.AccentPrimary : theme.HighVisibilityInteractiveHover }
         };
 
         private readonly Dictionary<string, Panel> _colorPreviewPanels = new(StringComparer.Ordinal);
@@ -548,6 +549,7 @@ namespace FractalExplorer.Forms.Other
                 InputBorderColor = _selectedTheme?.InputBorderColor ?? _currentColors[nameof(ThemeDefinition.BorderColor)],
                 InteractiveBorderNormal = _currentColors[nameof(ThemeDefinition.InteractiveBorderNormal)],
                 InteractiveBorderHover = _currentColors[nameof(ThemeDefinition.InteractiveBorderHover)],
+                HighVisibilityInteractiveHover = _currentColors[nameof(ThemeDefinition.HighVisibilityInteractiveHover)],
                 HighVisibilityInteractiveStates = _chkHighVisibilityInteractiveStates.Checked
             };
         }

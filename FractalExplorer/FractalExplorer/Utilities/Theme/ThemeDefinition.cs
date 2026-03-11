@@ -20,6 +20,7 @@ namespace FractalExplorer.Utilities.Theme
         public required Color InputBorderColor { get; init; }
         public Color InteractiveBorderNormal { get; init; } = Color.Empty;
         public Color InteractiveBorderHover { get; init; } = Color.Empty;
+        public Color HighVisibilityInteractiveHover { get; init; } = Color.Empty;
         public bool HighVisibilityInteractiveStates { get; init; }
 
         public ThemeDefinition CloneWith(string id, string displayName, bool? isBuiltIn = null)
@@ -42,6 +43,7 @@ namespace FractalExplorer.Utilities.Theme
                 InputBorderColor = InputBorderColor,
                 InteractiveBorderNormal = InteractiveBorderNormal,
                 InteractiveBorderHover = InteractiveBorderHover,
+                HighVisibilityInteractiveHover = HighVisibilityInteractiveHover,
                 HighVisibilityInteractiveStates = HighVisibilityInteractiveStates
             };
         }

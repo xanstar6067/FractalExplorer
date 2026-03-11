@@ -11,7 +11,7 @@ namespace FractalExplorer.Utilities.Theme
         public const double HighVisibilityInteractiveContrastRatio = 4.5d;
 
         private static readonly Color HighVisibilityNormalDark = Color.FromArgb(24, 24, 24);
-        private static readonly Color HighVisibilityHoverBright = Color.FromArgb(255, 214, 0);
+        private static readonly Color HighVisibilityHoverFallback = Color.FromArgb(255, 214, 0);
 
         private const string PreserveBackColorTag = "preserve-backcolor";
         public const string DefaultThemeId = "dark-modern-lab-green";
@@ -359,7 +359,7 @@ namespace FractalExplorer.Utilities.Theme
 
             if (theme.HighVisibilityInteractiveStates)
             {
-                return GetHighVisibilityInteractiveStateColors(background);
+                return GetHighVisibilityInteractiveStateColors(theme, background);
             }
 
             bool hasNormal = !theme.InteractiveBorderNormal.IsEmpty;
@@ -377,9 +377,13 @@ namespace FractalExplorer.Utilities.Theme
             return GetAutoInteractiveStateColors(theme, background);
         }
 
-        private static (Color Normal, Color Hover) GetHighVisibilityInteractiveStateColors(Color background)
+        private static (Color Normal, Color Hover) GetHighVisibilityInteractiveStateColors(ThemeDefinition theme, Color background)
         {
-            Color hover = EnsureMinimumContrast(HighVisibilityHoverBright, background, HighVisibilityInteractiveContrastRatio);
+            Color highVisibilityHoverBase = theme.HighVisibilityInteractiveHover.IsEmpty
+                ? HighVisibilityHoverFallback
+                : theme.HighVisibilityInteractiveHover;
+
+            Color hover = EnsureMinimumContrast(highVisibilityHoverBase, background, HighVisibilityInteractiveContrastRatio);
             if (CalculateContrastRatio(hover, background) < HighVisibilityInteractiveContrastRatio)
             {
                 hover = EnsureMinimumContrast(Color.White, background, HighVisibilityInteractiveContrastRatio);
