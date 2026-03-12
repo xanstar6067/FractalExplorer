@@ -1,7 +1,6 @@
 ﻿using FractalExplorer.Utilities.ColorPicking;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.Theme;
-using Microsoft.VisualBasic;
 
 namespace FractalExplorer
 {
@@ -134,6 +133,21 @@ namespace FractalExplorer
             btnSave.Enabled = isCustom && _hasUnsavedChanges;
             btnDelete.Enabled = isCustom;
             btnSaveAs.Enabled = hasPalette;
+            btnNew.Enabled = true;
+        }
+
+        private string GenerateUniquePaletteName(string baseName)
+        {
+            string trimmedBaseName = string.IsNullOrWhiteSpace(baseName) ? "Новая палитра" : baseName.Trim();
+            string candidate = trimmedBaseName;
+            int suffix = 1;
+
+            while (_paletteManager.Palettes.Any(p => p.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
+            {
+                candidate = $"{trimmedBaseName} {suffix++}";
+            }
+
+            return candidate;
         }
 
         private List<Color> BuildAutoAdjustedColors(NewtonColorPalette palette, int requiredCount)
@@ -220,11 +234,40 @@ namespace FractalExplorer
 
             _selectedPalette.Name = txtName.Text;
             MarkUnsavedChanges();
-            int idx = lbPalettes.SelectedIndex;
-            if (idx >= 0)
+        }
+
+        private void txtName_Leave(object sender, EventArgs e)
+        {
+            UpdateSelectedPaletteDisplayName();
+        }
+
+        private void txtName_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
             {
-                lbPalettes.Items[idx] = _selectedPalette.Name;
+                return;
             }
+
+            e.SuppressKeyPress = true;
+            UpdateSelectedPaletteDisplayName();
+        }
+
+        private void UpdateSelectedPaletteDisplayName()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            int selectedIndex = lbPalettes.SelectedIndex;
+            if (selectedIndex < 0)
+            {
+                return;
+            }
+
+            lbPalettes.SelectedIndexChanged -= lbPalettes_SelectedIndexChanged;
+            lbPalettes.Items[selectedIndex] = _selectedPalette.Name;
+            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
         }
 
         private void btnAddColor_Click(object sender, EventArgs e)
@@ -571,17 +614,7 @@ namespace FractalExplorer
                 return;
             }
 
-            string newName = Interaction.InputBox("Введите имя для новой палитры:", "Сохранить палитру как", "Моя палитра");
-            if (string.IsNullOrWhiteSpace(newName))
-            {
-                return;
-            }
-
-            if (_paletteManager.Palettes.Any(p => p.Name.Equals(newName, StringComparison.OrdinalIgnoreCase)))
-            {
-                MessageBox.Show("Палитра с таким именем уже существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+            string newName = GenerateUniquePaletteName($"{_selectedPalette.Name} копия");
 
             NewtonColorPalette newPalette = new()
             {
@@ -597,7 +630,25 @@ namespace FractalExplorer
             PopulatePaletteList();
             string newDisplayName = newPalette.IsBuiltIn ? $"{newPalette.Name} [Встроенная]" : newPalette.Name;
             lbPalettes.SelectedItem = newDisplayName;
-            MessageBox.Show($"Палитра '{newName}' создана и автоматически сохранена.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void btnNew_Click(object sender, EventArgs e)
+        {
+            string newName = GenerateUniquePaletteName("Новая палитра");
+            NewtonColorPalette newPalette = new()
+            {
+                Name = newName,
+                IsGradient = true,
+                IsBuiltIn = false,
+                RootColors = GenerateHarmonicColors(Math.Max(_requiredRootCount, 3)),
+                BackgroundColor = Color.Black
+            };
+
+            _paletteManager.Palettes.Add(newPalette);
+            _paletteManager.SavePalettes();
+
+            PopulatePaletteList();
+            lbPalettes.SelectedItem = newPalette.Name;
         }
 
         private void btnDelete_Click(object sender, EventArgs e)
@@ -622,7 +673,6 @@ namespace FractalExplorer
 
             _paletteManager.SavePalettes();
             PopulatePaletteList();
-            MessageBox.Show("Палитра удалена и изменения автоматически сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnApply_Click(object sender, EventArgs e)

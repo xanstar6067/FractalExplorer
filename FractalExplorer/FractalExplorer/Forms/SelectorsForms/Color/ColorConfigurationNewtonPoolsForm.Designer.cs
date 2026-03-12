@@ -19,10 +19,11 @@
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorConfigurationNewtonPoolsForm));
             groupBoxPalettes = new GroupBox();
+            btnNew = new Button();
             btnDelete = new Button();
             btnSaveAs = new Button();
-            btnSave = new Button();
             lbPalettes = new ListBox();
+            btnSave = new Button();
             groupBoxEditor = new GroupBox();
             lblEditHint = new Label();
             btnAutoAdjustRoots = new Button();
@@ -46,23 +47,34 @@
             // groupBoxPalettes
             // 
             groupBoxPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            groupBoxPalettes.Controls.Add(btnNew);
             groupBoxPalettes.Controls.Add(btnDelete);
             groupBoxPalettes.Controls.Add(btnSaveAs);
-            groupBoxPalettes.Controls.Add(btnSave);
             groupBoxPalettes.Controls.Add(lbPalettes);
             groupBoxPalettes.Location = new Point(12, 12);
             groupBoxPalettes.Name = "groupBoxPalettes";
-            groupBoxPalettes.Size = new Size(254, 457);
+            groupBoxPalettes.Size = new Size(238, 428);
             groupBoxPalettes.TabIndex = 0;
             groupBoxPalettes.TabStop = false;
             groupBoxPalettes.Text = "Список палитр";
             // 
+            // btnNew
+            // 
+            btnNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnNew.Location = new Point(7, 391);
+            btnNew.Name = "btnNew";
+            btnNew.Size = new Size(61, 28);
+            btnNew.TabIndex = 1;
+            btnNew.Text = "Новая";
+            btnNew.UseVisualStyleBackColor = true;
+            btnNew.Click += btnNew_Click;
+            // 
             // btnDelete
             // 
-            btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            btnDelete.Location = new Point(7, 421);
+            btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnDelete.Location = new Point(168, 391);
             btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(241, 28);
+            btnDelete.Size = new Size(63, 28);
             btnDelete.TabIndex = 3;
             btnDelete.Text = "Удалить";
             btnDelete.UseVisualStyleBackColor = true;
@@ -70,25 +82,14 @@
             // 
             // btnSaveAs
             // 
-            btnSaveAs.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            btnSaveAs.Location = new Point(7, 387);
+            btnSaveAs.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnSaveAs.Location = new Point(74, 391);
             btnSaveAs.Name = "btnSaveAs";
-            btnSaveAs.Size = new Size(241, 28);
+            btnSaveAs.Size = new Size(88, 28);
             btnSaveAs.TabIndex = 2;
             btnSaveAs.Text = "Копировать";
             btnSaveAs.UseVisualStyleBackColor = true;
             btnSaveAs.Click += btnSaveAs_Click;
-            // 
-            // btnSave
-            // 
-            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            btnSave.Location = new Point(7, 353);
-            btnSave.Name = "btnSave";
-            btnSave.Size = new Size(241, 28);
-            btnSave.TabIndex = 1;
-            btnSave.Text = "Сохранить изменения";
-            btnSave.UseVisualStyleBackColor = true;
-            btnSave.Click += btnSave_Click;
             // 
             // lbPalettes
             // 
@@ -96,9 +97,20 @@
             lbPalettes.FormattingEnabled = true;
             lbPalettes.Location = new Point(7, 22);
             lbPalettes.Name = "lbPalettes";
-            lbPalettes.Size = new Size(241, 319);
+            lbPalettes.Size = new Size(224, 364);
             lbPalettes.TabIndex = 0;
             lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
+            // 
+            // btnSave
+            // 
+            btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnSave.Location = new Point(12, 441);
+            btnSave.Name = "btnSave";
+            btnSave.Size = new Size(149, 28);
+            btnSave.TabIndex = 2;
+            btnSave.Text = "Сохранить изменения";
+            btnSave.UseVisualStyleBackColor = true;
+            btnSave.Click += btnSave_Click;
             // 
             // groupBoxEditor
             // 
@@ -258,6 +270,8 @@
             txtName.Size = new Size(462, 23);
             txtName.TabIndex = 1;
             txtName.TextChanged += txtName_TextChanged;
+            txtName.KeyDown += txtName_KeyDown;
+            txtName.Leave += txtName_Leave;
             // 
             // labelName
             // 
@@ -273,6 +287,7 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(762, 481);
+            Controls.Add(btnSave);
             Controls.Add(groupBoxEditor);
             Controls.Add(groupBoxPalettes);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -289,6 +304,7 @@
         #endregion
 
         private GroupBox groupBoxPalettes;
+        private Button btnNew;
         private Button btnDelete;
         private Button btnSaveAs;
         private Button btnSave;
