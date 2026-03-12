@@ -23,6 +23,7 @@ namespace FractalExplorer.Utilities
         /// Текущая выбранная палитра в списке.
         /// </summary>
         private Palette _selectedPalette;
+        private bool _hasUnsavedChanges;
         #endregion
 
         #region Events
@@ -114,6 +115,8 @@ namespace FractalExplorer.Utilities
             string selectedName = lbPalettes.SelectedItem.ToString().Replace(" [Встроенная]", "");
             _selectedPalette = _paletteManager.Palettes.FirstOrDefault(p => p.Name == selectedName);
             if (_selectedPalette == null) return;
+
+            ResetUnsavedChanges();
             DisplayPaletteDetails();
             UpdateControlsState();
         }
@@ -192,6 +195,24 @@ namespace FractalExplorer.Utilities
             nudMaxColorIterations.Enabled = isCustom && !_selectedPalette.AlignWithRenderIterations;
 
             btnCopy.Enabled = _selectedPalette != null;
+            btnSave.Enabled = isCustom && _hasUnsavedChanges;
+        }
+
+        private void MarkUnsavedChanges()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            _hasUnsavedChanges = true;
+            btnSave.Enabled = true;
+        }
+
+        private void ResetUnsavedChanges()
+        {
+            _hasUnsavedChanges = false;
+            btnSave.Enabled = false;
         }
 
         /// <summary>
@@ -248,6 +269,7 @@ namespace FractalExplorer.Utilities
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.Name = txtName.Text;
+                MarkUnsavedChanges();
             }
         }
 
@@ -282,6 +304,7 @@ namespace FractalExplorer.Utilities
             {
                 _selectedPalette.Colors.Add(selectedColor);
                 DisplayPaletteDetails();
+                MarkUnsavedChanges();
             }
         }
 
@@ -299,6 +322,7 @@ namespace FractalExplorer.Utilities
             {
                 _selectedPalette.Colors[lbColorStops.SelectedIndex] = selectedColor;
                 DisplayPaletteDetails();
+                MarkUnsavedChanges();
             }
         }
 
@@ -314,6 +338,7 @@ namespace FractalExplorer.Utilities
             {
                 _selectedPalette.Colors.RemoveAt(lbColorStops.SelectedIndex);
                 DisplayPaletteDetails();
+                MarkUnsavedChanges();
             }
         }
 
@@ -335,6 +360,7 @@ namespace FractalExplorer.Utilities
 
             // ИЗМЕНЕНО: Используем безопасный метод менеджера для добавления палитры
             _paletteManager.AddPalette(newPalette);
+            _paletteManager.SaveCustomPalettes();
 
             PopulatePaletteList();
             lbPalettes.SelectedItem = newPalette.Name;
@@ -373,6 +399,7 @@ namespace FractalExplorer.Utilities
 
             // ИЗМЕНЕНО: Используем безопасный метод менеджера для добавления палитры
             _paletteManager.AddPalette(newPalette);
+            _paletteManager.SaveCustomPalettes();
 
             PopulatePaletteList();
             lbPalettes.SelectedItem = newPalette.Name;
@@ -396,6 +423,7 @@ namespace FractalExplorer.Utilities
 
                     if (removed)
                     {
+                        _paletteManager.SaveCustomPalettes();
                         PopulatePaletteList();
                         // Устанавливаем выбор на последний элемент в списке или
                         // оставляем без выбора, если список пуст.
@@ -426,6 +454,7 @@ namespace FractalExplorer.Utilities
             {
                 _selectedPalette.IsGradient = checkIsGradient.Checked;
                 panelPreview.Invalidate();
+                MarkUnsavedChanges();
             }
         }
 
@@ -441,6 +470,7 @@ namespace FractalExplorer.Utilities
             {
                 _selectedPalette.AlignWithRenderIterations = checkAlignSteps.Checked;
                 nudMaxColorIterations.Enabled = !checkAlignSteps.Checked;
+                MarkUnsavedChanges();
             }
         }
 
@@ -454,6 +484,7 @@ namespace FractalExplorer.Utilities
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
                 _selectedPalette.MaxColorIterations = (int)nudMaxColorIterations.Value;
+                MarkUnsavedChanges();
             }
         }
 
@@ -468,6 +499,7 @@ namespace FractalExplorer.Utilities
             {
                 _selectedPalette.Gamma = (double)nudGamma.Value;
                 panelPreview.Invalidate();
+                MarkUnsavedChanges();
             }
         }
 
@@ -480,7 +512,8 @@ namespace FractalExplorer.Utilities
         private void btnSave_Click(object sender, EventArgs e)
         {
             _paletteManager.SaveCustomPalettes();
-            MessageBox.Show("Пользовательские палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ResetUnsavedChanges();
+            MessageBox.Show("Изменения палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         #endregion
 
@@ -608,6 +641,7 @@ namespace FractalExplorer.Utilities
             // Удаляем его со старого места и вставляем в новое.
             _selectedPalette.Colors.RemoveAt(sourceIndex);
             _selectedPalette.Colors.Insert(destinationIndex, draggedColor);
+            MarkUnsavedChanges();
 
             // Полностью обновляем все детали палитры на форме.
             // Это самый надежный способ, так как он перерисовывает список

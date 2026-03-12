@@ -86,7 +86,7 @@
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(241, 28);
             btnSave.TabIndex = 1;
-            btnSave.Text = "Сохранить";
+            btnSave.Text = "Сохранить изменения";
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
             // 

@@ -25,6 +25,7 @@ namespace FractalExplorer
         private int? _previewHoveredRootIndex;
         private bool _previewBackgroundHovered;
         private Rectangle _previewHoveredBounds;
+        private bool _hasUnsavedChanges;
 
         public ColorConfigurationNewtonPoolsForm(NewtonPaletteManager manager)
         {
@@ -86,6 +87,7 @@ namespace FractalExplorer
             _isProgrammaticChange = false;
 
             RefreshUIFromPalette(_paletteManager.ActivePalette);
+            ResetUnsavedChanges();
         }
 
         private void RefreshUIFromPalette(NewtonColorPalette palette)
@@ -129,7 +131,7 @@ namespace FractalExplorer
             btnEditColor.Enabled = isCustom && lbColorStops.SelectedIndex >= 0 && _requiredRootCount > 0;
             btnAutoAdjustRoots.Enabled = isCustom;
 
-            btnSave.Enabled = isCustom;
+            btnSave.Enabled = isCustom && _hasUnsavedChanges;
             btnDelete.Enabled = isCustom;
             btnSaveAs.Enabled = hasPalette;
         }
@@ -174,6 +176,23 @@ namespace FractalExplorer
             return true;
         }
 
+        private void MarkUnsavedChanges()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            _hasUnsavedChanges = true;
+            btnSave.Enabled = true;
+        }
+
+        private void ResetUnsavedChanges()
+        {
+            _hasUnsavedChanges = false;
+            btnSave.Enabled = false;
+        }
+
         private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_isProgrammaticChange || lbPalettes.SelectedItem is null)
@@ -184,6 +203,7 @@ namespace FractalExplorer
             string selectedName = lbPalettes.SelectedItem.ToString()!.Replace(" [Встроенная]", string.Empty);
             NewtonColorPalette selected = _paletteManager.Palettes.First(p => p.Name == selectedName);
             RefreshUIFromPalette(selected);
+            ResetUnsavedChanges();
         }
 
         private void lbColorStops_SelectedIndexChanged(object sender, EventArgs e)
@@ -199,6 +219,7 @@ namespace FractalExplorer
             }
 
             _selectedPalette.Name = txtName.Text;
+            MarkUnsavedChanges();
             int idx = lbPalettes.SelectedIndex;
             if (idx >= 0)
             {
@@ -243,6 +264,7 @@ namespace FractalExplorer
                 }
 
                 _selectedPalette.RootColors[rootIndex] = selectedColor;
+                MarkUnsavedChanges();
                 RefreshUIFromPalette(_selectedPalette);
                 lbColorStops.SelectedIndex = rootIndex;
             }
@@ -268,6 +290,7 @@ namespace FractalExplorer
             if (_colorSelectionService.TrySelectColor(this, _selectedPalette.BackgroundColor, out Color selectedColor))
             {
                 _selectedPalette.BackgroundColor = selectedColor;
+                MarkUnsavedChanges();
                 panelPreview.Invalidate();
             }
         }
@@ -288,6 +311,7 @@ namespace FractalExplorer
             }
 
             _selectedPalette!.IsGradient = chkIsGradient.Checked;
+            MarkUnsavedChanges();
         }
 
         private void btnAutoAdjustRoots_Click(object sender, EventArgs e)
@@ -298,6 +322,7 @@ namespace FractalExplorer
             }
 
             _selectedPalette!.RootColors = BuildAutoAdjustedColors(_selectedPalette, _requiredRootCount);
+            MarkUnsavedChanges();
             RefreshUIFromPalette(_selectedPalette);
         }
 
@@ -535,7 +560,8 @@ namespace FractalExplorer
             }
 
             _paletteManager.SavePalettes();
-            MessageBox.Show("Палитра сохранена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ResetUnsavedChanges();
+            MessageBox.Show("Изменения палитры сохранены!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnSaveAs_Click(object sender, EventArgs e)
@@ -571,7 +597,7 @@ namespace FractalExplorer
             PopulatePaletteList();
             string newDisplayName = newPalette.IsBuiltIn ? $"{newPalette.Name} [Встроенная]" : newPalette.Name;
             lbPalettes.SelectedItem = newDisplayName;
-            MessageBox.Show($"Палитра '{newName}' создана и сохранена.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show($"Палитра '{newName}' создана и автоматически сохранена.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnDelete_Click(object sender, EventArgs e)
@@ -596,6 +622,7 @@ namespace FractalExplorer
 
             _paletteManager.SavePalettes();
             PopulatePaletteList();
+            MessageBox.Show("Палитра удалена и изменения автоматически сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnApply_Click(object sender, EventArgs e)

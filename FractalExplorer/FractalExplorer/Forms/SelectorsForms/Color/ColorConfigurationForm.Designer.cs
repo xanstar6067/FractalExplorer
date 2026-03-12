@@ -173,7 +173,7 @@
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(149, 28);
             btnSave.TabIndex = 10;
-            btnSave.Text = "Сохранить палитры";
+            btnSave.Text = "Сохранить изменения";
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
             // 

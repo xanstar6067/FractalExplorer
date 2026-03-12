@@ -15,6 +15,7 @@ namespace FractalExplorer.SelectorsForms
         private readonly SerpinskyPaletteManager _paletteManager;
         private SerpinskyColorPalette _selectedPalette;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
+        private bool _hasUnsavedChanges;
         #endregion
 
         #region Events
@@ -96,6 +97,7 @@ namespace FractalExplorer.SelectorsForms
             }
 
             DisplayPaletteDetails();
+            ResetUnsavedChanges();
             UpdateControlsState();
         }
 
@@ -145,6 +147,24 @@ namespace FractalExplorer.SelectorsForms
             panelFractalColor.Enabled = isCustom;
             panelBackgroundColor.Enabled = isCustom;
             btnDelete.Enabled = isCustom;
+            btnSave.Enabled = isCustom && _hasUnsavedChanges;
+        }
+
+        private void MarkUnsavedChanges()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            _hasUnsavedChanges = true;
+            btnSave.Enabled = true;
+        }
+
+        private void ResetUnsavedChanges()
+        {
+            _hasUnsavedChanges = false;
+            btnSave.Enabled = false;
         }
 
         /// <summary>
@@ -164,6 +184,7 @@ namespace FractalExplorer.SelectorsForms
             {
                 panel.BackColor = selectedColor;
                 setColorAction(selectedColor);
+                MarkUnsavedChanges();
             }
         }
         #endregion
@@ -203,6 +224,7 @@ namespace FractalExplorer.SelectorsForms
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn && txtName.Focused)
             {
                 _selectedPalette.Name = txtName.Text;
+                MarkUnsavedChanges();
                 // Обновляем текст в ListBox, чтобы изменения имени были сразу видны.
                 // Пересоздавать весь список не требуется, достаточно обновить конкретный элемент.
                 lbPalettes.Items[lbPalettes.SelectedIndex] = txtName.Text;
@@ -227,6 +249,7 @@ namespace FractalExplorer.SelectorsForms
             }
             var newPalette = new SerpinskyColorPalette { Name = newName };
             _paletteManager.Palettes.Add(newPalette);
+            _paletteManager.SaveCustomPalettes();
             PopulatePaletteList(); // Перезагружаем список для отображения новой палитры.
             lbPalettes.SelectedItem = newPalette.Name; // Выбираем только что созданную палитру в списке.
         }
@@ -246,6 +269,7 @@ namespace FractalExplorer.SelectorsForms
                 if (MessageBox.Show($"Удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
                     _paletteManager.Palettes.Remove(_selectedPalette);
+                    _paletteManager.SaveCustomPalettes();
                     PopulatePaletteList(); // Обновляем список после удаления.
                     // Выбираем первый элемент в списке после удаления, чтобы всегда была выбрана палитра.
                     lbPalettes.SelectedIndex = 0;
@@ -262,7 +286,8 @@ namespace FractalExplorer.SelectorsForms
         private void btnSave_Click(object sender, EventArgs e)
         {
             _paletteManager.SaveCustomPalettes();
-            MessageBox.Show("Пользовательские палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ResetUnsavedChanges();
+            MessageBox.Show("Изменения палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
