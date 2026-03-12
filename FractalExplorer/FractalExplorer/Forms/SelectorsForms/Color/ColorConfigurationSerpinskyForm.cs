@@ -1,153 +1,127 @@
-﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
-using FractalExplorer.Utilities.ColorPicking;
+﻿using FractalExplorer.Utilities.ColorPicking;
+using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.Theme;
 
 namespace FractalExplorer.SelectorsForms
 {
     /// <summary>
-    /// Представляет форму для настройки цветовых палитр фрактала Серпинского.
-    /// Позволяет пользователю просматривать, создавать, редактировать, удалять
-    /// и применять пользовательские цветовые палитры.
+    /// Форма настройки палитр для фрактала Серпинского.
     /// </summary>
     public partial class ColorConfigurationSerpinskyForm : Form
     {
-        #region Fields
         private readonly SerpinskyPaletteManager _paletteManager;
-        private SerpinskyColorPalette _selectedPalette;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
+
+        private SerpinskyColorPalette? _selectedPalette;
+        private bool _isProgrammaticChange;
         private bool _hasUnsavedChanges;
-        #endregion
+        private EventHandler? _themeChangedHandler;
+        private bool _fractalColorHovered;
+        private bool _backgroundColorHovered;
 
-        #region Events
-        /// <summary>
-        /// Происходит, когда выбранная цветовая палитра применена.
-        /// </summary>
-        public event EventHandler PaletteApplied;
-        #endregion
+        public event EventHandler? PaletteApplied;
 
-        #region Constructor
-        /// <summary>
-        /// Инициализирует новый экземпляр класса <see cref="ColorConfigurationSerpinskyForm"/>.
-        /// </summary>
-        /// <param name="paletteManager">Менеджер палитр, используемый для управления цветовыми схемами.</param>
         public ColorConfigurationSerpinskyForm(SerpinskyPaletteManager paletteManager)
         {
             InitializeComponent();
-            ThemeManager.RegisterForm(this);
-            ThemeManager.ThemeChanged += ThemeManager_ThemeChanged;
-            Disposed += ColorConfigurationSerpinskyForm_Disposed;
             _paletteManager = paletteManager;
-        }
-        #endregion
 
-        #region Form Lifecycle
-        /// <summary>
-        /// Обрабатывает событие загрузки формы.
-        /// Заполняет список палитр и выбирает активную палитру, если она установлена.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
+            EnableDoubleBuffering(panelFractalColor);
+            EnableDoubleBuffering(panelBackgroundColor);
+
+            ThemeManager.RegisterForm(this);
+            _themeChangedHandler = (_, _) => ApplySerpinskyPaletteThemeHints();
+            ThemeManager.ThemeChanged += _themeChangedHandler;
+
+            FormClosing += ColorConfigurationSerpinskyForm_FormClosing;
+        }
+
+        private static void EnableDoubleBuffering(Control control)
+        {
+            var doubleBufferedProperty = typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            doubleBufferedProperty?.SetValue(control, true);
+        }
+
         private void ColorConfigurationSerpinskyForm_Load(object sender, EventArgs e)
         {
             PopulatePaletteList();
-            if (_paletteManager.ActivePalette != null)
-            {
-                // Формируем отображаемое имя для поиска в ListBox,
-                // учитывая, что встроенные палитры имеют суффикс "[Встроенная]".
-                string displayNameToFind = _paletteManager.ActivePalette.IsBuiltIn
-                    ? $"{_paletteManager.ActivePalette.Name} [Встроенная]"
-                    : _paletteManager.ActivePalette.Name;
-                lbPalettes.SelectedItem = displayNameToFind;
-            }
         }
-        #endregion
 
-        #region Palette Management
-        /// <summary>
-        /// Заполняет список доступных цветовых палитр в ListBox.
-        /// </summary>
         private void PopulatePaletteList()
         {
+            _isProgrammaticChange = true;
             lbPalettes.Items.Clear();
-            foreach (var palette in _paletteManager.Palettes)
+
+            foreach (SerpinskyColorPalette palette in _paletteManager.Palettes)
             {
                 string displayName = palette.IsBuiltIn ? $"{palette.Name} [Встроенная]" : palette.Name;
                 lbPalettes.Items.Add(displayName);
             }
-        }
 
-        /// <summary>
-        /// Обрабатывает изменение выбранного элемента в списке палитр.
-        /// Обновляет отображаемые детали палитры и состояние элементов управления.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
-        private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (lbPalettes.SelectedIndex == -1)
-            {
-                return;
-            }
+            string activeName = _paletteManager.ActivePalette.IsBuiltIn
+                ? $"{_paletteManager.ActivePalette.Name} [Встроенная]"
+                : _paletteManager.ActivePalette.Name;
+            lbPalettes.SelectedItem = activeName;
 
-            string selectedName = lbPalettes.SelectedItem.ToString().Replace(" [Встроенная]", "");
-            _selectedPalette = _paletteManager.Palettes.FirstOrDefault(p => p.Name == selectedName);
-            if (_selectedPalette == null)
-            {
-                return;
-            }
-
-            DisplayPaletteDetails();
+            _isProgrammaticChange = false;
+            RefreshUIFromPalette(_paletteManager.ActivePalette);
             ResetUnsavedChanges();
+        }
+
+        private void RefreshUIFromPalette(SerpinskyColorPalette palette)
+        {
+            _isProgrammaticChange = true;
+            _selectedPalette = palette;
+
+            txtName.Text = palette.Name;
+            panelFractalColor.BackColor = palette.FractalColor;
+            panelBackgroundColor.BackColor = palette.BackgroundColor;
+
             UpdateControlsState();
+            ApplySerpinskyPaletteThemeHints();
+            _isProgrammaticChange = false;
+
+            panelFractalColor.Invalidate();
+            panelBackgroundColor.Invalidate();
         }
 
-        /// <summary>
-        /// Отображает детали выбранной палитры (имя и цвета) в соответствующих элементах управления.
-        /// </summary>
-        private void DisplayPaletteDetails()
-        {
-            // Отписываемся от события TextChanged перед изменением текста,
-            // чтобы избежать повторного вызова обработчика и лишних операций во время инициализации.
-            txtName.TextChanged -= txtName_TextChanged;
-            txtName.Text = _selectedPalette.Name;
-            txtName.TextChanged += txtName_TextChanged;
-
-            ApplySelectedPalettePreviewColors();
-        }
-
-        /// <summary>
-        /// Применяет цвета предпросмотра текущей выбранной палитры только к целевым панелям,
-        /// чтобы сохранить пользовательские цвета после смены темы.
-        /// </summary>
-        private void ApplySelectedPalettePreviewColors()
-        {
-            if (_selectedPalette == null)
-            {
-                return;
-            }
-
-            panelFractalColor.BackColor = _selectedPalette.FractalColor;
-            panelBackgroundColor.BackColor = _selectedPalette.BackgroundColor;
-        }
-
-        /// <summary>
-        /// Обновляет состояние активности элементов управления в зависимости от того,
-        /// является ли выбранная палитра встроенной или пользовательской.
-        /// </summary>
         private void UpdateControlsState()
         {
-            if (_selectedPalette == null)
-            {
-                return;
-            }
-            // Отключаем возможность редактирования имени, цветов и удаления для встроенных палитр,
-            // чтобы сохранить их целостность и предотвратить случайные изменения.
-            bool isCustom = !_selectedPalette.IsBuiltIn;
+            bool hasPalette = _selectedPalette != null;
+            bool isCustom = hasPalette && !_selectedPalette!.IsBuiltIn;
+
             txtName.Enabled = isCustom;
             panelFractalColor.Enabled = isCustom;
             panelBackgroundColor.Enabled = isCustom;
-            btnDelete.Enabled = isCustom;
             btnSave.Enabled = isCustom && _hasUnsavedChanges;
+            btnDelete.Enabled = isCustom;
+            btnCopy.Enabled = hasPalette;
+            btnNew.Enabled = true;
+        }
+
+        private string GenerateUniquePaletteName(string baseName)
+        {
+            string trimmedBaseName = string.IsNullOrWhiteSpace(baseName) ? "Новая палитра" : baseName.Trim();
+            string candidate = trimmedBaseName;
+            int suffix = 1;
+
+            while (_paletteManager.Palettes.Any(p => p.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
+            {
+                candidate = $"{trimmedBaseName} {suffix++}";
+            }
+
+            return candidate;
+        }
+
+        private bool EnsureEditablePaletteOrWarn()
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                MessageBox.Show("Встроенные палитры нельзя изменять. Сначала сохраните её как новую палитру.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            return true;
         }
 
         private void MarkUnsavedChanges()
@@ -167,174 +141,294 @@ namespace FractalExplorer.SelectorsForms
             btnSave.Enabled = false;
         }
 
-        /// <summary>
-        /// Открывает диалоговое окно выбора цвета и применяет выбранный цвет.
-        /// </summary>
-        /// <param name="panel">Панель, чей фоновый цвет будет изменен.</param>
-        /// <param name="setColorAction">Действие для установки нового цвета в палитре.</param>
-        private void EditColor(Panel panel, Action<Color> setColorAction)
+        private void UpdateSelectedPaletteDisplayName()
         {
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
-                MessageBox.Show("Нельзя изменять встроенные палитры. Создайте новую, чтобы редактировать.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            Color initialColor = panel.BackColor;
-            if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
+
+            int selectedIndex = lbPalettes.SelectedIndex;
+            if (selectedIndex < 0)
+            {
+                return;
+            }
+
+            lbPalettes.SelectedIndexChanged -= lbPalettes_SelectedIndexChanged;
+            lbPalettes.Items[selectedIndex] = _selectedPalette.Name;
+            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
+        }
+
+        private void EditColor(Panel panel, Action<Color> setColorAction)
+        {
+            if (!EnsureEditablePaletteOrWarn())
+            {
+                return;
+            }
+
+            if (_colorSelectionService.TrySelectColor(this, panel.BackColor, out Color selectedColor))
             {
                 panel.BackColor = selectedColor;
                 setColorAction(selectedColor);
                 MarkUnsavedChanges();
+                panel.Invalidate();
             }
         }
-        #endregion
 
-        #region Event Handlers
-        /// <summary>
-        /// Обрабатывает событие клика по панели цвета фрактала, позволяя пользователю изменить цвет фрактала.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
+        private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_isProgrammaticChange || lbPalettes.SelectedItem is null)
+            {
+                return;
+            }
+
+            string selectedName = lbPalettes.SelectedItem.ToString()!.Replace(" [Встроенная]", string.Empty);
+            SerpinskyColorPalette selected = _paletteManager.Palettes.First(p => p.Name == selectedName);
+            RefreshUIFromPalette(selected);
+            ResetUnsavedChanges();
+        }
+
+        private void txtName_TextChanged(object sender, EventArgs e)
+        {
+            if (_isProgrammaticChange || _selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            _selectedPalette.Name = txtName.Text;
+            MarkUnsavedChanges();
+        }
+
+        private void txtName_Leave(object sender, EventArgs e)
+        {
+            UpdateSelectedPaletteDisplayName();
+        }
+
+        private void txtName_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.SuppressKeyPress = true;
+            UpdateSelectedPaletteDisplayName();
+        }
+
         private void panelFractalColor_Click(object sender, EventArgs e)
         {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
             EditColor(panelFractalColor, color => _selectedPalette.FractalColor = color);
         }
 
-        /// <summary>
-        /// Обрабатывает событие клика по панели цвета фона, позволяя пользователю изменить цвет фона.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
         private void panelBackgroundColor_Click(object sender, EventArgs e)
         {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
             EditColor(panelBackgroundColor, color => _selectedPalette.BackgroundColor = color);
         }
 
-        /// <summary>
-        /// Обрабатывает изменение текста в поле для ввода имени палитры.
-        /// Обновляет имя выбранной палитры и соответствующий элемент в списке.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
-        private void txtName_TextChanged(object sender, EventArgs e)
-        {
-            // Обновляем имя палитры и соответствующий элемент в списке ListBox,
-            // только если это пользовательская палитра и изменение вызвано прямым вводом пользователя (элемент находится в фокусе).
-            // Это предотвращает обновление при программном изменении текста (например, при загрузке палитры).
-            if (_selectedPalette != null && !_selectedPalette.IsBuiltIn && txtName.Focused)
-            {
-                _selectedPalette.Name = txtName.Text;
-                MarkUnsavedChanges();
-                // Обновляем текст в ListBox, чтобы изменения имени были сразу видны.
-                // Пересоздавать весь список не требуется, достаточно обновить конкретный элемент.
-                lbPalettes.Items[lbPalettes.SelectedIndex] = txtName.Text;
-            }
-        }
-
-        /// <summary>
-        /// Обрабатывает нажатие кнопки "Новая".
-        /// Создает новую пользовательскую палитру с уникальным именем и добавляет ее в список.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
         private void btnNew_Click(object sender, EventArgs e)
         {
-            string newName = "Новая палитра";
-            int counter = 1;
-            // Генерируем уникальное имя для новой палитры,
-            // чтобы избежать конфликтов имен с существующими палитрами.
-            while (_paletteManager.Palettes.Any(p => p.Name == newName))
+            string newName = GenerateUniquePaletteName("Новая палитра");
+            SerpinskyColorPalette newPalette = new()
             {
-                newName = $"Новая палитра {++counter}";
-            }
-            var newPalette = new SerpinskyColorPalette { Name = newName };
+                Name = newName,
+                FractalColor = Color.Black,
+                BackgroundColor = Color.White,
+                IsBuiltIn = false
+            };
+
             _paletteManager.Palettes.Add(newPalette);
             _paletteManager.SaveCustomPalettes();
-            PopulatePaletteList(); // Перезагружаем список для отображения новой палитры.
-            lbPalettes.SelectedItem = newPalette.Name; // Выбираем только что созданную палитру в списке.
+
+            PopulatePaletteList();
+            lbPalettes.SelectedItem = newPalette.Name;
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопки "Удалить".
-        /// Удаляет выбранную пользовательскую палитру после подтверждения пользователя.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
+        private void btnCopy_Click(object sender, EventArgs e)
+        {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
+            string newName = GenerateUniquePaletteName($"{_selectedPalette.Name} копия");
+            SerpinskyColorPalette newPalette = new()
+            {
+                Name = newName,
+                FractalColor = _selectedPalette.FractalColor,
+                BackgroundColor = _selectedPalette.BackgroundColor,
+                IsBuiltIn = false
+            };
+
+            _paletteManager.Palettes.Add(newPalette);
+            _paletteManager.SaveCustomPalettes();
+
+            PopulatePaletteList();
+            lbPalettes.SelectedItem = newPalette.Name;
+        }
+
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
-                // Запрашиваем подтверждение перед удалением палитры,
-                // так как это необратимая операция.
-                if (MessageBox.Show($"Удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    _paletteManager.Palettes.Remove(_selectedPalette);
-                    _paletteManager.SaveCustomPalettes();
-                    PopulatePaletteList(); // Обновляем список после удаления.
-                    // Выбираем первый элемент в списке после удаления, чтобы всегда была выбрана палитра.
-                    lbPalettes.SelectedIndex = 0;
-                }
+                return;
             }
+
+            DialogResult confirmResult = MessageBox.Show($"Вы уверены, что хотите удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirmResult != DialogResult.Yes)
+            {
+                return;
+            }
+
+            bool deletedWasActive = ReferenceEquals(_paletteManager.ActivePalette, _selectedPalette);
+            _paletteManager.Palettes.Remove(_selectedPalette);
+            if (deletedWasActive)
+            {
+                _paletteManager.ActivePalette = _paletteManager.Palettes.First();
+            }
+
+            _paletteManager.SaveCustomPalettes();
+            PopulatePaletteList();
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопки "Сохранить".
-        /// Сохраняет все пользовательские палитры через менеджер палитр.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
         private void btnSave_Click(object sender, EventArgs e)
         {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                MessageBox.Show("Нельзя сохранить изменения во встроенной палитре.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             _paletteManager.SaveCustomPalettes();
             ResetUnsavedChanges();
-            MessageBox.Show("Изменения палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Изменения палитры сохранены!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопки "Применить".
-        /// Устанавливает выбранную палитру как активную и вызывает событие <see cref="PaletteApplied"/>.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
         private void btnApply_Click(object sender, EventArgs e)
+        {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
+            _paletteManager.ActivePalette = _selectedPalette;
+            PaletteApplied?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Hide();
+        }
+
+        private void panelFractalColor_MouseEnter(object sender, EventArgs e)
+        {
+            if (_fractalColorHovered)
+            {
+                return;
+            }
+
+            _fractalColorHovered = true;
+            panelFractalColor.Invalidate();
+        }
+
+        private void panelFractalColor_MouseLeave(object sender, EventArgs e)
+        {
+            if (!_fractalColorHovered)
+            {
+                return;
+            }
+
+            _fractalColorHovered = false;
+            panelFractalColor.Invalidate();
+        }
+
+        private void panelBackgroundColor_MouseEnter(object sender, EventArgs e)
+        {
+            if (_backgroundColorHovered)
+            {
+                return;
+            }
+
+            _backgroundColorHovered = true;
+            panelBackgroundColor.Invalidate();
+        }
+
+        private void panelBackgroundColor_MouseLeave(object sender, EventArgs e)
+        {
+            if (!_backgroundColorHovered)
+            {
+                return;
+            }
+
+            _backgroundColorHovered = false;
+            panelBackgroundColor.Invalidate();
+        }
+
+        private void panelFractalColor_Paint(object sender, PaintEventArgs e)
+        {
+            DrawColorPanelBorder(panelFractalColor, e.Graphics, _fractalColorHovered);
+        }
+
+        private void panelBackgroundColor_Paint(object sender, PaintEventArgs e)
+        {
+            DrawColorPanelBorder(panelBackgroundColor, e.Graphics, _backgroundColorHovered);
+        }
+
+        private void DrawColorPanelBorder(Panel panel, Graphics graphics, bool hovered)
+        {
+            ThemeDefinition theme = ThemeManager.CurrentDefinition;
+            Color borderColor = ThemeManager.GetInteractiveBorderColor(theme, panel.BackColor, hovered);
+            using Pen borderPen = new(borderColor, hovered ? 2f : 1f);
+
+            Rectangle borderRect = panel.ClientRectangle;
+            borderRect.Width = Math.Max(1, borderRect.Width - 1);
+            borderRect.Height = Math.Max(1, borderRect.Height - 1);
+            graphics.DrawRectangle(borderPen, borderRect);
+        }
+
+        private void ApplySerpinskyPaletteThemeHints()
         {
             if (_selectedPalette != null)
             {
-                _paletteManager.ActivePalette = _selectedPalette;
-                // Вызываем событие PaletteApplied, чтобы главная форма или другие подписчики
-                // могли отреагировать на изменение активной палитры и обновить отображение фрактала.
-                PaletteApplied?.Invoke(this, EventArgs.Empty);
+                panelFractalColor.BackColor = _selectedPalette.FractalColor;
+                panelBackgroundColor.BackColor = _selectedPalette.BackgroundColor;
+            }
+
+            panelFractalColor.Invalidate();
+            panelBackgroundColor.Invalidate();
+            lblEditHint.Text = _selectedPalette?.IsBuiltIn == true
+                ? "Встроенная палитра доступна только для просмотра"
+                : "Текущая палитра редактируема";
+            lblEditHint.ForeColor = ThemeManager.CurrentDefinition.SecondaryText;
+        }
+
+        private void ColorConfigurationSerpinskyForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                Hide();
             }
         }
 
-        /// <summary>
-        /// Обрабатывает нажатие кнопки "Закрыть".
-        /// Закрывает текущую форму настройки цвета.
-        /// </summary>
-        /// <param name="sender">Источник события.</param>
-        /// <param name="e">Данные события.</param>
-        private void btnClose_Click(object sender, EventArgs e)
+        protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            this.Close();
-        }
+            if (_themeChangedHandler is not null)
+            {
+                ThemeManager.ThemeChanged -= _themeChangedHandler;
+                _themeChangedHandler = null;
+            }
 
-        /// <summary>
-        /// Обрабатывает изменение темы приложения и восстанавливает цвета предпросмотра палитры,
-        /// которые не должны быть заменены цветами темы.
-        /// </summary>
-        private void ThemeManager_ThemeChanged(object? sender, EventArgs e)
-        {
-            ApplySelectedPalettePreviewColors();
+            base.OnFormClosed(e);
         }
-
-        /// <summary>
-        /// Отписывает форму от глобальных событий темы при уничтожении.
-        /// </summary>
-        private void ColorConfigurationSerpinskyForm_Disposed(object? sender, EventArgs e)
-        {
-            ThemeManager.ThemeChanged -= ThemeManager_ThemeChanged;
-            Disposed -= ColorConfigurationSerpinskyForm_Disposed;
-        }
-        #endregion
     }
 }

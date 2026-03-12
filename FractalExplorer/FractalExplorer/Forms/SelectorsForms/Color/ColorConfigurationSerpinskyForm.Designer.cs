@@ -18,55 +18,47 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ColorConfigurationSerpinskyForm));
-            groupBox1 = new GroupBox();
-            lbPalettes = new ListBox();
+            groupBoxPalettes = new GroupBox();
             btnNew = new Button();
             btnDelete = new Button();
-            groupBox2 = new GroupBox();
+            btnCopy = new Button();
+            lbPalettes = new ListBox();
+            groupBoxEditor = new GroupBox();
+            lblEditHint = new Label();
             panelBackgroundColor = new Panel();
-            label4 = new Label();
+            labelBackgroundColor = new Label();
             panelFractalColor = new Panel();
-            label3 = new Label();
-            label1 = new Label();
+            labelFractalColor = new Label();
             txtName = new TextBox();
-            btnClose = new Button();
-            btnApply = new Button();
+            labelName = new Label();
             btnSave = new Button();
-            groupBox1.SuspendLayout();
-            groupBox2.SuspendLayout();
+            btnApply = new Button();
+            btnClose = new Button();
+            groupBoxPalettes.SuspendLayout();
+            groupBoxEditor.SuspendLayout();
             SuspendLayout();
             // 
-            // groupBox1
+            // groupBoxPalettes
             // 
-            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
-            groupBox1.Controls.Add(lbPalettes);
-            groupBox1.Controls.Add(btnNew);
-            groupBox1.Controls.Add(btnDelete);
-            groupBox1.Location = new Point(12, 12);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(236, 269);
-            groupBox1.TabIndex = 14;
-            groupBox1.TabStop = false;
-            groupBox1.Text = "Список палитр";
-            // 
-            // lbPalettes
-            // 
-            lbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lbPalettes.FormattingEnabled = true;
-            lbPalettes.ItemHeight = 15;
-            lbPalettes.Location = new Point(8, 22);
-            lbPalettes.Name = "lbPalettes";
-            lbPalettes.Size = new Size(220, 199);
-            lbPalettes.TabIndex = 0;
-            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
+            groupBoxPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            groupBoxPalettes.Controls.Add(btnNew);
+            groupBoxPalettes.Controls.Add(btnDelete);
+            groupBoxPalettes.Controls.Add(btnCopy);
+            groupBoxPalettes.Controls.Add(lbPalettes);
+            groupBoxPalettes.Location = new Point(12, 12);
+            groupBoxPalettes.Name = "groupBoxPalettes";
+            groupBoxPalettes.Size = new Size(238, 338);
+            groupBoxPalettes.TabIndex = 0;
+            groupBoxPalettes.TabStop = false;
+            groupBoxPalettes.Text = "Список палитр";
             // 
             // btnNew
             // 
             btnNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnNew.Location = new Point(8, 233);
+            btnNew.Location = new Point(7, 301);
             btnNew.Name = "btnNew";
-            btnNew.Size = new Size(109, 30);
-            btnNew.TabIndex = 8;
+            btnNew.Size = new Size(61, 28);
+            btnNew.TabIndex = 1;
             btnNew.Text = "Новая";
             btnNew.UseVisualStyleBackColor = true;
             btnNew.Click += btnNew_Click;
@@ -74,159 +66,198 @@
             // btnDelete
             // 
             btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnDelete.Location = new Point(123, 233);
+            btnDelete.Location = new Point(168, 301);
             btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(105, 30);
-            btnDelete.TabIndex = 9;
+            btnDelete.Size = new Size(63, 28);
+            btnDelete.TabIndex = 3;
             btnDelete.Text = "Удалить";
             btnDelete.UseVisualStyleBackColor = true;
             btnDelete.Click += btnDelete_Click;
             // 
-            // groupBox2
+            // btnCopy
             // 
-            groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            groupBox2.Controls.Add(panelBackgroundColor);
-            groupBox2.Controls.Add(label4);
-            groupBox2.Controls.Add(panelFractalColor);
-            groupBox2.Controls.Add(label3);
-            groupBox2.Controls.Add(label1);
-            groupBox2.Controls.Add(txtName);
-            groupBox2.Location = new Point(264, 12);
-            groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(278, 269);
-            groupBox2.TabIndex = 15;
-            groupBox2.TabStop = false;
-            groupBox2.Text = "Редактор палитры";
+            btnCopy.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnCopy.Location = new Point(74, 301);
+            btnCopy.Name = "btnCopy";
+            btnCopy.Size = new Size(88, 28);
+            btnCopy.TabIndex = 2;
+            btnCopy.Text = "Копировать";
+            btnCopy.UseVisualStyleBackColor = true;
+            btnCopy.Click += btnCopy_Click;
+            // 
+            // lbPalettes
+            // 
+            lbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lbPalettes.FormattingEnabled = true;
+            lbPalettes.Location = new Point(7, 22);
+            lbPalettes.Name = "lbPalettes";
+            lbPalettes.Size = new Size(224, 274);
+            lbPalettes.TabIndex = 0;
+            lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
+            // 
+            // groupBoxEditor
+            // 
+            groupBoxEditor.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBoxEditor.Controls.Add(lblEditHint);
+            groupBoxEditor.Controls.Add(panelBackgroundColor);
+            groupBoxEditor.Controls.Add(labelBackgroundColor);
+            groupBoxEditor.Controls.Add(panelFractalColor);
+            groupBoxEditor.Controls.Add(labelFractalColor);
+            groupBoxEditor.Controls.Add(txtName);
+            groupBoxEditor.Controls.Add(labelName);
+            groupBoxEditor.Location = new Point(272, 12);
+            groupBoxEditor.Name = "groupBoxEditor";
+            groupBoxEditor.Size = new Size(352, 338);
+            groupBoxEditor.TabIndex = 1;
+            groupBoxEditor.TabStop = false;
+            groupBoxEditor.Text = "Редактор палитры";
+            // 
+            // lblEditHint
+            // 
+            lblEditHint.AutoSize = true;
+            lblEditHint.Location = new Point(9, 166);
+            lblEditHint.Name = "lblEditHint";
+            lblEditHint.Size = new Size(173, 15);
+            lblEditHint.TabIndex = 6;
+            lblEditHint.Text = "Текущая палитра редактируема";
             // 
             // panelBackgroundColor
             // 
-            panelBackgroundColor.BorderStyle = BorderStyle.FixedSingle;
+            panelBackgroundColor.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panelBackgroundColor.Cursor = Cursors.Hand;
-            panelBackgroundColor.Location = new Point(125, 114);
+            panelBackgroundColor.Location = new Point(120, 121);
             panelBackgroundColor.Name = "panelBackgroundColor";
-            panelBackgroundColor.Size = new Size(130, 23);
-            panelBackgroundColor.TabIndex = 13;
+            panelBackgroundColor.Size = new Size(223, 28);
+            panelBackgroundColor.TabIndex = 5;
             panelBackgroundColor.Click += panelBackgroundColor_Click;
+            panelBackgroundColor.Paint += panelBackgroundColor_Paint;
+            panelBackgroundColor.MouseEnter += panelBackgroundColor_MouseEnter;
+            panelBackgroundColor.MouseLeave += panelBackgroundColor_MouseLeave;
             // 
-            // label4
+            // labelBackgroundColor
             // 
-            label4.AutoSize = true;
-            label4.Location = new Point(15, 118);
-            label4.Name = "label4";
-            label4.Size = new Size(68, 15);
-            label4.TabIndex = 12;
-            label4.Text = "Цвет фона:";
+            labelBackgroundColor.AutoSize = true;
+            labelBackgroundColor.Location = new Point(9, 128);
+            labelBackgroundColor.Name = "labelBackgroundColor";
+            labelBackgroundColor.Size = new Size(68, 15);
+            labelBackgroundColor.TabIndex = 4;
+            labelBackgroundColor.Text = "Цвет фона:";
             // 
             // panelFractalColor
             // 
-            panelFractalColor.BorderStyle = BorderStyle.FixedSingle;
+            panelFractalColor.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             panelFractalColor.Cursor = Cursors.Hand;
-            panelFractalColor.Location = new Point(125, 80);
+            panelFractalColor.Location = new Point(120, 82);
             panelFractalColor.Name = "panelFractalColor";
-            panelFractalColor.Size = new Size(130, 23);
-            panelFractalColor.TabIndex = 11;
+            panelFractalColor.Size = new Size(223, 28);
+            panelFractalColor.TabIndex = 3;
             panelFractalColor.Click += panelFractalColor_Click;
+            panelFractalColor.Paint += panelFractalColor_Paint;
+            panelFractalColor.MouseEnter += panelFractalColor_MouseEnter;
+            panelFractalColor.MouseLeave += panelFractalColor_MouseLeave;
             // 
-            // label3
+            // labelFractalColor
             // 
-            label3.AutoSize = true;
-            label3.Location = new Point(15, 84);
-            label3.Name = "label3";
-            label3.Size = new Size(91, 15);
-            label3.TabIndex = 10;
-            label3.Text = "Цвет фрактала:";
-            // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(15, 25);
-            label1.Name = "label1";
-            label1.Size = new Size(113, 15);
-            label1.TabIndex = 9;
-            label1.Text = "Название палитры:";
+            labelFractalColor.AutoSize = true;
+            labelFractalColor.Location = new Point(9, 89);
+            labelFractalColor.Name = "labelFractalColor";
+            labelFractalColor.Size = new Size(91, 15);
+            labelFractalColor.TabIndex = 2;
+            labelFractalColor.Text = "Цвет фрактала:";
             // 
             // txtName
             // 
-            txtName.Location = new Point(15, 43);
+            txtName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtName.Location = new Point(9, 37);
             txtName.Name = "txtName";
-            txtName.Size = new Size(240, 23);
-            txtName.TabIndex = 0;
+            txtName.Size = new Size(334, 23);
+            txtName.TabIndex = 1;
             txtName.TextChanged += txtName_TextChanged;
+            txtName.KeyDown += txtName_KeyDown;
+            txtName.Leave += txtName_Leave;
             // 
-            // btnClose
+            // labelName
             // 
-            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnClose.Location = new Point(448, 298);
-            btnClose.Name = "btnClose";
-            btnClose.Size = new Size(94, 30);
-            btnClose.TabIndex = 16;
-            btnClose.Text = "Закрыть";
-            btnClose.UseVisualStyleBackColor = true;
-            btnClose.Click += btnClose_Click;
-            // 
-            // btnApply
-            // 
-            btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnApply.Location = new Point(348, 298);
-            btnApply.Name = "btnApply";
-            btnApply.Size = new Size(94, 30);
-            btnApply.TabIndex = 17;
-            btnApply.Text = "Применить";
-            btnApply.UseVisualStyleBackColor = true;
-            btnApply.Click += btnApply_Click;
+            labelName.AutoSize = true;
+            labelName.Location = new Point(9, 19);
+            labelName.Name = "labelName";
+            labelName.Size = new Size(113, 15);
+            labelName.TabIndex = 0;
+            labelName.Text = "Название палитры:";
             // 
             // btnSave
             // 
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnSave.Location = new Point(12, 298);
+            btnSave.Location = new Point(19, 362);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(155, 30);
-            btnSave.TabIndex = 18;
+            btnSave.Size = new Size(149, 28);
+            btnSave.TabIndex = 2;
             btnSave.Text = "Сохранить изменения";
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
+            // 
+            // btnApply
+            // 
+            btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnApply.Location = new Point(399, 362);
+            btnApply.Name = "btnApply";
+            btnApply.Size = new Size(107, 28);
+            btnApply.TabIndex = 3;
+            btnApply.Text = "Применить";
+            btnApply.UseVisualStyleBackColor = true;
+            btnApply.Click += btnApply_Click;
+            // 
+            // btnClose
+            // 
+            btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnClose.Location = new Point(512, 362);
+            btnClose.Name = "btnClose";
+            btnClose.Size = new Size(107, 28);
+            btnClose.TabIndex = 4;
+            btnClose.Text = "Закрыть";
+            btnClose.UseVisualStyleBackColor = true;
+            btnClose.Click += btnClose_Click;
             // 
             // ColorConfigurationSerpinskyForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(554, 340);
-            Controls.Add(btnSave);
-            Controls.Add(btnApply);
+            ClientSize = new Size(636, 402);
             Controls.Add(btnClose);
-            Controls.Add(groupBox2);
-            Controls.Add(groupBox1);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Controls.Add(btnApply);
+            Controls.Add(btnSave);
+            Controls.Add(groupBoxEditor);
+            Controls.Add(groupBoxPalettes);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MaximizeBox = false;
-            MinimizeBox = false;
-            MinimumSize = new Size(570, 379);
+            MinimumSize = new Size(652, 441);
             Name = "ColorConfigurationSerpinskyForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Настройка палитры (Серпинский)";
             Load += ColorConfigurationSerpinskyForm_Load;
-            groupBox1.ResumeLayout(false);
-            groupBox2.ResumeLayout(false);
-            groupBox2.PerformLayout();
+            groupBoxPalettes.ResumeLayout(false);
+            groupBoxEditor.ResumeLayout(false);
+            groupBoxEditor.PerformLayout();
             ResumeLayout(false);
 
         }
 
         #endregion
 
-        private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.ListBox lbPalettes;
-        private System.Windows.Forms.Button btnNew;
-        private System.Windows.Forms.Button btnDelete;
-        private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.Button btnClose;
-        private System.Windows.Forms.Button btnApply;
-        private System.Windows.Forms.Button btnSave;
-        private System.Windows.Forms.Panel panelFractalColor;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox txtName;
-        private System.Windows.Forms.Panel panelBackgroundColor;
-        private System.Windows.Forms.Label label4;
+        private GroupBox groupBoxPalettes;
+        private Button btnNew;
+        private Button btnDelete;
+        private Button btnCopy;
+        private ListBox lbPalettes;
+        private GroupBox groupBoxEditor;
+        private Label lblEditHint;
+        private Panel panelBackgroundColor;
+        private Label labelBackgroundColor;
+        private Panel panelFractalColor;
+        private Label labelFractalColor;
+        private TextBox txtName;
+        private Label labelName;
+        private Button btnSave;
+        private Button btnApply;
+        private Button btnClose;
     }
 }
