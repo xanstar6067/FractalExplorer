@@ -104,7 +104,7 @@
             // btnSave
             // 
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnSave.Location = new Point(12, 441);
+            btnSave.Location = new Point(19, 441);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(149, 28);
             btnSave.TabIndex = 2;
@@ -142,7 +142,7 @@
             lblEditHint.AutoSize = true;
             lblEditHint.Location = new Point(9, 400);
             lblEditHint.Name = "lblEditHint";
-            lblEditHint.Size = new Size(183, 15);
+            lblEditHint.Size = new Size(182, 15);
             lblEditHint.TabIndex = 15;
             lblEditHint.Text = "Текущая палитра редактируема";
             // 

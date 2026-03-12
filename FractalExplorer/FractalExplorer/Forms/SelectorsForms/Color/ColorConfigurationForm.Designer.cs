@@ -167,7 +167,7 @@
             // btnSave
             // 
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnSave.Location = new Point(10, 454);
+            btnSave.Location = new Point(17, 454);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(149, 28);
             btnSave.TabIndex = 10;
