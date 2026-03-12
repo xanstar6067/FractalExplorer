@@ -50,7 +50,6 @@
             // 
             lbPalettes.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             lbPalettes.FormattingEnabled = true;
-            lbPalettes.ItemHeight = 15;
             lbPalettes.Location = new Point(7, 22);
             lbPalettes.Name = "lbPalettes";
             lbPalettes.Size = new Size(224, 364);
@@ -71,7 +70,6 @@
             // 
             lbColorStops.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             lbColorStops.FormattingEnabled = true;
-            lbColorStops.ItemHeight = 15;
             lbColorStops.Location = new Point(8, 223);
             lbColorStops.Name = "lbColorStops";
             lbColorStops.Size = new Size(279, 169);
@@ -147,7 +145,7 @@
             // btnCopy
             // 
             btnCopy.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnCopy.Location = new Point(91, 391);
+            btnCopy.Location = new Point(74, 391);
             btnCopy.Name = "btnCopy";
             btnCopy.Size = new Size(88, 28);
             btnCopy.TabIndex = 15;
@@ -158,11 +156,11 @@
             // btnDelete
             // 
             btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnDelete.Location = new Point(198, 391);
+            btnDelete.Location = new Point(168, 391);
             btnDelete.Name = "btnDelete";
-            btnDelete.Size = new Size(33, 28);
+            btnDelete.Size = new Size(63, 28);
             btnDelete.TabIndex = 9;
-            btnDelete.Text = "X";
+            btnDelete.Text = "Удалить";
             btnDelete.UseVisualStyleBackColor = true;
             btnDelete.Click += btnDelete_Click;
             // 
