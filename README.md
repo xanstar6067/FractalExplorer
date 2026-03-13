@@ -1,356 +1,337 @@
-Fractal Explorer
+Fractal Explorer Studio
 
 Welcome to Fractal Explorer! This is a comprehensive Windows Forms application written in C# that allows you to generate, explore, customize, and save a wide variety of beautiful fractal images. Dive into the infinite complexity of mathematical art with a powerful and user-friendly toolset.
 
-🌟 Key Features
+🌟 Key Features (Version 1.7)
 
-    Central Hub: A convenient launcher to access all available fractal types from a single, organized interface.
+    Huge Fractal Library: Explore 13 different types of fractals, including classics like Mandelbrot and Julia, as well as exotic modifications: Nova, Collatz, Buffalo, Simonbrot, and Generalized Mandelbrot.
 
-    Diverse Fractal Library: Explore classic and exotic fractals, including:
+    Full UI Customization: Personalize the app with the new Theme Manager. Customize the colors of every UI element, save, load, and share your themes.
 
-        Mandelbrot Set & Julia Set
+    Interactive 2D and 4D Selectors: Visual parameter selection. Navigate maps (using the mouse wheel and Middle Mouse Button) to pick Julia set constants, or use the complex 4D selector in the form of two dynamic slices for the Phoenix fractal.
 
-        Burning Ship (Mandelbrot & Julia variations)
+    Advanced Color Management: Upgraded palette managers for different fractal types and an entirely new Color Probe tool to grab colors from anywhere on your monitor.
 
-        Sierpiński Triangle (via Chaos Game)
+    Smart Save System: A unified manager for user saves and built-in "Points of Interest". All data (states, palettes, themes) is securely stored in human-readable JSON files in the Saves folder.
 
-        Newton's Pools
+    Professional Image Export: Save your fractals in JPG or PNG formats at any resolution. Features upscaling algorithms (Lanczos-3, Bicubic) and SSAA (Super-Sample Anti-Aliasing) for pixel-perfect quality.
 
-        Phoenix Fractal
+🎨 Visualization and Design
+Flexible Coloring System
 
-    Interactive Exploration:
+The application offers two main algorithms for color calculation (independent of the chosen palette):
 
-        Smooth, high-precision zooming and panning with the mouse.
+    Discrete (Iterative): The classic method that creates sharp color bands based on the iteration count.
 
-        Multi-threaded rendering for responsive navigation and fast calculations.
+    Smooth: Uses a normalized iteration count algorithm to create soft, seamless gradients without color banding.
 
-    Deep Parameter Control:
+Animated Tile Rendering
 
-        Adjust iteration counts, escape thresholds, and other core fractal parameters.
+Watch the mathematical generation process in real-time! In the Main Menu (Hub), you can choose the visual effect of how rendering tiles appear: From Center, Row-by-Row, Checkerboard, Spiral, Random, Edges to Center, or Z-curve (Morton).
+Professional Color Selection Tool
 
-        Interactive C-Value Selectors:
+The color configuration system has been completely completely overhauled. You now have three ways to assign colors:
 
-            For Julia sets, visually pick the complex constant c by clicking on a preview of the corresponding Mandelbrot or Burning Ship set.
+    Windows System Dialog: The classic color picker (also opens by clicking on the current color thumbnail).
 
-            For the Phoenix fractal, use a unique dual-slice selector to define the C1 (P and Q) parameters in a 4D parameter space.
+    Color Probe Tool: An innovative feature that launches a transparent overlay across your entire monitor. It allows you to copy any color from the screen with a single click (cancel with Esc or Right-Click).
 
-Advanced Color Management
+    Automatic Palettes: For Newton's Pools, the system automatically detects the number of polynomial roots and generates the required set of colors.
 
-The application features three distinct, specialized palette managers, tailored to the unique needs of different fractal families.
+🚀 Implemented Fractals and Formulas
 
-    🎨 For Mandelbrot, Julia & Phoenix:
+    Mandelbrot Family (z₀ = 0, c = pixel):
 
-        A powerful editor to create, edit, copy, and save custom multi-color palettes.
+        Classic Mandelbrot: z = z² + c
 
-        Toggle between smooth gradient and discrete cyclic coloring.
+        Burning Ship: z = (|Re(z)| - i * |-Im(z)|)² + c
 
-        Fine-tune the look with gamma correction and color cycle length.
+        Buffalo: z = (|Re(z)| + i * |Im(z)|)² + c
 
-        Comes with a rich set of built-in palettes to get you started.
+        Generalized Mandelbrot: z = z^p + c (with manual input for power p)
 
-    🔬 For Newton's Pools:
+        Simonbrot: z = z^p ⋅ |z|^p + c (with an option for X-axis mirror inversion)
 
-        A dynamic palette system where the number of color pickers automatically adjusts to the number of roots found for the current polynomial.
+        Nova Mandelbrot: z = z - m * (z^p−1)/(p*z^(p−1)) + c (with adjustable relaxation coefficient m and power p)
 
-        Individually assign colors for each root's basin of attraction.
+    Julia Family (z₀ = pixel, c = constant):
 
-        Switch between sharp, discrete coloring and a smooth gradient based on iteration count.
+        Classic Julia: z = z² + c
 
-    🔺 For Sierpiński Triangle:
+        Burning Ship (Julia): z = (|Re(z)| - i * |-Im(z)|)² + c
 
-        A straightforward yet effective manager to select custom colors for the fractal and the background, allowing for high-contrast, artistic renderings.
+        Nova Julia: z = z - m * (z^p−1)/(p*z^(p−1)) + c
 
-State & Preset Management
+    Unique and Exotic Fractals:
 
-    Save & Load States: Save your entire fractal configuration—including position, zoom, iterations, and parameters—to a JSON file. Never lose a great discovery.
+        Newton's Pools: z = z - f(z)/f'(z). Equipped with an expression parser for custom user formulas (e.g., z^3 - 1).
 
-    Points of Interest: Load from a curated list of built-in presets that showcase stunning or mathematically significant locations for each fractal.
+        Phoenix Fractal: z_{n+1} = z_n² + Re(C1) + Im(C1)*z_{n-1}
 
-    Live Preview Generation: The save/load dialog features a high-quality, interactive preview of each saved state.
+        Collatz Fractal: A complex plane adaptation of the famous conjecture. Features 3 formulas: Standard (z = 0.25(2+7z−(2+5z)cos(πz))), Sine Variation, and Generalized P.
 
-        Live Render Visualization: Watch as the preview is rendered in real-time with a tile-based visualizer.
+        Sierpiński Triangle: Generated using the "Chaos Game" stochastic method.
 
-        Progressive Caching: Previews are intelligently cached, so tiles are only rendered once per session, making subsequent views of the same state instantaneous.
+🛠️ Technical Details and Optimization
 
-High-Resolution Export
+    Platform: .NET Windows Forms (C#). Asynchronous, multi-threaded rendering engine.
 
-    Save Manager: A dedicated form to export your creations as high-resolution images.
+    Computational Precision: Uses a custom ComplexDecimal structure for high-precision complex number operations at extreme zoom levels.
 
-    Formats: Save in PNG, JPG (with adjustable quality), or BMP formats.
+    Algorithm Optimization:
 
-    Custom Resolution: Define any output resolution, from FullHD to 4K and beyond.
+        Mandelbrot: Implemented checking for points inside the main cardioid and period-2 bulb. This reduced rendering time for low iteration depths by dozens of times (e.g., from 0.4s to 0.02s).
 
-    SSAA (Anti-Aliasing): Render images with Super-Sample Anti-Aliasing (from 2x to 8x) for incredibly crisp and smooth results, perfect for printing or display.
+        Newton's Pools: Root-finding algorithms were optimized, providing an average performance boost of 20% across all scenarios.
 
-    Future-Proof: The architecture is designed to easily accommodate more post-processing filters in future updates.
+        RAM Usage: High architectural efficiency keeps application memory footprint under 100 MB even during complex calculations.
 
-🚀 Implemented Fractals
+🖼️ Gallery and Interface
 
-    Mandelbrot Set: z = z² + c
-
-    Julia Set: z = z² + c (with a selectable constant c)
-
-    Burning Ship (Mandelbrot): z = (|Re(z)| + i * |-Im(z)|)² + c
-
-    Burning Ship (Julia): z = (|Re(z)| + i * |-Im(z)|)² + c (with a selectable constant c)
-
-    Phoenix Fractal: z_n+1 = z_n² + c1 + c2*z_{n-1}
-
-    Sierpiński Triangle: Generated using the "Chaos Game" stochastic method.
-
-    Newton's Pools: Iterative Newton's method for finding roots of complex functions f(z).
-
-        Features a built-in mathematical expression parser allowing you to input your own custom formulas like z^3 - 1 or sin(z).
-
-🛠️ Technical Details
-
-    Language: C#
-
-    Platform: .NET Windows Forms
-
-    Rendering:
-
-        Asynchronous, multi-threaded rendering engine for both on-screen display and high-resolution export.
-
-        Tile-based system with live visualization for previews.
-
-    Mathematics:
-
-        Custom ComplexDecimal structure for high-precision complex number operations, crucial for deep zooms.
-
-        Robust mathematical expression parser for the Newton fractal (supports numbers, variable 'z', 'i', and operators +, -, *, /, ^).
-
-    Data Persistence:
-
-        Custom fractal states and color palettes are serialized to human-readable JSON files, saved locally in a Saves directory.
-
-🖥️ How to Use
-
-    Launch the application FractalExplorer.exe.
-
-    In the main hub ("Менеджер фракталов"), select the fractal you want to explore from the tabs.
-
-    Click the "Запустить" (Launch) button.
-
-    In the fractal window:
-
-        Use the left panel to adjust parameters like iterations, color palettes, and fractal-specific constants.
-
-        Use the mouse wheel to zoom and the left mouse button to pan the view.
-
-        Click "Запустить рендер" (Render) to update the image.
-
-        Use the "Сохранить/Загрузить состояние" (Save/Load State) button to manage your fractal configurations.
-
-        Use the "Сохранить изображение" (Save Image) button to export your final artwork in high resolution.
-
-🖼️ Gallery
+Below is a detailed overview of the application's features and windows.
+Main Menu and Customization
 <table>
 <tr>
-<td align="center"><b>Launcher Hub</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
-<td align="center"><b>Mandelbrot Set</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
-<td align="center"><b>Burning Ship (Mandelbrot)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Julia Set</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
-<td align="center"><b>Burning Ship (Julia)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
-<td align="center"><b>Julia 'C' Point Selector</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_2/04_Serpinski.png" width="300"></td>
-<td align="center"><b>Newton's Pools</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
-<td align="center"><b>Phoenix Fractal</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Phoenix 'C1' Parameter Selector</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
-<td align="center"><b>Palette Manager (Mandelbrot)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
-<td align="center"><b>Palette Manager (Newton)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Palette Manager (Sierpiński)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
-<td align="center"><b>Save/Load State Manager</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
-<td align="center"><b>Live Preview Rendering</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
+<td align="center"><b>Hub (Main Page)</b><br>Fractal, theme & render selection.<br><img src="Pictures/V1_7/01_Hub.png" width="270"></td>
+<td align="center"><b>Render Effects</b><br>Visual styles for rendering tiles.<br><img src="Pictures/V1_7/01_Hub_rendertypes.png" width="270"></td>
+<td align="center"><b>Theme Manager</b><br>Deep UI customization.<br><img src="Pictures/V1_7/22_themes_manager.png" width="270"></td>
 </tr>
 </table>
-📜 **License**
-
-This project is distributed under the Apache 2.0 license. The full text of the license is available in LICENSE.md.
-Исследователь Фракталов (Fractal Explorer)
-
-Добро пожаловать в "Исследователь Фракталов"! Это комплексное приложение для Windows Forms, написанное на C#, которое позволяет генерировать, исследовать, настраивать и сохранять разнообразные и красивые фрактальные изображения. Погрузитесь в бесконечную сложность математического искусства с помощью мощного и удобного инструментария.
-
-🌟 Ключевые Возможности
-
-    Центральный Хаб: Удобный лаунчер для доступа ко всем доступным типам фракталов из единого, организованного интерфейса.
-
-    Разнообразная Библиотека Фракталов: Исследуйте классические и экзотические фракталы, включая:
-
-        Множество Мандельброта и Множество Жюлиа
-
-        Горящий Корабль (в вариациях Мандельброта и Жюлиа)
-
-        Треугольник Серпинского (метод "Игры Хаоса")
-
-        Бассейны Ньютона
-
-        Фрактал Феникс
-
-    Интерактивное Исследование:
-
-        Плавное, высокоточное масштабирование и панорамирование с помощью мыши.
-
-        Многопоточный рендеринг для отзывчивой навигации и быстрых вычислений.
-
-    Глубокая Настройка Параметров:
-
-        Управление количеством итераций, порогом выхода и другими ключевыми параметрами фракталов.
-
-        Интерактивные Селекторы Константы 'C':
-
-            Для множеств Жюлиа — визуальный выбор комплексной константы c кликом по превью соответствующего множества Мандельброта или Горящего Корабля.
-
-            Для фрактала Феникс — уникальный селектор с двумя срезами для определения параметров C1 (P и Q) в 4D-пространстве.
-
-Продвинутая Работа с Цветом
-
-Приложение включает три различных, специализированных менеджера палитр, созданных для уникальных потребностей разных семейств фракталов.
-
-    🎨 Для Мандельброта, Жюлиа и Феникса:
-
-        Мощный редактор для создания, редактирования, копирования и сохранения пользовательских многоцветных палитр.
-
-        Переключение между плавной градиентной и дискретной циклической окраской.
-
-        Тонкая настройка вида с помощью гамма-коррекции и длины цветового цикла.
-
-        Поставляется с богатым набором встроенных палитр для быстрого старта.
-
-    🔬 Для Бассейнов Ньютона:
-
-        Динамическая система палитр, где количество палитр с цветами автоматически подстраивается под число корней, найденных для текущего полинома.
-
-        Индивидуальное назначение цветов для каждого бассейна притяжения корня.
-
-        Переключение между четкой, дискретной окраской и плавным градиентом на основе числа итераций.
-
-    🔺 Для Треугольника Серпинского:
-
-        Простой, но эффективный менеджер для выбора пользовательских цветов для самого фрактала и фона, что позволяет создавать высококонтрастные, художественные изображения.
-
-Управление Состояниями и Пресетами
-
-    Сохранение и Загрузка Состояний: Сохраняйте всю конфигурацию фрактала — включая позицию, масштаб, итерации и параметры — в файл JSON. Никогда не теряйте свои лучшие находки.
-
-    Точки Интереса: Загружайте состояния из встроенного списка пресетов, которые демонстрируют потрясающие или математически значимые места для каждого фрактала.
-
-    Генерация Превью в Реальном Времени: Диалог сохранения/загрузки отображает высококачественное, интерактивное превью каждого сохраненного состояния.
-
-        Визуализация Рендеринга: Наблюдайте, как превью отрисовывается в реальном времени с помощью плиточного (тайлового) визуализатора.
-
-        Прогрессивное Кэширование: Превью интеллектуально кэшируются, поэтому плитки отрисовываются только один раз за сессию, делая последующие просмотры того же состояния мгновенными.
-
-Экспорт в Высоком Разрешении
-
-    Менеджер Сохранения: Специальная форма для экспорта ваших творений в виде изображений высокого разрешения.
-
-    Форматы: Сохранение в PNG, JPG (с настраиваемым качеством) или BMP.
-
-    Пользовательское Разрешение: Задавайте любое разрешение на выходе, от FullHD до 4K и выше.
-
-    SSAA (Сглаживание): Рендеринг изображений с суперсэмплингом (от 2x до 8x) для невероятно четких и плавных результатов, идеальных для печати или демонстрации.
-
-    Задел на Будущее: Архитектура спроектирована так, чтобы легко добавлять новые фильтры постобработки в будущих обновлениях.
-
-🚀 Реализованные Фракталы
-
-    Множество Мандельброта: z = z² + c
-
-    Множество Жюлиа: z = z² + c (с выбираемой константой c)
-
-    Горящий Корабль (Мандельброт): z = (|Re(z)| + i * |-Im(z)|)² + c
-
-    Горящий Корабль (Жюлиа): z = (|Re(z)| + i * |-Im(z)|)² + c (с выбираемой константой c)
-
-    Фрактал Феникс: z_n+1 = z_n² + c1 + c2*z_{n-1}
-
-    Треугольник Серпинского: Генерируется с помощью стохастического метода "Игра Хаоса".
-
-    Бассейны Ньютона: Итерационный метод Ньютона для поиска корней комплексных функций f(z).
-
-        Включает встроенный парсер математических выражений, позволяющий вводить собственные формулы, такие как z^3 - 1 или sin(z).
-
-🛠️ Технические Детали
-
-    Язык: C#
-
-    Платформа: .NET Windows Forms
-
-    Рендеринг:
-
-        Асинхронный, многопоточный движок рендеринга для отображения на экране и экспорта в высоком разрешении.
-
-        Плиточная система с живой визуализацией для превью.
-
-    Математика:
-
-        Пользовательская структура ComplexDecimal для высокоточных операций с комплексными числами, что критически важно для глубоких увеличений.
-
-        Надежный парсер математических выражений для фрактала Ньютона (поддерживает числа, переменную 'z', 'i' и операторы +, -, *, /, ^).
-
-    Сохранение Данных:
-
-        Пользовательские состояния фракталов и цветовые палитры сериализуются в читаемые JSON файлы и сохраняются локально в директорию Saves.
-
-🖥️ Как Использовать
-
-    Запустите приложение FractalExplorer.exe.
-
-    В главном хабе ("Менеджер фракталов") выберите интересующий вас фрактал из вкладок.
-
-    Нажмите кнопку "Запустить".
-
-    В окне фрактала:
-
-        Используйте левую панель для настройки параметров: итераций, цветовых палитр и специфичных для фрактала констант.
-
-        Используйте колесо мыши для масштабирования и левую кнопку мыши для панорамирования.
-
-        Нажмите "Запустить рендер" для обновления изображения.
-
-        Используйте кнопку "Сохранить/Загрузить состояние" для управления конфигурациями фракталов.
-
-        Используйте кнопку "Сохранить изображение" для экспорта вашего финального произведения в высоком разрешении.
-
-🖼️ Галерея
+Mandelbrot Family
 <table>
 <tr>
-<td align="center"><b>Главное меню (Хаб)</b><br><img src="Pictures/V1_2/01_hub.png" width="300"></td>
-<td align="center"><b>Множество Мандельброта</b><br><img src="Pictures/V1_2/02_Mandelbrot.png" width="300"></td>
-<td align="center"><b>Горящий Корабль (Мандельброт)</b><br><img src="Pictures/V1_2/02_MandelbrotBurningShip.png" width="300"></td>
+<td align="center"><b>Mandelbrot Set</b><br><img src="Pictures/V1_7/02_Mandelbrot.png" width="270"></td>
+<td align="center"><b>Burning Ship</b><br><img src="Pictures/V1_7/03_Burning_ship.png" width="270"></td>
+<td align="center"><b>Buffalo Fractal</b><br><img src="Pictures/V1_7/04_Buffalo.png" width="270"></td>
 </tr>
 <tr>
-<td align="center"><b>Множество Жюлиа</b><br><img src="Pictures/V1_2/03_Julia.png" width="300"></td>
-<td align="center"><b>Горящий Корабль (Жюлиа)</b><br><img src="Pictures/V1_2/03_JuliaBurningShip.png" width="300"></td>
-<td align="center"><b>Выбор точки 'C' для Жюлиа</b><br><img src="Pictures/V1_2/03_JuliaPointSelectors.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Треугольник Серпинского</b><br><img src="Pictures/V1_2/04_Serpinski.png" width="300"></td>
-<td align="center"><b>Бассейны Ньютона</b><br><img src="Pictures/V1_2/05_NewtonPools.png" width="300"></td>
-<td align="center"><b>Фрактал Феникс</b><br><img src="Pictures/V1_2/06_Phoenix.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Выбор параметра 'C1' для Феникса</b><br><img src="Pictures/V1_2/06_PhoenixPointSelector.png" width="300"></td>
-<td align="center"><b>Менеджер палитр (Мандельброт)</b><br><img src="Pictures/V1_2/07_ColorPaletteManager.png" width="300"></td>
-<td align="center"><b>Менеджер палитр (Ньютон)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerNewton.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Менеджер палитр (Серпинский)</b><br><img src="Pictures/V1_2/07_ColorPaletteManagerSerpinski.png" width="300"></td>
-<td align="center"><b>Менеджер сохранения/загрузки состояний</b><br><img src="Pictures/V1_2/08_SaveFractalManager.png" width="300"></td>
-<td align="center"><b>Превью рендеринга</b><br><img src="Pictures/V1_2/09_SaveFractaltoIMG_Manager(alpha).png" width="300"></td>
+<td align="center"><b>Simonbrot</b><br><img src="Pictures/V1_7/05_Simonbrot.png" width="270"></td>
+<td align="center"><b>Generalized Mandelbrot</b><br><img src="Pictures/V1_7/06_General_mandelbrot.png" width="270"></td>
+<td align="center"><b>Nova Mandelbrot</b><br><img src="Pictures/V1_7/12_Nova_Mandelbrot.png" width="270"></td>
 </tr>
 </table>
-📜 **Лицензия**
+Julia Family and Interactive Maps (Selectors)
 
-Этот проект распространяется под лицензией Apache 2.0. Полный текст лицензии доступен в LICENSE.md.
+Navigate selectors using the mouse wheel and middle mouse button; left-click to select the 'C' constant.
+<table>
+<tr>
+<td align="center"><b>Julia Set</b><br><img src="Pictures/V1_7/07_Julia.png" width="270"></td>
+<td align="center"><b>Julia (Burning Ship)</b><br><img src="Pictures/V1_7/08_Julia_Burning_ship.png" width="270"></td>
+<td align="center"><b>Nova Julia</b><br><img src="Pictures/V1_7/13_Nova_Julia.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Julia Selector</b><br>(Map: Classic Mandelbrot)<br><img src="Pictures/V1_7/07_Julia_C_selector.png" width="270"></td>
+<td align="center"><b>Julia B.S. Selector</b><br>(Map: Mandelbrot B.S.)<br><img src="Pictures/V1_7/08_Julia_Burning_ship_C_selector.png" width="270"></td>
+<td align="center"><b>Nova Julia Selector</b><br>(Map: Nova Mandelbrot)<br><img src="Pictures/V1_7/13_Nova_Julia_C_selector.png" width="270"></td>
+</tr>
+</table>
+Unique Fractals
+<table>
+<tr>
+<td align="center"><b>Newton's Pools</b><br><img src="Pictures/V1_7/09_Newton_pools.png" width="270"></td>
+<td align="center"><b>Phoenix Fractal</b><br><img src="Pictures/V1_7/10_Phoenix.png" width="270"></td>
+<td align="center"><b>4D Selector (Phoenix)</b><br>Two dynamic 2D slices.<br><img src="Pictures/V1_7/10_Phoenix_C1C2_selector.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Collatz Fractal</b><br><img src="Pictures/V1_7/11_Collatz.png" width="270"></td>
+<td align="center"><b>Sierpiński Triangle</b><br><img src="Pictures/V1_7/14_Serpinsky.png" width="270"></td>
+<td align="center"></td>
+</tr>
+</table>
+Color and Palette Management
+<table>
+<tr>
+<td align="center"><b>Iterative Palette</b><br>For most fractals.<br><img src="Pictures/V1_7/02_iterative_palette.png" width="270"></td>
+<td align="center"><b>Newton's Palette</b><br>Auto-detection of roots.<br><img src="Pictures/V1_7/09_Newton_pools_palette.png" width="270"></td>
+<td align="center"><b>Sierpiński Palette</b><br>Background & point setup.<br><img src="Pictures/V1_7/14_Serpinsky_palette.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Theme Selection Menu</b><br>Accessible from the Hub.<br><img src="Pictures/V1_7/01_Hub_themes.png" width="270"></td>
+<td align="center"><b>Color Tool & Probe</b><br>3 ways to pick colors.<br><img src="Pictures/V1_7/23_color&color_probe_setting.png" width="270"></td>
+<td align="center"><b>Windows System Palette</b><br>Classic dialog box.<br><img src="Pictures/V1_7/23_color_standart_setting.png" width="270"></td>
+</tr>
+</table>
+Save and Export
+<table>
+<tr>
+<td align="center"><b>Points of Interest</b><br>Built-in beautiful presets.<br><img src="Pictures/V1_7/20_save_load_manager.png" width="270"></td>
+<td align="center"><b>User Saves</b><br>Your personal discoveries.<br><img src="Pictures/V1_7/20_save_load_manager_user.png" width="270"></td>
+<td align="center"><b>Image Export</b><br>SSAA, filters & custom res.<br><img src="Pictures/V1_7/21_save_image.png" width="270"></td>
+</tr>
+</table>
+📜 License
 
-Project AI generated. Проект создан при помощи ИИ.
+This project is distributed under the Apache 2.0 license. The full text of the license is available in the LICENSE.md file.
+
+Project created with AI assistance.
+
+<br><br>
+
+<br><br>
+
+<a name="исследователь-фракталов-fractal-explorer-ru"></a>
+Исследователь Фракталов (Fractal Explorer) (RU)
+
+Добро пожаловать в "Студию Исследователь Фракталов"! Это комплексное приложение для Windows Forms, написанное на C#, которое позволяет генерировать, исследовать, настраивать и сохранять разнообразные и красивые фрактальные изображения. Погрузитесь в бесконечную сложность математического искусства с помощью мощного и удобного инструментария.
+🌟 Ключевые Возможности (Версия 1.7)
+
+    Огромная Библиотека Фракталов: Исследуйте 13 различных типов фракталов, включая как классику (Мандельброт, Жюлиа), так и экзотические модификации: Нова, Коллатц, Буффало, Симоноброт и Обобщенный Мандельброт.
+
+    Полная Кастомизация Интерфейса: Персонализируйте приложение с помощью нового Менеджера Тем. Настраивайте цвета каждого элемента, сохраняйте, загружайте и делитесь своими темами.
+
+    Интерактивные 2D и 4D Селекторы: Визуальный выбор параметров. Навигация по картам (с помощью колеса и СКМ) для выбора констант множеств Жюлиа или сложный 4D-селектор в виде двух динамических срезов для фрактала Феникс.
+
+    Продвинутая Работа с Цветом: Усовершенствованные менеджеры палитр для разных типов фракталов и абсолютно новый инструмент "Пипетка" (Color Probe) для захвата цвета из любой точки вашего монитора.
+
+    Умная Система Сохранений: Единый менеджер для пользовательских сохранений и встроенных "Точек интереса". Все данные (состояния, палитры, темы) надежно хранятся в JSON-файлах в папке Saves.
+
+    Профессиональный Экспорт Изображений: Сохраняйте фракталы в форматах JPG или PNG с любым разрешением. Доступны алгоритмы масштабирования (Ланцош-3, Бикубический) и сглаживание SSAA (Сверхвысокое разрешение) для идеального качества.
+
+🎨 Визуализация и Дизайн
+Гибкая Система Окраски
+
+Приложение предлагает два основных алгоритма расчета цвета (независимо от выбранной палитры):
+
+    Дискретный (Iterative): Классический метод, создающий четкие цветовые полосы в зависимости от числа итераций.
+
+    Плавный (Smooth): Использует алгоритм нормализованного счётчика для создания мягких, непрерывных градиентов без "полосатости".
+
+Анимированный Плиточный Рендеринг
+
+Наблюдайте за процессом математической генерации в реальном времени! В Главном меню (Хабе) вы можете выбрать визуальный эффект появления плиток при рендеринге: От центра, Построчный, Шахматный, Спиральный, Случайный, От краев к центру или Z-кривая (Мортон).
+Профессиональный Инструмент Выбора Цвета
+
+Система настройки цвета была полностью переработана. Теперь при назначении цвета вам доступны три варианта:
+
+    Системный диалог Windows: Классический выбор цвета (открывается также по клику на миниатюру текущего цвета).
+
+    Инструмент "Пипетка" (Color Probe): Инновационная функция, запускающая прозрачный оверлей поверх всего монитора. Позволяет одним кликом скопировать любой цвет с экрана (отмена по Esc или ПКМ).
+
+    Автоматические Палитры: Для Бассейнов Ньютона система сама определяет число корней уравнения и создает нужный набор цветов.
+
+🚀 Реализованные Фракталы и Формулы
+
+    Семейство Мандельброта (z₀ = 0, c = пиксель):
+
+        Классический Мандельброт: z = z² + c
+
+        Горящий Корабль: z = (|Re(z)| - i * |-Im(z)|)² + c
+
+        Буффало: z = (|Re(z)| + i * |Im(z)|)² + c
+
+        Обобщенный Мандельброт: z = z^p + c (с ручным вводом степени p)
+
+        Симоноброт: z = z^p ⋅ |z|^p + c (с опцией зеркальной инверсии по оси X)
+
+        Нова Мандельброт: z = z - m * (z^p−1)/(p*z^(p−1)) + c (с настройкой коэффициента релаксации m и степени p)
+
+    Семейство Жюлиа (z₀ = пиксель, c = константа):
+
+        Классический Жюлиа: z = z² + c
+
+        Горящий Корабль (Жюлиа): z = (|Re(z)| - i * |-Im(z)|)² + c
+
+        Нова Жюлиа: z = z - m * (z^p−1)/(p*z^(p−1)) + c
+
+    Уникальные и Экзотические Фракталы:
+
+        Бассейны Ньютона: z = z - f(z)/f'(z). Оснащен парсером выражений для ввода пользовательских формул (например, z^3 - 1).
+
+        Фрактал Феникс: z_{n+1} = z_n² + Re(C1) + Im(C1)*z_{n-1}
+
+        Фрактал Коллатца: Комплексная адаптация знаменитой гипотезы. Доступны 3 формулы: Standard (z = 0.25(2+7z−(2+5z)cos(πz))), Sine Variation и Generalized P.
+
+        Треугольник Серпинского: Метод "Игры Хаоса".
+
+🛠️ Технические Детали и Оптимизация
+
+    Платформа: .NET Windows Forms (C#). Асинхронный, многопоточный движок рендеринга.
+
+    Вычислительная Точность: Использование кастомной структуры ComplexDecimal для операций с комплексными числами при экстремальных приближениях.
+
+    Оптимизация Алгоритмов:
+
+        Мандельброт: Внедрена проверка нахождения точек внутри основной кардиоиды и бульбы периода 2. Это позволило сократить время рендера низких глубин ("мелководья") в десятки раз (например, с 0.4 сек до 0.02 сек).
+
+        Бассейны Ньютона: Алгоритмы поиска корней оптимизированы, что дало прирост производительности в среднем на 20% во всех сценариях.
+
+        Потребление ОЗУ: Высокая эффективность архитектуры позволяет приложению потреблять до 100 МБ оперативной памяти даже при сложных расчетах.
+
+🖼️ Галерея и Интерфейс
+
+Ниже представлен подробный обзор всех возможностей и окон приложения.
+Главное меню и Оформление
+<table>
+<tr>
+<td align="center"><b>Хаб (Главная страница)</b><br>Выбор фрактала, темы и рендера.<br><img src="Pictures/V1_7/01_Hub.png" width="270"></td>
+<td align="center"><b>Эффекты рендеринга</b><br>Визуальные стили появления плиток.<br><img src="Pictures/V1_7/01_Hub_rendertypes.png" width="270"></td>
+<td align="center"><b>Менеджер Тем</b><br>Глубокая кастомизация интерфейса.<br><img src="Pictures/V1_7/22_themes_manager.png" width="270"></td>
+</tr>
+</table>
+Семейство Мандельброта
+<table>
+<tr>
+<td align="center"><b>Множество Мандельброта</b><br><img src="Pictures/V1_7/02_Mandelbrot.png" width="270"></td>
+<td align="center"><b>Горящий Корабль</b><br><img src="Pictures/V1_7/03_Burning_ship.png" width="270"></td>
+<td align="center"><b>Фрактал Буффало</b><br><img src="Pictures/V1_7/04_Buffalo.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Симоноброт</b><br><img src="Pictures/V1_7/05_Simonbrot.png" width="270"></td>
+<td align="center"><b>Обобщенный Мандельброт</b><br><img src="Pictures/V1_7/06_General_mandelbrot.png" width="270"></td>
+<td align="center"><b>Нова Мандельброт</b><br><img src="Pictures/V1_7/12_Nova_Mandelbrot.png" width="270"></td>
+</tr>
+</table>
+Семейство Жюлиа и Интерактивные Карты (Селекторы)
+
+Навигация по селекторам осуществляется с помощью колеса и средней кнопки мыши, левый клик — выбор константы 'C'.
+<table>
+<tr>
+<td align="center"><b>Множество Жюлиа</b><br><img src="Pictures/V1_7/07_Julia.png" width="270"></td>
+<td align="center"><b>Жюлиа (Горящий Корабль)</b><br><img src="Pictures/V1_7/08_Julia_Burning_ship.png" width="270"></td>
+<td align="center"><b>Нова Жюлиа</b><br><img src="Pictures/V1_7/13_Nova_Julia.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Селектор для Жюлиа</b><br>(Карта: Классический Мандельброт)<br><img src="Pictures/V1_7/07_Julia_C_selector.png" width="270"></td>
+<td align="center"><b>Селектор для Жюлиа Г.К.</b><br>(Карта: Мандельброт Г.К.)<br><img src="Pictures/V1_7/08_Julia_Burning_ship_C_selector.png" width="270"></td>
+<td align="center"><b>Селектор для Нова Жюлиа</b><br>(Карта: Нова Мандельброт)<br><img src="Pictures/V1_7/13_Nova_Julia_C_selector.png" width="270"></td>
+</tr>
+</table>
+Уникальные Фракталы
+<table>
+<tr>
+<td align="center"><b>Бассейны Ньютона</b><br><img src="Pictures/V1_7/09_Newton_pools.png" width="270"></td>
+<td align="center"><b>Фрактал Феникс</b><br><img src="Pictures/V1_7/10_Phoenix.png" width="270"></td>
+<td align="center"><b>4D-Селектор для Феникса</b><br>Два динамических 2D-среза.<br><img src="Pictures/V1_7/10_Phoenix_C1C2_selector.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Фрактал Коллатца</b><br><img src="Pictures/V1_7/11_Collatz.png" width="270"></td>
+<td align="center"><b>Треугольник Серпинского</b><br><img src="Pictures/V1_7/14_Serpinsky.png" width="270"></td>
+<td align="center"></td>
+</tr>
+</table>
+Управление Цветом и Палитрами
+<table>
+<tr>
+<td align="center"><b>Итеративная Палитра</b><br>Для большинства фракталов.<br><img src="Pictures/V1_7/02_iterative_palette.png" width="270"></td>
+<td align="center"><b>Палитра Ньютона</b><br>Авто-определение корней.<br><img src="Pictures/V1_7/09_Newton_pools_palette.png" width="270"></td>
+<td align="center"><b>Палитра Серпинского</b><br>Настройка фона и точек.<br><img src="Pictures/V1_7/14_Serpinsky_palette.png" width="270"></td>
+</tr>
+<tr>
+<td align="center"><b>Меню выбора темы</b><br>Доступно из Хаба.<br><img src="Pictures/V1_7/01_Hub_themes.png" width="270"></td>
+<td align="center"><b>Инструмент Цвета и Пипетка</b><br>3 способа выбора цвета.<br><img src="Pictures/V1_7/23_color&color_probe_setting.png" width="270"></td>
+<td align="center"><b>Системная палитра Windows</b><br>Классический диалог.<br><img src="Pictures/V1_7/23_color_standart_setting.png" width="270"></td>
+</tr>
+</table>
+Сохранение и Экспорт
+<table>
+<tr>
+<td align="center"><b>Точки Интереса</b><br>Встроенные красивые пресеты.<br><img src="Pictures/V1_7/20_save_load_manager.png" width="270"></td>
+<td align="center"><b>Пользовательские Сохранения</b><br>Ваши личные находки.<br><img src="Pictures/V1_7/20_save_load_manager_user.png" width="270"></td>
+<td align="center"><b>Экспорт Изображений</b><br>SSAA, фильтры и кастомное разрешение.<br><img src="Pictures/V1_7/21_save_image.png" width="270"></td>
+</tr>
+</table>
+📜 Лицензия
+
+Этот проект распространяется под лицензией Apache 2.0. Полный текст лицензии доступен в файле LICENSE.md.
+
+Проект создан при помощи ИИ.
