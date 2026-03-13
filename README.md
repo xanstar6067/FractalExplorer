@@ -1,6 +1,6 @@
-Fractal Explorer Studio
+# Fractal Explorer Studio
 
-Welcome to Fractal Explorer! This is a comprehensive Windows Forms application written in C# that allows you to generate, explore, customize, and save a wide variety of beautiful fractal images. Dive into the infinite complexity of mathematical art with a powerful and user-friendly toolset.
+Welcome to Fractal Explorer Studio! This is a comprehensive Windows Forms application written in C# that allows you to generate, explore, customize, and save a wide variety of beautiful fractal images. Dive into the infinite complexity of mathematical art with a powerful and user-friendly toolset.
 
 🌟 Key Features (Version 1.7)
 
@@ -30,7 +30,7 @@ Animated Tile Rendering
 Watch the mathematical generation process in real-time! In the Main Menu (Hub), you can choose the visual effect of how rendering tiles appear: From Center, Row-by-Row, Checkerboard, Spiral, Random, Edges to Center, or Z-curve (Morton).
 Professional Color Selection Tool
 
-The color configuration system has been completely completely overhauled. You now have three ways to assign colors:
+The color configuration system has been completely overhauled. You now have three ways to assign colors:
 
     Windows System Dialog: The classic color picker (also opens by clicking on the current color thumbnail).
 
@@ -169,17 +169,17 @@ Project created with AI assistance.
 
 <br><br>
 
-<a name="исследователь-фракталов-fractal-explorer-ru"></a>
-Исследователь Фракталов (Fractal Explorer) (RU)
+<a name="fractal-explorer-studio-ru"></a>
+# Fractal Explorer Studio (RU)
 
-Добро пожаловать в "Студию Исследователь Фракталов"! Это комплексное приложение для Windows Forms, написанное на C#, которое позволяет генерировать, исследовать, настраивать и сохранять разнообразные и красивые фрактальные изображения. Погрузитесь в бесконечную сложность математического искусства с помощью мощного и удобного инструментария.
+Добро пожаловать в Fractal Explorer Studio! Это комплексное приложение для Windows Forms, написанное на C#, которое позволяет генерировать, исследовать, настраивать и сохранять разнообразные и красивые фрактальные изображения. Погрузитесь в бесконечную сложность математического искусства с помощью мощного и удобного инструментария.
 🌟 Ключевые Возможности (Версия 1.7)
 
     Огромная Библиотека Фракталов: Исследуйте 13 различных типов фракталов, включая как классику (Мандельброт, Жюлиа), так и экзотические модификации: Нова, Коллатц, Буффало, Симоноброт и Обобщенный Мандельброт.
 
     Полная Кастомизация Интерфейса: Персонализируйте приложение с помощью нового Менеджера Тем. Настраивайте цвета каждого элемента, сохраняйте, загружайте и делитесь своими темами.
 
-    Интерактивные 2D и 4D Селекторы: Визуальный выбор параметров. Навигация по картам (с помощью колеса и СКМ) для выбора констант множеств Жюлиа или сложный 4D-селектор в виде двух динамических срезов для фрактала Феникс.
+    Интерактивные 2D и 4D Селекторы: Визуальный выбор параметров. Навигация по картам (с помощью колеса и СКМ) для выбора констант множеств Жюлиа, а также сложный 4D-селектор в виде двух динамических срезов для фрактала Феникс.
 
     Продвинутая Работа с Цветом: Усовершенствованные менеджеры палитр для разных типов фракталов и абсолютно новый инструмент "Пипетка" (Color Probe) для захвата цвета из любой точки вашего монитора.
 
