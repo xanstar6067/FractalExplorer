@@ -158,17 +158,23 @@ namespace FractalExplorer.Resources
         {
             if (tiles.Count <= 1) return tiles;
 
-            // Находим индексы столбцов и строк для создания сетки (как вы делали в Spiral)
-            var xValues = tiles.Select(t => t.Bounds.X).Distinct().OrderBy(v => v).ToList();
-            var yValues = tiles.Select(t => t.Bounds.Y).Distinct().OrderBy(v => v).ToList();
+            // Находим индексы столбцов и строк для создания сетки (как в Spiral/Morton)
+            var xValues = tiles.Select(t => t.Bounds.X).Distinct().OrderBy(v => v).ToArray();
+            var yValues = tiles.Select(t => t.Bounds.Y).Distinct().OrderBy(v => v).ToArray();
+
+            var xIndexMap = xValues.Select((value, index) => new { value, index }).ToDictionary(x => x.value, x => x.index);
+            var yIndexMap = yValues.Select((value, index) => new { value, index }).ToDictionary(y => y.value, y => y.index);
 
             // Сортируем: сначала четная сумма индексов (col + row), затем нечетная
             return tiles.OrderBy(tile =>
             {
-                int col = xValues.IndexOf(tile.Bounds.X);
-                int row = yValues.IndexOf(tile.Bounds.Y);
+                int col = xIndexMap[tile.Bounds.X];
+                int row = yIndexMap[tile.Bounds.Y];
                 return (col + row) % 2; // Сначала 0, потом 1
-            }).ToList();
+            })
+            .ThenBy(tile => yIndexMap[tile.Bounds.Y])
+            .ThenBy(tile => xIndexMap[tile.Bounds.X])
+            .ToList();
         }
     }
 
