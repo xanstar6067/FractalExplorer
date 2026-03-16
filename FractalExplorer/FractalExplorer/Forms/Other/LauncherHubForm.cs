@@ -592,6 +592,12 @@ namespace FractalExplorer
             LaunchFractal(_selectedFractal);
         }
 
+        private void btnAboutInfo_Click(object sender, EventArgs e)
+        {
+            using AboutForm aboutForm = new();
+            aboutForm.ShowDialog(this);
+        }
+
         private void LaunchFractal(FractalInfo? fractalToLaunch)
         {
             if (fractalToLaunch?.FormToLaunch == null)

@@ -32,7 +32,9 @@
             splitContainerMain = new SplitContainer();
             treeViewFractals = new TreeView();
             pnlDetails = new TableLayoutPanel();
+            headerPanel = new TableLayoutPanel();
             lblFractalName = new Label();
+            btnAboutInfo = new Button();
             pictureBoxPreview = new PictureBox();
             settingsPanel = new TableLayoutPanel();
             lblRenderPatternType = new Label();
@@ -87,7 +89,7 @@
             pnlDetails.ColumnCount = 2;
             pnlDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
             pnlDetails.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            pnlDetails.Controls.Add(lblFractalName, 0, 0);
+            pnlDetails.Controls.Add(headerPanel, 0, 0);
             pnlDetails.Controls.Add(pictureBoxPreview, 0, 1);
             pnlDetails.Controls.Add(settingsPanel, 1, 1);
             pnlDetails.Controls.Add(richTextBoxDescription, 0, 2);
@@ -102,19 +104,50 @@
             pnlDetails.Size = new Size(558, 521);
             pnlDetails.TabIndex = 0;
             // 
+            // headerPanel
+            // 
+            headerPanel.ColumnCount = 2;
+            headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34F));
+            pnlDetails.SetColumnSpan(headerPanel, 2);
+            headerPanel.Controls.Add(lblFractalName, 0, 0);
+            headerPanel.Controls.Add(btnAboutInfo, 1, 0);
+            headerPanel.Dock = DockStyle.Fill;
+            headerPanel.Location = new Point(15, 15);
+            headerPanel.Margin = new Padding(0, 0, 0, 15);
+            headerPanel.Name = "headerPanel";
+            headerPanel.RowCount = 1;
+            headerPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            headerPanel.Size = new Size(528, 30);
+            headerPanel.TabIndex = 0;
+            // 
             // lblFractalName
             // 
             lblFractalName.AutoSize = true;
-            pnlDetails.SetColumnSpan(lblFractalName, 2);
             lblFractalName.Dock = DockStyle.Fill;
             lblFractalName.Font = new Font("Segoe UI Semibold", 16F, FontStyle.Bold);
-            lblFractalName.Location = new Point(15, 15);
-            lblFractalName.Margin = new Padding(0, 0, 0, 15);
+            lblFractalName.Location = new Point(0, 0);
+            lblFractalName.Margin = new Padding(0);
             lblFractalName.Name = "lblFractalName";
-            lblFractalName.Size = new Size(528, 30);
+            lblFractalName.Size = new Size(494, 30);
             lblFractalName.TabIndex = 0;
             lblFractalName.Text = "Выберите фрактал";
             lblFractalName.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // btnAboutInfo
+            // 
+            btnAboutInfo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnAboutInfo.Cursor = Cursors.Hand;
+            btnAboutInfo.FlatStyle = FlatStyle.Flat;
+            btnAboutInfo.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+            btnAboutInfo.Location = new Point(499, 1);
+            btnAboutInfo.Margin = new Padding(0, 1, 0, 0);
+            btnAboutInfo.Name = "btnAboutInfo";
+            btnAboutInfo.Size = new Size(29, 29);
+            btnAboutInfo.TabIndex = 1;
+            btnAboutInfo.Text = "ℹ";
+            btnAboutInfo.UseVisualStyleBackColor = true;
+            btnAboutInfo.Click += btnAboutInfo_Click;
             // 
             // pictureBoxPreview
             // 
@@ -243,6 +276,8 @@
             splitContainerMain.ResumeLayout(false);
             pnlDetails.ResumeLayout(false);
             pnlDetails.PerformLayout();
+            headerPanel.ResumeLayout(false);
+            headerPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).EndInit();
             settingsPanel.ResumeLayout(false);
             settingsPanel.PerformLayout();
@@ -255,7 +290,9 @@
         private System.Windows.Forms.SplitContainer splitContainerMain;
         private System.Windows.Forms.TreeView treeViewFractals;
         private System.Windows.Forms.TableLayoutPanel pnlDetails;
+        private System.Windows.Forms.TableLayoutPanel headerPanel;
         private System.Windows.Forms.Label lblFractalName;
+        private System.Windows.Forms.Button btnAboutInfo;
         private System.Windows.Forms.PictureBox pictureBoxPreview;
         private System.Windows.Forms.RichTextBox richTextBoxDescription;
         private System.Windows.Forms.TableLayoutPanel settingsPanel;
