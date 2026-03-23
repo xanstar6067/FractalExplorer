@@ -399,6 +399,27 @@ namespace FractalExplorer
 
         private void ClearInitialControlSelection()
         {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (!IsHandleCreated)
+            {
+                EventHandler? onHandleCreated = null;
+                onHandleCreated = (sender, args) =>
+                {
+                    HandleCreated -= onHandleCreated;
+                    if (!IsDisposed)
+                    {
+                        BeginInvoke(new Action(() => ActiveControl = null));
+                    }
+                };
+
+                HandleCreated += onHandleCreated;
+                return;
+            }
+
             BeginInvoke(new Action(() => ActiveControl = null));
         }
 
