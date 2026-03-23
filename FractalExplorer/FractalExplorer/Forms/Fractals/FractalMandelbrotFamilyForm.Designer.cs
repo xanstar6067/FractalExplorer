@@ -289,6 +289,7 @@
             // 
             // cbThreads
             // 
+            cbThreads.DropDownStyle = ComboBoxStyle.DropDownList;
             cbThreads.Dock = DockStyle.Fill;
             cbThreads.FormattingEnabled = true;
             cbThreads.Location = new Point(6, 166);
@@ -310,6 +311,7 @@
             // 
             // cbSSAA
             // 
+            cbSSAA.DropDownStyle = ComboBoxStyle.DropDownList;
             cbSSAA.Dock = DockStyle.Fill;
             cbSSAA.FormattingEnabled = true;
             cbSSAA.Location = new Point(6, 195);

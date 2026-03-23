@@ -235,6 +235,14 @@ namespace FractalExplorer.Forms
         }
         #endregion
 
+        /// <summary>
+        /// Снимает стартовый фокус с комбобоксов, чтобы они не выглядели выделенными сразу после открытия формы.
+        /// </summary>
+        private void ClearInitialControlSelection()
+        {
+            BeginInvoke(new Action(() => ActiveControl = null));
+        }
+
         #region UI Event Handlers
         /// <summary>
         /// Обрабатывает изменение значения в элементах управления параметрами фрактала.
@@ -1225,6 +1233,7 @@ namespace FractalExplorer.Forms
 
             UpdateEngineParameters();
             ScheduleRender();
+            ClearInitialControlSelection();
         }
 
         /// <summary>

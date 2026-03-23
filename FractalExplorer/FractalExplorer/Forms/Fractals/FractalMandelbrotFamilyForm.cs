@@ -472,6 +472,14 @@ namespace FractalDraving
         }
 
         /// <summary>
+        /// Снимает стартовый фокус с комбобоксов, чтобы они не выглядели выделенными сразу после открытия формы.
+        /// </summary>
+        private void ClearInitialControlSelection()
+        {
+            BeginInvoke(new Action(() => ActiveControl = null));
+        }
+
+        /// <summary>
         /// Обрабатывает изменение значения в одном из контролов параметров фрактала.
         /// </summary>
         /// <param name="sender">Источник события.</param>
@@ -1517,6 +1525,7 @@ namespace FractalDraving
             OnPostInitialize();
             UpdateEngineParameters();
             ScheduleRender();
+            ClearInitialControlSelection();
         }
 
         /// <summary>

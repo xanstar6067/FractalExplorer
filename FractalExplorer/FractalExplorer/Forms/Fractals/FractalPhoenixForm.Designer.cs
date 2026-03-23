@@ -354,6 +354,7 @@
             // 
             // cbThreads
             // 
+            cbThreads.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             cbThreads.Dock = System.Windows.Forms.DockStyle.Fill;
             cbThreads.FormattingEnabled = true;
             cbThreads.Location = new System.Drawing.Point(6, 283);
@@ -375,6 +376,7 @@
             // 
             // cbSSAA
             // 
+            cbSSAA.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             cbSSAA.Dock = System.Windows.Forms.DockStyle.Fill;
             cbSSAA.FormattingEnabled = true;
             cbSSAA.Location = new System.Drawing.Point(6, 312);
