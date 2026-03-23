@@ -69,7 +69,7 @@
             btnToggleControls.BackColor = System.Drawing.Color.FromArgb(235, 32, 32, 32);
             btnToggleControls.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             btnToggleControls.ForeColor = System.Drawing.Color.White;
-            btnToggleControls.Location = new System.Drawing.Point(12, 12);
+            btnToggleControls.Location = new System.Drawing.Point(256, 12);
             btnToggleControls.Name = "btnToggleControls";
             btnToggleControls.Size = new System.Drawing.Size(44, 32);
             btnToggleControls.TabIndex = 0;
