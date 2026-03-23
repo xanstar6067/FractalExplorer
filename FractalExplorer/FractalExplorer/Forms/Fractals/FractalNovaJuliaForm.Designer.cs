@@ -20,6 +20,10 @@ namespace FractalExplorer.Forms
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalNovaJuliaForm));
+            btnToggleControls = new Button();
+            contentPanel = new Panel();
+            canvasHost = new Panel();
+            controlsHost = new Panel();
             pnlControls = new TableLayoutPanel();
             gbNovaParameters = new GroupBox();
             tlpNovaParameters = new TableLayoutPanel();
@@ -61,6 +65,9 @@ namespace FractalExplorer.Forms
             pnlMapPreview = new Panel();
             pbMandelbrotPreview = new PictureBox();
             canvas = new PictureBox();
+            contentPanel.SuspendLayout();
+            canvasHost.SuspendLayout();
+            controlsHost.SuspendLayout();
             pnlControls.SuspendLayout();
             gbNovaParameters.SuspendLayout();
             tlpNovaParameters.SuspendLayout();
@@ -82,6 +89,52 @@ namespace FractalExplorer.Forms
             ((System.ComponentModel.ISupportInitialize)pbMandelbrotPreview).BeginInit();
             ((System.ComponentModel.ISupportInitialize)canvas).BeginInit();
             SuspendLayout();
+            // 
+            // btnToggleControls
+            // 
+            btnToggleControls.AutoSize = true;
+            btnToggleControls.Anchor = ((AnchorStyles)(AnchorStyles.Top | AnchorStyles.Left));
+            btnToggleControls.BackColor = Color.FromArgb(235, 32, 32, 32);
+            btnToggleControls.FlatStyle = FlatStyle.Popup;
+            btnToggleControls.ForeColor = Color.White;
+            btnToggleControls.Location = new Point(265, 12);
+            btnToggleControls.Name = "btnToggleControls";
+            btnToggleControls.Size = new Size(44, 32);
+            btnToggleControls.TabIndex = 0;
+            btnToggleControls.Text = "✕";
+            btnToggleControls.UseVisualStyleBackColor = true;
+            btnToggleControls.Click += btnToggleControls_Click;
+            // 
+            // contentPanel
+            // 
+            contentPanel.Controls.Add(canvasHost);
+            contentPanel.Dock = DockStyle.Fill;
+            contentPanel.Location = new Point(0, 0);
+            contentPanel.Name = "contentPanel";
+            contentPanel.Size = new Size(1120, 841);
+            contentPanel.TabIndex = 0;
+            // 
+            // canvasHost
+            // 
+            canvasHost.Controls.Add(controlsHost);
+            canvasHost.Controls.Add(btnToggleControls);
+            canvasHost.Controls.Add(canvas);
+            canvasHost.Dock = DockStyle.Fill;
+            canvasHost.Location = new Point(0, 0);
+            canvasHost.Name = "canvasHost";
+            canvasHost.Size = new Size(1120, 841);
+            canvasHost.TabIndex = 0;
+            // 
+            // controlsHost
+            // 
+            controlsHost.Anchor = ((AnchorStyles)(((AnchorStyles.Top | AnchorStyles.Bottom) | AnchorStyles.Left)));
+            controlsHost.BackColor = SystemColors.Control;
+            controlsHost.BorderStyle = BorderStyle.FixedSingle;
+            controlsHost.Controls.Add(pnlControls);
+            controlsHost.Location = new Point(0, 0);
+            controlsHost.Name = "controlsHost";
+            controlsHost.Size = new Size(240, 841);
+            controlsHost.TabIndex = 0;
             // 
             // pnlControls
             // 
@@ -111,7 +164,7 @@ namespace FractalExplorer.Forms
             pnlControls.Controls.Add(lblProgress, 0, 15);
             pnlControls.Controls.Add(pbRenderProgress, 0, 16);
             pnlControls.Controls.Add(pnlMapPreview, 0, 17);
-            pnlControls.Dock = DockStyle.Left;
+            pnlControls.Dock = DockStyle.Fill;
             pnlControls.Location = new Point(0, 0);
             pnlControls.Name = "pnlControls";
             pnlControls.RowCount = 19;
@@ -464,6 +517,7 @@ namespace FractalExplorer.Forms
             // cbThreads
             // 
             cbThreads.Dock = DockStyle.Fill;
+            cbThreads.DropDownStyle = ComboBoxStyle.DropDownList;
             cbThreads.FormattingEnabled = true;
             cbThreads.Location = new Point(3, 392);
             cbThreads.Name = "cbThreads";
@@ -484,6 +538,7 @@ namespace FractalExplorer.Forms
             // cbSSAA
             // 
             cbSSAA.Dock = DockStyle.Fill;
+            cbSSAA.DropDownStyle = ComboBoxStyle.DropDownList;
             cbSSAA.FormattingEnabled = true;
             cbSSAA.Location = new Point(3, 421);
             cbSSAA.Name = "cbSSAA";
@@ -607,7 +662,7 @@ namespace FractalExplorer.Forms
             // canvas
             // 
             canvas.Dock = DockStyle.Fill;
-            canvas.Location = new Point(240, 0);
+            canvas.Location = new Point(0, 0);
             canvas.Name = "canvas";
             canvas.Size = new Size(844, 841);
             canvas.TabIndex = 1;
@@ -618,12 +673,15 @@ namespace FractalExplorer.Forms
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1084, 841);
-            Controls.Add(canvas);
-            Controls.Add(pnlControls);
+            Controls.Add(contentPanel);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 880);
             Name = "FractalNovaJuliaForm";
             Text = "Фрактал Nova Julia";
+            controlsHost.ResumeLayout(false);
+            contentPanel.ResumeLayout(false);
+            canvasHost.ResumeLayout(false);
+            canvasHost.PerformLayout();
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
             gbNovaParameters.ResumeLayout(false);
@@ -652,6 +710,10 @@ namespace FractalExplorer.Forms
         }
         #endregion
 
+        private System.Windows.Forms.Button btnToggleControls;
+        private System.Windows.Forms.Panel contentPanel;
+        private System.Windows.Forms.Panel canvasHost;
+        private System.Windows.Forms.Panel controlsHost;
         private System.Windows.Forms.TableLayoutPanel pnlControls;
         private System.Windows.Forms.PictureBox canvas;
         private System.Windows.Forms.GroupBox gbNovaParameters;

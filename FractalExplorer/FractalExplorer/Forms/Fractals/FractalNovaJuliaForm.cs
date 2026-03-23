@@ -60,6 +60,9 @@ namespace FractalExplorer.Forms
         private bool _panning = false;
 
         private string _baseTitle;
+        private const int ToggleButtonMargin = 12;
+        private bool _suppressResizeRender = false;
+        private bool _controlsPanelVisible = true;
         private const decimal BASE_SCALE = 4.0m;
 
         private const int MAP_PREVIEW_ITERATIONS = 100;
@@ -209,13 +212,9 @@ namespace FractalExplorer.Forms
             canvas.MouseMove += Canvas_MouseMove;
             canvas.MouseUp += Canvas_MouseUp;
             canvas.Paint += Canvas_Paint;
-            canvas.Resize += (s, e) =>
-            {
-                if (WindowState != FormWindowState.Minimized)
-                {
-                    ScheduleRender();
-                }
-            };
+            canvas.Resize += Canvas_Resize;
+            canvasHost.Resize += CanvasHost_Resize;
+            controlsHost.SizeChanged += ControlsHost_SizeChanged;
 
             pbMandelbrotPreview.Paint += PbMandelbrotPreview_Paint;
             pbMandelbrotPreview.Click += PbMandelbrotPreview_Click;
@@ -730,6 +729,73 @@ namespace FractalExplorer.Forms
         }
         #endregion
 
+
+        private void Canvas_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                return;
+            }
+
+            if (_suppressResizeRender)
+            {
+                canvas.Invalidate();
+                return;
+            }
+
+            ScheduleRender();
+        }
+
+        private void btnToggleControls_Click(object sender, EventArgs e)
+        {
+            ToggleControlsPanel();
+        }
+
+        private void CanvasHost_Resize(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void UpdateToggleControlsPosition()
+        {
+            int targetX = ToggleButtonMargin;
+            if (_controlsPanelVisible)
+            {
+                targetX = controlsHost.Right + ToggleButtonMargin;
+            }
+
+            int maxX = Math.Max(ToggleButtonMargin, canvasHost.ClientSize.Width - btnToggleControls.Width - ToggleButtonMargin);
+            btnToggleControls.Location = new Point(Math.Min(targetX, maxX), ToggleButtonMargin);
+            btnToggleControls.BringToFront();
+        }
+
+        private void ToggleControlsPanel()
+        {
+            _controlsPanelVisible = !_controlsPanelVisible;
+            btnToggleControls.Text = _controlsPanelVisible ? "✕" : "☰";
+            _suppressResizeRender = true;
+            try
+            {
+                controlsHost.Visible = _controlsPanelVisible;
+                UpdateToggleControlsPosition();
+                canvas.Invalidate();
+            }
+            finally
+            {
+                _suppressResizeRender = false;
+            }
+        }
+
+        private void ClearInitialControlSelection()
+        {
+            BeginInvoke(new Action(() => ActiveControl = null));
+        }
+
         #region Utility Methods
         private void CommitAndBakePreview()
         {
@@ -1055,6 +1121,8 @@ namespace FractalExplorer.Forms
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
             UpdateEngineParameters();
+            UpdateToggleControlsPosition();
+            ClearInitialControlSelection();
             RenderMandelbrotMapAsync();
             ScheduleRender();
         }
