@@ -17,6 +17,10 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalPhoenixForm));
+            btnToggleControls = new System.Windows.Forms.Button();
+            contentPanel = new System.Windows.Forms.Panel();
+            canvasHost = new System.Windows.Forms.Panel();
+            controlsHost = new System.Windows.Forms.Panel();
             pnlControls = new System.Windows.Forms.TableLayoutPanel();
             nudC1Re = new System.Windows.Forms.NumericUpDown();
             lblC1Re = new System.Windows.Forms.Label();
@@ -45,6 +49,9 @@
             lblProgress = new System.Windows.Forms.Label();
             pbRenderProgress = new System.Windows.Forms.ProgressBar();
             canvas = new System.Windows.Forms.PictureBox();
+            contentPanel.SuspendLayout();
+            canvasHost.SuspendLayout();
+            controlsHost.SuspendLayout();
             pnlControls.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(nudC1Re)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(nudC1Im)).BeginInit();
@@ -55,6 +62,52 @@
             ((System.ComponentModel.ISupportInitialize)(nudZoom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(canvas)).BeginInit();
             SuspendLayout();
+            // btnToggleControls
+            // 
+            btnToggleControls.AutoSize = true;
+            btnToggleControls.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)));
+            btnToggleControls.BackColor = System.Drawing.Color.FromArgb(235, 32, 32, 32);
+            btnToggleControls.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            btnToggleControls.ForeColor = System.Drawing.Color.White;
+            btnToggleControls.Location = new System.Drawing.Point(12, 12);
+            btnToggleControls.Name = "btnToggleControls";
+            btnToggleControls.Size = new System.Drawing.Size(44, 32);
+            btnToggleControls.TabIndex = 0;
+            btnToggleControls.Text = "✕";
+            btnToggleControls.UseVisualStyleBackColor = true;
+            btnToggleControls.Click += new System.EventHandler(btnToggleControls_Click);
+            // 
+            // contentPanel
+            // 
+            contentPanel.Controls.Add(canvasHost);
+            contentPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            contentPanel.Location = new System.Drawing.Point(0, 0);
+            contentPanel.Name = "contentPanel";
+            contentPanel.Size = new System.Drawing.Size(1084, 636);
+            contentPanel.TabIndex = 0;
+            // 
+            // canvasHost
+            // 
+            canvasHost.Controls.Add(controlsHost);
+            canvasHost.Controls.Add(btnToggleControls);
+            canvasHost.Controls.Add(canvas);
+            canvasHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            canvasHost.Location = new System.Drawing.Point(0, 0);
+            canvasHost.Name = "canvasHost";
+            canvasHost.Size = new System.Drawing.Size(1084, 636);
+            canvasHost.TabIndex = 0;
+            // 
+            // controlsHost
+            // 
+            controlsHost.Controls.Add(pnlControls);
+            controlsHost.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            controlsHost.BackColor = System.Drawing.SystemColors.Control;
+            controlsHost.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            controlsHost.Location = new System.Drawing.Point(0, 0);
+            controlsHost.Name = "controlsHost";
+            controlsHost.Size = new System.Drawing.Size(231, 636);
+            controlsHost.TabIndex = 0;
             // 
             // pnlControls
             // 
@@ -87,7 +140,7 @@
             pnlControls.Controls.Add(btnStateManager, 0, 15);
             pnlControls.Controls.Add(lblProgress, 0, 16);
             pnlControls.Controls.Add(pbRenderProgress, 0, 17);
-            pnlControls.Dock = System.Windows.Forms.DockStyle.Left;
+            pnlControls.Dock = System.Windows.Forms.DockStyle.Fill;
             pnlControls.Location = new System.Drawing.Point(0, 0);
             pnlControls.Name = "pnlControls";
             pnlControls.RowCount = 19;
@@ -433,7 +486,7 @@
             // canvas
             // 
             canvas.Dock = System.Windows.Forms.DockStyle.Fill;
-            canvas.Location = new System.Drawing.Point(231, 0);
+            canvas.Location = new System.Drawing.Point(0, 0);
             canvas.Name = "canvas";
             canvas.Size = new System.Drawing.Size(853, 636);
             canvas.TabIndex = 1;
@@ -444,14 +497,17 @@
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             ClientSize = new System.Drawing.Size(1084, 636);
-            Controls.Add(canvas);
-            Controls.Add(pnlControls);
+            Controls.Add(contentPanel);
             Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             MinimumSize = new System.Drawing.Size(1100, 675);
             Name = "FractalPhoenixForm";
             Text = "Фрактал Феникс";
             FormClosed += new System.Windows.Forms.FormClosedEventHandler(FractalPhoenixForm_FormClosed);
             Load += new System.EventHandler(FractalPhoenixForm_Load);
+            contentPanel.ResumeLayout(false);
+            canvasHost.ResumeLayout(false);
+            canvasHost.PerformLayout();
+            controlsHost.ResumeLayout(false);
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(nudC1Re)).EndInit();
@@ -467,6 +523,10 @@
         }
         #endregion
 
+        private System.Windows.Forms.Button btnToggleControls;
+        private System.Windows.Forms.Panel contentPanel;
+        private System.Windows.Forms.Panel canvasHost;
+        private System.Windows.Forms.Panel controlsHost;
         protected System.Windows.Forms.TableLayoutPanel pnlControls;
         protected System.Windows.Forms.PictureBox canvas;
         protected System.Windows.Forms.Label lblThreshold;

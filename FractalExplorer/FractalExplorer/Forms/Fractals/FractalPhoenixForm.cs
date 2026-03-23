@@ -71,6 +71,14 @@ namespace FractalExplorer.Forms
         /// </summary>
         private Bitmap _currentRenderingBitmap;
         /// <summary>
+        /// Размер полной буферной поверхности рендера для последнего завершенного кадра.
+        /// </summary>
+        private Size _renderedSurfaceSize = Size.Empty;
+        /// <summary>
+        /// Видимая область внутри полной буферной поверхности для последнего завершенного кадра.
+        /// </summary>
+        private Rectangle _renderedViewportRect = Rectangle.Empty;
+        /// <summary>
         /// Источник токенов для отмены текущего рендеринга предпросмотра.
         /// </summary>
         private CancellationTokenSource _previewRenderCts;
@@ -123,6 +131,14 @@ namespace FractalExplorer.Forms
         /// Таймер для отложенного запуска рендеринга после изменения параметров.
         /// </summary>
         private System.Windows.Forms.Timer _renderDebounceTimer;
+        /// <summary>
+        /// Флаг, отключающий запуск полного рендера при программном изменении layout.
+        /// </summary>
+        private bool _suppressResizeRender = false;
+        /// <summary>
+        /// Признак видимости панели управления.
+        /// </summary>
+        private bool _controlsPanelVisible = true;
         /// <summary>
         /// Базовый заголовок окна.
         /// </summary>
@@ -212,7 +228,7 @@ namespace FractalExplorer.Forms
             canvas.MouseMove += Canvas_MouseMove;
             canvas.MouseUp += Canvas_MouseUp;
             canvas.Paint += Canvas_Paint;
-            canvas.Resize += (s, e) => { if (WindowState != FormWindowState.Minimized) ScheduleRender(); };
+            canvas.Resize += Canvas_Resize;
         }
         #endregion
 
@@ -378,43 +394,22 @@ namespace FractalExplorer.Forms
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
             e.Graphics.Clear(Color.Black);
+            Rectangle currentViewportRect = GetCurrentViewportRect();
             lock (_bitmapLock)
             {
                 if (_previewBitmap != null)
                 {
                     if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
                     {
-                        e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                        Rectangle sourceViewport = GetSafeViewportRect(_previewBitmap.Size, currentViewportRect);
+                        DrawPreviewBitmap(e.Graphics, _previewBitmap, sourceViewport, canvas.ClientRectangle);
                     }
                     else
                     {
-                        try
-                        {
-                            decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
-                            decimal currentComplexWidth = BASE_SCALE / _zoom;
-                            if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
-                            {
-                                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
-                                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
-                                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
-                                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
-                                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
-                                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
-                                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
-                                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
-                                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
-                                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
-                                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
-                                e.Graphics.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
-                            }
-                        }
-                        catch (Exception) { }
+                        DrawTransformedPreview(e.Graphics, _previewBitmap, canvas.ClientRectangle);
                     }
                 }
-                if (_currentRenderingBitmap != null) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                if (_currentRenderingBitmap != null) DrawVisibleBitmap(e.Graphics, _currentRenderingBitmap, currentViewportRect, canvas.ClientRectangle);
             }
             if (_renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
         }
@@ -437,10 +432,12 @@ namespace FractalExplorer.Forms
         /// </summary>
         private async Task StartPreviewRenderSSAA(int ssaaFactor)
         {
-            if (canvas.Width <= 0 || canvas.Height <= 0) return;
+            Size renderSurfaceSize = GetRenderSurfaceSize();
+            Rectangle viewportRect = GetCurrentViewportRect();
+            if (renderSurfaceSize.Width <= 0 || renderSurfaceSize.Height <= 0 || viewportRect.Width <= 0 || viewportRect.Height <= 0) return;
 
-            int currentWidth = canvas.Width;
-            int currentHeight = canvas.Height;
+            int currentWidth = renderSurfaceSize.Width;
+            int currentHeight = renderSurfaceSize.Height;
 
             var stopwatch = Stopwatch.StartNew();
             _isRenderingPreview = true;
@@ -462,9 +459,9 @@ namespace FractalExplorer.Forms
             {
                 MaxIterations = _fractalEngine.MaxIterations,
                 ThresholdSquared = _fractalEngine.ThresholdSquared,
-                CenterX = _fractalEngine.CenterX,
+                CenterX = GetRenderSurfaceCenterX(renderSurfaceSize, viewportRect),
                 CenterY = _fractalEngine.CenterY,
-                Scale = _fractalEngine.Scale,
+                Scale = GetRenderSurfaceScale(renderSurfaceSize, viewportRect),
                 C1 = _fractalEngine.C1,
                 C2 = _fractalEngine.C2,
                 UseSmoothColoring = _fractalEngine.UseSmoothColoring,
@@ -538,6 +535,8 @@ namespace FractalExplorer.Forms
                         _renderedCenterX = currentRenderedCenterX;
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
+                        _renderedSurfaceSize = renderSurfaceSize;
+                        _renderedViewportRect = viewportRect;
                     }
                     else
                     {
@@ -583,10 +582,12 @@ namespace FractalExplorer.Forms
         /// </summary>
         private async Task StartPreviewRender()
         {
-            if (canvas.Width <= 0 || canvas.Height <= 0) return;
+            Size renderSurfaceSize = GetRenderSurfaceSize();
+            Rectangle viewportRect = GetCurrentViewportRect();
+            if (renderSurfaceSize.Width <= 0 || renderSurfaceSize.Height <= 0 || viewportRect.Width <= 0 || viewportRect.Height <= 0) return;
 
-            int currentWidth = canvas.Width;
-            int currentHeight = canvas.Height;
+            int currentWidth = renderSurfaceSize.Width;
+            int currentHeight = renderSurfaceSize.Height;
 
             var stopwatch = Stopwatch.StartNew();
             _isRenderingPreview = true;
@@ -608,9 +609,9 @@ namespace FractalExplorer.Forms
             {
                 MaxIterations = _fractalEngine.MaxIterations,
                 ThresholdSquared = _fractalEngine.ThresholdSquared,
-                CenterX = _fractalEngine.CenterX,
+                CenterX = GetRenderSurfaceCenterX(renderSurfaceSize, viewportRect),
                 CenterY = _fractalEngine.CenterY,
-                Scale = _fractalEngine.Scale,
+                Scale = GetRenderSurfaceScale(renderSurfaceSize, viewportRect),
                 C1 = _fractalEngine.C1,
                 C2 = _fractalEngine.C2,
                 UseSmoothColoring = _fractalEngine.UseSmoothColoring,
@@ -681,6 +682,8 @@ namespace FractalExplorer.Forms
                         _renderedCenterX = currentRenderedCenterX;
                         _renderedCenterY = currentRenderedCenterY;
                         _renderedZoom = currentRenderedZoom;
+                        _renderedSurfaceSize = renderSurfaceSize;
+                        _renderedViewportRect = viewportRect;
                     }
                     else
                     {
@@ -766,8 +769,10 @@ namespace FractalExplorer.Forms
             _previewRenderCts?.Cancel();
             lock (_bitmapLock)
             {
-                if (_currentRenderingBitmap == null || canvas.Width <= 0 || canvas.Height <= 0) return;
-                var bakedBitmap = new Bitmap(canvas.Width, canvas.Height, PixelFormat.Format24bppRgb);
+                Size renderSurfaceSize = GetRenderSurfaceSize();
+                Rectangle viewportRect = GetCurrentViewportRect();
+                if (_currentRenderingBitmap == null || renderSurfaceSize.Width <= 0 || renderSurfaceSize.Height <= 0 || viewportRect.Width <= 0 || viewportRect.Height <= 0) return;
+                var bakedBitmap = new Bitmap(renderSurfaceSize.Width, renderSurfaceSize.Height, PixelFormat.Format24bppRgb);
                 using (var g = Graphics.FromImage(bakedBitmap))
                 {
                     g.Clear(Color.Black);
@@ -780,20 +785,21 @@ namespace FractalExplorer.Forms
                             decimal currentComplexWidth = BASE_SCALE / _zoom;
                             if (!(_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0))
                             {
-                                decimal unitsPerPixelRendered = renderedComplexWidth / _previewBitmap.Width;
-                                decimal unitsPerPixelCurrent = currentComplexWidth / canvas.Width;
+                                Rectangle sourceViewport = GetSafeViewportRect(_previewBitmap.Size, _renderedViewportRect);
+                                decimal unitsPerPixelRendered = renderedComplexWidth / sourceViewport.Width;
+                                decimal unitsPerPixelCurrent = currentComplexWidth / viewportRect.Width;
                                 decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
-                                decimal renderedImMax = _renderedCenterY + (_previewBitmap.Height * unitsPerPixelRendered / 2.0m);
+                                decimal renderedImMax = _renderedCenterY + (sourceViewport.Height * unitsPerPixelRendered / 2.0m);
                                 decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
-                                decimal currentImMax = _centerY + (canvas.Height * unitsPerPixelCurrent / 2.0m);
+                                decimal currentImMax = _centerY + (viewportRect.Height * unitsPerPixelCurrent / 2.0m);
                                 decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
                                 decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
-                                decimal newWidthPixels = _previewBitmap.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                decimal newHeightPixels = _previewBitmap.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
-                                PointF destPoint1 = new PointF((float)offsetXPixels, (float)offsetYPixels);
-                                PointF destPoint2 = new PointF((float)(offsetXPixels + newWidthPixels), (float)offsetYPixels);
-                                PointF destPoint3 = new PointF((float)offsetXPixels, (float)(offsetYPixels + newHeightPixels));
-                                g.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 });
+                                decimal newWidthPixels = sourceViewport.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                                decimal newHeightPixels = sourceViewport.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                                PointF destPoint1 = new PointF(viewportRect.X + (float)offsetXPixels, viewportRect.Y + (float)offsetYPixels);
+                                PointF destPoint2 = new PointF(viewportRect.X + (float)(offsetXPixels + newWidthPixels), viewportRect.Y + (float)offsetYPixels);
+                                PointF destPoint3 = new PointF(viewportRect.X + (float)offsetXPixels, viewportRect.Y + (float)(offsetYPixels + newHeightPixels));
+                                g.DrawImage(_previewBitmap, new PointF[] { destPoint1, destPoint2, destPoint3 }, sourceViewport, GraphicsUnit.Pixel);
                             }
                         }
                         catch (Exception) { }
@@ -809,7 +815,121 @@ namespace FractalExplorer.Forms
                 _renderedCenterX = _centerX;
                 _renderedCenterY = _centerY;
                 _renderedZoom = _zoom;
+                _renderedSurfaceSize = renderSurfaceSize;
+                _renderedViewportRect = viewportRect;
             }
+        }
+
+        private void Canvas_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized) return;
+            if (_suppressResizeRender)
+            {
+                canvas.Invalidate();
+                return;
+            }
+            ScheduleRender();
+        }
+
+        private void btnToggleControls_Click(object sender, EventArgs e)
+        {
+            ToggleControlsPanel();
+        }
+
+        private void ToggleControlsPanel()
+        {
+            _controlsPanelVisible = !_controlsPanelVisible;
+            btnToggleControls.Text = _controlsPanelVisible ? "✕" : "☰";
+            btnToggleControls.BringToFront();
+            _suppressResizeRender = true;
+            try
+            {
+                controlsHost.Visible = _controlsPanelVisible;
+                canvas.Invalidate();
+            }
+            finally
+            {
+                _suppressResizeRender = false;
+            }
+        }
+
+        private Size GetRenderSurfaceSize()
+        {
+            return canvas.ClientSize;
+        }
+
+        private Rectangle GetCurrentViewportRect()
+        {
+            return new Rectangle(0, 0, Math.Max(0, canvas.Width), Math.Max(0, canvas.Height));
+        }
+
+        private decimal GetRenderSurfaceCenterX(Size renderSurfaceSize, Rectangle viewportRect)
+        {
+            if (renderSurfaceSize.Width <= 0 || viewportRect.Width <= 0) return _centerX;
+            decimal unitsPerPixel = (BASE_SCALE / _zoom) / viewportRect.Width;
+            decimal viewportCenterOffset = (viewportRect.X + (viewportRect.Width / 2.0m)) - (renderSurfaceSize.Width / 2.0m);
+            return _centerX - (viewportCenterOffset * unitsPerPixel);
+        }
+
+        private decimal GetRenderSurfaceScale(Size renderSurfaceSize, Rectangle viewportRect)
+        {
+            if (renderSurfaceSize.Width <= 0 || viewportRect.Width <= 0) return BASE_SCALE / _zoom;
+            return (BASE_SCALE / _zoom) * renderSurfaceSize.Width / viewportRect.Width;
+        }
+
+        private Rectangle GetSafeViewportRect(Size bitmapSize, Rectangle viewportRect)
+        {
+            var safeRect = viewportRect;
+            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            {
+                safeRect = new Rectangle(Point.Empty, bitmapSize);
+            }
+            safeRect.Intersect(new Rectangle(Point.Empty, bitmapSize));
+            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            {
+                safeRect = new Rectangle(Point.Empty, bitmapSize);
+            }
+            return safeRect;
+        }
+
+        private void DrawVisibleBitmap(Graphics graphics, Bitmap bitmap, Rectangle sourceViewport, Rectangle destRect)
+        {
+            Rectangle safeSourceRect = GetSafeViewportRect(bitmap.Size, sourceViewport);
+            DrawPreviewBitmap(graphics, bitmap, safeSourceRect, destRect);
+        }
+
+        private void DrawPreviewBitmap(Graphics graphics, Bitmap bitmap, Rectangle sourceViewport, Rectangle destRect)
+        {
+            if (destRect.Width <= 0 || destRect.Height <= 0 || sourceViewport.Width <= 0 || sourceViewport.Height <= 0) return;
+            graphics.DrawImage(bitmap, destRect, sourceViewport, GraphicsUnit.Pixel);
+        }
+
+        private void DrawTransformedPreview(Graphics graphics, Bitmap bitmap, Rectangle destRect)
+        {
+            try
+            {
+                decimal renderedComplexWidth = BASE_SCALE / _renderedZoom;
+                decimal currentComplexWidth = BASE_SCALE / _zoom;
+                if (_renderedZoom <= 0 || _zoom <= 0 || renderedComplexWidth <= 0 || currentComplexWidth <= 0 || destRect.Width <= 0 || destRect.Height <= 0) return;
+
+                Rectangle sourceViewport = GetSafeViewportRect(bitmap.Size, _renderedViewportRect);
+                decimal unitsPerPixelRendered = renderedComplexWidth / sourceViewport.Width;
+                decimal unitsPerPixelCurrent = currentComplexWidth / destRect.Width;
+                decimal renderedReMin = _renderedCenterX - (renderedComplexWidth / 2.0m);
+                decimal renderedImMax = _renderedCenterY + (sourceViewport.Height * unitsPerPixelRendered / 2.0m);
+                decimal currentReMin = _centerX - (currentComplexWidth / 2.0m);
+                decimal currentImMax = _centerY + (destRect.Height * unitsPerPixelCurrent / 2.0m);
+                decimal offsetXPixels = (renderedReMin - currentReMin) / unitsPerPixelCurrent;
+                decimal offsetYPixels = (currentImMax - renderedImMax) / unitsPerPixelCurrent;
+                decimal newWidthPixels = sourceViewport.Width * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                decimal newHeightPixels = sourceViewport.Height * (unitsPerPixelRendered / unitsPerPixelCurrent);
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                PointF destPoint1 = new PointF(destRect.X + (float)offsetXPixels, destRect.Y + (float)offsetYPixels);
+                PointF destPoint2 = new PointF(destRect.X + (float)(offsetXPixels + newWidthPixels), destRect.Y + (float)offsetYPixels);
+                PointF destPoint3 = new PointF(destRect.X + (float)offsetXPixels, destRect.Y + (float)(offsetYPixels + newHeightPixels));
+                graphics.DrawImage(bitmap, new PointF[] { destPoint1, destPoint2, destPoint3 }, sourceViewport, GraphicsUnit.Pixel);
+            }
+            catch (Exception) { }
         }
 
         /// <summary>
@@ -1069,6 +1189,8 @@ namespace FractalExplorer.Forms
 
             InitializeControls();
             InitializeEventHandlers();
+            btnToggleControls.Text = "✕";
+            btnToggleControls.BringToFront();
 
             _centerX = 0.0m; _centerY = 0.0m;
             _renderedCenterX = _centerX; _renderedCenterY = _centerY;
