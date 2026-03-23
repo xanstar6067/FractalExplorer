@@ -137,6 +137,9 @@ namespace FractalExplorer
         /// Базовая часть заголовка окна.
         /// </summary>
         private string _baseTitle;
+        private const int ToggleButtonMargin = 12;
+        private bool _suppressResizeRender = false;
+        private bool _controlsPanelVisible = true;
 
         /// <summary>
         /// Массив предустановленных полиномиальных формул для выбора.
@@ -238,6 +241,8 @@ namespace FractalExplorer
             richTextInput.MouseLeave += FormulaInput_MouseLeave;
             pnlFormulaInput.MouseEnter += FormulaInput_MouseEnter;
             pnlFormulaInput.MouseLeave += FormulaInput_MouseLeave;
+            canvasHost.Resize += CanvasHost_Resize;
+            controlsHost.SizeChanged += ControlsHost_SizeChanged;
             pnlFormulaGlow.MouseEnter += FormulaInput_MouseEnter;
             pnlFormulaGlow.MouseLeave += FormulaInput_MouseLeave;
             lblFormulaExample.MouseEnter += FormulaInput_MouseEnter;
@@ -259,13 +264,15 @@ namespace FractalExplorer
             fractal_bitmap.MouseMove += Canvas_MouseMove;
             fractal_bitmap.MouseUp += Canvas_MouseUp;
             fractal_bitmap.Paint += Canvas_Paint;
-            fractal_bitmap.Resize += (s, e) => { if (WindowState != FormWindowState.Minimized) ScheduleRender(); };
+            fractal_bitmap.Resize += FractalBitmap_Resize;
 
             _renderedCenterX = _centerX;
             _renderedCenterY = _centerY;
             _renderedZoom = _zoom;
 
             ApplyActivePalette();
+            UpdateToggleControlsPosition();
+            ClearInitialControlSelection();
             ScheduleRender();
         }
 
@@ -326,6 +333,73 @@ namespace FractalExplorer
 
             _isFormulaInputHovered = false;
             UpdateFormulaAccentState();
+        }
+
+
+        private void FractalBitmap_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                return;
+            }
+
+            if (_suppressResizeRender)
+            {
+                fractal_bitmap.Invalidate();
+                return;
+            }
+
+            ScheduleRender();
+        }
+
+        private void btnToggleControls_Click(object sender, EventArgs e)
+        {
+            ToggleControlsPanel();
+        }
+
+        private void CanvasHost_Resize(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void UpdateToggleControlsPosition()
+        {
+            int targetX = ToggleButtonMargin;
+            if (_controlsPanelVisible)
+            {
+                targetX = controlsHost.Right + ToggleButtonMargin;
+            }
+
+            int maxX = Math.Max(ToggleButtonMargin, canvasHost.ClientSize.Width - btnToggleControls.Width - ToggleButtonMargin);
+            btnToggleControls.Location = new Point(Math.Min(targetX, maxX), ToggleButtonMargin);
+            btnToggleControls.BringToFront();
+        }
+
+        private void ToggleControlsPanel()
+        {
+            _controlsPanelVisible = !_controlsPanelVisible;
+            btnToggleControls.Text = _controlsPanelVisible ? "✕" : "☰";
+            _suppressResizeRender = true;
+            try
+            {
+                controlsHost.Visible = _controlsPanelVisible;
+                UpdateToggleControlsPosition();
+                fractal_bitmap.Invalidate();
+            }
+            finally
+            {
+                _suppressResizeRender = false;
+            }
+        }
+
+        private void ClearInitialControlSelection()
+        {
+            BeginInvoke(new Action(() => ActiveControl = null));
         }
 
         #endregion

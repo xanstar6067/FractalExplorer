@@ -29,6 +29,10 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FractalSerpinski));
+            btnToggleControls = new System.Windows.Forms.Button();
+            contentPanel = new System.Windows.Forms.Panel();
+            canvasHost = new System.Windows.Forms.Panel();
+            controlsHost = new System.Windows.Forms.Panel();
             pnlControls = new System.Windows.Forms.TableLayoutPanel();
             lblFractalType = new System.Windows.Forms.Label();
             pnlFractalType = new System.Windows.Forms.FlowLayoutPanel();
@@ -49,6 +53,9 @@
             label8 = new System.Windows.Forms.Label();
             progressBarSerpinsky = new System.Windows.Forms.ProgressBar();
             canvasSerpinsky = new System.Windows.Forms.PictureBox();
+            contentPanel.SuspendLayout();
+            canvasHost.SuspendLayout();
+            controlsHost.SuspendLayout();
             pnlControls.SuspendLayout();
             pnlFractalType.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(nudIterations)).BeginInit();
@@ -56,6 +63,52 @@
             pnlRenderButtons.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(canvasSerpinsky)).BeginInit();
             SuspendLayout();
+            // 
+            // btnToggleControls
+            // 
+            btnToggleControls.AutoSize = true;
+            btnToggleControls.Anchor = ((AnchorStyles)(AnchorStyles.Top | AnchorStyles.Left));
+            btnToggleControls.BackColor = Color.FromArgb(235, 32, 32, 32);
+            btnToggleControls.FlatStyle = FlatStyle.Popup;
+            btnToggleControls.ForeColor = Color.White;
+            btnToggleControls.Location = new Point(256, 12);
+            btnToggleControls.Name = "btnToggleControls";
+            btnToggleControls.Size = new Size(44, 32);
+            btnToggleControls.TabIndex = 0;
+            btnToggleControls.Text = "✕";
+            btnToggleControls.UseVisualStyleBackColor = true;
+            btnToggleControls.Click += btnToggleControls_Click;
+            // 
+            // contentPanel
+            // 
+            contentPanel.Controls.Add(canvasHost);
+            contentPanel.Dock = DockStyle.Fill;
+            contentPanel.Location = new Point(0, 0);
+            contentPanel.Name = "contentPanel";
+            contentPanel.Size = new Size(1084, 636);
+            contentPanel.TabIndex = 0;
+            // 
+            // canvasHost
+            // 
+            canvasHost.Controls.Add(controlsHost);
+            canvasHost.Controls.Add(btnToggleControls);
+            canvasHost.Controls.Add(canvasSerpinsky);
+            canvasHost.Dock = DockStyle.Fill;
+            canvasHost.Location = new Point(0, 0);
+            canvasHost.Name = "canvasHost";
+            canvasHost.Size = new Size(1084, 636);
+            canvasHost.TabIndex = 0;
+            // 
+            // controlsHost
+            // 
+            controlsHost.Anchor = ((AnchorStyles)(((AnchorStyles.Top | AnchorStyles.Bottom) | AnchorStyles.Left)));
+            controlsHost.BackColor = SystemColors.Control;
+            controlsHost.BorderStyle = BorderStyle.FixedSingle;
+            controlsHost.Controls.Add(pnlControls);
+            controlsHost.Location = new Point(0, 0);
+            controlsHost.Name = "controlsHost";
+            controlsHost.Size = new Size(231, 636);
+            controlsHost.TabIndex = 0;
             // 
             // pnlControls
             // 
@@ -188,6 +241,7 @@
             // cbCPUThreads
             // 
             cbCPUThreads.Dock = System.Windows.Forms.DockStyle.Fill;
+            cbCPUThreads.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             cbCPUThreads.FormattingEnabled = true;
             cbCPUThreads.Location = new System.Drawing.Point(6, 111);
             cbCPUThreads.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
@@ -319,12 +373,15 @@
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             ClientSize = new System.Drawing.Size(1084, 636);
-            Controls.Add(canvasSerpinsky);
-            Controls.Add(pnlControls);
+            Controls.Add(contentPanel);
             Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             MinimumSize = new System.Drawing.Size(1100, 675);
             Name = "FractalSerpinski";
             Text = "Треугольник Серпинского";
+            controlsHost.ResumeLayout(false);
+            contentPanel.ResumeLayout(false);
+            canvasHost.ResumeLayout(false);
+            canvasHost.PerformLayout();
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
             pnlFractalType.ResumeLayout(false);
@@ -339,6 +396,10 @@
 
         #endregion
 
+        private System.Windows.Forms.Button btnToggleControls;
+        private System.Windows.Forms.Panel contentPanel;
+        private System.Windows.Forms.Panel canvasHost;
+        private System.Windows.Forms.Panel controlsHost;
         private System.Windows.Forms.TableLayoutPanel pnlControls;
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.Label label5;

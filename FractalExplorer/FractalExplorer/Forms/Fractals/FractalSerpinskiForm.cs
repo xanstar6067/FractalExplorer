@@ -94,6 +94,9 @@ namespace FractalExplorer
         /// Форма конфигурации цветов.
         /// </summary>
         private ColorConfigurationSerpinskyForm _colorConfigForm;
+        private const int ToggleButtonMargin = 12;
+        private bool _suppressResizeRender = false;
+        private bool _controlsPanelVisible = true;
         #endregion
 
         #region Constructor
@@ -134,6 +137,8 @@ namespace FractalExplorer
                 renderedCenterY = centerY;
                 renderedZoom = currentZoom;
                 ApplyActivePalette();
+                UpdateToggleControlsPosition();
+                ClearInitialControlSelection();
                 ScheduleRender();
             };
             canvasSerpinsky.Paint += CanvasSerpinsky_Paint;
@@ -141,8 +146,10 @@ namespace FractalExplorer
             canvasSerpinsky.MouseDown += CanvasSerpinsky_MouseDown;
             canvasSerpinsky.MouseMove += CanvasSerpinsky_MouseMove;
             canvasSerpinsky.MouseUp += CanvasSerpinsky_MouseUp;
-            Resize += (s, e) => { if (WindowState != FormWindowState.Minimized) ScheduleRender(); };
-            canvasSerpinsky.Resize += (s, e) => { if (WindowState != FormWindowState.Minimized) ScheduleRender(); };
+            canvasHost.Resize += CanvasHost_Resize;
+            controlsHost.SizeChanged += ControlsHost_SizeChanged;
+            Resize += (s, e) => { if (WindowState != FormWindowState.Minimized && !_suppressResizeRender) ScheduleRender(); };
+            canvasSerpinsky.Resize += CanvasSerpinsky_Resize;
 
             nudZoom.ValueChanged += ParamControl_Changed;
             nudIterations.ValueChanged += ParamControl_Changed;
@@ -153,6 +160,69 @@ namespace FractalExplorer
             FractalTypeIsGeometry.Checked = true;
             UpdateAbortButtonState();
         }
+
+        private void CanvasSerpinsky_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized) return;
+            if (_suppressResizeRender)
+            {
+                canvasSerpinsky.Invalidate();
+                return;
+            }
+
+            ScheduleRender();
+        }
+
+        private void btnToggleControls_Click(object sender, EventArgs e)
+        {
+            ToggleControlsPanel();
+        }
+
+        private void CanvasHost_Resize(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void UpdateToggleControlsPosition()
+        {
+            int targetX = ToggleButtonMargin;
+            if (_controlsPanelVisible)
+            {
+                targetX = controlsHost.Right + ToggleButtonMargin;
+            }
+
+            int maxX = Math.Max(ToggleButtonMargin, canvasHost.ClientSize.Width - btnToggleControls.Width - ToggleButtonMargin);
+            btnToggleControls.Location = new Point(Math.Min(targetX, maxX), ToggleButtonMargin);
+            btnToggleControls.BringToFront();
+        }
+
+        private void ToggleControlsPanel()
+        {
+            _controlsPanelVisible = !_controlsPanelVisible;
+            btnToggleControls.Text = _controlsPanelVisible ? "✕" : "☰";
+            _suppressResizeRender = true;
+            try
+            {
+                controlsHost.Visible = _controlsPanelVisible;
+                UpdateToggleControlsPosition();
+                canvasSerpinsky.Invalidate();
+            }
+            finally
+            {
+                _suppressResizeRender = false;
+            }
+        }
+
+        private void ClearInitialControlSelection()
+        {
+            BeginInvoke(new Action(() => ActiveControl = null));
+        }
+
         #endregion
 
         #region UI Event Handlers

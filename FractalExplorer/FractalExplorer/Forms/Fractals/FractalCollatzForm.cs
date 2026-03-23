@@ -127,9 +127,21 @@ namespace FractalExplorer.Forms.Fractals
         /// </summary>
         private System.Windows.Forms.Timer _renderDebounceTimer;
         /// <summary>
+        /// Флаг, отключающий запуск полного рендера при программном изменении layout.
+        /// </summary>
+        private bool _suppressResizeRender = false;
+        /// <summary>
+        /// Признак видимости панели управления.
+        /// </summary>
+        private bool _controlsPanelVisible = true;
+        /// <summary>
         /// Базовый заголовок окна.
         /// </summary>
         private string _baseTitle;
+        /// <summary>
+        /// Размер отступа кнопки переключения панели.
+        /// </summary>
+        private const int ToggleButtonMargin = 12;
         /// <summary>
         /// Базовый масштаб для вычислений.
         /// </summary>
@@ -219,7 +231,9 @@ namespace FractalExplorer.Forms.Fractals
             canvas.MouseMove += Canvas_MouseMove;
             canvas.MouseUp += Canvas_MouseUp;
             canvas.Paint += Canvas_Paint;
-            canvas.Resize += (s, e) => { if (WindowState != FormWindowState.Minimized) ScheduleRender(); };
+            canvas.Resize += Canvas_Resize;
+            canvasHost.Resize += CanvasHost_Resize;
+            controlsHost.SizeChanged += ControlsHost_SizeChanged;
         }
         #endregion
 
@@ -315,6 +329,69 @@ namespace FractalExplorer.Forms.Fractals
             {
                 dialog.ShowDialog(this);
             }
+        }
+
+
+        private void Canvas_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized) return;
+            if (_suppressResizeRender)
+            {
+                canvas.Invalidate();
+                return;
+            }
+
+            ScheduleRender();
+        }
+
+        private void btnToggleControls_Click(object sender, EventArgs e)
+        {
+            ToggleControlsPanel();
+        }
+
+        private void CanvasHost_Resize(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        {
+            UpdateToggleControlsPosition();
+        }
+
+        private void UpdateToggleControlsPosition()
+        {
+            int targetX = ToggleButtonMargin;
+            if (_controlsPanelVisible)
+            {
+                targetX = controlsHost.Right + ToggleButtonMargin;
+            }
+
+            int maxX = Math.Max(ToggleButtonMargin, canvasHost.ClientSize.Width - btnToggleControls.Width - ToggleButtonMargin);
+            btnToggleControls.Location = new Point(Math.Min(targetX, maxX), ToggleButtonMargin);
+            btnToggleControls.BringToFront();
+        }
+
+        private void ToggleControlsPanel()
+        {
+            _controlsPanelVisible = !_controlsPanelVisible;
+            btnToggleControls.Text = _controlsPanelVisible ? "✕" : "☰";
+            _suppressResizeRender = true;
+            try
+            {
+                controlsHost.Visible = _controlsPanelVisible;
+                UpdateToggleControlsPosition();
+                canvas.Invalidate();
+            }
+            finally
+            {
+                _suppressResizeRender = false;
+            }
+        }
+
+        private void ClearInitialControlSelection()
+        {
+            BeginInvoke(new Action(() => ActiveControl = null));
         }
 
         #endregion
@@ -1141,6 +1218,8 @@ namespace FractalExplorer.Forms.Fractals
             _renderedZoom = _zoom;
 
             UpdateEngineParameters();
+            UpdateToggleControlsPosition();
+            ClearInitialControlSelection();
             ScheduleRender();
         }
 

@@ -30,6 +30,10 @@
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NewtonPools));
+            btnToggleControls = new Button();
+            contentPanel = new Panel();
+            canvasHost = new Panel();
+            controlsHost = new Panel();
             pnlControls = new TableLayoutPanel();
             lblFormula = new Label();
             cbSelector = new ComboBox();
@@ -54,6 +58,9 @@
             richTextDebugOutput = new RichTextBox();
             fractal_bitmap = new PictureBox();
             toolTipFormula = new ToolTip(components);
+            contentPanel.SuspendLayout();
+            canvasHost.SuspendLayout();
+            controlsHost.SuspendLayout();
             pnlControls.SuspendLayout();
             pnlFormulaGlow.SuspendLayout();
             pnlFormulaInput.SuspendLayout();
@@ -61,6 +68,52 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)fractal_bitmap).BeginInit();
             SuspendLayout();
+            // 
+            // btnToggleControls
+            // 
+            btnToggleControls.AutoSize = true;
+            btnToggleControls.Anchor = ((AnchorStyles)(AnchorStyles.Top | AnchorStyles.Left));
+            btnToggleControls.BackColor = Color.FromArgb(235, 32, 32, 32);
+            btnToggleControls.FlatStyle = FlatStyle.Popup;
+            btnToggleControls.ForeColor = Color.White;
+            btnToggleControls.Location = new Point(256, 12);
+            btnToggleControls.Name = "btnToggleControls";
+            btnToggleControls.Size = new Size(44, 32);
+            btnToggleControls.TabIndex = 0;
+            btnToggleControls.Text = "✕";
+            btnToggleControls.UseVisualStyleBackColor = true;
+            btnToggleControls.Click += btnToggleControls_Click;
+            // 
+            // contentPanel
+            // 
+            contentPanel.Controls.Add(canvasHost);
+            contentPanel.Dock = DockStyle.Fill;
+            contentPanel.Location = new Point(0, 0);
+            contentPanel.Name = "contentPanel";
+            contentPanel.Size = new Size(1084, 636);
+            contentPanel.TabIndex = 0;
+            // 
+            // canvasHost
+            // 
+            canvasHost.Controls.Add(controlsHost);
+            canvasHost.Controls.Add(btnToggleControls);
+            canvasHost.Controls.Add(fractal_bitmap);
+            canvasHost.Dock = DockStyle.Fill;
+            canvasHost.Location = new Point(0, 0);
+            canvasHost.Name = "canvasHost";
+            canvasHost.Size = new Size(1084, 636);
+            canvasHost.TabIndex = 0;
+            // 
+            // controlsHost
+            // 
+            controlsHost.Anchor = ((AnchorStyles)(((AnchorStyles.Top | AnchorStyles.Bottom) | AnchorStyles.Left)));
+            controlsHost.BackColor = SystemColors.Control;
+            controlsHost.BorderStyle = BorderStyle.FixedSingle;
+            controlsHost.Controls.Add(pnlControls);
+            controlsHost.Location = new Point(0, 0);
+            controlsHost.Name = "controlsHost";
+            controlsHost.Size = new Size(231, 636);
+            controlsHost.TabIndex = 0;
             // 
             // pnlControls
             // 
@@ -85,7 +138,7 @@
             pnlControls.Controls.Add(progressBar, 0, 12);
             pnlControls.Controls.Add(lblDebug, 0, 13);
             pnlControls.Controls.Add(richTextDebugOutput, 0, 14);
-            pnlControls.Dock = DockStyle.Left;
+            pnlControls.Dock = DockStyle.Fill;
             pnlControls.Location = new Point(0, 0);
             pnlControls.Name = "pnlControls";
             pnlControls.RowCount = 16;
@@ -238,6 +291,7 @@
             // cbThreads
             // 
             cbThreads.Dock = DockStyle.Fill;
+            cbThreads.DropDownStyle = ComboBoxStyle.DropDownList;
             cbThreads.FormattingEnabled = true;
             cbThreads.Location = new Point(6, 259);
             cbThreads.Margin = new Padding(6, 3, 3, 3);
@@ -355,7 +409,7 @@
             // fractal_bitmap
             // 
             fractal_bitmap.Dock = DockStyle.Fill;
-            fractal_bitmap.Location = new Point(231, 0);
+            fractal_bitmap.Location = new Point(0, 0);
             fractal_bitmap.Name = "fractal_bitmap";
             fractal_bitmap.Size = new Size(853, 636);
             fractal_bitmap.TabIndex = 1;
@@ -366,12 +420,15 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1084, 636);
-            Controls.Add(fractal_bitmap);
-            Controls.Add(pnlControls);
+            Controls.Add(contentPanel);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 675);
             Name = "NewtonPools";
             Text = "Бассейны Ньютона";
+            controlsHost.ResumeLayout(false);
+            contentPanel.ResumeLayout(false);
+            canvasHost.ResumeLayout(false);
+            canvasHost.PerformLayout();
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
             pnlFormulaGlow.ResumeLayout(false);
@@ -384,6 +441,10 @@
 
         #endregion
 
+        private System.Windows.Forms.Button btnToggleControls;
+        private System.Windows.Forms.Panel contentPanel;
+        private System.Windows.Forms.Panel canvasHost;
+        private System.Windows.Forms.Panel controlsHost;
         private System.Windows.Forms.TableLayoutPanel pnlControls;
         private System.Windows.Forms.Label lblFormula;
         private System.Windows.Forms.ComboBox cbSelector;
