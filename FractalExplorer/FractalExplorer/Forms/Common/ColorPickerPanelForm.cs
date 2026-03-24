@@ -466,7 +466,10 @@ namespace FractalExplorer.Forms.Common
                     h = 0f;
                 }
 
-                Color color = FromAhsb(255, h, 1f, 1f);
+                // FromAhsb реализует HSL-подобную модель (где "brightness" = lightness).
+                // Для lightness=1f любой hue становится белым, поэтому для hue-полосы
+                // используем среднюю lightness, чтобы отображалась полноценная радуга.
+                Color color = FromAhsb(255, h, 1f, 0.5f);
                 for (int x = 0; x < width; x++)
                 {
                     _hueBitmap.SetPixel(x, y, color);
