@@ -124,7 +124,7 @@ namespace FractalExplorer.Forms.Common
             {
                 if (_screenEyedropper.TryPickColor(null, out Color pickedColor))
                 {
-                    ApplySelectedColor(pickedColor);
+                    ApplySelectedColor(ToOpaqueColor(pickedColor));
                 }
             }
             finally
@@ -206,14 +206,14 @@ namespace FractalExplorer.Forms.Common
             {
                 if (_customColors[i] == Color.Empty)
                 {
-                    _customColors[i] = _selectedColor;
+                    _customColors[i] = ToOpaqueColor(_selectedColor);
                     RefreshCustomColorCell(i);
                     SaveCustomColors();
                     return;
                 }
             }
 
-            _customColors[0] = _selectedColor;
+            _customColors[0] = ToOpaqueColor(_selectedColor);
             RefreshCustomColorCell(0);
             SaveCustomColors();
         }
@@ -231,10 +231,22 @@ namespace FractalExplorer.Forms.Common
             }
             else
             {
-                _customColors[index] = _selectedColor;
+                _customColors[index] = ToOpaqueColor(_selectedColor);
                 RefreshCustomColorCell(index);
                 SaveCustomColors();
             }
+        }
+
+        private void CustomPaletteCell_MouseUp(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || sender is not Panel panel || !_customCellIndexes.TryGetValue(panel, out int index))
+            {
+                return;
+            }
+
+            _customColors[index] = Color.White;
+            RefreshCustomColorCell(index);
+            SaveCustomColors();
         }
 
         private void StandardPaletteCell_Click(object? sender, EventArgs e)
@@ -247,6 +259,7 @@ namespace FractalExplorer.Forms.Common
 
         private void ApplySelectedColor(Color color)
         {
+            color = ToOpaqueColor(color);
             _selectedColor = color;
             _hue = color.GetHue();
             _saturation = color.GetSaturation();
@@ -362,6 +375,7 @@ namespace FractalExplorer.Forms.Common
                 cell.MouseEnter += (_, _) => SetCustomHoveredIndex(capturedIndex);
                 cell.MouseLeave += (_, _) => SetCustomHoveredIndex(-1);
                 cell.MouseMove += (_, _) => SetCustomHoveredIndex(capturedIndex);
+                cell.MouseUp += CustomPaletteCell_MouseUp;
                 cell.Paint += CustomColorCell_Paint;
                 _customColorCells.Add(cell);
                 _customCellIndexes[cell] = i;
@@ -384,6 +398,7 @@ namespace FractalExplorer.Forms.Common
                 MinimumSize = new Size(PaletteCellSize, PaletteCellSize)
             };
 
+            EnableDoubleBuffering(cell);
             cell.Click += clickHandler;
             return cell;
         }
@@ -401,6 +416,7 @@ namespace FractalExplorer.Forms.Common
                 MinimumSize = new Size(PaletteCellSize, PaletteCellSize)
             };
 
+            EnableDoubleBuffering(cell);
             cell.Click += clickHandler;
             return cell;
         }
@@ -771,7 +787,7 @@ namespace FractalExplorer.Forms.Common
             {
                 if (i < chunks.Length && int.TryParse(chunks[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out int argb))
                 {
-                    _customColors[i] = Color.FromArgb(argb);
+                    _customColors[i] = argb == int.MinValue ? Color.Empty : Color.FromArgb(argb);
                 }
                 else
                 {
@@ -785,6 +801,11 @@ namespace FractalExplorer.Forms.Common
             string serialized = string.Join(";", _customColors.Select(c => (c == Color.Empty ? int.MinValue : c.ToArgb()).ToString(CultureInfo.InvariantCulture)));
             Settings.Default.ColorPicker_CustomColors = serialized;
             Settings.Default.Save();
+        }
+
+        private static Color ToOpaqueColor(Color color)
+        {
+            return color.A == byte.MaxValue ? color : Color.FromArgb(byte.MaxValue, color.R, color.G, color.B);
         }
 
         private static string ToHexString(Color color)
