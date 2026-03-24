@@ -15,6 +15,7 @@ namespace FractalExplorer.Forms.Common
         private const int CustomPaletteRowsCount = 2;
         private const int PaletteCellSize = 20;
         private const int PaletteCellMargin = 2;
+        private const string CustomPaletteTooltipText = "ЛКМ - задать цвет, ПКМ - очистить";
 
         private readonly Color _originalColor;
         private readonly ScreenEyedropper _screenEyedropper = new();
@@ -355,6 +356,7 @@ namespace FractalExplorer.Forms.Common
                 cell.Paint += StandardColorCell_Paint;
                 _standardColorCells.Add(cell);
                 _standardCellEntries[cell] = _standardColors[i];
+                _paletteToolTip.SetToolTip(cell, _standardColors[i].Name ?? string.Empty);
                 tableStandardColors.Controls.Add(cell, i % 8, i / 8);
             }
 
@@ -379,6 +381,7 @@ namespace FractalExplorer.Forms.Common
                 cell.Paint += CustomColorCell_Paint;
                 _customColorCells.Add(cell);
                 _customCellIndexes[cell] = i;
+                _paletteToolTip.SetToolTip(cell, CustomPaletteTooltipText);
                 tableCustomColors.Controls.Add(cell, i % 8, i / 8);
             }
 
@@ -736,7 +739,6 @@ namespace FractalExplorer.Forms.Common
             {
                 _standardColorCells[_standardHoveredIndex].Invalidate();
             }
-            UpdateStandardTooltip();
         }
 
         private void SetCustomHoveredIndex(int hoveredIndex)
@@ -759,18 +761,6 @@ namespace FractalExplorer.Forms.Common
             {
                 _customColorCells[_customHoveredIndex].Invalidate();
             }
-        }
-
-        private void UpdateStandardTooltip()
-        {
-            if (_standardHoveredIndex < 0 || _standardHoveredIndex >= _standardColors.Count)
-            {
-                _paletteToolTip.SetToolTip(tableStandardColors, string.Empty);
-                return;
-            }
-
-            string? name = _standardColors[_standardHoveredIndex].Name;
-            _paletteToolTip.SetToolTip(tableStandardColors, string.IsNullOrWhiteSpace(name) ? string.Empty : name);
         }
 
         private void LoadCustomColors()
