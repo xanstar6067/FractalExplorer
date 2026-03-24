@@ -2,6 +2,7 @@ using FractalExplorer.Properties;
 using FractalExplorer.Utilities.ColorPicking;
 using FractalExplorer.Utilities.Theme;
 using System.Globalization;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace FractalExplorer.Forms.Common
@@ -9,39 +10,50 @@ namespace FractalExplorer.Forms.Common
     public partial class ColorPickerPanelForm : Form
     {
         private const int CustomColorSlotsCount = 16;
+        private const int PaletteColumnsCount = 8;
+        private const int StandardPaletteRowsCount = 6;
+        private const int CustomPaletteRowsCount = 2;
+        private const int PaletteCellSize = 20;
+        private const int PaletteCellMargin = 2;
 
         private readonly Color _originalColor;
         private readonly ScreenEyedropper _screenEyedropper = new();
+        private readonly ToolTip _paletteToolTip = new();
 
-        private readonly List<Color> _standardColors = new()
+        private readonly List<PaletteColorEntry> _standardColors = new()
         {
-            Color.FromArgb(255, 128, 128), Color.FromArgb(255, 255, 128), Color.FromArgb(128, 255, 128), Color.FromArgb(0, 255, 128),
-            Color.FromArgb(128, 255, 255), Color.FromArgb(0, 128, 255), Color.FromArgb(255, 128, 192), Color.FromArgb(255, 128, 255),
+            new(Color.FromArgb(255, 128, 128), null), new(Color.FromArgb(255, 255, 128), null), new(Color.FromArgb(128, 255, 128), null), new(Color.FromArgb(0, 255, 128), null),
+            new(Color.FromArgb(128, 255, 255), null), new(Color.FromArgb(0, 128, 255), null), new(Color.FromArgb(255, 128, 192), null), new(Color.FromArgb(255, 128, 255), null),
 
-            Color.FromArgb(255, 0, 0), Color.FromArgb(255, 255, 0), Color.FromArgb(128, 255, 0), Color.FromArgb(0, 255, 64),
-            Color.FromArgb(0, 255, 255), Color.FromArgb(0, 128, 192), Color.FromArgb(128, 128, 192), Color.FromArgb(255, 0, 255),
+            new(Color.Red, "Красный"), new(Color.Yellow, "Жёлтый"), new(Color.FromArgb(128, 255, 0), null), new(Color.FromArgb(0, 255, 64), null),
+            new(Color.Cyan, "Бирюзовый"), new(Color.FromArgb(0, 128, 192), null), new(Color.FromArgb(128, 128, 192), null), new(Color.Magenta, "Пурпурный"),
 
-            Color.FromArgb(128, 64, 64), Color.FromArgb(255, 128, 64), Color.FromArgb(0, 255, 0), Color.FromArgb(0, 128, 128),
-            Color.FromArgb(0, 64, 128), Color.FromArgb(128, 128, 255), Color.FromArgb(128, 0, 64), Color.FromArgb(255, 0, 128),
+            new(Color.FromArgb(128, 64, 64), null), new(Color.FromArgb(255, 128, 64), null), new(Color.Lime, "Зелёный"), new(Color.Teal, "Тёмно-бирюзовый"),
+            new(Color.FromArgb(0, 64, 128), null), new(Color.FromArgb(128, 128, 255), null), new(Color.FromArgb(128, 0, 64), null), new(Color.DeepPink, "Розовый"),
 
-            Color.FromArgb(128, 0, 0), Color.FromArgb(255, 128, 0), Color.FromArgb(0, 128, 0), Color.FromArgb(0, 128, 64),
-            Color.FromArgb(0, 0, 255), Color.FromArgb(0, 0, 160), Color.FromArgb(128, 0, 128), Color.FromArgb(128, 0, 255),
+            new(Color.Maroon, "Бордовый"), new(Color.Orange, "Оранжевый"), new(Color.Green, "Тёмно-зелёный"), new(Color.FromArgb(0, 128, 64), null),
+            new(Color.Blue, "Синий"), new(Color.FromArgb(0, 0, 160), null), new(Color.Purple, "Фиолетовый"), new(Color.FromArgb(128, 0, 255), null),
 
-            Color.FromArgb(64, 0, 0), Color.FromArgb(128, 64, 0), Color.FromArgb(0, 64, 0), Color.FromArgb(0, 64, 64),
-            Color.FromArgb(0, 0, 128), Color.FromArgb(0, 0, 64), Color.FromArgb(64, 0, 64), Color.FromArgb(64, 0, 128),
+            new(Color.FromArgb(64, 0, 0), null), new(Color.FromArgb(128, 64, 0), null), new(Color.DarkGreen, "Тёмный зелёный"), new(Color.FromArgb(0, 64, 64), null),
+            new(Color.Navy, "Тёмно-синий"), new(Color.FromArgb(0, 0, 64), null), new(Color.FromArgb(64, 0, 64), null), new(Color.FromArgb(64, 0, 128), null),
 
-            Color.Black, Color.FromArgb(64, 64, 64), Color.FromArgb(128, 128, 128), Color.FromArgb(192, 192, 192),
-            Color.White, Color.FromArgb(255, 255, 224), Color.FromArgb(255, 224, 192), Color.FromArgb(255, 224, 255)
+            new(Color.Black, "Чёрный"), new(Color.FromArgb(64, 64, 64), "Тёмно-серый"), new(Color.Gray, "Серый"), new(Color.Silver, "Серебристый"),
+            new(Color.White, "Белый"), new(Color.LightYellow, "Светло-жёлтый"), new(Color.Moccasin, null), new(Color.Gold, "Золотой")
         };
 
         private readonly Color[] _customColors = new Color[CustomColorSlotsCount];
         private readonly List<Panel> _customColorCells = new();
+        private readonly List<Panel> _standardColorCells = new();
+        private readonly Dictionary<Panel, int> _customCellIndexes = new();
+        private readonly Dictionary<Panel, PaletteColorEntry> _standardCellEntries = new();
 
         private Color _selectedColor;
         private bool _isUpdatingControls;
         private float _hue;
         private float _saturation;
         private float _brightness;
+        private int _standardHoveredIndex = -1;
+        private int _customHoveredIndex = -1;
 
         private Bitmap? _matrixBitmap;
         private Bitmap? _hueBitmap;
@@ -55,6 +67,15 @@ namespace FractalExplorer.Forms.Common
             ThemeManager.RegisterForm(this);
             ThemeManager.ThemeChanged += ThemeManager_ThemeChanged;
             Disposed += ColorPickerPanelForm_Disposed;
+            Shown += ColorPickerPanelForm_Shown;
+
+            EnableDoubleBuffering(pnlColorMatrix);
+            EnableDoubleBuffering(pnlHueSlider);
+            EnableDoubleBuffering(tableStandardColors);
+            EnableDoubleBuffering(tableCustomColors);
+            ConfigurePaletteGrid(tableStandardColors, PaletteColumnsCount, StandardPaletteRowsCount);
+            ConfigurePaletteGrid(tableCustomColors, PaletteColumnsCount, CustomPaletteRowsCount);
+            WirePaletteInteractions();
 
             _originalColor = initialColor;
 
@@ -70,15 +91,29 @@ namespace FractalExplorer.Forms.Common
         {
             ThemeManager.ThemeChanged -= ThemeManager_ThemeChanged;
             Disposed -= ColorPickerPanelForm_Disposed;
+            Shown -= ColorPickerPanelForm_Shown;
             _matrixBitmap?.Dispose();
             _hueBitmap?.Dispose();
+            _paletteToolTip.Dispose();
         }
 
         private void ThemeManager_ThemeChanged(object? sender, EventArgs e)
         {
             BuildHueBitmap();
             RedrawMatrixBitmap();
+            RefreshStandardPaletteColors();
+            RefreshAllCustomColorCells();
             ApplySelectedColor(_selectedColor);
+            InvalidatePaletteHoverVisuals();
+            pnlHueSlider.Invalidate();
+        }
+
+        private void ColorPickerPanelForm_Shown(object? sender, EventArgs e)
+        {
+            BuildHueBitmap();
+            RedrawMatrixBitmap();
+            pnlHueSlider.Invalidate();
+            pnlColorMatrix.Invalidate();
         }
 
         private void btnEyedropper_Click(object? sender, EventArgs e)
@@ -137,6 +172,11 @@ namespace FractalExplorer.Forms.Common
 
         private void pnlHueSlider_Paint(object? sender, PaintEventArgs e)
         {
+            if (_hueBitmap == null || _hueBitmap.Width != Math.Max(1, pnlHueSlider.Width) || _hueBitmap.Height != Math.Max(1, pnlHueSlider.Height))
+            {
+                BuildHueBitmap();
+            }
+
             if (_hueBitmap != null)
             {
                 e.Graphics.DrawImage(_hueBitmap, 0, 0, pnlHueSlider.Width, pnlHueSlider.Height);
@@ -180,7 +220,7 @@ namespace FractalExplorer.Forms.Common
 
         private void CustomPaletteCell_Click(object? sender, EventArgs e)
         {
-            if (sender is not Panel panel || panel.Tag is not int index)
+            if (sender is not Panel panel || !_customCellIndexes.TryGetValue(panel, out int index))
             {
                 return;
             }
@@ -199,9 +239,9 @@ namespace FractalExplorer.Forms.Common
 
         private void StandardPaletteCell_Click(object? sender, EventArgs e)
         {
-            if (sender is Panel panel && panel.Tag is Color color)
+            if (sender is Panel panel && _standardCellEntries.TryGetValue(panel, out PaletteColorEntry? entry))
             {
-                ApplySelectedColor(color);
+                ApplySelectedColor(entry.Color);
             }
         }
 
@@ -289,10 +329,19 @@ namespace FractalExplorer.Forms.Common
         {
             tableStandardColors.SuspendLayout();
             tableStandardColors.Controls.Clear();
+            _standardColorCells.Clear();
+            _standardCellEntries.Clear();
 
             for (int i = 0; i < _standardColors.Count; i++)
             {
-                Panel cell = CreateColorCell(_standardColors[i], i, StandardPaletteCell_Click);
+                Panel cell = CreateColorCell(_standardColors[i], StandardPaletteCell_Click);
+                int capturedIndex = i;
+                cell.MouseEnter += (_, _) => SetStandardHoveredIndex(capturedIndex);
+                cell.MouseLeave += (_, _) => SetStandardHoveredIndex(-1);
+                cell.MouseMove += (_, _) => SetStandardHoveredIndex(capturedIndex);
+                cell.Paint += StandardColorCell_Paint;
+                _standardColorCells.Add(cell);
+                _standardCellEntries[cell] = _standardColors[i];
                 tableStandardColors.Controls.Add(cell, i % 8, i / 8);
             }
 
@@ -304,27 +353,52 @@ namespace FractalExplorer.Forms.Common
             tableCustomColors.SuspendLayout();
             tableCustomColors.Controls.Clear();
             _customColorCells.Clear();
+            _customCellIndexes.Clear();
 
             for (int i = 0; i < _customColors.Length; i++)
             {
                 Panel cell = CreateColorCell(_customColors[i], i, CustomPaletteCell_Click);
+                int capturedIndex = i;
+                cell.MouseEnter += (_, _) => SetCustomHoveredIndex(capturedIndex);
+                cell.MouseLeave += (_, _) => SetCustomHoveredIndex(-1);
+                cell.MouseMove += (_, _) => SetCustomHoveredIndex(capturedIndex);
+                cell.Paint += CustomColorCell_Paint;
                 _customColorCells.Add(cell);
+                _customCellIndexes[cell] = i;
                 tableCustomColors.Controls.Add(cell, i % 8, i / 8);
             }
 
             tableCustomColors.ResumeLayout();
         }
 
-        private static Panel CreateColorCell(Color color, object tag, EventHandler clickHandler)
+        private static Panel CreateColorCell(PaletteColorEntry entry, EventHandler clickHandler)
+        {
+            Panel cell = new()
+            {
+                BackColor = entry.Color == Color.Empty ? Color.White : entry.Color,
+                BorderStyle = BorderStyle.FixedSingle,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(PaletteCellMargin),
+                Cursor = Cursors.Hand,
+                Tag = "preserve-backcolor",
+                MinimumSize = new Size(PaletteCellSize, PaletteCellSize)
+            };
+
+            cell.Click += clickHandler;
+            return cell;
+        }
+
+        private static Panel CreateColorCell(Color color, int index, EventHandler clickHandler)
         {
             Panel cell = new()
             {
                 BackColor = color == Color.Empty ? Color.White : color,
                 BorderStyle = BorderStyle.FixedSingle,
                 Dock = DockStyle.Fill,
-                Margin = new Padding(2),
+                Margin = new Padding(PaletteCellMargin),
                 Cursor = Cursors.Hand,
-                Tag = tag
+                Tag = "preserve-backcolor",
+                MinimumSize = new Size(PaletteCellSize, PaletteCellSize)
             };
 
             cell.Click += clickHandler;
@@ -339,6 +413,22 @@ namespace FractalExplorer.Forms.Common
             }
 
             _customColorCells[index].BackColor = _customColors[index] == Color.Empty ? Color.White : _customColors[index];
+        }
+
+        private void RefreshStandardPaletteColors()
+        {
+            for (int i = 0; i < _standardColorCells.Count && i < _standardColors.Count; i++)
+            {
+                _standardColorCells[i].BackColor = _standardColors[i].Color;
+            }
+        }
+
+        private void RefreshAllCustomColorCells()
+        {
+            for (int i = 0; i < _customColorCells.Count; i++)
+            {
+                RefreshCustomColorCell(i);
+            }
         }
 
         private void RedrawMatrixBitmap()
@@ -390,6 +480,278 @@ namespace FractalExplorer.Forms.Common
             RedrawMatrixBitmap();
             pnlColorMatrix.Invalidate();
             pnlHueSlider.Invalidate();
+        }
+
+        private static void EnableDoubleBuffering(Control control)
+        {
+            PropertyInfo? property = typeof(Control).GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
+            property?.SetValue(control, true);
+        }
+
+        private static void ConfigurePaletteGrid(TableLayoutPanel table, int columns, int rows)
+        {
+            table.SuspendLayout();
+            table.ColumnCount = columns;
+            table.RowCount = rows;
+            table.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
+            table.Margin = Padding.Empty;
+            table.Padding = Padding.Empty;
+
+            table.ColumnStyles.Clear();
+            for (int i = 0; i < columns; i++)
+            {
+                table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, PaletteCellSize + (PaletteCellMargin * 2)));
+            }
+
+            table.RowStyles.Clear();
+            for (int i = 0; i < rows; i++)
+            {
+                table.RowStyles.Add(new RowStyle(SizeType.Absolute, PaletteCellSize + (PaletteCellMargin * 2)));
+            }
+
+            table.Width = columns * (PaletteCellSize + (PaletteCellMargin * 2));
+            table.Height = rows * (PaletteCellSize + (PaletteCellMargin * 2));
+            table.Anchor = AnchorStyles.None;
+            table.ResumeLayout();
+        }
+
+        private void WirePaletteInteractions()
+        {
+            tableStandardColors.MouseClick += tableStandardColors_MouseClick;
+            tableStandardColors.MouseMove += tableStandardColors_MouseMove;
+            tableStandardColors.MouseLeave += tableStandardColors_MouseLeave;
+            tableStandardColors.Paint += tableStandardColors_Paint;
+
+            tableCustomColors.MouseMove += tableCustomColors_MouseMove;
+            tableCustomColors.MouseLeave += tableCustomColors_MouseLeave;
+            tableCustomColors.Paint += tableCustomColors_Paint;
+        }
+
+        private void tableStandardColors_MouseClick(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            int index = GetPaletteIndexAtPoint(tableStandardColors, e.Location, _standardColors.Count);
+            if (index >= 0)
+            {
+                ApplySelectedColor(_standardColors[index].Color);
+            }
+        }
+
+        private void tableStandardColors_MouseMove(object? sender, MouseEventArgs e)
+        {
+            int hoveredIndex = GetPaletteIndexAtPoint(tableStandardColors, e.Location, _standardColors.Count);
+            SetStandardHoveredIndex(hoveredIndex);
+        }
+
+        private void tableStandardColors_MouseLeave(object? sender, EventArgs e)
+        {
+            if (_standardHoveredIndex < 0)
+            {
+                return;
+            }
+
+            SetStandardHoveredIndex(-1);
+        }
+
+        private void tableCustomColors_MouseMove(object? sender, MouseEventArgs e)
+        {
+            int hoveredIndex = GetPaletteIndexAtPoint(tableCustomColors, e.Location, _customColorCells.Count);
+            SetCustomHoveredIndex(hoveredIndex);
+        }
+
+        private void tableCustomColors_MouseLeave(object? sender, EventArgs e)
+        {
+            if (_customHoveredIndex < 0)
+            {
+                return;
+            }
+
+            SetCustomHoveredIndex(-1);
+        }
+
+        private void tableStandardColors_Paint(object? sender, PaintEventArgs e)
+        {
+            if (_standardHoveredIndex >= 0 && _standardHoveredIndex < _standardColorCells.Count)
+            {
+                _standardColorCells[_standardHoveredIndex].Invalidate();
+            }
+        }
+
+        private void tableCustomColors_Paint(object? sender, PaintEventArgs e)
+        {
+            if (_customHoveredIndex >= 0 && _customHoveredIndex < _customColorCells.Count)
+            {
+                _customColorCells[_customHoveredIndex].Invalidate();
+            }
+        }
+
+        private void StandardColorCell_Paint(object? sender, PaintEventArgs e)
+        {
+            if (sender is not Panel panel || !_standardCellEntries.TryGetValue(panel, out _))
+            {
+                return;
+            }
+
+            if (!_standardColorCells.Contains(panel))
+            {
+                return;
+            }
+
+            int index = _standardColorCells.IndexOf(panel);
+            if (index != _standardHoveredIndex)
+            {
+                return;
+            }
+
+            DrawHoverFrame(e.Graphics, panel.ClientRectangle);
+        }
+
+        private void CustomColorCell_Paint(object? sender, PaintEventArgs e)
+        {
+            if (sender is not Panel panel || !_customCellIndexes.TryGetValue(panel, out int index))
+            {
+                return;
+            }
+
+            if (index != _customHoveredIndex)
+            {
+                return;
+            }
+
+            DrawHoverFrame(e.Graphics, panel.ClientRectangle);
+        }
+
+        private static void DrawHoverFrame(Graphics graphics, Rectangle bounds)
+        {
+            using Pen hoverPen = new(ThemeManager.GetInteractiveBorderColor(ThemeManager.CurrentDefinition, ThemeManager.CurrentDefinition.PanelBackground, hovered: true), 2f);
+            Rectangle hoverRect = Rectangle.Inflate(bounds, -1, -1);
+            hoverRect.Width = Math.Max(1, hoverRect.Width - 1);
+            hoverRect.Height = Math.Max(1, hoverRect.Height - 1);
+            graphics.DrawRectangle(hoverPen, hoverRect);
+        }
+
+        private static int GetPaletteIndexAtPoint(TableLayoutPanel table, Point location, int itemCount)
+        {
+            int cellPitch = PaletteCellSize + (PaletteCellMargin * 2);
+            if (location.X < 0 || location.Y < 0)
+            {
+                return -1;
+            }
+
+            int column = location.X / cellPitch;
+            int row = location.Y / cellPitch;
+            if (column < 0 || column >= table.ColumnCount || row < 0 || row >= table.RowCount)
+            {
+                return -1;
+            }
+
+            int index = row * table.ColumnCount + column;
+            return index >= 0 && index < itemCount ? index : -1;
+        }
+
+        private static Rectangle GetPaletteCellBounds(TableLayoutPanel table, int index)
+        {
+            if (index < 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            int col = index % table.ColumnCount;
+            int row = index / table.ColumnCount;
+            if (row >= table.RowCount)
+            {
+                return Rectangle.Empty;
+            }
+
+            return GetCellPositionBounds(table, col, row);
+        }
+
+        private static Rectangle GetCellPositionBounds(TableLayoutPanel table, int column, int row)
+        {
+            int x = (PaletteCellSize + (PaletteCellMargin * 2)) * column;
+            int y = (PaletteCellSize + (PaletteCellMargin * 2)) * row;
+            return new Rectangle(x + PaletteCellMargin, y + PaletteCellMargin, PaletteCellSize, PaletteCellSize);
+        }
+
+        private void InvalidatePaletteHoverVisuals()
+        {
+            InvalidatePaletteCell(tableStandardColors, _standardHoveredIndex);
+            InvalidatePaletteCell(tableCustomColors, _customHoveredIndex);
+        }
+
+        private static void InvalidatePaletteCell(TableLayoutPanel table, int index)
+        {
+            if (index < 0)
+            {
+                return;
+            }
+
+            Rectangle bounds = GetPaletteCellBounds(table, index);
+            if (!bounds.IsEmpty)
+            {
+                table.Invalidate(Rectangle.Inflate(bounds, 3, 3));
+            }
+        }
+
+        private void SetStandardHoveredIndex(int hoveredIndex)
+        {
+            if (_standardHoveredIndex == hoveredIndex)
+            {
+                return;
+            }
+
+            int previous = _standardHoveredIndex;
+            _standardHoveredIndex = hoveredIndex;
+            InvalidatePaletteCell(tableStandardColors, previous);
+            InvalidatePaletteCell(tableStandardColors, _standardHoveredIndex);
+            if (previous >= 0 && previous < _standardColorCells.Count)
+            {
+                _standardColorCells[previous].Invalidate();
+            }
+
+            if (_standardHoveredIndex >= 0 && _standardHoveredIndex < _standardColorCells.Count)
+            {
+                _standardColorCells[_standardHoveredIndex].Invalidate();
+            }
+            UpdateStandardTooltip();
+        }
+
+        private void SetCustomHoveredIndex(int hoveredIndex)
+        {
+            if (_customHoveredIndex == hoveredIndex)
+            {
+                return;
+            }
+
+            int previous = _customHoveredIndex;
+            _customHoveredIndex = hoveredIndex;
+            InvalidatePaletteCell(tableCustomColors, previous);
+            InvalidatePaletteCell(tableCustomColors, _customHoveredIndex);
+            if (previous >= 0 && previous < _customColorCells.Count)
+            {
+                _customColorCells[previous].Invalidate();
+            }
+
+            if (_customHoveredIndex >= 0 && _customHoveredIndex < _customColorCells.Count)
+            {
+                _customColorCells[_customHoveredIndex].Invalidate();
+            }
+        }
+
+        private void UpdateStandardTooltip()
+        {
+            if (_standardHoveredIndex < 0 || _standardHoveredIndex >= _standardColors.Count)
+            {
+                _paletteToolTip.SetToolTip(tableStandardColors, string.Empty);
+                return;
+            }
+
+            string? name = _standardColors[_standardHoveredIndex].Name;
+            _paletteToolTip.SetToolTip(tableStandardColors, string.IsNullOrWhiteSpace(name) ? string.Empty : name);
         }
 
         private void LoadCustomColors()
@@ -502,5 +864,7 @@ namespace FractalExplorer.Forms.Common
                 _ => Color.FromArgb(alpha, iMax, iMid, iMin)
             };
         }
+
+        private sealed record PaletteColorEntry(Color Color, string? Name);
     }
 }
