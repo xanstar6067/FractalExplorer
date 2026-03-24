@@ -417,7 +417,7 @@ namespace FractalExplorer.Forms.Common
 
         private void SaveCustomColors()
         {
-            string serialized = string.Join(";", _customColors.Select(c => c == Color.Empty ? int.MinValue : c.ToArgb().ToString(CultureInfo.InvariantCulture)));
+            string serialized = string.Join(";", _customColors.Select(c => (c == Color.Empty ? int.MinValue : c.ToArgb()).ToString(CultureInfo.InvariantCulture)));
             Settings.Default.ColorPicker_CustomColors = serialized;
             Settings.Default.Save();
         }
