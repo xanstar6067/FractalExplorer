@@ -244,7 +244,7 @@ namespace FractalExplorer.Forms.Common
                 return;
             }
 
-            _customColors[index] = Color.White;
+            _customColors[index] = Color.Empty;
             RefreshCustomColorCell(index);
             SaveCustomColors();
         }
