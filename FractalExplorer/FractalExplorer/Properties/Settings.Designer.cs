@@ -133,6 +133,18 @@ namespace FractalExplorer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ColorPicker_CustomColors {
+            get {
+                return ((string)(this["ColorPicker_CustomColors"]));
+            }
+            set {
+                this["ColorPicker_CustomColors"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
         public int RenderPatternIndex {
             get {
