@@ -23,23 +23,23 @@ namespace FractalExplorer.Forms.Common
 
         private readonly List<PaletteColorEntry> _standardColors = new()
         {
-            new(Color.FromArgb(255, 128, 128), null), new(Color.FromArgb(255, 255, 128), null), new(Color.FromArgb(128, 255, 128), null), new(Color.FromArgb(0, 255, 128), null),
-            new(Color.FromArgb(128, 255, 255), null), new(Color.FromArgb(0, 128, 255), null), new(Color.FromArgb(255, 128, 192), null), new(Color.FromArgb(255, 128, 255), null),
+            new(Color.FromArgb(255, 128, 128), "Светло-красный"), new(Color.FromArgb(255, 255, 128), "Светло-жёлтый"), new(Color.FromArgb(128, 255, 128), "Светло-зелёный"), new(Color.FromArgb(0, 255, 128), "Аквамариновый"),
+            new(Color.FromArgb(128, 255, 255), "Светло-бирюзовый"), new(Color.FromArgb(0, 128, 255), "Лазурный"), new(Color.FromArgb(255, 128, 192), "Светло-розовый"), new(Color.FromArgb(255, 128, 255), "Светло-пурпурный"),
 
-            new(Color.Red, "Красный"), new(Color.Yellow, "Жёлтый"), new(Color.FromArgb(128, 255, 0), null), new(Color.FromArgb(0, 255, 64), null),
-            new(Color.Cyan, "Бирюзовый"), new(Color.FromArgb(0, 128, 192), null), new(Color.FromArgb(128, 128, 192), null), new(Color.Magenta, "Пурпурный"),
+            new(Color.Red, "Красный"), new(Color.Yellow, "Жёлтый"), new(Color.FromArgb(128, 255, 0), "Салатовый"), new(Color.FromArgb(0, 255, 64), "Изумрудный"),
+            new(Color.Cyan, "Бирюзовый"), new(Color.FromArgb(0, 128, 192), "Сине-бирюзовый"), new(Color.FromArgb(128, 128, 192), "Серо-голубой"), new(Color.Magenta, "Пурпурный"),
 
-            new(Color.FromArgb(128, 64, 64), null), new(Color.FromArgb(255, 128, 64), null), new(Color.Lime, "Зелёный"), new(Color.Teal, "Тёмно-бирюзовый"),
-            new(Color.FromArgb(0, 64, 128), null), new(Color.FromArgb(128, 128, 255), null), new(Color.FromArgb(128, 0, 64), null), new(Color.DeepPink, "Розовый"),
+            new(Color.FromArgb(128, 64, 64), "Коричнево-красный"), new(Color.FromArgb(255, 128, 64), "Светло-оранжевый"), new(Color.Lime, "Зелёный"), new(Color.Teal, "Тёмно-бирюзовый"),
+            new(Color.FromArgb(0, 64, 128), "Тёмно-лазурный"), new(Color.FromArgb(128, 128, 255), "Светло-синий"), new(Color.FromArgb(128, 0, 64), "Тёмно-розовый"), new(Color.DeepPink, "Розовый"),
 
-            new(Color.Maroon, "Бордовый"), new(Color.Orange, "Оранжевый"), new(Color.Green, "Тёмно-зелёный"), new(Color.FromArgb(0, 128, 64), null),
-            new(Color.Blue, "Синий"), new(Color.FromArgb(0, 0, 160), null), new(Color.Purple, "Фиолетовый"), new(Color.FromArgb(128, 0, 255), null),
+            new(Color.Maroon, "Бордовый"), new(Color.Orange, "Оранжевый"), new(Color.Green, "Тёмно-зелёный"), new(Color.FromArgb(0, 128, 64), "Хвойный"),
+            new(Color.Blue, "Синий"), new(Color.FromArgb(0, 0, 160), "Индиго"), new(Color.Purple, "Фиолетовый"), new(Color.FromArgb(128, 0, 255), "Ярко-фиолетовый"),
 
-            new(Color.FromArgb(64, 0, 0), null), new(Color.FromArgb(128, 64, 0), null), new(Color.DarkGreen, "Тёмный зелёный"), new(Color.FromArgb(0, 64, 64), null),
-            new(Color.Navy, "Тёмно-синий"), new(Color.FromArgb(0, 0, 64), null), new(Color.FromArgb(64, 0, 64), null), new(Color.FromArgb(64, 0, 128), null),
+            new(Color.FromArgb(64, 0, 0), "Очень тёмно-красный"), new(Color.FromArgb(128, 64, 0), "Тёмно-коричневый"), new(Color.DarkGreen, "Тёмно-зелёный"), new(Color.FromArgb(0, 64, 64), "Тёмный морской"),
+            new(Color.Navy, "Тёмно-синий"), new(Color.FromArgb(0, 0, 64), "Ночной синий"), new(Color.FromArgb(64, 0, 64), "Тёмно-пурпурный"), new(Color.FromArgb(64, 0, 128), "Индиго-фиолетовый"),
 
             new(Color.Black, "Чёрный"), new(Color.FromArgb(64, 64, 64), "Тёмно-серый"), new(Color.Gray, "Серый"), new(Color.Silver, "Серебристый"),
-            new(Color.White, "Белый"), new(Color.LightYellow, "Светло-жёлтый"), new(Color.Moccasin, null), new(Color.Gold, "Золотой")
+            new(Color.White, "Белый"), new(Color.LightYellow, "Светло-жёлтый"), new(Color.Moccasin, "Кремовый"), new(Color.Gold, "Золотой")
         };
 
         private readonly Color[] _customColors = new Color[CustomColorSlotsCount];
