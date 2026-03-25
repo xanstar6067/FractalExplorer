@@ -44,7 +44,7 @@
             lblThreads = new Label();
             cbSSAA = new ComboBox();
             lbSSAA = new Label();
-            cbSmooth = new CheckBox();
+            cbSmooth = new ComboBox();
             lblVariation = new Label();
             cbVariation = new ComboBox();
             lblPParameter = new Label();
@@ -270,18 +270,15 @@
             // 
             // cbSmooth
             // 
-            cbSmooth.AutoSize = true;
-            cbSmooth.Checked = true;
-            cbSmooth.CheckState = CheckState.Checked;
+            cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbSmooth.FormattingEnabled = true;
             pnlControls.SetColumnSpan(cbSmooth, 2);
             cbSmooth.Dock = DockStyle.Fill;
             cbSmooth.Location = new Point(6, 166);
             cbSmooth.Margin = new Padding(6, 3, 3, 3);
             cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(222, 19);
+            cbSmooth.Size = new Size(222, 23);
             cbSmooth.TabIndex = 19;
-            cbSmooth.Text = "Плавное окрашивание";
-            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // lblVariation
             // 
@@ -457,7 +454,7 @@
         protected System.Windows.Forms.Label lblProgress;
         protected System.Windows.Forms.Button color_configurations;
         private System.Windows.Forms.Button btnStateManager;
-        private System.Windows.Forms.CheckBox cbSmooth;
+        private System.Windows.Forms.ComboBox cbSmooth;
         protected System.Windows.Forms.Label lbSSAA;
         private System.Windows.Forms.ComboBox cbSSAA;
         private System.Windows.Forms.Label lblVariation;

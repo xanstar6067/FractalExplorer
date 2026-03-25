@@ -196,6 +196,10 @@ namespace FractalExplorer.Forms.Fractals
             cbSSAA.Items.Add("Высокое (4x)");
             cbSSAA.SelectedItem = "Выкл (1x)";
 
+            cbSmooth.Items.Clear();
+            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
+            cbSmooth.SelectedIndex = 1;
+
             // Инициализация новых элементов управления для вариаций
             cbVariation.DataSource = Enum.GetValues(typeof(CollatzVariation));
             cbVariation.SelectedItem = CollatzVariation.Standard;
@@ -219,7 +223,7 @@ namespace FractalExplorer.Forms.Fractals
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
-            cbSmooth.CheckedChanged += ParamControl_Changed;
+            cbSmooth.SelectedIndexChanged += ParamControl_Changed;
             cbSSAA.SelectedIndexChanged += ParamControl_Changed;
 
             // Добавляем обработчики для новых элементов
@@ -961,7 +965,7 @@ namespace FractalExplorer.Forms.Fractals
             _fractalEngine.CenterX = _centerX;
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BASE_SCALE / _zoom;
-            _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
+            _fractalEngine.UseSmoothColoring = IsSmoothColoringEnabled();
 
             // Обновляем движок параметрами вариаций
             if (cbVariation.InvokeRequired)
@@ -1008,6 +1012,11 @@ namespace FractalExplorer.Forms.Fractals
         private int GetThreadCount()
         {
             return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+        }
+
+        private bool IsSmoothColoringEnabled()
+        {
+            return cbSmooth.SelectedIndex == 1;
         }
 
         /// <summary>
@@ -1267,7 +1276,7 @@ namespace FractalExplorer.Forms.Fractals
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = "collatz",
-                UseSmoothColoring = cbSmooth.Checked,
+                UseSmoothColoring = IsSmoothColoringEnabled(),
 
                 // Добавляем специфичные для Коллатца параметры
                 Variation = (CollatzVariation)cbVariation.SelectedItem,
@@ -1425,7 +1434,7 @@ namespace FractalExplorer.Forms.Fractals
                 Iterations = state.Iterations,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
-                UseSmoothColoring = cbSmooth.Checked,
+                UseSmoothColoring = IsSmoothColoringEnabled(),
                 // Добавляем параметры вариаций в JSON для предпросмотра
                 Variation = state.Variation,
                 P_Parameter = state.P_Parameter

@@ -206,6 +206,10 @@ namespace FractalExplorer.Forms
             cbSSAA.Items.Add("Низкое (2x)");
             cbSSAA.Items.Add("Высокое (4x)");
             cbSSAA.SelectedItem = "Выкл (1x)";
+
+            cbSmooth.Items.Clear();
+            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
+            cbSmooth.SelectedIndex = 1;
         }
 
         /// <summary>
@@ -221,7 +225,7 @@ namespace FractalExplorer.Forms
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
-            cbSmooth.CheckedChanged += ParamControl_Changed;
+            cbSmooth.SelectedIndexChanged += ParamControl_Changed;
             cbSSAA.SelectedIndexChanged += ParamControl_Changed;
 
             canvas.MouseWheel += Canvas_MouseWheel;
@@ -979,7 +983,7 @@ namespace FractalExplorer.Forms
             _fractalEngine.Scale = BASE_SCALE / _zoom;
             _fractalEngine.C1 = new ComplexDecimal(nudC1Re.Value, nudC1Im.Value);
             _fractalEngine.C2 = new ComplexDecimal(nudC2Re.Value, nudC2Im.Value);
-            _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
+            _fractalEngine.UseSmoothColoring = IsSmoothColoringEnabled();
             ApplyActivePalette();
         }
 
@@ -1006,6 +1010,11 @@ namespace FractalExplorer.Forms
         private int GetThreadCount()
         {
             return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+        }
+
+        private bool IsSmoothColoringEnabled()
+        {
+            return cbSmooth.SelectedIndex == 1;
         }
 
         /// <summary>
@@ -1331,7 +1340,7 @@ namespace FractalExplorer.Forms
                 C1Im = state.C1Im,
                 C2Re = state.C2Re,
                 C2Im = state.C2Im,
-                UseSmoothColoring = cbSmooth.Checked
+                UseSmoothColoring = IsSmoothColoringEnabled()
             };
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams);
             return state;
@@ -1497,7 +1506,7 @@ namespace FractalExplorer.Forms
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = fileNameDetails,
                 JuliaC = new ComplexDecimal(nudC1Re.Value, nudC1Im.Value),
-                UseSmoothColoring = cbSmooth.Checked
+                UseSmoothColoring = IsSmoothColoringEnabled()
             };
 
             return state;

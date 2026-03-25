@@ -41,7 +41,7 @@
             lblThreads = new System.Windows.Forms.Label();
             cbSSAA = new System.Windows.Forms.ComboBox();
             lbSSAA = new System.Windows.Forms.Label();
-            cbSmooth = new System.Windows.Forms.CheckBox();
+            cbSmooth = new System.Windows.Forms.ComboBox();
             btnSaveHighRes = new System.Windows.Forms.Button();
             color_configurations = new System.Windows.Forms.Button();
             btnRender = new System.Windows.Forms.Button();
@@ -398,18 +398,15 @@
             // 
             // cbSmooth
             // 
-            cbSmooth.AutoSize = true;
-            cbSmooth.Checked = true;
-            cbSmooth.CheckState = System.Windows.Forms.CheckState.Checked;
+            cbSmooth.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            cbSmooth.FormattingEnabled = true;
             pnlControls.SetColumnSpan(cbSmooth, 2);
             cbSmooth.Dock = System.Windows.Forms.DockStyle.Fill;
             cbSmooth.Location = new System.Drawing.Point(6, 341);
             cbSmooth.Margin = new System.Windows.Forms.Padding(6, 3, 3, 3);
             cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new System.Drawing.Size(222, 19);
+            cbSmooth.Size = new System.Drawing.Size(222, 23);
             cbSmooth.TabIndex = 19;
-            cbSmooth.Text = "Плавное окрашивание";
-            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // btnSaveHighRes
             // 
@@ -555,7 +552,7 @@
         protected System.Windows.Forms.NumericUpDown nudC2Im;
         protected System.Windows.Forms.Button btnSelectPhoenixParameters;
         private System.Windows.Forms.Button btnStateManager;
-        private System.Windows.Forms.CheckBox cbSmooth;
+        private System.Windows.Forms.ComboBox cbSmooth;
         protected System.Windows.Forms.Label lbSSAA;
         private System.Windows.Forms.ComboBox cbSSAA;
     }

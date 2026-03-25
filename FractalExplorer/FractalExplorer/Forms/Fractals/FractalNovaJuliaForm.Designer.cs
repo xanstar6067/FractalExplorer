@@ -55,7 +55,7 @@ namespace FractalExplorer.Forms
             lblThreads = new Label();
             cbSSAA = new ComboBox();
             lblSSAA = new Label();
-            cbSmooth = new CheckBox();
+            cbSmooth = new ComboBox();
             btnSaveHighRes = new Button();
             btnConfigurePalette = new Button();
             btnRender = new Button();
@@ -558,17 +558,14 @@ namespace FractalExplorer.Forms
             // 
             // cbSmooth
             // 
-            cbSmooth.AutoSize = true;
-            cbSmooth.Checked = true;
-            cbSmooth.CheckState = CheckState.Checked;
+            cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbSmooth.FormattingEnabled = true;
             pnlControls.SetColumnSpan(cbSmooth, 2);
             cbSmooth.Dock = DockStyle.Fill;
             cbSmooth.Location = new Point(3, 450);
             cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(234, 19);
+            cbSmooth.Size = new Size(234, 23);
             cbSmooth.TabIndex = 14;
-            cbSmooth.Text = "Плавное окрашивание";
-            cbSmooth.UseVisualStyleBackColor = true;
             // 
             // btnSaveHighRes
             // 
@@ -740,7 +737,7 @@ namespace FractalExplorer.Forms
         private System.Windows.Forms.Label lblThreads;
         private System.Windows.Forms.ComboBox cbSSAA;
         private System.Windows.Forms.Label lblSSAA;
-        private System.Windows.Forms.CheckBox cbSmooth;
+        private System.Windows.Forms.ComboBox cbSmooth;
         private System.Windows.Forms.Button btnSaveHighRes;
         private System.Windows.Forms.Button btnConfigurePalette;
         private System.Windows.Forms.Button btnRender;

@@ -184,6 +184,10 @@ namespace FractalExplorer.Forms
             nudIterations.Value = 100;
             nudThreshold.Value = 10m;
             nudZoom.Value = 1.0m;
+
+            cbSmooth.Items.Clear();
+            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
+            cbSmooth.SelectedIndex = 1;
         }
 
         private void InitializeEventHandlers()
@@ -204,7 +208,7 @@ namespace FractalExplorer.Forms
             nudThreshold.ValueChanged += ParamControl_Changed;
             cbThreads.SelectedIndexChanged += ParamControl_Changed;
             nudZoom.ValueChanged += ParamControl_Changed;
-            cbSmooth.CheckedChanged += ParamControl_Changed;
+            cbSmooth.SelectedIndexChanged += ParamControl_Changed;
             cbSSAA.SelectedIndexChanged += ParamControl_Changed;
 
             canvas.MouseWheel += Canvas_MouseWheel;
@@ -860,7 +864,7 @@ namespace FractalExplorer.Forms
             _fractalEngine.CenterX = _centerX;
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BASE_SCALE / _zoom;
-            _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
+            _fractalEngine.UseSmoothColoring = IsSmoothColoringEnabled();
             _fractalEngine.P = new ComplexDecimal(nudP_Re.Value, nudP_Im.Value);
             _fractalEngine.Z0 = new ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value);
             _fractalEngine.M = nudM.Value;
@@ -889,6 +893,11 @@ namespace FractalExplorer.Forms
                 return Environment.ProcessorCount;
             }
             return Convert.ToInt32(cbThreads.SelectedItem);
+        }
+
+        private bool IsSmoothColoringEnabled()
+        {
+            return cbSmooth.SelectedIndex == 1;
         }
 
         private int GetSelectedSsaaFactor()
@@ -1177,7 +1186,7 @@ namespace FractalExplorer.Forms
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = fileNameDetails,
-                UseSmoothColoring = cbSmooth.Checked,
+                UseSmoothColoring = IsSmoothColoringEnabled(),
                 NovaP = new ComplexDecimal(nudP_Re.Value, nudP_Im.Value),
                 NovaZ0 = new ComplexDecimal(nudZ0_Re.Value, nudZ0_Im.Value),
                 NovaM = nudM.Value,
@@ -1286,7 +1295,7 @@ namespace FractalExplorer.Forms
                 M = state.M,
                 C_Re = state.C_Re,
                 C_Im = state.C_Im,
-                UseSmoothColoring = cbSmooth.Checked
+                UseSmoothColoring = IsSmoothColoringEnabled()
             };
             state.PreviewParametersJson = JsonSerializer.Serialize(previewParams);
             return state;
