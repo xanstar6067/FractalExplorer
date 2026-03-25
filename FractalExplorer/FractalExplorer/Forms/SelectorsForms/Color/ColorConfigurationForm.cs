@@ -19,6 +19,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         private readonly PaletteManager _paletteManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
+        private readonly int _compactClientWidth;
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
@@ -43,6 +44,7 @@ namespace FractalExplorer.Utilities
             InitializeComponent();
             ThemeManager.RegisterForm(this);
             _paletteManager = paletteManager;
+            _compactClientWidth = ClientSize.Width;
 
             nudGamma.Minimum = 0.1m;
             nudGamma.Maximum = 5.0m;
@@ -59,6 +61,50 @@ namespace FractalExplorer.Utilities
             lbColorStops.MouseDown += new MouseEventHandler(lbColorStops_MouseDown);
             lbColorStops.DragOver += new DragEventHandler(lbColorStops_DragOver);
             lbColorStops.DragDrop += new DragEventHandler(lbColorStops_DragDrop);
+        }
+        #endregion
+
+        #region Advanced Editor
+        public void SetAdvancedMode(bool enabled)
+        {
+            pnlAdvancedHost.Visible = enabled;
+
+            int advancedWidth = pnlAdvancedHost.Width + 10;
+            int targetClientWidth = enabled
+                ? _compactClientWidth + advancedWidth
+                : _compactClientWidth;
+
+            ClientSize = new Size(targetClientWidth, ClientSize.Height);
+        }
+
+        public void LoadAdvancedEditor(string coloringMode)
+        {
+            foreach (Control control in pnlAdvancedHost.Controls)
+            {
+                control.Dispose();
+            }
+
+            pnlAdvancedHost.Controls.Clear();
+
+            UserControl? advancedEditor = CreateAdvancedEditor(coloringMode);
+            if (advancedEditor == null)
+            {
+                SetAdvancedMode(false);
+                return;
+            }
+
+            advancedEditor.Dock = DockStyle.Fill;
+            pnlAdvancedHost.Controls.Add(advancedEditor);
+            SetAdvancedMode(true);
+        }
+
+        private static UserControl? CreateAdvancedEditor(string coloringMode)
+        {
+            return coloringMode?.Trim().ToLowerInvariant() switch
+            {
+                // TODO: Подключить конкретные UserControl редакторов для режимов окрашивания.
+                _ => null
+            };
         }
         #endregion
 

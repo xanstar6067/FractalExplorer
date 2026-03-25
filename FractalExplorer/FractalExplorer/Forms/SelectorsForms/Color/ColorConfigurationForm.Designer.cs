@@ -33,6 +33,7 @@
             btnClose = new Button();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
+            pnlAdvancedHost = new Panel();
             checkAlignSteps = new CheckBox();
             nudGamma = new NumericUpDown();
             labelGamma = new Label();
@@ -306,11 +307,22 @@
             label1.TabIndex = 8;
             label1.Text = "Название палитры:";
             // 
+            // pnlAdvancedHost
+            // 
+            pnlAdvancedHost.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
+            pnlAdvancedHost.BorderStyle = BorderStyle.FixedSingle;
+            pnlAdvancedHost.Location = new Point(664, 11);
+            pnlAdvancedHost.Name = "pnlAdvancedHost";
+            pnlAdvancedHost.Size = new Size(260, 428);
+            pnlAdvancedHost.TabIndex = 15;
+            pnlAdvancedHost.Visible = false;
+            // 
             // ColorConfigurationForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(669, 501);
+            Controls.Add(pnlAdvancedHost);
             Controls.Add(groupBox2);
             Controls.Add(groupBox1);
             Controls.Add(btnSave);
@@ -350,6 +362,7 @@
         private System.Windows.Forms.Button btnClose;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
+        private System.Windows.Forms.Panel pnlAdvancedHost;
         private System.Windows.Forms.CheckBox checkAlignSteps;
         private System.Windows.Forms.NumericUpDown nudGamma;
         private System.Windows.Forms.Label labelGamma;
