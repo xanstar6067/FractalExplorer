@@ -149,7 +149,7 @@
             // btnAutoAdjustRoots
             // 
             btnAutoAdjustRoots.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnAutoAdjustRoots.Location = new Point(190, 375);
+            btnAutoAdjustRoots.Location = new Point(9, 348);
             btnAutoAdjustRoots.Name = "btnAutoAdjustRoots";
             btnAutoAdjustRoots.Size = new Size(188, 28);
             btnAutoAdjustRoots.TabIndex = 14;
@@ -180,7 +180,7 @@
             // 
             chkIsGradient.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             chkIsGradient.AutoSize = true;
-            chkIsGradient.Location = new Point(9, 380);
+            chkIsGradient.Location = new Point(9, 391);
             chkIsGradient.Name = "chkIsGradient";
             chkIsGradient.Size = new Size(267, 19);
             chkIsGradient.TabIndex = 11;
