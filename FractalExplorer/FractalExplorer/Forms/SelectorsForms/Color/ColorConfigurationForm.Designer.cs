@@ -33,7 +33,6 @@
             btnClose = new Button();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
-            pnlAdvancedHost = new Panel();
             checkAlignSteps = new CheckBox();
             nudGamma = new NumericUpDown();
             labelGamma = new Label();
@@ -44,6 +43,7 @@
             btnCreateMetadataProfile = new Button();
             lbMetadataProfiles = new ListBox();
             label3 = new Label();
+            pnlAdvancedHost = new Panel();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudGamma).BeginInit();
@@ -76,7 +76,7 @@
             lbColorStops.FormattingEnabled = true;
             lbColorStops.Location = new Point(8, 223);
             lbColorStops.Name = "lbColorStops";
-            lbColorStops.Size = new Size(279, 169);
+            lbColorStops.Size = new Size(279, 199);
             lbColorStops.TabIndex = 2;
             // 
             // btnAddColor
@@ -316,7 +316,7 @@
             // btnCreateMetadataProfile
             // 
             btnCreateMetadataProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnCreateMetadataProfile.Location = new Point(292, 360);
+            btnCreateMetadataProfile.Location = new Point(292, 391);
             btnCreateMetadataProfile.Name = "btnCreateMetadataProfile";
             btnCreateMetadataProfile.Size = new Size(107, 32);
             btnCreateMetadataProfile.TabIndex = 17;
@@ -328,18 +328,18 @@
             // 
             lbMetadataProfiles.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lbMetadataProfiles.FormattingEnabled = true;
-            lbMetadataProfiles.Location = new Point(292, 223);
+            lbMetadataProfiles.Location = new Point(292, 247);
             lbMetadataProfiles.Name = "lbMetadataProfiles";
-            lbMetadataProfiles.Size = new Size(107, 124);
+            lbMetadataProfiles.Size = new Size(107, 139);
             lbMetadataProfiles.TabIndex = 16;
             // 
             // label3
             // 
             label3.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             label3.AutoSize = true;
-            label3.Location = new Point(292, 205);
+            label3.Location = new Point(291, 223);
             label3.Name = "label3";
-            label3.Size = new Size(80, 15);
+            label3.Size = new Size(86, 15);
             label3.TabIndex = 15;
             label3.Text = "Метапрофили";
             // 
