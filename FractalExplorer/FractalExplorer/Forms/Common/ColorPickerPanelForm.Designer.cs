@@ -18,10 +18,13 @@ namespace FractalExplorer.Forms.Common
 
         private void InitializeComponent()
         {
+            // ── объявления ────────────────────────────────────────────────────
             tableMain = new TableLayoutPanel();
-            grpSelectColor = new GroupBox();
-            tableSelectionRoot = new TableLayoutPanel();
+
+            // левая колонка
+            tableLeft = new TableLayoutPanel();
             panelColorMatrixContainer = new Panel();
+            tableColorArea = new TableLayoutPanel();
             pnlColorMatrix = new Panel();
             pnlHueSlider = new Panel();
             tableRgb = new TableLayoutPanel();
@@ -34,7 +37,15 @@ namespace FractalExplorer.Forms.Common
             lblBlue = new Label();
             trkBlue = new TrackBar();
             lblBlueValue = new Label();
+            tableEyedropperPreview = new TableLayoutPanel();
             btnEyedropper = new Button();
+            tablePreviewStrip = new TableLayoutPanel();
+            pnlCurrentColor = new Panel();
+            lblCurrentHexValue = new Label();
+            pnlNewColor = new Panel();
+            lblNewHexValue = new Label();
+
+            // правая колонка
             grpPalettes = new GroupBox();
             tablePalettes = new TableLayoutPanel();
             lblStandard = new Label();
@@ -42,118 +53,125 @@ namespace FractalExplorer.Forms.Common
             lblCustom = new Label();
             tableCustomColors = new TableLayoutPanel();
             btnAddToCustomColors = new Button();
-            grpPreview = new GroupBox();
-            tablePreview = new TableLayoutPanel();
-            lblCurrent = new Label();
-            pnlCurrentColor = new Panel();
-            lblCurrentHexValue = new Label();
-            lblNew = new Label();
-            pnlNewColor = new Panel();
-            lblNewHexValue = new Label();
+
+            // нижняя строка
             panelButtons = new FlowLayoutPanel();
             btnOk = new Button();
             btnCancel = new Button();
+
+            // ── SuspendLayout ─────────────────────────────────────────────────
             tableMain.SuspendLayout();
-            grpSelectColor.SuspendLayout();
-            tableSelectionRoot.SuspendLayout();
+            tableLeft.SuspendLayout();
             panelColorMatrixContainer.SuspendLayout();
+            tableColorArea.SuspendLayout();
             tableRgb.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)trkRed).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkGreen).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkBlue).BeginInit();
+            tableEyedropperPreview.SuspendLayout();
+            tablePreviewStrip.SuspendLayout();
             grpPalettes.SuspendLayout();
             tablePalettes.SuspendLayout();
-            grpPreview.SuspendLayout();
-            tablePreview.SuspendLayout();
             panelButtons.SuspendLayout();
             SuspendLayout();
-            // 
-            // tableMain
-            // 
-            tableMain.ColumnCount = 1;
+
+            // ══════════════════════════════════════════════════════════════════
+            // tableMain — 2 col x 2 row
+            //   col 0: левая колонка (340px фикс.)
+            //   col 1: правая колонка (fill)
+            //   row 0: основной контент (fill)
+            //   row 1: кнопки (36px фикс.)
+            // ══════════════════════════════════════════════════════════════════
+            tableMain.ColumnCount = 2;
+            tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 340F));
             tableMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tableMain.Controls.Add(grpSelectColor, 0, 0);
-            tableMain.Controls.Add(grpPalettes, 0, 1);
-            tableMain.Controls.Add(grpPreview, 0, 2);
-            tableMain.Controls.Add(panelButtons, 0, 3);
+            tableMain.Controls.Add(tableLeft, 0, 0);
+            tableMain.Controls.Add(grpPalettes, 1, 0);
+            tableMain.Controls.Add(panelButtons, 0, 1);
+            tableMain.SetColumnSpan(panelButtons, 2);
             tableMain.Dock = DockStyle.Fill;
             tableMain.Location = new Point(0, 0);
             tableMain.Name = "tableMain";
-            tableMain.Padding = new Padding(12);
-            tableMain.RowCount = 4;
-            tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 290F));
-            tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 211F));
+            tableMain.Padding = new Padding(10);
+            tableMain.RowCount = 2;
             tableMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableMain.RowStyles.Add(new RowStyle());
-            tableMain.Size = new Size(560, 722);
+            tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F));
+            tableMain.Size = new Size(780, 450);
             tableMain.TabIndex = 0;
-            // 
-            // grpSelectColor
-            // 
-            grpSelectColor.Controls.Add(tableSelectionRoot);
-            grpSelectColor.Dock = DockStyle.Fill;
-            grpSelectColor.Location = new Point(15, 15);
-            grpSelectColor.Name = "grpSelectColor";
-            grpSelectColor.Size = new Size(530, 284);
-            grpSelectColor.TabIndex = 0;
-            grpSelectColor.TabStop = false;
-            grpSelectColor.Text = "Выбор цвета";
-            // 
-            // tableSelectionRoot
-            // 
-            tableSelectionRoot.ColumnCount = 1;
-            tableSelectionRoot.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tableSelectionRoot.Controls.Add(panelColorMatrixContainer, 0, 0);
-            tableSelectionRoot.Controls.Add(tableRgb, 0, 1);
-            tableSelectionRoot.Controls.Add(btnEyedropper, 0, 2);
-            tableSelectionRoot.Dock = DockStyle.Fill;
-            tableSelectionRoot.Location = new Point(3, 19);
-            tableSelectionRoot.Name = "tableSelectionRoot";
-            tableSelectionRoot.RowCount = 3;
-            tableSelectionRoot.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableSelectionRoot.RowStyles.Add(new RowStyle(SizeType.Absolute, 106F));
-            tableSelectionRoot.RowStyles.Add(new RowStyle());
-            tableSelectionRoot.Size = new Size(524, 262);
-            tableSelectionRoot.TabIndex = 0;
-            // 
+
+            // ══════════════════════════════════════════════════════════════════
+            // tableLeft — левая колонка, 3 строки:
+            //   row 0: panelColorMatrixContainer (fill)
+            //   row 1: tableRgb                  (96px фикс.)
+            //   row 2: tableEyedropperPreview    (52px фикс.)
+            // ══════════════════════════════════════════════════════════════════
+            tableLeft.ColumnCount = 1;
+            tableLeft.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableLeft.Controls.Add(panelColorMatrixContainer, 0, 0);
+            tableLeft.Controls.Add(tableRgb, 0, 1);
+            tableLeft.Controls.Add(tableEyedropperPreview, 0, 2);
+            tableLeft.Dock = DockStyle.Fill;
+            tableLeft.Name = "tableLeft";
+            tableLeft.Padding = new Padding(0, 0, 8, 0);
+            tableLeft.RowCount = 3;
+            tableLeft.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableLeft.RowStyles.Add(new RowStyle(SizeType.Absolute, 96F));
+            tableLeft.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
+            tableLeft.TabIndex = 0;
+
+            // ══════════════════════════════════════════════════════════════════
             // panelColorMatrixContainer
-            // 
-            panelColorMatrixContainer.Controls.Add(pnlColorMatrix);
-            panelColorMatrixContainer.Controls.Add(pnlHueSlider);
+            // ══════════════════════════════════════════════════════════════════
+            panelColorMatrixContainer.Controls.Add(tableColorArea);
             panelColorMatrixContainer.Dock = DockStyle.Fill;
-            panelColorMatrixContainer.Location = new Point(3, 3);
             panelColorMatrixContainer.Name = "panelColorMatrixContainer";
-            panelColorMatrixContainer.Size = new Size(518, 121);
             panelColorMatrixContainer.TabIndex = 0;
-            // 
-            // pnlColorMatrix
-            // 
-            pnlColorMatrix.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+
+            // ══════════════════════════════════════════════════════════════════
+            // tableColorArea — 2 колонки:
+            //   col 0: матрица цвета (fill)
+            //   col 1: hue slider    (38px fixed)
+            // ══════════════════════════════════════════════════════════════════
+            tableColorArea.ColumnCount = 2;
+            tableColorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableColorArea.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 38F));
+            tableColorArea.Controls.Add(pnlColorMatrix, 0, 0);
+            tableColorArea.Controls.Add(pnlHueSlider, 1, 0);
+            tableColorArea.Dock = DockStyle.Fill;
+            tableColorArea.Location = new Point(0, 0);
+            tableColorArea.Margin = new Padding(0);
+            tableColorArea.Name = "tableColorArea";
+            tableColorArea.Padding = new Padding(0);
+            tableColorArea.RowCount = 1;
+            tableColorArea.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableColorArea.TabIndex = 0;
+
+            // ── pnlColorMatrix ────────────────────────────────────────────────
             pnlColorMatrix.BorderStyle = BorderStyle.FixedSingle;
             pnlColorMatrix.Cursor = Cursors.Cross;
-            pnlColorMatrix.Location = new Point(0, 0);
+            pnlColorMatrix.Dock = DockStyle.Fill;
+            pnlColorMatrix.Margin = new Padding(0, 0, 6, 0);
             pnlColorMatrix.Name = "pnlColorMatrix";
-            pnlColorMatrix.Size = new Size(470, 121);
             pnlColorMatrix.TabIndex = 0;
             pnlColorMatrix.Paint += pnlColorMatrix_Paint;
             pnlColorMatrix.MouseDown += pnlColorMatrix_MouseDown;
             pnlColorMatrix.MouseMove += pnlColorMatrix_MouseMove;
-            // 
-            // pnlHueSlider
-            // 
-            pnlHueSlider.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
+
+            // ── pnlHueSlider ──────────────────────────────────────────────────
             pnlHueSlider.BorderStyle = BorderStyle.FixedSingle;
             pnlHueSlider.Cursor = Cursors.Hand;
-            pnlHueSlider.Location = new Point(476, 0);
+            pnlHueSlider.Dock = DockStyle.Fill;
+            pnlHueSlider.Margin = new Padding(0);
+            pnlHueSlider.MinimumSize = new Size(38, 0);
             pnlHueSlider.Name = "pnlHueSlider";
-            pnlHueSlider.Size = new Size(42, 121);
             pnlHueSlider.TabIndex = 1;
             pnlHueSlider.Paint += pnlHueSlider_Paint;
             pnlHueSlider.MouseDown += pnlHueSlider_MouseDown;
             pnlHueSlider.MouseMove += pnlHueSlider_MouseMove;
-            // 
-            // tableRgb
-            // 
+
+            // ══════════════════════════════════════════════════════════════════
+            // tableRgb — R/G/B слайдеры
+            // ══════════════════════════════════════════════════════════════════
             tableRgb.ColumnCount = 3;
             tableRgb.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
             tableRgb.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -168,147 +186,170 @@ namespace FractalExplorer.Forms.Common
             tableRgb.Controls.Add(trkBlue, 1, 2);
             tableRgb.Controls.Add(lblBlueValue, 2, 2);
             tableRgb.Dock = DockStyle.Fill;
-            tableRgb.Location = new Point(3, 130);
             tableRgb.Name = "tableRgb";
             tableRgb.RowCount = 3;
-            tableRgb.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
-            tableRgb.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
-            tableRgb.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
-            tableRgb.Size = new Size(518, 100);
+            tableRgb.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3F));
+            tableRgb.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3F));
+            tableRgb.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3F));
             tableRgb.TabIndex = 1;
-            // 
-            // lblRed
-            // 
+
+            // R
             lblRed.AutoSize = true;
             lblRed.Dock = DockStyle.Fill;
-            lblRed.Location = new Point(3, 0);
             lblRed.Name = "lblRed";
-            lblRed.Size = new Size(14, 33);
             lblRed.TabIndex = 0;
             lblRed.Text = "R";
             lblRed.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // trkRed
-            // 
+
             trkRed.AutoSize = false;
             trkRed.Dock = DockStyle.Fill;
             trkRed.LargeChange = 16;
-            trkRed.Location = new Point(23, 4);
             trkRed.Margin = new Padding(3, 4, 3, 0);
             trkRed.Maximum = 255;
             trkRed.Name = "trkRed";
-            trkRed.Size = new Size(448, 24);
             trkRed.TabIndex = 1;
             trkRed.TickFrequency = 16;
             trkRed.Scroll += trackColor_Scroll;
-            // 
-            // lblRedValue
-            // 
+
             lblRedValue.AutoSize = true;
             lblRedValue.Dock = DockStyle.Fill;
-            lblRedValue.Location = new Point(477, 0);
             lblRedValue.Name = "lblRedValue";
-            lblRedValue.Size = new Size(38, 33);
             lblRedValue.TabIndex = 2;
             lblRedValue.Text = "0";
             lblRedValue.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // lblGreen
-            // 
+
+            // G
             lblGreen.AutoSize = true;
             lblGreen.Dock = DockStyle.Fill;
-            lblGreen.Location = new Point(3, 33);
             lblGreen.Name = "lblGreen";
-            lblGreen.Size = new Size(14, 33);
             lblGreen.TabIndex = 3;
             lblGreen.Text = "G";
             lblGreen.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // trkGreen
-            // 
+
             trkGreen.AutoSize = false;
             trkGreen.Dock = DockStyle.Fill;
             trkGreen.LargeChange = 16;
-            trkGreen.Location = new Point(23, 37);
             trkGreen.Margin = new Padding(3, 4, 3, 0);
             trkGreen.Maximum = 255;
             trkGreen.Name = "trkGreen";
-            trkGreen.Size = new Size(448, 24);
             trkGreen.TabIndex = 4;
             trkGreen.TickFrequency = 16;
             trkGreen.Scroll += trackColor_Scroll;
-            // 
-            // lblGreenValue
-            // 
+
             lblGreenValue.AutoSize = true;
             lblGreenValue.Dock = DockStyle.Fill;
-            lblGreenValue.Location = new Point(477, 33);
             lblGreenValue.Name = "lblGreenValue";
-            lblGreenValue.Size = new Size(38, 33);
             lblGreenValue.TabIndex = 5;
             lblGreenValue.Text = "0";
             lblGreenValue.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // lblBlue
-            // 
+
+            // B
             lblBlue.AutoSize = true;
             lblBlue.Dock = DockStyle.Fill;
-            lblBlue.Location = new Point(3, 66);
             lblBlue.Name = "lblBlue";
-            lblBlue.Size = new Size(14, 34);
             lblBlue.TabIndex = 6;
             lblBlue.Text = "B";
             lblBlue.TextAlign = ContentAlignment.MiddleLeft;
-            // 
-            // trkBlue
-            // 
+
             trkBlue.AutoSize = false;
             trkBlue.Dock = DockStyle.Fill;
             trkBlue.LargeChange = 16;
-            trkBlue.Location = new Point(23, 70);
             trkBlue.Margin = new Padding(3, 4, 3, 0);
             trkBlue.Maximum = 255;
             trkBlue.Name = "trkBlue";
-            trkBlue.Size = new Size(448, 24);
             trkBlue.TabIndex = 7;
             trkBlue.TickFrequency = 16;
             trkBlue.Scroll += trackColor_Scroll;
-            // 
-            // lblBlueValue
-            // 
+
             lblBlueValue.AutoSize = true;
             lblBlueValue.Dock = DockStyle.Fill;
-            lblBlueValue.Location = new Point(477, 66);
             lblBlueValue.Name = "lblBlueValue";
-            lblBlueValue.Size = new Size(38, 34);
             lblBlueValue.TabIndex = 8;
             lblBlueValue.Text = "0";
             lblBlueValue.TextAlign = ContentAlignment.MiddleRight;
-            // 
-            // btnEyedropper
-            // 
-            btnEyedropper.Dock = DockStyle.Top;
-            btnEyedropper.Location = new Point(3, 236);
+
+            // ══════════════════════════════════════════════════════════════════
+            // tableEyedropperPreview — нижняя строка левой колонки
+            // ══════════════════════════════════════════════════════════════════
+            tableEyedropperPreview.ColumnCount = 2;
+            tableEyedropperPreview.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
+            tableEyedropperPreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableEyedropperPreview.Controls.Add(btnEyedropper, 0, 0);
+            tableEyedropperPreview.Controls.Add(tablePreviewStrip, 1, 0);
+            tableEyedropperPreview.Dock = DockStyle.Fill;
+            tableEyedropperPreview.Name = "tableEyedropperPreview";
+            tableEyedropperPreview.RowCount = 1;
+            tableEyedropperPreview.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableEyedropperPreview.TabIndex = 2;
+
+            // ── btnEyedropper ─────────────────────────────────────────────────
+            btnEyedropper.Dock = DockStyle.Fill;
+            btnEyedropper.Margin = new Padding(0, 0, 6, 0);
             btnEyedropper.Name = "btnEyedropper";
-            btnEyedropper.Size = new Size(518, 23);
-            btnEyedropper.TabIndex = 2;
+            btnEyedropper.TabIndex = 0;
             btnEyedropper.Text = "Пипетка";
             btnEyedropper.UseVisualStyleBackColor = true;
             btnEyedropper.Click += btnEyedropper_Click;
-            // 
+
+            // ══════════════════════════════════════════════════════════════════
+            // tablePreviewStrip — два цветовых блока [текущий | новый]
+            // ══════════════════════════════════════════════════════════════════
+            tablePreviewStrip.ColumnCount = 2;
+            tablePreviewStrip.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tablePreviewStrip.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tablePreviewStrip.Controls.Add(pnlCurrentColor, 0, 0);
+            tablePreviewStrip.Controls.Add(lblCurrentHexValue, 0, 1);
+            tablePreviewStrip.Controls.Add(pnlNewColor, 1, 0);
+            tablePreviewStrip.Controls.Add(lblNewHexValue, 1, 1);
+            tablePreviewStrip.Dock = DockStyle.Fill;
+            tablePreviewStrip.Name = "tablePreviewStrip";
+            tablePreviewStrip.RowCount = 2;
+            tablePreviewStrip.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tablePreviewStrip.RowStyles.Add(new RowStyle(SizeType.Absolute, 16F));
+            tablePreviewStrip.TabIndex = 1;
+
+            // ── pnlCurrentColor ───────────────────────────────────────────────
+            pnlCurrentColor.BorderStyle = BorderStyle.FixedSingle;
+            pnlCurrentColor.Dock = DockStyle.Fill;
+            pnlCurrentColor.Margin = new Padding(0, 0, 2, 0);
+            pnlCurrentColor.Name = "pnlCurrentColor";
+            pnlCurrentColor.TabIndex = 0;
+
+            // ── lblCurrentHexValue ────────────────────────────────────────────
+            lblCurrentHexValue.AutoSize = true;
+            lblCurrentHexValue.Dock = DockStyle.Fill;
+            lblCurrentHexValue.Name = "lblCurrentHexValue";
+            lblCurrentHexValue.TabIndex = 1;
+            lblCurrentHexValue.Text = "#...";
+            lblCurrentHexValue.TextAlign = ContentAlignment.MiddleCenter;
+
+            // ── pnlNewColor ───────────────────────────────────────────────────
+            pnlNewColor.BorderStyle = BorderStyle.FixedSingle;
+            pnlNewColor.Dock = DockStyle.Fill;
+            pnlNewColor.Margin = new Padding(2, 0, 0, 0);
+            pnlNewColor.Name = "pnlNewColor";
+            pnlNewColor.TabIndex = 2;
+
+            // ── lblNewHexValue ────────────────────────────────────────────────
+            lblNewHexValue.AutoSize = true;
+            lblNewHexValue.Dock = DockStyle.Fill;
+            lblNewHexValue.Name = "lblNewHexValue";
+            lblNewHexValue.TabIndex = 3;
+            lblNewHexValue.Text = "#...";
+            lblNewHexValue.TextAlign = ContentAlignment.MiddleCenter;
+
+            // ══════════════════════════════════════════════════════════════════
             // grpPalettes
-            // 
+            // ══════════════════════════════════════════════════════════════════
             grpPalettes.Controls.Add(tablePalettes);
             grpPalettes.Dock = DockStyle.Fill;
-            grpPalettes.Location = new Point(15, 305);
             grpPalettes.Name = "grpPalettes";
-            grpPalettes.Size = new Size(530, 205);
+            grpPalettes.Padding = new Padding(6, 16, 6, 6);
             grpPalettes.TabIndex = 1;
             grpPalettes.TabStop = false;
             grpPalettes.Text = "Палитры";
-            // 
-            // tablePalettes
-            // 
+
+            // ── tablePalettes ─────────────────────────────────────────────────
             tablePalettes.ColumnCount = 1;
             tablePalettes.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tablePalettes.Controls.Add(lblStandard, 0, 0);
@@ -317,7 +358,6 @@ namespace FractalExplorer.Forms.Common
             tablePalettes.Controls.Add(tableCustomColors, 0, 3);
             tablePalettes.Controls.Add(btnAddToCustomColors, 0, 4);
             tablePalettes.Dock = DockStyle.Fill;
-            tablePalettes.Location = new Point(3, 19);
             tablePalettes.Name = "tablePalettes";
             tablePalettes.RowCount = 5;
             tablePalettes.RowStyles.Add(new RowStyle());
@@ -325,221 +365,82 @@ namespace FractalExplorer.Forms.Common
             tablePalettes.RowStyles.Add(new RowStyle());
             tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
             tablePalettes.RowStyles.Add(new RowStyle());
-            tablePalettes.Size = new Size(524, 183);
             tablePalettes.TabIndex = 0;
-            // 
-            // lblStandard
-            // 
+
+            // ── lblStandard ───────────────────────────────────────────────────
             lblStandard.AutoSize = true;
-            lblStandard.Location = new Point(3, 0);
+            lblStandard.Margin = new Padding(3, 4, 3, 2);
             lblStandard.Name = "lblStandard";
-            lblStandard.Size = new Size(137, 15);
             lblStandard.TabIndex = 0;
             lblStandard.Text = "Основные цвета:";
-            // 
-            // tableStandardColors
-            // 
-            tableStandardColors.ColumnCount = 12;
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+
+            // ── tableStandardColors ───────────────────────────────────────────
             tableStandardColors.Anchor = AnchorStyles.None;
-            tableStandardColors.Location = new Point(0, 15);
             tableStandardColors.Margin = new Padding(0);
             tableStandardColors.Name = "tableStandardColors";
-            tableStandardColors.RowCount = 4;
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
-            tableStandardColors.Size = new Size(524, 96);
             tableStandardColors.TabIndex = 1;
-            // 
-            // lblCustom
-            // 
+
+            // ── lblCustom ─────────────────────────────────────────────────────
             lblCustom.AutoSize = true;
-            lblCustom.Location = new Point(3, 111);
+            lblCustom.Margin = new Padding(3, 4, 3, 2);
             lblCustom.Name = "lblCustom";
-            lblCustom.Size = new Size(127, 15);
             lblCustom.TabIndex = 2;
             lblCustom.Text = "Пользовательские:";
-            // 
-            // tableCustomColors
-            // 
-            tableCustomColors.ColumnCount = 16;
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+
+            // ── tableCustomColors ─────────────────────────────────────────────
             tableCustomColors.Anchor = AnchorStyles.None;
-            tableCustomColors.Location = new Point(0, 126);
             tableCustomColors.Margin = new Padding(0);
             tableCustomColors.Name = "tableCustomColors";
-            tableCustomColors.RowCount = 1;
-            tableCustomColors.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableCustomColors.Size = new Size(524, 24);
             tableCustomColors.TabIndex = 3;
-            // 
-            // btnAddToCustomColors
-            // 
+
+            // ── btnAddToCustomColors ──────────────────────────────────────────
             btnAddToCustomColors.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAddToCustomColors.Location = new Point(373, 150);
-            btnAddToCustomColors.Margin = new Padding(3, 0, 3, 0);
+            btnAddToCustomColors.Margin = new Padding(3, 4, 3, 0);
             btnAddToCustomColors.Name = "btnAddToCustomColors";
             btnAddToCustomColors.Size = new Size(148, 23);
             btnAddToCustomColors.TabIndex = 4;
             btnAddToCustomColors.Text = "Добавить цвет";
             btnAddToCustomColors.UseVisualStyleBackColor = true;
             btnAddToCustomColors.Click += btnAddToCustomColors_Click;
-            // 
-            // grpPreview
-            // 
-            grpPreview.Controls.Add(tablePreview);
-            grpPreview.Dock = DockStyle.Fill;
-            grpPreview.Location = new Point(15, 516);
-            grpPreview.Name = "grpPreview";
-            grpPreview.Size = new Size(530, 161);
-            grpPreview.TabIndex = 2;
-            grpPreview.TabStop = false;
-            grpPreview.Text = "Предпросмотр";
-            // 
-            // tablePreview
-            // 
-            tablePreview.ColumnCount = 2;
-            tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tablePreview.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tablePreview.Controls.Add(lblCurrent, 0, 0);
-            tablePreview.Controls.Add(pnlCurrentColor, 0, 1);
-            tablePreview.Controls.Add(lblCurrentHexValue, 0, 2);
-            tablePreview.Controls.Add(lblNew, 1, 0);
-            tablePreview.Controls.Add(pnlNewColor, 1, 1);
-            tablePreview.Controls.Add(lblNewHexValue, 1, 2);
-            tablePreview.Dock = DockStyle.Fill;
-            tablePreview.Location = new Point(3, 19);
-            tablePreview.Name = "tablePreview";
-            tablePreview.RowCount = 3;
-            tablePreview.RowStyles.Add(new RowStyle());
-            tablePreview.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tablePreview.RowStyles.Add(new RowStyle());
-            tablePreview.Size = new Size(524, 139);
-            tablePreview.TabIndex = 0;
-            // 
-            // lblCurrent
-            // 
-            lblCurrent.AutoSize = true;
-            lblCurrent.Location = new Point(3, 0);
-            lblCurrent.Name = "lblCurrent";
-            lblCurrent.Size = new Size(96, 15);
-            lblCurrent.TabIndex = 0;
-            lblCurrent.Text = "Текущий цвет";
-            // 
-            // pnlCurrentColor
-            // 
-            pnlCurrentColor.BorderStyle = BorderStyle.FixedSingle;
-            pnlCurrentColor.Dock = DockStyle.Fill;
-            pnlCurrentColor.Location = new Point(3, 18);
-            pnlCurrentColor.Name = "pnlCurrentColor";
-            pnlCurrentColor.Size = new Size(256, 103);
-            pnlCurrentColor.TabIndex = 1;
-            // 
-            // lblCurrentHexValue
-            // 
-            lblCurrentHexValue.AutoSize = true;
-            lblCurrentHexValue.Location = new Point(3, 124);
-            lblCurrentHexValue.Name = "lblCurrentHexValue";
-            lblCurrentHexValue.Size = new Size(25, 15);
-            lblCurrentHexValue.TabIndex = 2;
-            lblCurrentHexValue.Text = "#...";
-            // 
-            // lblNew
-            // 
-            lblNew.AutoSize = true;
-            lblNew.Location = new Point(265, 0);
-            lblNew.Name = "lblNew";
-            lblNew.Size = new Size(72, 15);
-            lblNew.TabIndex = 3;
-            lblNew.Text = "Новый цвет";
-            // 
-            // pnlNewColor
-            // 
-            pnlNewColor.BorderStyle = BorderStyle.FixedSingle;
-            pnlNewColor.Dock = DockStyle.Fill;
-            pnlNewColor.Location = new Point(265, 18);
-            pnlNewColor.Name = "pnlNewColor";
-            pnlNewColor.Size = new Size(256, 103);
-            pnlNewColor.TabIndex = 4;
-            // 
-            // lblNewHexValue
-            // 
-            lblNewHexValue.AutoSize = true;
-            lblNewHexValue.Location = new Point(265, 124);
-            lblNewHexValue.Name = "lblNewHexValue";
-            lblNewHexValue.Size = new Size(25, 15);
-            lblNewHexValue.TabIndex = 5;
-            lblNewHexValue.Text = "#...";
-            // 
-            // panelButtons
-            // 
+
+            // ══════════════════════════════════════════════════════════════════
+            // panelButtons — нижняя строка, кнопки вправо
+            // ══════════════════════════════════════════════════════════════════
             panelButtons.AutoSize = true;
             panelButtons.Controls.Add(btnOk);
             panelButtons.Controls.Add(btnCancel);
             panelButtons.Dock = DockStyle.Fill;
             panelButtons.FlowDirection = FlowDirection.RightToLeft;
-            panelButtons.Location = new Point(15, 683);
             panelButtons.Name = "panelButtons";
-            panelButtons.Size = new Size(530, 24);
-            panelButtons.TabIndex = 3;
-            // 
-            // btnOk
-            // 
+            panelButtons.Padding = new Padding(0, 4, 0, 0);
+            panelButtons.TabIndex = 2;
+
+            // ── btnOk ─────────────────────────────────────────────────────────
             btnOk.DialogResult = DialogResult.OK;
-            btnOk.Location = new Point(452, 0);
             btnOk.Margin = new Padding(3, 0, 0, 0);
             btnOk.Name = "btnOk";
-            btnOk.Size = new Size(75, 23);
+            btnOk.Size = new Size(80, 26);
             btnOk.TabIndex = 0;
             btnOk.Text = "ОК";
             btnOk.UseVisualStyleBackColor = true;
-            // 
-            // btnCancel
-            // 
+
+            // ── btnCancel ─────────────────────────────────────────────────────
             btnCancel.DialogResult = DialogResult.Cancel;
-            btnCancel.Location = new Point(371, 0);
             btnCancel.Margin = new Padding(3, 0, 0, 0);
             btnCancel.Name = "btnCancel";
-            btnCancel.Size = new Size(75, 23);
+            btnCancel.Size = new Size(80, 26);
             btnCancel.TabIndex = 1;
             btnCancel.Text = "Отмена";
             btnCancel.UseVisualStyleBackColor = true;
-            // 
+
+            // ══════════════════════════════════════════════════════════════════
             // ColorPickerPanelForm
-            // 
+            // ══════════════════════════════════════════════════════════════════
             AcceptButton = btnOk;
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             CancelButton = btnCancel;
-            ClientSize = new Size(560, 722);
+            ClientSize = new Size(780, 450);
             Controls.Add(tableMain);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -549,32 +450,32 @@ namespace FractalExplorer.Forms.Common
             StartPosition = FormStartPosition.CenterParent;
             Text = "Выбор цвета";
             Resize += ColorPickerPanelForm_Resize;
+
+            // ── ResumeLayout ──────────────────────────────────────────────────
             tableMain.ResumeLayout(false);
-            tableMain.PerformLayout();
-            grpSelectColor.ResumeLayout(false);
-            tableSelectionRoot.ResumeLayout(false);
+            tableLeft.ResumeLayout(false);
+            tableColorArea.ResumeLayout(false);
             panelColorMatrixContainer.ResumeLayout(false);
             tableRgb.ResumeLayout(false);
             tableRgb.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)trkRed).EndInit();
             ((System.ComponentModel.ISupportInitialize)trkGreen).EndInit();
             ((System.ComponentModel.ISupportInitialize)trkBlue).EndInit();
+            tableEyedropperPreview.ResumeLayout(false);
+            tablePreviewStrip.ResumeLayout(false);
             grpPalettes.ResumeLayout(false);
             tablePalettes.ResumeLayout(false);
             tablePalettes.PerformLayout();
-            grpPreview.ResumeLayout(false);
-            tablePreview.ResumeLayout(false);
-            tablePreview.PerformLayout();
             panelButtons.ResumeLayout(false);
             ResumeLayout(false);
         }
 
         #endregion
 
-        private TableLayoutPanel tableMain;
-        private GroupBox grpSelectColor;
-        private TableLayoutPanel tableSelectionRoot;
+        // ── левая колонка ─────────────────────────────────────────────────────
+        private TableLayoutPanel tableLeft;
         private Panel panelColorMatrixContainer;
+        private TableLayoutPanel tableColorArea;
         private Panel pnlColorMatrix;
         private Panel pnlHueSlider;
         private TableLayoutPanel tableRgb;
@@ -587,7 +488,15 @@ namespace FractalExplorer.Forms.Common
         private Label lblBlue;
         private TrackBar trkBlue;
         private Label lblBlueValue;
+        private TableLayoutPanel tableEyedropperPreview;
         private Button btnEyedropper;
+        private TableLayoutPanel tablePreviewStrip;
+        private Panel pnlCurrentColor;
+        private Label lblCurrentHexValue;
+        private Panel pnlNewColor;
+        private Label lblNewHexValue;
+
+        // ── правая колонка ────────────────────────────────────────────────────
         private GroupBox grpPalettes;
         private TableLayoutPanel tablePalettes;
         private Label lblStandard;
@@ -595,14 +504,9 @@ namespace FractalExplorer.Forms.Common
         private Label lblCustom;
         private TableLayoutPanel tableCustomColors;
         private Button btnAddToCustomColors;
-        private GroupBox grpPreview;
-        private TableLayoutPanel tablePreview;
-        private Label lblCurrent;
-        private Panel pnlCurrentColor;
-        private Label lblCurrentHexValue;
-        private Label lblNew;
-        private Panel pnlNewColor;
-        private Label lblNewHexValue;
+
+        // ── корень и нижняя строка ────────────────────────────────────────────
+        private TableLayoutPanel tableMain;
         private FlowLayoutPanel panelButtons;
         private Button btnOk;
         private Button btnCancel;
