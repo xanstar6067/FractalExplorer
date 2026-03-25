@@ -1,5 +1,6 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.ColorPicking;
+using FractalExplorer.Utilities.SaveIO;
 using System.Drawing.Drawing2D;
 
 using FractalExplorer.Utilities.Theme;
@@ -20,10 +21,12 @@ namespace FractalExplorer.Utilities
         private readonly PaletteManager _paletteManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
         private readonly int _compactClientWidth;
+        private readonly Dictionary<string, Func<UserControl>> _advancedEditorFactories;
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
         private Palette _selectedPalette;
+        private IColorModeEditor? _activeColorModeEditor;
         private bool _hasUnsavedChanges;
         #endregion
 
@@ -45,6 +48,14 @@ namespace FractalExplorer.Utilities
             ThemeManager.RegisterForm(this);
             _paletteManager = paletteManager;
             _compactClientWidth = ClientSize.Width;
+            _advancedEditorFactories = new Dictionary<string, Func<UserControl>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["discrete"] = () => new DiscreteEditor(),
+                ["smooth"] = () => new SmoothEditor(),
+                // Будущие режимы:
+                // ["histogram"] = () => new HistogramEditor(),
+                // ["orbittrap"] = () => new OrbitTrapEditor(),
+            };
 
             nudGamma.Minimum = 0.1m;
             nudGamma.Maximum = 5.0m;
@@ -85,6 +96,7 @@ namespace FractalExplorer.Utilities
             }
 
             pnlAdvancedHost.Controls.Clear();
+            _activeColorModeEditor = null;
 
             UserControl? advancedEditor = CreateAdvancedEditor(coloringMode);
             if (advancedEditor == null)
@@ -93,18 +105,24 @@ namespace FractalExplorer.Utilities
                 return;
             }
 
+            _activeColorModeEditor = advancedEditor as IColorModeEditor;
+            _activeColorModeEditor?.LoadFromPalette(_selectedPalette);
             advancedEditor.Dock = DockStyle.Fill;
             pnlAdvancedHost.Controls.Add(advancedEditor);
             SetAdvancedMode(true);
         }
 
-        private static UserControl? CreateAdvancedEditor(string coloringMode)
+        private UserControl? CreateAdvancedEditor(string coloringMode)
         {
-            return coloringMode?.Trim().ToLowerInvariant() switch
+            if (string.IsNullOrWhiteSpace(coloringMode))
             {
-                // TODO: Подключить конкретные UserControl редакторов для режимов окрашивания.
-                _ => null
-            };
+                return null;
+            }
+
+            string key = coloringMode.Trim();
+            return _advancedEditorFactories.TryGetValue(key, out Func<UserControl>? editorFactory)
+                ? editorFactory()
+                : null;
         }
         #endregion
 
@@ -164,6 +182,7 @@ namespace FractalExplorer.Utilities
 
             ResetUnsavedChanges();
             DisplayPaletteDetails();
+            _activeColorModeEditor?.LoadFromPalette(_selectedPalette);
             UpdateControlsState();
         }
 
@@ -557,6 +576,7 @@ namespace FractalExplorer.Utilities
         /// <param name="e">Аргументы события.</param>
         private void btnSave_Click(object sender, EventArgs e)
         {
+            _activeColorModeEditor?.SaveChanges(_paletteManager);
             _paletteManager.SaveCustomPalettes();
             ResetUnsavedChanges();
             MessageBox.Show("Изменения палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -595,6 +615,7 @@ namespace FractalExplorer.Utilities
         {
             if (_selectedPalette != null)
             {
+                _activeColorModeEditor?.ApplyToPalette(_selectedPalette);
                 _paletteManager.ActivePalette = _selectedPalette;
                 PaletteApplied?.Invoke(this, EventArgs.Empty);
             }
