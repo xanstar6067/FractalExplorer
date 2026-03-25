@@ -392,6 +392,10 @@ namespace FractalDraving
             _zoom = BaseScale / 4.0m;
             nudZoom.Value = _zoom;
 
+            cbSmooth.Items.Clear();
+            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
+            cbSmooth.SelectedIndex = 1;
+
             if (nudRe != null && nudIm != null)
             {
                 nudRe.Minimum = -2m;
@@ -418,7 +422,7 @@ namespace FractalDraving
             nudZoom.ValueChanged += ParamControl_Changed;
             if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
-            cbSmooth.CheckedChanged += ParamControl_Changed;
+            cbSmooth.SelectedIndexChanged += ParamControl_Changed;
 
             btnRender.Click += (s, e) => ScheduleRender();
 
@@ -1219,7 +1223,7 @@ namespace FractalDraving
             _fractalEngine.CenterY = _centerY;
             _fractalEngine.Scale = BaseScale / _zoom;
 
-            _fractalEngine.UseSmoothColoring = cbSmooth.Checked;
+            _fractalEngine.UseSmoothColoring = IsSmoothColoringEnabled();
 
             UpdateEngineSpecificParameters();
             ApplyActivePalette();
@@ -1253,6 +1257,15 @@ namespace FractalDraving
         private int GetThreadCount()
         {
             return cbThreads.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Convert.ToInt32(cbThreads.SelectedItem);
+        }
+
+        /// <summary>
+        /// Определяет, включен ли плавный режим окрашивания.
+        /// </summary>
+        /// <returns>True, если выбран режим "Плавно".</returns>
+        private bool IsSmoothColoringEnabled()
+        {
+            return cbSmooth.SelectedIndex == 1;
         }
 
         /// <summary>
@@ -1661,7 +1674,7 @@ namespace FractalDraving
                 Iterations = (int)nudIterations.Value,
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
-                UseSmoothColoring = cbSmooth.Checked,
+                UseSmoothColoring = IsSmoothColoringEnabled(),
                 PreviewEngineType = state.PreviewEngineType
             };
 
@@ -1862,7 +1875,7 @@ namespace FractalDraving
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = this.GetSaveFileNameDetails(),
-                UseSmoothColoring = cbSmooth.Checked
+                UseSmoothColoring = IsSmoothColoringEnabled()
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
