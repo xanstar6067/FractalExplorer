@@ -82,10 +82,10 @@ namespace FractalExplorer.Forms.Common
             tableMain.Padding = new Padding(12);
             tableMain.RowCount = 4;
             tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 290F));
-            tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 283F));
+            tableMain.RowStyles.Add(new RowStyle(SizeType.Absolute, 211F));
             tableMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             tableMain.RowStyles.Add(new RowStyle());
-            tableMain.Size = new Size(560, 794);
+            tableMain.Size = new Size(560, 722);
             tableMain.TabIndex = 0;
             // 
             // grpSelectColor
@@ -302,7 +302,7 @@ namespace FractalExplorer.Forms.Common
             grpPalettes.Dock = DockStyle.Fill;
             grpPalettes.Location = new Point(15, 305);
             grpPalettes.Name = "grpPalettes";
-            grpPalettes.Size = new Size(530, 277);
+            grpPalettes.Size = new Size(530, 205);
             grpPalettes.TabIndex = 1;
             grpPalettes.TabStop = false;
             grpPalettes.Text = "Палитры";
@@ -321,11 +321,11 @@ namespace FractalExplorer.Forms.Common
             tablePalettes.Name = "tablePalettes";
             tablePalettes.RowCount = 5;
             tablePalettes.RowStyles.Add(new RowStyle());
-            tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 144F));
+            tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 96F));
             tablePalettes.RowStyles.Add(new RowStyle());
-            tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
+            tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
             tablePalettes.RowStyles.Add(new RowStyle());
-            tablePalettes.Size = new Size(524, 255);
+            tablePalettes.Size = new Size(524, 183);
             tablePalettes.TabIndex = 0;
             // 
             // lblStandard
@@ -339,33 +339,35 @@ namespace FractalExplorer.Forms.Common
             // 
             // tableStandardColors
             // 
-            tableStandardColors.ColumnCount = 8;
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
+            tableStandardColors.ColumnCount = 12;
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
+            tableStandardColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 8.333333F));
             tableStandardColors.Anchor = AnchorStyles.None;
             tableStandardColors.Location = new Point(0, 15);
             tableStandardColors.Margin = new Padding(0);
             tableStandardColors.Name = "tableStandardColors";
-            tableStandardColors.RowCount = 6;
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 16.666666F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 16.666666F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 16.666666F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 16.666666F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 16.666666F));
-            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 16.666666F));
-            tableStandardColors.Size = new Size(524, 144);
+            tableStandardColors.RowCount = 4;
+            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tableStandardColors.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            tableStandardColors.Size = new Size(524, 96);
             tableStandardColors.TabIndex = 1;
             // 
             // lblCustom
             // 
             lblCustom.AutoSize = true;
-            lblCustom.Location = new Point(3, 159);
+            lblCustom.Location = new Point(3, 111);
             lblCustom.Name = "lblCustom";
             lblCustom.Size = new Size(127, 15);
             lblCustom.TabIndex = 2;
@@ -373,29 +375,36 @@ namespace FractalExplorer.Forms.Common
             // 
             // tableCustomColors
             // 
-            tableCustomColors.ColumnCount = 8;
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
-            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 12.5F));
+            tableCustomColors.ColumnCount = 16;
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
+            tableCustomColors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 6.25F));
             tableCustomColors.Anchor = AnchorStyles.None;
-            tableCustomColors.Location = new Point(0, 174);
+            tableCustomColors.Location = new Point(0, 126);
             tableCustomColors.Margin = new Padding(0);
             tableCustomColors.Name = "tableCustomColors";
-            tableCustomColors.RowCount = 2;
-            tableCustomColors.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableCustomColors.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tableCustomColors.Size = new Size(524, 48);
+            tableCustomColors.RowCount = 1;
+            tableCustomColors.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableCustomColors.Size = new Size(524, 24);
             tableCustomColors.TabIndex = 3;
             // 
             // btnAddToCustomColors
             // 
             btnAddToCustomColors.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAddToCustomColors.Location = new Point(373, 222);
+            btnAddToCustomColors.Location = new Point(373, 150);
             btnAddToCustomColors.Margin = new Padding(3, 0, 3, 0);
             btnAddToCustomColors.Name = "btnAddToCustomColors";
             btnAddToCustomColors.Size = new Size(148, 23);
@@ -408,7 +417,7 @@ namespace FractalExplorer.Forms.Common
             // 
             grpPreview.Controls.Add(tablePreview);
             grpPreview.Dock = DockStyle.Fill;
-            grpPreview.Location = new Point(15, 588);
+            grpPreview.Location = new Point(15, 516);
             grpPreview.Name = "grpPreview";
             grpPreview.Size = new Size(530, 161);
             grpPreview.TabIndex = 2;
@@ -497,7 +506,7 @@ namespace FractalExplorer.Forms.Common
             panelButtons.Controls.Add(btnCancel);
             panelButtons.Dock = DockStyle.Fill;
             panelButtons.FlowDirection = FlowDirection.RightToLeft;
-            panelButtons.Location = new Point(15, 755);
+            panelButtons.Location = new Point(15, 683);
             panelButtons.Name = "panelButtons";
             panelButtons.Size = new Size(530, 24);
             panelButtons.TabIndex = 3;
@@ -530,7 +539,7 @@ namespace FractalExplorer.Forms.Common
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             CancelButton = btnCancel;
-            ClientSize = new Size(560, 794);
+            ClientSize = new Size(560, 722);
             Controls.Add(tableMain);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;

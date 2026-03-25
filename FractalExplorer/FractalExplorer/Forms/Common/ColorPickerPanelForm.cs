@@ -10,9 +10,10 @@ namespace FractalExplorer.Forms.Common
     public partial class ColorPickerPanelForm : Form
     {
         private const int CustomColorSlotsCount = 16;
-        private const int PaletteColumnsCount = 8;
-        private const int StandardPaletteRowsCount = 6;
-        private const int CustomPaletteRowsCount = 2;
+        private const int PaletteColumnsCount = 12;
+        private const int StandardPaletteRowsCount = 4;
+        private const int CustomPaletteColumnsCount = 16;
+        private const int CustomPaletteRowsCount = 1;
         private const int PaletteCellSize = 20;
         private const int PaletteCellMargin = 2;
         private const string CustomPaletteTooltipText = "ЛКМ - задать цвет, ПКМ - очистить";
@@ -75,7 +76,7 @@ namespace FractalExplorer.Forms.Common
             EnableDoubleBuffering(tableStandardColors);
             EnableDoubleBuffering(tableCustomColors);
             ConfigurePaletteGrid(tableStandardColors, PaletteColumnsCount, StandardPaletteRowsCount);
-            ConfigurePaletteGrid(tableCustomColors, PaletteColumnsCount, CustomPaletteRowsCount);
+            ConfigurePaletteGrid(tableCustomColors, CustomPaletteColumnsCount, CustomPaletteRowsCount);
             WirePaletteInteractions();
 
             _originalColor = initialColor;
@@ -357,7 +358,7 @@ namespace FractalExplorer.Forms.Common
                 _standardColorCells.Add(cell);
                 _standardCellEntries[cell] = _standardColors[i];
                 _paletteToolTip.SetToolTip(cell, _standardColors[i].Name ?? string.Empty);
-                tableStandardColors.Controls.Add(cell, i % 8, i / 8);
+                tableStandardColors.Controls.Add(cell, i % PaletteColumnsCount, i / PaletteColumnsCount);
             }
 
             tableStandardColors.ResumeLayout();
@@ -382,7 +383,7 @@ namespace FractalExplorer.Forms.Common
                 _customColorCells.Add(cell);
                 _customCellIndexes[cell] = i;
                 _paletteToolTip.SetToolTip(cell, CustomPaletteTooltipText);
-                tableCustomColors.Controls.Add(cell, i % 8, i / 8);
+                tableCustomColors.Controls.Add(cell, i % CustomPaletteColumnsCount, i / CustomPaletteColumnsCount);
             }
 
             tableCustomColors.ResumeLayout();
