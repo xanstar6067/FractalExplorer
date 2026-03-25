@@ -47,8 +47,8 @@
             pbRenderProgress = new ProgressBar();
             mandelbrotPreviewPanel = new Panel();
             mandelbrotPreviewCanvas = new PictureBox();
-            nudBaseScale = new NumericUpDown();
             canvas = new PictureBox();
+            nudBaseScale = new NumericUpDown();
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();
             controlsHost.SuspendLayout();
@@ -60,14 +60,13 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             mandelbrotPreviewPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)nudBaseScale).BeginInit();
             ((System.ComponentModel.ISupportInitialize)canvas).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)nudBaseScale).BeginInit();
             SuspendLayout();
             // 
             // btnToggleControls
             // 
             btnToggleControls.AutoSize = true;
-            btnToggleControls.Anchor = ((AnchorStyles)(AnchorStyles.Top | AnchorStyles.Left));
             btnToggleControls.BackColor = Color.FromArgb(235, 32, 32, 32);
             btnToggleControls.FlatStyle = FlatStyle.Popup;
             btnToggleControls.ForeColor = Color.White;
@@ -85,7 +84,7 @@
             contentPanel.Dock = DockStyle.Fill;
             contentPanel.Location = new Point(0, 0);
             contentPanel.Name = "contentPanel";
-            contentPanel.Size = new Size(1084, 636);
+            contentPanel.Size = new Size(1084, 642);
             contentPanel.TabIndex = 0;
             // 
             // canvasHost
@@ -96,18 +95,18 @@
             canvasHost.Dock = DockStyle.Fill;
             canvasHost.Location = new Point(0, 0);
             canvasHost.Name = "canvasHost";
-            canvasHost.Size = new Size(1084, 636);
+            canvasHost.Size = new Size(1084, 642);
             canvasHost.TabIndex = 0;
             // 
             // controlsHost
             // 
-            controlsHost.Anchor = ((AnchorStyles)(((AnchorStyles.Top | AnchorStyles.Bottom) | AnchorStyles.Left)));
+            controlsHost.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             controlsHost.BackColor = SystemColors.Control;
             controlsHost.BorderStyle = BorderStyle.FixedSingle;
             controlsHost.Controls.Add(pnlControls);
             controlsHost.Location = new Point(0, 0);
             controlsHost.Name = "controlsHost";
-            controlsHost.Size = new Size(231, 636);
+            controlsHost.Size = new Size(231, 642);
             controlsHost.TabIndex = 0;
             // 
             // pnlControls
@@ -161,7 +160,7 @@
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 161F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
-            pnlControls.Size = new Size(231, 636);
+            pnlControls.Size = new Size(229, 640);
             pnlControls.TabIndex = 0;
             // 
             // nudRe
@@ -174,14 +173,14 @@
             nudRe.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
             nudRe.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
             nudRe.Name = "nudRe";
-            nudRe.Size = new Size(118, 23);
+            nudRe.Size = new Size(116, 23);
             nudRe.TabIndex = 0;
             // 
             // lblRe
             // 
             lblRe.AutoSize = true;
             lblRe.Dock = DockStyle.Fill;
-            lblRe.Location = new Point(130, 0);
+            lblRe.Location = new Point(128, 0);
             lblRe.Name = "lblRe";
             lblRe.Size = new Size(98, 32);
             lblRe.TabIndex = 1;
@@ -198,14 +197,14 @@
             nudIm.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
             nudIm.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
             nudIm.Name = "nudIm";
-            nudIm.Size = new Size(118, 23);
+            nudIm.Size = new Size(116, 23);
             nudIm.TabIndex = 2;
             // 
             // lblIm
             // 
             lblIm.AutoSize = true;
             lblIm.Dock = DockStyle.Fill;
-            lblIm.Location = new Point(130, 32);
+            lblIm.Location = new Point(128, 32);
             lblIm.Name = "lblIm";
             lblIm.Size = new Size(98, 29);
             lblIm.TabIndex = 3;
@@ -220,7 +219,7 @@
             nudIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             nudIterations.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
             nudIterations.Name = "nudIterations";
-            nudIterations.Size = new Size(118, 23);
+            nudIterations.Size = new Size(116, 23);
             nudIterations.TabIndex = 4;
             nudIterations.Value = new decimal(new int[] { 500, 0, 0, 0 });
             // 
@@ -228,7 +227,7 @@
             // 
             lblIterations.AutoSize = true;
             lblIterations.Dock = DockStyle.Fill;
-            lblIterations.Location = new Point(130, 61);
+            lblIterations.Location = new Point(128, 61);
             lblIterations.Name = "lblIterations";
             lblIterations.Size = new Size(98, 29);
             lblIterations.TabIndex = 5;
@@ -245,7 +244,7 @@
             nudThreshold.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             nudThreshold.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
             nudThreshold.Name = "nudThreshold";
-            nudThreshold.Size = new Size(118, 23);
+            nudThreshold.Size = new Size(116, 23);
             nudThreshold.TabIndex = 6;
             nudThreshold.Value = new decimal(new int[] { 2, 0, 0, 0 });
             // 
@@ -253,7 +252,7 @@
             // 
             lblThreshold.AutoSize = true;
             lblThreshold.Dock = DockStyle.Fill;
-            lblThreshold.Location = new Point(130, 90);
+            lblThreshold.Location = new Point(128, 90);
             lblThreshold.Name = "lblThreshold";
             lblThreshold.Size = new Size(98, 29);
             lblThreshold.TabIndex = 7;
@@ -267,7 +266,7 @@
             lblZoom.Dock = DockStyle.Fill;
             lblZoom.Location = new Point(3, 119);
             lblZoom.Name = "lblZoom";
-            lblZoom.Size = new Size(225, 15);
+            lblZoom.Size = new Size(223, 15);
             lblZoom.TabIndex = 8;
             lblZoom.Text = "Приближение";
             lblZoom.TextAlign = ContentAlignment.MiddleCenter;
@@ -283,26 +282,26 @@
             nudZoom.Maximum = new decimal(new int[] { -1, -1, -1, 0 });
             nudZoom.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             nudZoom.Name = "nudZoom";
-            nudZoom.Size = new Size(219, 23);
+            nudZoom.Size = new Size(217, 23);
             nudZoom.TabIndex = 9;
             nudZoom.Value = new decimal(new int[] { 1, 0, 0, 65536 });
             // 
             // cbThreads
             // 
-            cbThreads.DropDownStyle = ComboBoxStyle.DropDownList;
             cbThreads.Dock = DockStyle.Fill;
+            cbThreads.DropDownStyle = ComboBoxStyle.DropDownList;
             cbThreads.FormattingEnabled = true;
             cbThreads.Location = new Point(6, 166);
             cbThreads.Margin = new Padding(6, 3, 3, 3);
             cbThreads.Name = "cbThreads";
-            cbThreads.Size = new Size(118, 23);
+            cbThreads.Size = new Size(116, 23);
             cbThreads.TabIndex = 10;
             // 
             // lblThreads
             // 
             lblThreads.AutoSize = true;
             lblThreads.Dock = DockStyle.Fill;
-            lblThreads.Location = new Point(130, 163);
+            lblThreads.Location = new Point(128, 163);
             lblThreads.Name = "lblThreads";
             lblThreads.Size = new Size(98, 29);
             lblThreads.TabIndex = 11;
@@ -311,20 +310,20 @@
             // 
             // cbSSAA
             // 
-            cbSSAA.DropDownStyle = ComboBoxStyle.DropDownList;
             cbSSAA.Dock = DockStyle.Fill;
+            cbSSAA.DropDownStyle = ComboBoxStyle.DropDownList;
             cbSSAA.FormattingEnabled = true;
             cbSSAA.Location = new Point(6, 195);
             cbSSAA.Margin = new Padding(6, 3, 3, 3);
             cbSSAA.Name = "cbSSAA";
-            cbSSAA.Size = new Size(118, 23);
+            cbSSAA.Size = new Size(116, 23);
             cbSSAA.TabIndex = 12;
             // 
             // lbSSAA
             // 
             lbSSAA.AutoSize = true;
             lbSSAA.Dock = DockStyle.Fill;
-            lbSSAA.Location = new Point(130, 192);
+            lbSSAA.Location = new Point(128, 192);
             lbSSAA.Name = "lbSSAA";
             lbSSAA.Size = new Size(98, 29);
             lbSSAA.TabIndex = 13;
@@ -333,23 +332,23 @@
             // 
             // cbSmooth
             // 
-            cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
-            cbSmooth.FormattingEnabled = true;
             pnlControls.SetColumnSpan(cbSmooth, 2);
             cbSmooth.Dock = DockStyle.Fill;
+            cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbSmooth.FormattingEnabled = true;
             cbSmooth.Location = new Point(6, 224);
             cbSmooth.Margin = new Padding(6, 3, 3, 3);
             cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(222, 23);
+            cbSmooth.Size = new Size(220, 23);
             cbSmooth.TabIndex = 14;
             // 
             // pnlCustomControls
             // 
             pnlControls.SetColumnSpan(pnlCustomControls, 2);
             pnlCustomControls.Dock = DockStyle.Fill;
-            pnlCustomControls.Location = new Point(3, 249);
+            pnlCustomControls.Location = new Point(3, 253);
             pnlCustomControls.Name = "pnlCustomControls";
-            pnlCustomControls.Size = new Size(225, 29);
+            pnlCustomControls.Size = new Size(223, 29);
             pnlCustomControls.TabIndex = 10;
             pnlCustomControls.Visible = false;
             // 
@@ -357,10 +356,10 @@
             // 
             pnlControls.SetColumnSpan(btnSaveHighRes, 2);
             btnSaveHighRes.Dock = DockStyle.Fill;
-            btnSaveHighRes.Location = new Point(6, 284);
+            btnSaveHighRes.Location = new Point(6, 288);
             btnSaveHighRes.Margin = new Padding(6, 3, 6, 3);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(219, 39);
+            btnSaveHighRes.Size = new Size(217, 39);
             btnSaveHighRes.TabIndex = 15;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
@@ -370,10 +369,10 @@
             // 
             pnlControls.SetColumnSpan(color_configurations, 2);
             color_configurations.Dock = DockStyle.Fill;
-            color_configurations.Location = new Point(6, 329);
+            color_configurations.Location = new Point(6, 333);
             color_configurations.Margin = new Padding(6, 3, 6, 3);
             color_configurations.Name = "color_configurations";
-            color_configurations.Size = new Size(219, 39);
+            color_configurations.Size = new Size(217, 39);
             color_configurations.TabIndex = 16;
             color_configurations.Text = "Настроить палитру";
             color_configurations.UseVisualStyleBackColor = true;
@@ -382,10 +381,10 @@
             // 
             pnlControls.SetColumnSpan(btnRender, 2);
             btnRender.Dock = DockStyle.Fill;
-            btnRender.Location = new Point(6, 374);
+            btnRender.Location = new Point(6, 378);
             btnRender.Margin = new Padding(6, 3, 6, 3);
             btnRender.Name = "btnRender";
-            btnRender.Size = new Size(219, 39);
+            btnRender.Size = new Size(217, 39);
             btnRender.TabIndex = 17;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
@@ -394,10 +393,10 @@
             // 
             pnlControls.SetColumnSpan(btnStateManager, 2);
             btnStateManager.Dock = DockStyle.Fill;
-            btnStateManager.Location = new Point(6, 419);
+            btnStateManager.Location = new Point(6, 423);
             btnStateManager.Margin = new Padding(6, 3, 6, 3);
             btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(219, 39);
+            btnStateManager.Size = new Size(217, 39);
             btnStateManager.TabIndex = 18;
             btnStateManager.Text = "Менеджер сохранений";
             btnStateManager.UseVisualStyleBackColor = true;
@@ -408,9 +407,9 @@
             lblProgress.AutoSize = true;
             pnlControls.SetColumnSpan(lblProgress, 2);
             lblProgress.Dock = DockStyle.Fill;
-            lblProgress.Location = new Point(3, 461);
+            lblProgress.Location = new Point(3, 465);
             lblProgress.Name = "lblProgress";
-            lblProgress.Size = new Size(225, 20);
+            lblProgress.Size = new Size(223, 20);
             lblProgress.TabIndex = 19;
             lblProgress.Text = "Обработка";
             lblProgress.TextAlign = ContentAlignment.BottomCenter;
@@ -419,10 +418,10 @@
             // 
             pnlControls.SetColumnSpan(pbRenderProgress, 2);
             pbRenderProgress.Dock = DockStyle.Fill;
-            pbRenderProgress.Location = new Point(6, 484);
+            pbRenderProgress.Location = new Point(6, 488);
             pbRenderProgress.Margin = new Padding(6, 3, 6, 3);
             pbRenderProgress.Name = "pbRenderProgress";
-            pbRenderProgress.Size = new Size(219, 24);
+            pbRenderProgress.Size = new Size(217, 24);
             pbRenderProgress.TabIndex = 20;
             // 
             // mandelbrotPreviewPanel
@@ -430,9 +429,9 @@
             pnlControls.SetColumnSpan(mandelbrotPreviewPanel, 2);
             mandelbrotPreviewPanel.Controls.Add(mandelbrotPreviewCanvas);
             mandelbrotPreviewPanel.Dock = DockStyle.Fill;
-            mandelbrotPreviewPanel.Location = new Point(3, 514);
+            mandelbrotPreviewPanel.Location = new Point(3, 518);
             mandelbrotPreviewPanel.Name = "mandelbrotPreviewPanel";
-            mandelbrotPreviewPanel.Size = new Size(225, 155);
+            mandelbrotPreviewPanel.Size = new Size(223, 155);
             mandelbrotPreviewPanel.TabIndex = 21;
             // 
             // mandelbrotPreviewCanvas
@@ -441,9 +440,18 @@
             mandelbrotPreviewCanvas.Dock = DockStyle.Fill;
             mandelbrotPreviewCanvas.Location = new Point(0, 0);
             mandelbrotPreviewCanvas.Name = "mandelbrotPreviewCanvas";
-            mandelbrotPreviewCanvas.Size = new Size(225, 155);
+            mandelbrotPreviewCanvas.Size = new Size(223, 155);
             mandelbrotPreviewCanvas.TabIndex = 0;
             mandelbrotPreviewCanvas.TabStop = false;
+            // 
+            // canvas
+            // 
+            canvas.Dock = DockStyle.Fill;
+            canvas.Location = new Point(0, 0);
+            canvas.Name = "canvas";
+            canvas.Size = new Size(1084, 642);
+            canvas.TabIndex = 1;
+            canvas.TabStop = false;
             // 
             // nudBaseScale
             // 
@@ -455,20 +463,11 @@
             nudBaseScale.Value = new decimal(new int[] { 4, 0, 0, 0 });
             nudBaseScale.Visible = false;
             // 
-            // canvas
-            // 
-            canvas.Dock = DockStyle.Fill;
-            canvas.Location = new Point(0, 0);
-            canvas.Name = "canvas";
-            canvas.Size = new Size(1084, 636);
-            canvas.TabIndex = 1;
-            canvas.TabStop = false;
-            // 
             // FractalMandelbrotFamilyForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1084, 636);
+            ClientSize = new Size(1084, 642);
             Controls.Add(contentPanel);
             Controls.Add(nudBaseScale);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -489,8 +488,8 @@
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             mandelbrotPreviewPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)mandelbrotPreviewCanvas).EndInit();
-            ((System.ComponentModel.ISupportInitialize)nudBaseScale).EndInit();
             ((System.ComponentModel.ISupportInitialize)canvas).EndInit();
+            ((System.ComponentModel.ISupportInitialize)nudBaseScale).EndInit();
             ResumeLayout(false);
         }
         #endregion

@@ -93,7 +93,6 @@ namespace FractalExplorer.Forms
             // btnToggleControls
             // 
             btnToggleControls.AutoSize = true;
-            btnToggleControls.Anchor = ((AnchorStyles)(AnchorStyles.Top | AnchorStyles.Left));
             btnToggleControls.BackColor = Color.FromArgb(235, 32, 32, 32);
             btnToggleControls.FlatStyle = FlatStyle.Popup;
             btnToggleControls.ForeColor = Color.White;
@@ -111,7 +110,7 @@ namespace FractalExplorer.Forms
             contentPanel.Dock = DockStyle.Fill;
             contentPanel.Location = new Point(0, 0);
             contentPanel.Name = "contentPanel";
-            contentPanel.Size = new Size(1120, 841);
+            contentPanel.Size = new Size(1084, 845);
             contentPanel.TabIndex = 0;
             // 
             // canvasHost
@@ -122,18 +121,18 @@ namespace FractalExplorer.Forms
             canvasHost.Dock = DockStyle.Fill;
             canvasHost.Location = new Point(0, 0);
             canvasHost.Name = "canvasHost";
-            canvasHost.Size = new Size(1120, 841);
+            canvasHost.Size = new Size(1084, 845);
             canvasHost.TabIndex = 0;
             // 
             // controlsHost
             // 
-            controlsHost.Anchor = ((AnchorStyles)(((AnchorStyles.Top | AnchorStyles.Bottom) | AnchorStyles.Left)));
+            controlsHost.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             controlsHost.BackColor = SystemColors.Control;
             controlsHost.BorderStyle = BorderStyle.FixedSingle;
             controlsHost.Controls.Add(pnlControls);
             controlsHost.Location = new Point(0, 0);
             controlsHost.Name = "controlsHost";
-            controlsHost.Size = new Size(240, 841);
+            controlsHost.Size = new Size(240, 845);
             controlsHost.TabIndex = 0;
             // 
             // pnlControls
@@ -187,7 +186,7 @@ namespace FractalExplorer.Forms
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 160F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            pnlControls.Size = new Size(240, 841);
+            pnlControls.Size = new Size(238, 843);
             pnlControls.TabIndex = 0;
             // 
             // gbNovaParameters
@@ -197,7 +196,7 @@ namespace FractalExplorer.Forms
             gbNovaParameters.Dock = DockStyle.Fill;
             gbNovaParameters.Location = new Point(3, 3);
             gbNovaParameters.Name = "gbNovaParameters";
-            gbNovaParameters.Size = new Size(234, 80);
+            gbNovaParameters.Size = new Size(232, 80);
             gbNovaParameters.TabIndex = 0;
             gbNovaParameters.TabStop = false;
             gbNovaParameters.Text = "Параметры степени (P)";
@@ -217,7 +216,7 @@ namespace FractalExplorer.Forms
             tlpNovaParameters.RowCount = 2;
             tlpNovaParameters.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             tlpNovaParameters.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tlpNovaParameters.Size = new Size(228, 58);
+            tlpNovaParameters.Size = new Size(226, 58);
             tlpNovaParameters.TabIndex = 0;
             // 
             // nudP_Re
@@ -229,7 +228,7 @@ namespace FractalExplorer.Forms
             nudP_Re.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
             nudP_Re.Minimum = new decimal(new int[] { 10, 0, 0, int.MinValue });
             nudP_Re.Name = "nudP_Re";
-            nudP_Re.Size = new Size(119, 23);
+            nudP_Re.Size = new Size(118, 23);
             nudP_Re.TabIndex = 0;
             nudP_Re.Value = new decimal(new int[] { 3, 0, 0, 0 });
             // 
@@ -237,9 +236,9 @@ namespace FractalExplorer.Forms
             // 
             lblP_Re.AutoSize = true;
             lblP_Re.Dock = DockStyle.Fill;
-            lblP_Re.Location = new Point(128, 0);
+            lblP_Re.Location = new Point(127, 0);
             lblP_Re.Name = "lblP_Re";
-            lblP_Re.Size = new Size(97, 29);
+            lblP_Re.Size = new Size(96, 29);
             lblP_Re.TabIndex = 1;
             lblP_Re.Text = "Re";
             lblP_Re.TextAlign = ContentAlignment.MiddleLeft;
@@ -253,16 +252,16 @@ namespace FractalExplorer.Forms
             nudP_Im.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
             nudP_Im.Minimum = new decimal(new int[] { 10, 0, 0, int.MinValue });
             nudP_Im.Name = "nudP_Im";
-            nudP_Im.Size = new Size(119, 23);
+            nudP_Im.Size = new Size(118, 23);
             nudP_Im.TabIndex = 2;
             // 
             // lblP_Im
             // 
             lblP_Im.AutoSize = true;
             lblP_Im.Dock = DockStyle.Fill;
-            lblP_Im.Location = new Point(128, 29);
+            lblP_Im.Location = new Point(127, 29);
             lblP_Im.Name = "lblP_Im";
-            lblP_Im.Size = new Size(97, 29);
+            lblP_Im.Size = new Size(96, 29);
             lblP_Im.TabIndex = 3;
             lblP_Im.Text = "Im";
             lblP_Im.TextAlign = ContentAlignment.MiddleLeft;
@@ -274,7 +273,7 @@ namespace FractalExplorer.Forms
             gbInitialConditions.Dock = DockStyle.Fill;
             gbInitialConditions.Location = new Point(3, 89);
             gbInitialConditions.Name = "gbInitialConditions";
-            gbInitialConditions.Size = new Size(234, 80);
+            gbInitialConditions.Size = new Size(232, 80);
             gbInitialConditions.TabIndex = 1;
             gbInitialConditions.TabStop = false;
             gbInitialConditions.Text = "Начальные условия (Z₀)";
@@ -294,7 +293,7 @@ namespace FractalExplorer.Forms
             tlpInitialConditions.RowCount = 2;
             tlpInitialConditions.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             tlpInitialConditions.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tlpInitialConditions.Size = new Size(228, 58);
+            tlpInitialConditions.Size = new Size(226, 58);
             tlpInitialConditions.TabIndex = 0;
             // 
             // nudZ0_Re
@@ -306,7 +305,7 @@ namespace FractalExplorer.Forms
             nudZ0_Re.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
             nudZ0_Re.Minimum = new decimal(new int[] { 10, 0, 0, int.MinValue });
             nudZ0_Re.Name = "nudZ0_Re";
-            nudZ0_Re.Size = new Size(119, 23);
+            nudZ0_Re.Size = new Size(118, 23);
             nudZ0_Re.TabIndex = 0;
             nudZ0_Re.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
@@ -314,9 +313,9 @@ namespace FractalExplorer.Forms
             // 
             lblZ0_Re.AutoSize = true;
             lblZ0_Re.Dock = DockStyle.Fill;
-            lblZ0_Re.Location = new Point(128, 0);
+            lblZ0_Re.Location = new Point(127, 0);
             lblZ0_Re.Name = "lblZ0_Re";
-            lblZ0_Re.Size = new Size(97, 29);
+            lblZ0_Re.Size = new Size(96, 29);
             lblZ0_Re.TabIndex = 1;
             lblZ0_Re.Text = "Re";
             lblZ0_Re.TextAlign = ContentAlignment.MiddleLeft;
@@ -330,16 +329,16 @@ namespace FractalExplorer.Forms
             nudZ0_Im.Maximum = new decimal(new int[] { 10, 0, 0, 0 });
             nudZ0_Im.Minimum = new decimal(new int[] { 10, 0, 0, int.MinValue });
             nudZ0_Im.Name = "nudZ0_Im";
-            nudZ0_Im.Size = new Size(119, 23);
+            nudZ0_Im.Size = new Size(118, 23);
             nudZ0_Im.TabIndex = 2;
             // 
             // lblZ0_Im
             // 
             lblZ0_Im.AutoSize = true;
             lblZ0_Im.Dock = DockStyle.Fill;
-            lblZ0_Im.Location = new Point(128, 29);
+            lblZ0_Im.Location = new Point(127, 29);
             lblZ0_Im.Name = "lblZ0_Im";
-            lblZ0_Im.Size = new Size(97, 29);
+            lblZ0_Im.Size = new Size(96, 29);
             lblZ0_Im.TabIndex = 3;
             lblZ0_Im.Text = "Im";
             lblZ0_Im.TextAlign = ContentAlignment.MiddleLeft;
@@ -351,7 +350,7 @@ namespace FractalExplorer.Forms
             gbJuliaConstant.Dock = DockStyle.Fill;
             gbJuliaConstant.Location = new Point(3, 175);
             gbJuliaConstant.Name = "gbJuliaConstant";
-            gbJuliaConstant.Size = new Size(234, 80);
+            gbJuliaConstant.Size = new Size(232, 80);
             gbJuliaConstant.TabIndex = 2;
             gbJuliaConstant.TabStop = false;
             gbJuliaConstant.Text = "Константа C";
@@ -371,7 +370,7 @@ namespace FractalExplorer.Forms
             tlpJuliaConstant.RowCount = 2;
             tlpJuliaConstant.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
             tlpJuliaConstant.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tlpJuliaConstant.Size = new Size(228, 58);
+            tlpJuliaConstant.Size = new Size(226, 58);
             tlpJuliaConstant.TabIndex = 0;
             // 
             // nudC_Re
@@ -383,16 +382,16 @@ namespace FractalExplorer.Forms
             nudC_Re.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
             nudC_Re.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
             nudC_Re.Name = "nudC_Re";
-            nudC_Re.Size = new Size(119, 23);
+            nudC_Re.Size = new Size(118, 23);
             nudC_Re.TabIndex = 0;
             // 
             // lblC_Re
             // 
             lblC_Re.AutoSize = true;
             lblC_Re.Dock = DockStyle.Fill;
-            lblC_Re.Location = new Point(128, 0);
+            lblC_Re.Location = new Point(127, 0);
             lblC_Re.Name = "lblC_Re";
-            lblC_Re.Size = new Size(97, 29);
+            lblC_Re.Size = new Size(96, 29);
             lblC_Re.TabIndex = 1;
             lblC_Re.Text = "Re";
             lblC_Re.TextAlign = ContentAlignment.MiddleLeft;
@@ -406,16 +405,16 @@ namespace FractalExplorer.Forms
             nudC_Im.Maximum = new decimal(new int[] { 2, 0, 0, 0 });
             nudC_Im.Minimum = new decimal(new int[] { 2, 0, 0, int.MinValue });
             nudC_Im.Name = "nudC_Im";
-            nudC_Im.Size = new Size(119, 23);
+            nudC_Im.Size = new Size(118, 23);
             nudC_Im.TabIndex = 2;
             // 
             // lblC_Im
             // 
             lblC_Im.AutoSize = true;
             lblC_Im.Dock = DockStyle.Fill;
-            lblC_Im.Location = new Point(128, 29);
+            lblC_Im.Location = new Point(127, 29);
             lblC_Im.Name = "lblC_Im";
-            lblC_Im.Size = new Size(97, 29);
+            lblC_Im.Size = new Size(96, 29);
             lblC_Im.TabIndex = 3;
             lblC_Im.Text = "Im";
             lblC_Im.TextAlign = ContentAlignment.MiddleLeft;
@@ -424,7 +423,7 @@ namespace FractalExplorer.Forms
             // 
             lblM.AutoSize = true;
             lblM.Dock = DockStyle.Fill;
-            lblM.Location = new Point(135, 258);
+            lblM.Location = new Point(133, 258);
             lblM.Name = "lblM";
             lblM.Size = new Size(102, 29);
             lblM.TabIndex = 3;
@@ -440,7 +439,7 @@ namespace FractalExplorer.Forms
             nudM.Maximum = new decimal(new int[] { 5, 0, 0, 0 });
             nudM.Minimum = new decimal(new int[] { 1, 0, 0, 65536 });
             nudM.Name = "nudM";
-            nudM.Size = new Size(126, 23);
+            nudM.Size = new Size(124, 23);
             nudM.TabIndex = 2;
             nudM.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
@@ -451,7 +450,7 @@ namespace FractalExplorer.Forms
             nudIterations.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             nudIterations.Minimum = new decimal(new int[] { 10, 0, 0, 0 });
             nudIterations.Name = "nudIterations";
-            nudIterations.Size = new Size(126, 23);
+            nudIterations.Size = new Size(124, 23);
             nudIterations.TabIndex = 4;
             nudIterations.Value = new decimal(new int[] { 100, 0, 0, 0 });
             // 
@@ -459,7 +458,7 @@ namespace FractalExplorer.Forms
             // 
             lblIterations.AutoSize = true;
             lblIterations.Dock = DockStyle.Fill;
-            lblIterations.Location = new Point(135, 287);
+            lblIterations.Location = new Point(133, 287);
             lblIterations.Name = "lblIterations";
             lblIterations.Size = new Size(102, 29);
             lblIterations.TabIndex = 5;
@@ -474,7 +473,7 @@ namespace FractalExplorer.Forms
             nudThreshold.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             nudThreshold.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
             nudThreshold.Name = "nudThreshold";
-            nudThreshold.Size = new Size(126, 23);
+            nudThreshold.Size = new Size(124, 23);
             nudThreshold.TabIndex = 6;
             nudThreshold.Value = new decimal(new int[] { 10, 0, 0, 0 });
             // 
@@ -482,7 +481,7 @@ namespace FractalExplorer.Forms
             // 
             lblThreshold.AutoSize = true;
             lblThreshold.Dock = DockStyle.Fill;
-            lblThreshold.Location = new Point(135, 316);
+            lblThreshold.Location = new Point(133, 316);
             lblThreshold.Name = "lblThreshold";
             lblThreshold.Size = new Size(102, 29);
             lblThreshold.TabIndex = 7;
@@ -496,7 +495,7 @@ namespace FractalExplorer.Forms
             lblZoom.Dock = DockStyle.Fill;
             lblZoom.Location = new Point(3, 345);
             lblZoom.Name = "lblZoom";
-            lblZoom.Size = new Size(234, 15);
+            lblZoom.Size = new Size(232, 15);
             lblZoom.TabIndex = 8;
             lblZoom.Text = "Приближение";
             lblZoom.TextAlign = ContentAlignment.MiddleCenter;
@@ -510,7 +509,7 @@ namespace FractalExplorer.Forms
             nudZoom.Maximum = new decimal(new int[] { -1, -1, -1, 0 });
             nudZoom.Minimum = new decimal(new int[] { 1, 0, 0, 393216 });
             nudZoom.Name = "nudZoom";
-            nudZoom.Size = new Size(234, 23);
+            nudZoom.Size = new Size(232, 23);
             nudZoom.TabIndex = 9;
             nudZoom.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
@@ -521,14 +520,14 @@ namespace FractalExplorer.Forms
             cbThreads.FormattingEnabled = true;
             cbThreads.Location = new Point(3, 392);
             cbThreads.Name = "cbThreads";
-            cbThreads.Size = new Size(126, 23);
+            cbThreads.Size = new Size(124, 23);
             cbThreads.TabIndex = 10;
             // 
             // lblThreads
             // 
             lblThreads.AutoSize = true;
             lblThreads.Dock = DockStyle.Fill;
-            lblThreads.Location = new Point(135, 389);
+            lblThreads.Location = new Point(133, 389);
             lblThreads.Name = "lblThreads";
             lblThreads.Size = new Size(102, 29);
             lblThreads.TabIndex = 11;
@@ -542,14 +541,14 @@ namespace FractalExplorer.Forms
             cbSSAA.FormattingEnabled = true;
             cbSSAA.Location = new Point(3, 421);
             cbSSAA.Name = "cbSSAA";
-            cbSSAA.Size = new Size(126, 23);
+            cbSSAA.Size = new Size(124, 23);
             cbSSAA.TabIndex = 12;
             // 
             // lblSSAA
             // 
             lblSSAA.AutoSize = true;
             lblSSAA.Dock = DockStyle.Fill;
-            lblSSAA.Location = new Point(135, 418);
+            lblSSAA.Location = new Point(133, 418);
             lblSSAA.Name = "lblSSAA";
             lblSSAA.Size = new Size(102, 29);
             lblSSAA.TabIndex = 13;
@@ -558,22 +557,22 @@ namespace FractalExplorer.Forms
             // 
             // cbSmooth
             // 
-            cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
-            cbSmooth.FormattingEnabled = true;
             pnlControls.SetColumnSpan(cbSmooth, 2);
             cbSmooth.Dock = DockStyle.Fill;
+            cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbSmooth.FormattingEnabled = true;
             cbSmooth.Location = new Point(3, 450);
             cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(234, 23);
+            cbSmooth.Size = new Size(232, 23);
             cbSmooth.TabIndex = 14;
             // 
             // btnSaveHighRes
             // 
             pnlControls.SetColumnSpan(btnSaveHighRes, 2);
             btnSaveHighRes.Dock = DockStyle.Fill;
-            btnSaveHighRes.Location = new Point(3, 475);
+            btnSaveHighRes.Location = new Point(3, 479);
             btnSaveHighRes.Name = "btnSaveHighRes";
-            btnSaveHighRes.Size = new Size(234, 34);
+            btnSaveHighRes.Size = new Size(232, 34);
             btnSaveHighRes.TabIndex = 15;
             btnSaveHighRes.Text = "Сохранить изображение";
             btnSaveHighRes.UseVisualStyleBackColor = true;
@@ -583,9 +582,9 @@ namespace FractalExplorer.Forms
             // 
             pnlControls.SetColumnSpan(btnConfigurePalette, 2);
             btnConfigurePalette.Dock = DockStyle.Fill;
-            btnConfigurePalette.Location = new Point(3, 515);
+            btnConfigurePalette.Location = new Point(3, 519);
             btnConfigurePalette.Name = "btnConfigurePalette";
-            btnConfigurePalette.Size = new Size(234, 34);
+            btnConfigurePalette.Size = new Size(232, 34);
             btnConfigurePalette.TabIndex = 16;
             btnConfigurePalette.Text = "Настроить палитру";
             btnConfigurePalette.UseVisualStyleBackColor = true;
@@ -595,9 +594,9 @@ namespace FractalExplorer.Forms
             // 
             pnlControls.SetColumnSpan(btnRender, 2);
             btnRender.Dock = DockStyle.Fill;
-            btnRender.Location = new Point(3, 555);
+            btnRender.Location = new Point(3, 559);
             btnRender.Name = "btnRender";
-            btnRender.Size = new Size(234, 34);
+            btnRender.Size = new Size(232, 34);
             btnRender.TabIndex = 17;
             btnRender.Text = "Запустить рендер";
             btnRender.UseVisualStyleBackColor = true;
@@ -606,9 +605,9 @@ namespace FractalExplorer.Forms
             // 
             pnlControls.SetColumnSpan(btnStateManager, 2);
             btnStateManager.Dock = DockStyle.Fill;
-            btnStateManager.Location = new Point(3, 595);
+            btnStateManager.Location = new Point(3, 599);
             btnStateManager.Name = "btnStateManager";
-            btnStateManager.Size = new Size(234, 34);
+            btnStateManager.Size = new Size(232, 34);
             btnStateManager.TabIndex = 18;
             btnStateManager.Text = "Менеджер сохранений";
             btnStateManager.UseVisualStyleBackColor = true;
@@ -619,9 +618,9 @@ namespace FractalExplorer.Forms
             lblProgress.AutoSize = true;
             pnlControls.SetColumnSpan(lblProgress, 2);
             lblProgress.Dock = DockStyle.Fill;
-            lblProgress.Location = new Point(3, 632);
+            lblProgress.Location = new Point(3, 636);
             lblProgress.Name = "lblProgress";
-            lblProgress.Size = new Size(234, 20);
+            lblProgress.Size = new Size(232, 20);
             lblProgress.TabIndex = 19;
             lblProgress.Text = "Прогресс";
             lblProgress.TextAlign = ContentAlignment.BottomCenter;
@@ -630,9 +629,9 @@ namespace FractalExplorer.Forms
             // 
             pnlControls.SetColumnSpan(pbRenderProgress, 2);
             pbRenderProgress.Dock = DockStyle.Fill;
-            pbRenderProgress.Location = new Point(3, 655);
+            pbRenderProgress.Location = new Point(3, 659);
             pbRenderProgress.Name = "pbRenderProgress";
-            pbRenderProgress.Size = new Size(234, 24);
+            pbRenderProgress.Size = new Size(232, 24);
             pbRenderProgress.TabIndex = 20;
             // 
             // pnlMapPreview
@@ -640,9 +639,9 @@ namespace FractalExplorer.Forms
             pnlControls.SetColumnSpan(pnlMapPreview, 2);
             pnlMapPreview.Controls.Add(pbMandelbrotPreview);
             pnlMapPreview.Dock = DockStyle.Fill;
-            pnlMapPreview.Location = new Point(3, 685);
+            pnlMapPreview.Location = new Point(3, 689);
             pnlMapPreview.Name = "pnlMapPreview";
-            pnlMapPreview.Size = new Size(234, 154);
+            pnlMapPreview.Size = new Size(232, 154);
             pnlMapPreview.TabIndex = 21;
             // 
             // pbMandelbrotPreview
@@ -651,7 +650,7 @@ namespace FractalExplorer.Forms
             pbMandelbrotPreview.Dock = DockStyle.Fill;
             pbMandelbrotPreview.Location = new Point(0, 0);
             pbMandelbrotPreview.Name = "pbMandelbrotPreview";
-            pbMandelbrotPreview.Size = new Size(234, 154);
+            pbMandelbrotPreview.Size = new Size(232, 154);
             pbMandelbrotPreview.SizeMode = PictureBoxSizeMode.StretchImage;
             pbMandelbrotPreview.TabIndex = 0;
             pbMandelbrotPreview.TabStop = false;
@@ -661,7 +660,7 @@ namespace FractalExplorer.Forms
             canvas.Dock = DockStyle.Fill;
             canvas.Location = new Point(0, 0);
             canvas.Name = "canvas";
-            canvas.Size = new Size(844, 841);
+            canvas.Size = new Size(1084, 845);
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
@@ -669,16 +668,16 @@ namespace FractalExplorer.Forms
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1084, 841);
+            ClientSize = new Size(1084, 845);
             Controls.Add(contentPanel);
             Icon = (Icon)resources.GetObject("$this.Icon");
             MinimumSize = new Size(1100, 880);
             Name = "FractalNovaJuliaForm";
             Text = "Фрактал Nova Julia";
-            controlsHost.ResumeLayout(false);
             contentPanel.ResumeLayout(false);
             canvasHost.ResumeLayout(false);
             canvasHost.PerformLayout();
+            controlsHost.ResumeLayout(false);
             pnlControls.ResumeLayout(false);
             pnlControls.PerformLayout();
             gbNovaParameters.ResumeLayout(false);
