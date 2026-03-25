@@ -53,6 +53,13 @@ namespace FractalExplorer.Forms.Common
             lblCustom = new Label();
             tableCustomColors = new TableLayoutPanel();
             btnAddToCustomColors = new Button();
+            grpHexTools = new GroupBox();
+            tableHexTools = new TableLayoutPanel();
+            lblHexInput = new Label();
+            txtHexInput = new TextBox();
+            panelHexButtons = new FlowLayoutPanel();
+            btnApplyHex = new Button();
+            btnCopyCurrentHex = new Button();
 
             // нижняя строка
             panelButtons = new FlowLayoutPanel();
@@ -72,6 +79,9 @@ namespace FractalExplorer.Forms.Common
             tablePreviewStrip.SuspendLayout();
             grpPalettes.SuspendLayout();
             tablePalettes.SuspendLayout();
+            grpHexTools.SuspendLayout();
+            tableHexTools.SuspendLayout();
+            panelHexButtons.SuspendLayout();
             panelButtons.SuspendLayout();
             SuspendLayout();
 
@@ -357,14 +367,16 @@ namespace FractalExplorer.Forms.Common
             tablePalettes.Controls.Add(lblCustom, 0, 2);
             tablePalettes.Controls.Add(tableCustomColors, 0, 3);
             tablePalettes.Controls.Add(btnAddToCustomColors, 0, 4);
+            tablePalettes.Controls.Add(grpHexTools, 0, 5);
             tablePalettes.Dock = DockStyle.Fill;
             tablePalettes.Name = "tablePalettes";
-            tablePalettes.RowCount = 5;
+            tablePalettes.RowCount = 6;
             tablePalettes.RowStyles.Add(new RowStyle());
             tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 96F));
             tablePalettes.RowStyles.Add(new RowStyle());
             tablePalettes.RowStyles.Add(new RowStyle(SizeType.Absolute, 24F));
             tablePalettes.RowStyles.Add(new RowStyle());
+            tablePalettes.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             tablePalettes.TabIndex = 0;
 
             // ── lblStandard ───────────────────────────────────────────────────
@@ -402,6 +414,71 @@ namespace FractalExplorer.Forms.Common
             btnAddToCustomColors.Text = "Добавить цвет";
             btnAddToCustomColors.UseVisualStyleBackColor = true;
             btnAddToCustomColors.Click += btnAddToCustomColors_Click;
+
+            // ── grpHexTools ──────────────────────────────────────────────────
+            grpHexTools.Controls.Add(tableHexTools);
+            grpHexTools.Dock = DockStyle.Fill;
+            grpHexTools.Margin = new Padding(0, 8, 0, 0);
+            grpHexTools.Name = "grpHexTools";
+            grpHexTools.Padding = new Padding(8);
+            grpHexTools.TabIndex = 5;
+            grpHexTools.TabStop = false;
+            grpHexTools.Text = "HEX";
+
+            // ── tableHexTools ────────────────────────────────────────────────
+            tableHexTools.ColumnCount = 1;
+            tableHexTools.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableHexTools.Controls.Add(lblHexInput, 0, 0);
+            tableHexTools.Controls.Add(txtHexInput, 0, 1);
+            tableHexTools.Controls.Add(panelHexButtons, 0, 2);
+            tableHexTools.Dock = DockStyle.Fill;
+            tableHexTools.Name = "tableHexTools";
+            tableHexTools.RowCount = 4;
+            tableHexTools.RowStyles.Add(new RowStyle());
+            tableHexTools.RowStyles.Add(new RowStyle());
+            tableHexTools.RowStyles.Add(new RowStyle());
+            tableHexTools.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableHexTools.TabIndex = 0;
+
+            // ── lblHexInput ──────────────────────────────────────────────────
+            lblHexInput.AutoSize = true;
+            lblHexInput.Margin = new Padding(0, 0, 0, 4);
+            lblHexInput.Name = "lblHexInput";
+            lblHexInput.TabIndex = 0;
+            lblHexInput.Text = "Ввести HEX (#RRGGBB):";
+
+            // ── txtHexInput ──────────────────────────────────────────────────
+            txtHexInput.Dock = DockStyle.Top;
+            txtHexInput.Name = "txtHexInput";
+            txtHexInput.TabIndex = 1;
+            txtHexInput.KeyDown += txtHexInput_KeyDown;
+
+            // ── panelHexButtons ──────────────────────────────────────────────
+            panelHexButtons.AutoSize = true;
+            panelHexButtons.Controls.Add(btnApplyHex);
+            panelHexButtons.Controls.Add(btnCopyCurrentHex);
+            panelHexButtons.Dock = DockStyle.Top;
+            panelHexButtons.FlowDirection = FlowDirection.LeftToRight;
+            panelHexButtons.Margin = new Padding(0, 8, 0, 0);
+            panelHexButtons.Name = "panelHexButtons";
+            panelHexButtons.TabIndex = 2;
+            panelHexButtons.WrapContents = true;
+
+            // ── btnApplyHex ──────────────────────────────────────────────────
+            btnApplyHex.AutoSize = true;
+            btnApplyHex.Name = "btnApplyHex";
+            btnApplyHex.TabIndex = 0;
+            btnApplyHex.Text = "Применить HEX";
+            btnApplyHex.UseVisualStyleBackColor = true;
+            btnApplyHex.Click += btnApplyHex_Click;
+
+            // ── btnCopyCurrentHex ────────────────────────────────────────────
+            btnCopyCurrentHex.AutoSize = true;
+            btnCopyCurrentHex.Name = "btnCopyCurrentHex";
+            btnCopyCurrentHex.TabIndex = 1;
+            btnCopyCurrentHex.Text = "Копировать HEX текущего";
+            btnCopyCurrentHex.UseVisualStyleBackColor = true;
+            btnCopyCurrentHex.Click += btnCopyCurrentHex_Click;
 
             // ══════════════════════════════════════════════════════════════════
             // panelButtons — нижняя строка, кнопки вправо
@@ -466,6 +543,11 @@ namespace FractalExplorer.Forms.Common
             grpPalettes.ResumeLayout(false);
             tablePalettes.ResumeLayout(false);
             tablePalettes.PerformLayout();
+            grpHexTools.ResumeLayout(false);
+            tableHexTools.ResumeLayout(false);
+            tableHexTools.PerformLayout();
+            panelHexButtons.ResumeLayout(false);
+            panelHexButtons.PerformLayout();
             panelButtons.ResumeLayout(false);
             ResumeLayout(false);
         }
@@ -504,6 +586,13 @@ namespace FractalExplorer.Forms.Common
         private Label lblCustom;
         private TableLayoutPanel tableCustomColors;
         private Button btnAddToCustomColors;
+        private GroupBox grpHexTools;
+        private TableLayoutPanel tableHexTools;
+        private Label lblHexInput;
+        private TextBox txtHexInput;
+        private FlowLayoutPanel panelHexButtons;
+        private Button btnApplyHex;
+        private Button btnCopyCurrentHex;
 
         // ── корень и нижняя строка ────────────────────────────────────────────
         private TableLayoutPanel tableMain;

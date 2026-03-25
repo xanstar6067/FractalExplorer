@@ -220,6 +220,29 @@ namespace FractalExplorer.Forms.Common
             SaveCustomColors();
         }
 
+        private void btnApplyHex_Click(object? sender, EventArgs e)
+        {
+            ApplyColorFromHexInput();
+        }
+
+        private void txtHexInput_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            ApplyColorFromHexInput();
+        }
+
+        private void btnCopyCurrentHex_Click(object? sender, EventArgs e)
+        {
+            string currentHex = ToHexString(_originalColor);
+            Clipboard.SetText(currentHex);
+        }
+
         private void CustomPaletteCell_Click(object? sender, EventArgs e)
         {
             if (sender is not Panel panel || !_customCellIndexes.TryGetValue(panel, out int index))
@@ -288,10 +311,23 @@ namespace FractalExplorer.Forms.Common
 
             lblCurrentHexValue.Text = ToHexString(_originalColor);
             lblNewHexValue.Text = ToHexString(_selectedColor);
+            txtHexInput.Text = ToHexString(_selectedColor);
 
             RedrawMatrixBitmap();
             pnlColorMatrix.Invalidate();
             pnlHueSlider.Invalidate();
+        }
+
+        private void ApplyColorFromHexInput()
+        {
+            if (TryParseHexColor(txtHexInput.Text, out Color parsedColor))
+            {
+                ApplySelectedColor(parsedColor);
+                txtHexInput.ForeColor = SystemColors.WindowText;
+                return;
+            }
+
+            txtHexInput.ForeColor = Color.Firebrick;
         }
 
         private void UpdateColorFromMatrix(Point location)
@@ -802,6 +838,32 @@ namespace FractalExplorer.Forms.Common
         private static string ToHexString(Color color)
         {
             return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        }
+
+        private static bool TryParseHexColor(string? text, out Color color)
+        {
+            color = Color.Empty;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            string normalized = text.Trim();
+            if (normalized.StartsWith("#", StringComparison.Ordinal))
+            {
+                normalized = normalized[1..];
+            }
+
+            if (normalized.Length != 6
+                || !byte.TryParse(normalized[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte r)
+                || !byte.TryParse(normalized.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte g)
+                || !byte.TryParse(normalized.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
+            {
+                return false;
+            }
+
+            color = Color.FromArgb(r, g, b);
+            return true;
         }
 
         private static Color FromAhsb(int alpha, float hue, float saturation, float brightness)
