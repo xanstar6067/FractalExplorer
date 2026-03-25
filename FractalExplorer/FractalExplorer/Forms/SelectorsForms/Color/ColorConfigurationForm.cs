@@ -19,6 +19,7 @@ namespace FractalExplorer.Utilities
         /// Менеджер палитр, управляющий доступными палитрами.
         /// </summary>
         private readonly PaletteManager _paletteManager;
+        private readonly ColorMetadataProfileManager _metadataProfileManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
         private readonly int _compactClientWidth;
         private readonly Dictionary<string, Func<UserControl>> _advancedEditorFactories;
@@ -47,6 +48,7 @@ namespace FractalExplorer.Utilities
             InitializeComponent();
             ThemeManager.RegisterForm(this);
             _paletteManager = paletteManager;
+            _metadataProfileManager = _paletteManager.MetadataProfileManager;
             _compactClientWidth = ClientSize.Width;
             _advancedEditorFactories = new Dictionary<string, Func<UserControl>>(StringComparer.OrdinalIgnoreCase)
             {
@@ -172,6 +174,7 @@ namespace FractalExplorer.Utilities
             {
                 // Если ничего не выбрано, очищаем детали и выключаем кнопки
                 _selectedPalette = null;
+                lbMetadataProfiles.Items.Clear();
                 UpdateControlsState();
                 panelPreview.Invalidate();
                 return;
@@ -182,6 +185,7 @@ namespace FractalExplorer.Utilities
 
             ResetUnsavedChanges();
             DisplayPaletteDetails();
+            LoadMetadataProfilesForSelectedPalette();
             _activeColorModeEditor?.LoadFromPalette(_selectedPalette);
             UpdateControlsState();
         }
@@ -242,6 +246,7 @@ namespace FractalExplorer.Utilities
                 nudGamma.Enabled = isEnabled;
                 nudMaxColorIterations.Enabled = isEnabled;
                 btnCopy.Enabled = isEnabled;
+                btnCreateMetadataProfile.Enabled = isEnabled;
                 return;
             }
 
@@ -260,7 +265,22 @@ namespace FractalExplorer.Utilities
             nudMaxColorIterations.Enabled = isCustom && !_selectedPalette.AlignWithRenderIterations;
 
             btnCopy.Enabled = _selectedPalette != null;
+            btnCreateMetadataProfile.Enabled = _selectedPalette != null;
             btnSave.Enabled = isCustom && _hasUnsavedChanges;
+        }
+
+        private void LoadMetadataProfilesForSelectedPalette()
+        {
+            lbMetadataProfiles.Items.Clear();
+            if (_selectedPalette == null || _selectedPalette.PaletteId == Guid.Empty)
+            {
+                return;
+            }
+
+            foreach (ColorMetadataProfile profile in _metadataProfileManager.GetProfilesForPalette(_selectedPalette.PaletteId))
+            {
+                lbMetadataProfiles.Items.Add(profile.Name);
+            }
         }
 
         private void MarkUnsavedChanges()
@@ -470,6 +490,22 @@ namespace FractalExplorer.Utilities
             lbPalettes.SelectedItem = newPalette.Name;
         }
 
+        private void btnCreateMetadataProfile_Click(object sender, EventArgs e)
+        {
+            if (_selectedPalette == null)
+            {
+                return;
+            }
+
+            if (_selectedPalette.PaletteId == Guid.Empty)
+            {
+                _selectedPalette.PaletteId = Guid.NewGuid();
+            }
+
+            _metadataProfileManager.CreateProfile(_selectedPalette.PaletteId);
+            LoadMetadataProfilesForSelectedPalette();
+        }
+
         /// <summary>
         /// Обработчик события клика по кнопке "Delete Palette".
         /// Удаляет текущую выбранную палитру (если она не встроенная).
@@ -483,9 +519,7 @@ namespace FractalExplorer.Utilities
                 DialogResult confirmResult = MessageBox.Show($"Вы уверены, что хотите удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (confirmResult == DialogResult.Yes)
                 {
-                    // ИЗМЕНЕНО: Используем безопасный метод менеджера для удаления
-                    bool removed = _paletteManager.RemovePalette(_selectedPalette);
-
+                    bool removed = DeletePaletteWithMetadataProfilesTransactional(_selectedPalette);
                     if (removed)
                     {
                         _paletteManager.SaveCustomPalettes();
@@ -504,6 +538,35 @@ namespace FractalExplorer.Utilities
                         }
                     }
                 }
+            }
+        }
+
+        private bool DeletePaletteWithMetadataProfilesTransactional(Palette palette)
+        {
+            List<ColorMetadataProfile> snapshot = _metadataProfileManager.GetAllProfiles();
+            List<ColorMetadataProfile> profileSubset = snapshot
+                .Where(p => p.PaletteId == palette.PaletteId)
+                .ToList();
+
+            try
+            {
+                _metadataProfileManager.DeleteProfilesForPalette(palette.PaletteId);
+                bool removed = _paletteManager.RemovePalette(palette);
+
+                if (!removed)
+                {
+                    _metadataProfileManager.ReplaceAllProfiles(snapshot);
+                    return false;
+                }
+
+                return true;
+            }
+            catch
+            {
+                List<ColorMetadataProfile> current = _metadataProfileManager.GetAllProfiles();
+                current.AddRange(profileSubset);
+                _metadataProfileManager.ReplaceAllProfiles(current);
+                return false;
             }
         }
 

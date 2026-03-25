@@ -9,6 +9,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
     public class PaletteManager
     {
         private const string CUSTOM_PALETTES_FILE = "custom_palettes_mandelbrot.json";
+        private readonly ColorMetadataProfileManager _profileManager = new();
 
         /// <summary>
         /// Список всех доступных палитр (встроенных и пользовательских).
@@ -19,6 +20,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// Текущая активная палитра, используемая для рендеринга.
         /// </summary>
         public Palette ActivePalette { get; set; }
+        public ColorMetadataProfileManager MetadataProfileManager => _profileManager;
 
         public PaletteManager()
         {
@@ -44,6 +46,11 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                     var customPalettes = JsonSerializer.Deserialize<List<Palette>>(json, options);
                     if (customPalettes != null)
                     {
+                        foreach (Palette palette in customPalettes.Where(p => p.PaletteId == Guid.Empty))
+                        {
+                            palette.PaletteId = Guid.NewGuid();
+                        }
+
                         Palettes.AddRange(customPalettes);
                     }
                 }
@@ -53,6 +60,8 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
                     MessageBox.Show($"Не удалось загрузить палитры для Мандельброта: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+
+            _profileManager.PruneOrphanProfiles(Palettes.Select(p => p.PaletteId));
         }
 
         #region Public Methods for Palette Management
@@ -93,6 +102,12 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             try
             {
                 var customPalettes = Palettes.Where(p => !p.IsBuiltIn).ToList();
+                foreach (Palette palette in customPalettes.Where(p => p.PaletteId == Guid.Empty))
+                {
+                    palette.PaletteId = Guid.NewGuid();
+                }
+
+                _profileManager.PruneOrphanProfiles(Palettes.Select(p => p.PaletteId));
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 options.Converters.Add(new JsonColorConverter());
                 string json = JsonSerializer.Serialize(customPalettes, options);

@@ -41,6 +41,9 @@
             labelMaxColorIter = new Label();
             label2 = new Label();
             label1 = new Label();
+            btnCreateMetadataProfile = new Button();
+            lbMetadataProfiles = new ListBox();
+            label3 = new Label();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudGamma).BeginInit();
@@ -79,7 +82,7 @@
             // btnAddColor
             // 
             btnAddColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnAddColor.Location = new Point(292, 223);
+            btnAddColor.Location = new Point(292, 118);
             btnAddColor.Name = "btnAddColor";
             btnAddColor.Size = new Size(107, 28);
             btnAddColor.TabIndex = 3;
@@ -90,7 +93,7 @@
             // btnRemoveColor
             // 
             btnRemoveColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnRemoveColor.Location = new Point(292, 291);
+            btnRemoveColor.Location = new Point(292, 186);
             btnRemoveColor.Name = "btnRemoveColor";
             btnRemoveColor.Size = new Size(107, 28);
             btnRemoveColor.TabIndex = 5;
@@ -101,7 +104,7 @@
             // btnEditColor
             // 
             btnEditColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnEditColor.Location = new Point(292, 257);
+            btnEditColor.Location = new Point(292, 152);
             btnEditColor.Name = "btnEditColor";
             btnEditColor.Size = new Size(107, 28);
             btnEditColor.TabIndex = 4;
@@ -222,6 +225,9 @@
             groupBox2.Controls.Add(labelMaxColorIter);
             groupBox2.Controls.Add(label2);
             groupBox2.Controls.Add(label1);
+            groupBox2.Controls.Add(btnCreateMetadataProfile);
+            groupBox2.Controls.Add(lbMetadataProfiles);
+            groupBox2.Controls.Add(label3);
             groupBox2.Controls.Add(txtName);
             groupBox2.Controls.Add(panelPreview);
             groupBox2.Controls.Add(lbColorStops);
@@ -307,6 +313,36 @@
             label1.TabIndex = 8;
             label1.Text = "Название палитры:";
             // 
+            // btnCreateMetadataProfile
+            // 
+            btnCreateMetadataProfile.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnCreateMetadataProfile.Location = new Point(292, 360);
+            btnCreateMetadataProfile.Name = "btnCreateMetadataProfile";
+            btnCreateMetadataProfile.Size = new Size(107, 32);
+            btnCreateMetadataProfile.TabIndex = 17;
+            btnCreateMetadataProfile.Text = "Создать метапрофиль";
+            btnCreateMetadataProfile.UseVisualStyleBackColor = true;
+            btnCreateMetadataProfile.Click += btnCreateMetadataProfile_Click;
+            // 
+            // lbMetadataProfiles
+            // 
+            lbMetadataProfiles.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lbMetadataProfiles.FormattingEnabled = true;
+            lbMetadataProfiles.Location = new Point(292, 223);
+            lbMetadataProfiles.Name = "lbMetadataProfiles";
+            lbMetadataProfiles.Size = new Size(107, 124);
+            lbMetadataProfiles.TabIndex = 16;
+            // 
+            // label3
+            // 
+            label3.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            label3.AutoSize = true;
+            label3.Location = new Point(292, 205);
+            label3.Name = "label3";
+            label3.Size = new Size(80, 15);
+            label3.TabIndex = 15;
+            label3.Text = "Метапрофили";
+            // 
             // pnlAdvancedHost
             // 
             pnlAdvancedHost.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
@@ -370,5 +406,8 @@
         private System.Windows.Forms.Label labelMaxColorIter;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button btnCreateMetadataProfile;
+        private System.Windows.Forms.ListBox lbMetadataProfiles;
+        private System.Windows.Forms.Label label3;
     }
 }
