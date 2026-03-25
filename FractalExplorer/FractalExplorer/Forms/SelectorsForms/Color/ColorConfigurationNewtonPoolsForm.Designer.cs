@@ -53,7 +53,7 @@
             groupBoxPalettes.Controls.Add(lbPalettes);
             groupBoxPalettes.Location = new Point(12, 12);
             groupBoxPalettes.Name = "groupBoxPalettes";
-            groupBoxPalettes.Size = new Size(238, 428);
+            groupBoxPalettes.Size = new Size(238, 448);
             groupBoxPalettes.TabIndex = 0;
             groupBoxPalettes.TabStop = false;
             groupBoxPalettes.Text = "Список палитр";
@@ -61,7 +61,7 @@
             // btnNew
             // 
             btnNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnNew.Location = new Point(7, 391);
+            btnNew.Location = new Point(7, 411);
             btnNew.Name = "btnNew";
             btnNew.Size = new Size(61, 28);
             btnNew.TabIndex = 1;
@@ -72,7 +72,7 @@
             // btnDelete
             // 
             btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnDelete.Location = new Point(168, 391);
+            btnDelete.Location = new Point(168, 411);
             btnDelete.Name = "btnDelete";
             btnDelete.Size = new Size(63, 28);
             btnDelete.TabIndex = 3;
@@ -83,7 +83,7 @@
             // btnSaveAs
             // 
             btnSaveAs.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnSaveAs.Location = new Point(74, 391);
+            btnSaveAs.Location = new Point(74, 411);
             btnSaveAs.Name = "btnSaveAs";
             btnSaveAs.Size = new Size(88, 28);
             btnSaveAs.TabIndex = 2;
@@ -97,14 +97,14 @@
             lbPalettes.FormattingEnabled = true;
             lbPalettes.Location = new Point(7, 22);
             lbPalettes.Name = "lbPalettes";
-            lbPalettes.Size = new Size(224, 364);
+            lbPalettes.Size = new Size(224, 379);
             lbPalettes.TabIndex = 0;
             lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
             // 
             // btnSave
             // 
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnSave.Location = new Point(19, 441);
+            btnSave.Location = new Point(19, 461);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(149, 28);
             btnSave.TabIndex = 2;
@@ -131,7 +131,7 @@
             groupBoxEditor.Controls.Add(labelName);
             groupBoxEditor.Location = new Point(272, 12);
             groupBoxEditor.Name = "groupBoxEditor";
-            groupBoxEditor.Size = new Size(478, 457);
+            groupBoxEditor.Size = new Size(385, 477);
             groupBoxEditor.TabIndex = 1;
             groupBoxEditor.TabStop = false;
             groupBoxEditor.Text = "Редактор палитры Ньютона";
@@ -140,7 +140,7 @@
             // 
             lblEditHint.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             lblEditHint.AutoSize = true;
-            lblEditHint.Location = new Point(9, 400);
+            lblEditHint.Location = new Point(9, 420);
             lblEditHint.Name = "lblEditHint";
             lblEditHint.Size = new Size(182, 15);
             lblEditHint.TabIndex = 15;
@@ -149,7 +149,7 @@
             // btnAutoAdjustRoots
             // 
             btnAutoAdjustRoots.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnAutoAdjustRoots.Location = new Point(283, 355);
+            btnAutoAdjustRoots.Location = new Point(190, 375);
             btnAutoAdjustRoots.Name = "btnAutoAdjustRoots";
             btnAutoAdjustRoots.Size = new Size(188, 28);
             btnAutoAdjustRoots.TabIndex = 14;
@@ -180,7 +180,7 @@
             // 
             chkIsGradient.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             chkIsGradient.AutoSize = true;
-            chkIsGradient.Location = new Point(9, 360);
+            chkIsGradient.Location = new Point(9, 380);
             chkIsGradient.Name = "chkIsGradient";
             chkIsGradient.Size = new Size(267, 19);
             chkIsGradient.TabIndex = 11;
@@ -191,7 +191,7 @@
             // btnApply
             // 
             btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnApply.Location = new Point(251, 421);
+            btnApply.Location = new Point(158, 441);
             btnApply.Name = "btnApply";
             btnApply.Size = new Size(107, 28);
             btnApply.TabIndex = 16;
@@ -202,7 +202,7 @@
             // btnClose
             // 
             btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnClose.Location = new Point(364, 421);
+            btnClose.Location = new Point(271, 441);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(107, 28);
             btnClose.TabIndex = 17;
@@ -213,7 +213,7 @@
             // btnEditColor
             // 
             btnEditColor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnEditColor.Location = new Point(364, 192);
+            btnEditColor.Location = new Point(271, 192);
             btnEditColor.Name = "btnEditColor";
             btnEditColor.Size = new Size(107, 28);
             btnEditColor.TabIndex = 6;
@@ -227,7 +227,7 @@
             lbColorStops.FormattingEnabled = true;
             lbColorStops.Location = new Point(9, 192);
             lbColorStops.Name = "lbColorStops";
-            lbColorStops.Size = new Size(349, 124);
+            lbColorStops.Size = new Size(256, 139);
             lbColorStops.TabIndex = 5;
             lbColorStops.SelectedIndexChanged += lbColorStops_SelectedIndexChanged;
             // 
@@ -246,7 +246,7 @@
             panelPreview.BorderStyle = BorderStyle.FixedSingle;
             panelPreview.Location = new Point(9, 81);
             panelPreview.Name = "panelPreview";
-            panelPreview.Size = new Size(462, 38);
+            panelPreview.Size = new Size(369, 38);
             panelPreview.TabIndex = 3;
             panelPreview.Paint += panelPreview_Paint;
             panelPreview.MouseClick += panelPreview_MouseClick;
@@ -267,7 +267,7 @@
             txtName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtName.Location = new Point(9, 37);
             txtName.Name = "txtName";
-            txtName.Size = new Size(462, 23);
+            txtName.Size = new Size(369, 23);
             txtName.TabIndex = 1;
             txtName.TextChanged += txtName_TextChanged;
             txtName.KeyDown += txtName_KeyDown;
@@ -286,12 +286,12 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(762, 481);
+            ClientSize = new Size(669, 501);
             Controls.Add(btnSave);
             Controls.Add(groupBoxEditor);
             Controls.Add(groupBoxPalettes);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MinimumSize = new Size(778, 520);
+            MinimumSize = new Size(685, 540);
             Name = "ColorConfigurationNewtonPoolsForm";
             Text = "Настройка палитры для Бассейнов Ньютона";
             FormClosing += ColorSetting_FormClosing;

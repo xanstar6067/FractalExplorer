@@ -47,7 +47,7 @@
             groupBoxPalettes.Controls.Add(lbPalettes);
             groupBoxPalettes.Location = new Point(12, 12);
             groupBoxPalettes.Name = "groupBoxPalettes";
-            groupBoxPalettes.Size = new Size(238, 338);
+            groupBoxPalettes.Size = new Size(238, 437);
             groupBoxPalettes.TabIndex = 0;
             groupBoxPalettes.TabStop = false;
             groupBoxPalettes.Text = "Список палитр";
@@ -55,7 +55,7 @@
             // btnNew
             // 
             btnNew.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnNew.Location = new Point(7, 301);
+            btnNew.Location = new Point(7, 400);
             btnNew.Name = "btnNew";
             btnNew.Size = new Size(61, 28);
             btnNew.TabIndex = 1;
@@ -66,7 +66,7 @@
             // btnDelete
             // 
             btnDelete.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnDelete.Location = new Point(168, 301);
+            btnDelete.Location = new Point(168, 400);
             btnDelete.Name = "btnDelete";
             btnDelete.Size = new Size(63, 28);
             btnDelete.TabIndex = 3;
@@ -77,7 +77,7 @@
             // btnCopy
             // 
             btnCopy.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnCopy.Location = new Point(74, 301);
+            btnCopy.Location = new Point(74, 400);
             btnCopy.Name = "btnCopy";
             btnCopy.Size = new Size(88, 28);
             btnCopy.TabIndex = 2;
@@ -91,7 +91,7 @@
             lbPalettes.FormattingEnabled = true;
             lbPalettes.Location = new Point(7, 22);
             lbPalettes.Name = "lbPalettes";
-            lbPalettes.Size = new Size(224, 274);
+            lbPalettes.Size = new Size(224, 364);
             lbPalettes.TabIndex = 0;
             lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
             // 
@@ -107,7 +107,7 @@
             groupBoxEditor.Controls.Add(labelName);
             groupBoxEditor.Location = new Point(272, 12);
             groupBoxEditor.Name = "groupBoxEditor";
-            groupBoxEditor.Size = new Size(352, 338);
+            groupBoxEditor.Size = new Size(385, 437);
             groupBoxEditor.TabIndex = 1;
             groupBoxEditor.TabStop = false;
             groupBoxEditor.Text = "Редактор палитры";
@@ -117,7 +117,7 @@
             lblEditHint.AutoSize = true;
             lblEditHint.Location = new Point(9, 166);
             lblEditHint.Name = "lblEditHint";
-            lblEditHint.Size = new Size(173, 15);
+            lblEditHint.Size = new Size(182, 15);
             lblEditHint.TabIndex = 6;
             lblEditHint.Text = "Текущая палитра редактируема";
             // 
@@ -127,7 +127,7 @@
             panelBackgroundColor.Cursor = Cursors.Hand;
             panelBackgroundColor.Location = new Point(120, 121);
             panelBackgroundColor.Name = "panelBackgroundColor";
-            panelBackgroundColor.Size = new Size(223, 28);
+            panelBackgroundColor.Size = new Size(256, 28);
             panelBackgroundColor.TabIndex = 5;
             panelBackgroundColor.Click += panelBackgroundColor_Click;
             panelBackgroundColor.Paint += panelBackgroundColor_Paint;
@@ -149,7 +149,7 @@
             panelFractalColor.Cursor = Cursors.Hand;
             panelFractalColor.Location = new Point(120, 82);
             panelFractalColor.Name = "panelFractalColor";
-            panelFractalColor.Size = new Size(223, 28);
+            panelFractalColor.Size = new Size(256, 28);
             panelFractalColor.TabIndex = 3;
             panelFractalColor.Click += panelFractalColor_Click;
             panelFractalColor.Paint += panelFractalColor_Paint;
@@ -170,7 +170,7 @@
             txtName.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtName.Location = new Point(9, 37);
             txtName.Name = "txtName";
-            txtName.Size = new Size(334, 23);
+            txtName.Size = new Size(367, 23);
             txtName.TabIndex = 1;
             txtName.TextChanged += txtName_TextChanged;
             txtName.KeyDown += txtName_KeyDown;
@@ -188,7 +188,7 @@
             // btnSave
             // 
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            btnSave.Location = new Point(19, 362);
+            btnSave.Location = new Point(19, 461);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(149, 28);
             btnSave.TabIndex = 2;
@@ -199,7 +199,7 @@
             // btnApply
             // 
             btnApply.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnApply.Location = new Point(399, 362);
+            btnApply.Location = new Point(432, 461);
             btnApply.Name = "btnApply";
             btnApply.Size = new Size(107, 28);
             btnApply.TabIndex = 3;
@@ -210,7 +210,7 @@
             // btnClose
             // 
             btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnClose.Location = new Point(512, 362);
+            btnClose.Location = new Point(545, 461);
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(107, 28);
             btnClose.TabIndex = 4;
@@ -222,14 +222,14 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(636, 402);
+            ClientSize = new Size(669, 501);
             Controls.Add(btnClose);
             Controls.Add(btnApply);
             Controls.Add(btnSave);
             Controls.Add(groupBoxEditor);
             Controls.Add(groupBoxPalettes);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MinimumSize = new Size(652, 441);
+            MinimumSize = new Size(685, 540);
             Name = "ColorConfigurationSerpinskyForm";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Настройка палитры (Серпинский)";
