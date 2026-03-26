@@ -77,6 +77,12 @@ namespace FractalExplorer.Engines
         public bool UseSmoothColoring { get; set; } = false;
 
         /// <summary>
+        /// Получает или задает флаг, указывающий, нужно ли применять histogram coloring
+        /// для escape-time (дискретного) режима.
+        /// </summary>
+        public bool UseHistogramColoring { get; set; } = false;
+
+        /// <summary>
         /// Получает или задает функцию палитры для дискретного окрашивания.
         /// Принимает (текущая итерация, макс. итераций, макс. итераций для цвета) и возвращает цвет.
         /// </summary>
@@ -573,6 +579,40 @@ namespace FractalExplorer.Engines
             };
         }
 
+        private double[] BuildEscapeHistogramCdf(long[] histogram, long escapedTotal)
+        {
+            double[] cdf = new double[Math.Max(0, MaxIterations)];
+            if (escapedTotal <= 0 || cdf.Length == 0)
+            {
+                return cdf;
+            }
+
+            long cumulative = 0;
+            for (int i = 0; i < cdf.Length; i++)
+            {
+                cumulative += histogram[i];
+                cdf[i] = (double)cumulative / escapedTotal;
+            }
+
+            return cdf;
+        }
+
+        private int MapIterationUsingHistogram(int iter, double[] cdf)
+        {
+            if (iter >= MaxIterations)
+            {
+                return MaxIterations;
+            }
+
+            if (iter < 0 || cdf.Length == 0 || iter >= cdf.Length)
+            {
+                return Math.Min(Math.Max(iter, 0), MaxColorIterations);
+            }
+
+            double normalized = Math.Clamp(cdf[iter], 0.0, 1.0);
+            return (int)Math.Round(normalized * MaxColorIterations);
+        }
+
         /// <summary>
         /// Вспомогательный метод для рендеринга тайла с высокой точностью (<see cref="decimal"/>).
         /// </summary>
@@ -589,6 +629,59 @@ namespace FractalExplorer.Engines
             decimal centerX = CenterX;
             decimal centerY = CenterY;
             IterationCalculatorDecimal iterationCalculator = CreateDecimalIterationCalculator();
+
+            if (UseHistogramColoring && !UseSmoothColoring)
+            {
+                int[] iterationsBuffer = new int[tile.Bounds.Width * tile.Bounds.Height];
+                long[] histogram = new long[Math.Max(0, MaxIterations)];
+                long escapedTotal = 0;
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    int canvasY = tile.Bounds.Y + y;
+                    if (canvasY >= canvasHeight) continue;
+
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        int canvasX = tile.Bounds.X + x;
+                        if (canvasX >= canvasWidth) continue;
+
+                        decimal re = centerX + (canvasX - halfWidthPixels) * unitsPerPixel;
+                        decimal im = centerY - (canvasY - halfHeightPixels) * unitsPerPixel;
+
+                        iterationCalculator(re, im, out int iter, out _);
+
+                        int idx = y * tile.Bounds.Width + x;
+                        iterationsBuffer[idx] = iter;
+
+                        if (iter >= 0 && iter < MaxIterations && iter < histogram.Length)
+                        {
+                            histogram[iter]++;
+                            escapedTotal++;
+                        }
+                    }
+                }
+
+                double[] cdf = BuildEscapeHistogramCdf(histogram, escapedTotal);
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        int idx = y * tile.Bounds.Width + x;
+                        int mappedIter = MapIterationUsingHistogram(iterationsBuffer[idx], cdf);
+                        Color pixelColor = Palette(mappedIter, MaxIterations, MaxColorIterations);
+
+                        int bufferIndex = idx * bytesPerPixel;
+                        buffer[bufferIndex] = pixelColor.B;
+                        buffer[bufferIndex + 1] = pixelColor.G;
+                        buffer[bufferIndex + 2] = pixelColor.R;
+                        buffer[bufferIndex + 3] = 255;
+                    }
+                }
+
+                return;
+            }
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
@@ -636,6 +729,59 @@ namespace FractalExplorer.Engines
             double halfWidthPixels = canvasWidth / 2.0;
             double halfHeightPixels = canvasHeight / 2.0;
             double unitsPerPixel = scale_d / canvasWidth;
+
+            if (UseHistogramColoring && !UseSmoothColoring)
+            {
+                int[] iterationsBuffer = new int[tile.Bounds.Width * tile.Bounds.Height];
+                long[] histogram = new long[Math.Max(0, MaxIterations)];
+                long escapedTotal = 0;
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    int canvasY = tile.Bounds.Y + y;
+                    if (canvasY >= canvasHeight) continue;
+
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        int canvasX = tile.Bounds.X + x;
+                        if (canvasX >= canvasWidth) continue;
+
+                        double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
+                        double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
+
+                        iterationCalculator(re, im, out int iter, out _);
+
+                        int idx = y * tile.Bounds.Width + x;
+                        iterationsBuffer[idx] = iter;
+
+                        if (iter >= 0 && iter < MaxIterations && iter < histogram.Length)
+                        {
+                            histogram[iter]++;
+                            escapedTotal++;
+                        }
+                    }
+                }
+
+                double[] cdf = BuildEscapeHistogramCdf(histogram, escapedTotal);
+
+                for (int y = 0; y < tile.Bounds.Height; y++)
+                {
+                    for (int x = 0; x < tile.Bounds.Width; x++)
+                    {
+                        int idx = y * tile.Bounds.Width + x;
+                        int mappedIter = MapIterationUsingHistogram(iterationsBuffer[idx], cdf);
+                        Color pixelColor = Palette(mappedIter, MaxIterations, MaxColorIterations);
+
+                        int bufferIndex = idx * bytesPerPixel;
+                        buffer[bufferIndex] = pixelColor.B;
+                        buffer[bufferIndex + 1] = pixelColor.G;
+                        buffer[bufferIndex + 2] = pixelColor.R;
+                        buffer[bufferIndex + 3] = 255;
+                    }
+                }
+
+                return;
+            }
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
@@ -690,6 +836,12 @@ namespace FractalExplorer.Engines
 
             ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
 
+            int[] highResIterations = null;
+            if (UseHistogramColoring && !UseSmoothColoring)
+            {
+                highResIterations = new int[highResTileWidth * highResTileHeight];
+            }
+
             Parallel.For(0, highResTileHeight, po, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
@@ -702,11 +854,43 @@ namespace FractalExplorer.Engines
 
                     iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
-                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValue(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                    if (highResIterations != null)
+                    {
+                        highResIterations[y * highResTileWidth + x] = iter;
+                    }
+                    else
+                    {
+                        highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
+                            ? SmoothPalette(CalculateSmoothValue(iter, z))
+                            : Palette(iter, MaxIterations, MaxColorIterations);
+                    }
                 }
             });
+
+            if (highResIterations != null)
+            {
+                long[] histogram = new long[Math.Max(0, MaxIterations)];
+                long escapedTotal = 0;
+                for (int i = 0; i < highResIterations.Length; i++)
+                {
+                    int iter = highResIterations[i];
+                    if (iter >= 0 && iter < MaxIterations && iter < histogram.Length)
+                    {
+                        histogram[iter]++;
+                        escapedTotal++;
+                    }
+                }
+
+                double[] cdf = BuildEscapeHistogramCdf(histogram, escapedTotal);
+                for (int y = 0; y < highResTileHeight; y++)
+                {
+                    for (int x = 0; x < highResTileWidth; x++)
+                    {
+                        int mappedIter = MapIterationUsingHistogram(highResIterations[y * highResTileWidth + x], cdf);
+                        highResColorBuffer[x, y] = Palette(mappedIter, MaxIterations, MaxColorIterations);
+                    }
+                }
+            }
 
             // Усреднение цветов субпикселей для получения итогового цвета пикселя
             int sampleCount = supersamplingFactor * supersamplingFactor;
@@ -761,6 +945,12 @@ namespace FractalExplorer.Engines
 
             ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
 
+            int[] highResIterations = null;
+            if (UseHistogramColoring && !UseSmoothColoring)
+            {
+                highResIterations = new int[highResTileWidth * highResTileHeight];
+            }
+
             Parallel.For(0, highResTileHeight, po, y =>
             {
                 for (int x = 0; x < highResTileWidth; x++)
@@ -773,11 +963,43 @@ namespace FractalExplorer.Engines
 
                     iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
-                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                    if (highResIterations != null)
+                    {
+                        highResIterations[y * highResTileWidth + x] = iter;
+                    }
+                    else
+                    {
+                        highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
+                            ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
+                            : Palette(iter, MaxIterations, MaxColorIterations);
+                    }
                 }
             });
+
+            if (highResIterations != null)
+            {
+                long[] histogram = new long[Math.Max(0, MaxIterations)];
+                long escapedTotal = 0;
+                for (int i = 0; i < highResIterations.Length; i++)
+                {
+                    int iter = highResIterations[i];
+                    if (iter >= 0 && iter < MaxIterations && iter < histogram.Length)
+                    {
+                        histogram[iter]++;
+                        escapedTotal++;
+                    }
+                }
+
+                double[] cdf = BuildEscapeHistogramCdf(histogram, escapedTotal);
+                for (int y = 0; y < highResTileHeight; y++)
+                {
+                    for (int x = 0; x < highResTileWidth; x++)
+                    {
+                        int mappedIter = MapIterationUsingHistogram(highResIterations[y * highResTileWidth + x], cdf);
+                        highResColorBuffer[x, y] = Palette(mappedIter, MaxIterations, MaxColorIterations);
+                    }
+                }
+            }
 
             // Усреднение цветов субпикселей для получения итогового цвета пикселя
             int sampleCount = supersamplingFactor * supersamplingFactor;
