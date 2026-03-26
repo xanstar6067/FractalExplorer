@@ -15,28 +15,51 @@ namespace FractalExplorer.Utilities
         private readonly FractalMandelbrotFamilyForm.ColoringRuntimeState _workingState;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
 
-        private readonly ComboBox _cbMode = new();
+        // ── Выбор режима ────────────────────────────────────────────────────
+        private readonly FlowLayoutPanel _pnlModeChips = new();
+        private readonly List<Button> _modeChips = new();
+
+        // ── Вкладки ─────────────────────────────────────────────────────────
+        private readonly TabControl _tabs = new();
+        private readonly TabPage _tabParams = new();
+        private readonly TabPage _tabPalette = new();
+        private readonly TabPage _tabInterior = new();
+
+        // ── Вкладка «Параметры» ─────────────────────────────────────────────
+        private readonly Panel _modeParamsPanel = new();
+
+        // Поля режима Smooth
+        private NumericUpDown? _nudBlendPower;
+        private NumericUpDown? _nudIterationOffset;
+
+        // Поля режима Histogram
+        private CheckBox? _chkHistogramEqualization;
+        private NumericUpDown? _nudHistogramContrast;
+        private CheckBox? _chkHistogramInputUseSmooth;
+
+        // Поля режима OrbitTrap
+        private NumericUpDown? _nudOrbitTrapStrength;
+        private NumericUpDown? _nudOrbitTrapBias;
+
+        // Поля режима StripeAverage
+        private NumericUpDown? _nudStripeFrequency;
+        private NumericUpDown? _nudStripeStrength;
+        private NumericUpDown? _nudStripeBias;
+
+        // ── Вкладка «Палитра» ────────────────────────────────────────────────
         private readonly ComboBox _cbPalette = new();
-        private readonly Panel _dynamicParametersPanel = new();
-        private readonly Button _btnApply = new();
-        private readonly Button _btnCancel = new();
+        private NumericUpDown? _nudPalettePhaseOffset;
+        private NumericUpDown? _nudPaletteScale;
+        private ComboBox? _cbPaletteWrapMode;
+
+        // ── Вкладка «Внутренность» ───────────────────────────────────────────
         private readonly ComboBox _cbInteriorMode = new();
         private readonly Button _btnPickInteriorColor = new();
         private readonly Panel _pnlInteriorColorPreview = new();
 
-        private NumericUpDown? _nudBlendPower;
-        private NumericUpDown? _nudIterationOffset;
-        private CheckBox? _chkHistogramEqualization;
-        private NumericUpDown? _nudHistogramContrast;
-        private CheckBox? _chkHistogramInputUseSmooth;
-        private NumericUpDown? _nudOrbitTrapStrength;
-        private NumericUpDown? _nudOrbitTrapBias;
-        private NumericUpDown? _nudStripeFrequency;
-        private NumericUpDown? _nudStripeStrength;
-        private NumericUpDown? _nudStripeBias;
-        private NumericUpDown? _nudPalettePhaseOffset;
-        private NumericUpDown? _nudPaletteScale;
-        private ComboBox? _cbPaletteWrapMode;
+        // ── Кнопки ──────────────────────────────────────────────────────────
+        private readonly Button _btnApply = new();
+        private readonly Button _btnCancel = new();
 
         public event EventHandler<ColoringModeSettingsAppliedEventArgs>? SettingsApplied;
 
@@ -51,149 +74,181 @@ namespace FractalExplorer.Utilities
             ThemeManager.RegisterForm(this);
 
             InitializeUi();
-            PopulateModes();
-            PopulatePalettes(activePaletteName);
+            PopulateModeChips();
+            PopulatePalettesTab(activePaletteName);
+            PopulateInteriorTab();
             ApplyStateToUi();
 
             if (ownerIcon is not null)
-            {
                 Icon = ownerIcon;
-            }
         }
+
+        // ────────────────────────────────────────────────────────────────────
+        //  Построение UI
+        // ────────────────────────────────────────────────────────────────────
 
         private void InitializeUi()
         {
             Text = "Настройки окраски";
             StartPosition = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.Sizable;
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
             ShowIcon = true;
-            Width = 520;
-            Height = 360;
+            MinimumSize = new Size(480, 380);
+            Size = new Size(520, 440);
 
             var root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 4,
+                RowCount = 3,
                 Padding = new Padding(12)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // строка чипов режима
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // вкладки
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));   // кнопки
 
-            var modeRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
-            modeRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
-            modeRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            modeRow.Controls.Add(new Label { Text = "Режим окраски:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-            _cbMode.DropDownStyle = ComboBoxStyle.DropDownList;
-            _cbMode.Dock = DockStyle.Top;
-            _cbMode.SelectedIndexChanged += (_, _) => RebuildDynamicParametersPanel();
-            modeRow.Controls.Add(_cbMode, 1, 0);
+            // ── Блок выбора режима ───────────────────────────────────────────
+            var modeGroup = new GroupBox
+            {
+                Text = "Режим окраски",
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                Padding = new Padding(6, 4, 6, 6),
+                Margin = new Padding(0, 0, 0, 8)
+            };
 
-            var paletteRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true, Margin = new Padding(0, 8, 0, 0) };
-            paletteRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
-            paletteRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            paletteRow.Controls.Add(new Label { Text = "Палитра (быстро):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-            _cbPalette.DropDownStyle = ComboBoxStyle.DropDownList;
-            _cbPalette.Dock = DockStyle.Top;
-            paletteRow.Controls.Add(_cbPalette, 1, 0);
+            _pnlModeChips.Dock = DockStyle.Fill;
+            _pnlModeChips.FlowDirection = FlowDirection.LeftToRight;
+            _pnlModeChips.WrapContents = true;
+            _pnlModeChips.AutoSize = true;
+            _pnlModeChips.Padding = new Padding(0, 2, 0, 0);
+            modeGroup.Controls.Add(_pnlModeChips);
 
-            var group = new GroupBox { Text = "Параметры выбранного режима", Dock = DockStyle.Fill, Margin = new Padding(0, 12, 0, 0) };
-            _dynamicParametersPanel.Dock = DockStyle.Fill;
-            _dynamicParametersPanel.Padding = new Padding(8);
-            group.Controls.Add(_dynamicParametersPanel);
+            // ── Вкладки ─────────────────────────────────────────────────────
+            _tabs.Dock = DockStyle.Fill;
+            _tabs.Padding = new Point(10, 4);
+            _tabs.Margin = new Padding(0);
 
+            _tabParams.Text = "Параметры";
+            _tabPalette.Text = "Палитра";
+            _tabInterior.Text = "Внутренность";
+
+            _tabs.TabPages.Add(_tabParams);
+            _tabs.TabPages.Add(_tabPalette);
+            _tabs.TabPages.Add(_tabInterior);
+
+            // Вкладка «Параметры»
+            _modeParamsPanel.Dock = DockStyle.Fill;
+            _modeParamsPanel.AutoScroll = true;
+            _modeParamsPanel.Padding = new Padding(8);
+            _tabParams.Controls.Add(_modeParamsPanel);
+            _tabParams.Padding = new Padding(4);
+
+            // Вкладка «Палитра» — заполним в PopulatePalettesTab()
+            _tabPalette.Padding = new Padding(4);
+            _tabPalette.AutoScroll = true;
+
+            // Вкладка «Внутренность» — заполним в PopulateInteriorTab()
+            _tabInterior.Padding = new Padding(4);
+            _tabInterior.AutoScroll = true;
+
+            // ── Кнопки ──────────────────────────────────────────────────────
             var buttonsRow = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.RightToLeft,
                 Dock = DockStyle.Fill,
                 AutoSize = true,
-                Margin = new Padding(0, 12, 0, 0)
+                Margin = new Padding(0, 8, 0, 0)
             };
 
             _btnApply.Text = "Применить";
             _btnApply.AutoSize = true;
+            _btnApply.MinimumSize = new Size(90, 28);
             _btnApply.Click += BtnApply_Click;
 
             _btnCancel.Text = "Отмена";
             _btnCancel.AutoSize = true;
+            _btnCancel.MinimumSize = new Size(80, 28);
             _btnCancel.Click += (_, _) => Close();
 
             buttonsRow.Controls.Add(_btnApply);
             buttonsRow.Controls.Add(_btnCancel);
 
-            root.Controls.Add(modeRow, 0, 0);
-            root.Controls.Add(paletteRow, 0, 1);
-            root.Controls.Add(group, 0, 2);
-            root.Controls.Add(buttonsRow, 0, 3);
-
+            root.Controls.Add(modeGroup, 0, 0);
+            root.Controls.Add(_tabs, 0, 1);
+            root.Controls.Add(buttonsRow, 0, 2);
             Controls.Add(root);
         }
 
-        private void PopulateModes()
+        // ── Чипы режима ──────────────────────────────────────────────────────
+
+        private static readonly (FractalMandelbrotFamilyForm.ColoringModeType Mode, string Label)[] ModeDefinitions =
         {
-            _cbMode.Items.Clear();
-            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.Discrete, "Дискретно"));
-            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.Smooth, "Плавно"));
-            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.Histogram, "Histogram"));
-            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.OrbitTrap, "Orbit Trap"));
-            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.StripeAverage, "Stripe Average"));
+            (FractalMandelbrotFamilyForm.ColoringModeType.Discrete,     "Дискретно"),
+            (FractalMandelbrotFamilyForm.ColoringModeType.Smooth,       "Плавно"),
+            (FractalMandelbrotFamilyForm.ColoringModeType.Histogram,    "Histogram"),
+            (FractalMandelbrotFamilyForm.ColoringModeType.OrbitTrap,    "Orbit Trap"),
+            (FractalMandelbrotFamilyForm.ColoringModeType.StripeAverage,"Stripe Average"),
+        };
+
+        private void PopulateModeChips()
+        {
+            _pnlModeChips.Controls.Clear();
+            _modeChips.Clear();
+
+            foreach (var (mode, label) in ModeDefinitions)
+            {
+                var btn = new Button
+                {
+                    Text = label,
+                    AutoSize = true,
+                    MinimumSize = new Size(0, 28),
+                    Margin = new Padding(0, 0, 6, 4),
+                    Tag = mode,
+                    FlatStyle = FlatStyle.Flat,
+                    Cursor = Cursors.Hand
+                };
+                btn.FlatAppearance.BorderSize = 1;
+                btn.Click += ModeChip_Click;
+                _modeChips.Add(btn);
+                _pnlModeChips.Controls.Add(btn);
+            }
         }
 
-        private void PopulatePalettes(string? activePaletteName)
+        private void ModeChip_Click(object? sender, EventArgs e)
         {
-            _cbPalette.Items.Clear();
-            foreach (var palette in _paletteManager.Palettes)
-            {
-                string label = palette.IsBuiltIn ? $"{palette.Name} [Встроенная]" : $"{palette.Name} [Пользовательская]";
-                _cbPalette.Items.Add(new PaletteItem(palette.Name, label));
-            }
-
-            if (_cbPalette.Items.Count == 0)
-            {
-                return;
-            }
-
-            PaletteItem? selectedItem = null;
-            if (!string.IsNullOrWhiteSpace(activePaletteName))
-            {
-                selectedItem = _cbPalette.Items
-                    .OfType<PaletteItem>()
-                    .FirstOrDefault(p => p.PaletteName == activePaletteName);
-            }
-
-            _cbPalette.SelectedItem = selectedItem ?? _cbPalette.Items[0];
+            if (sender is not Button btn) return;
+            SelectModeChip((FractalMandelbrotFamilyForm.ColoringModeType)btn.Tag!);
+            RebuildModeParamsPanel();
         }
 
-        private void ApplyStateToUi()
+        private void SelectModeChip(FractalMandelbrotFamilyForm.ColoringModeType mode)
         {
-            var modeItem = _cbMode.Items
-                .OfType<ModeItem>()
-                .FirstOrDefault(m => m.Mode == _workingState.ActiveMode.ModeType);
-
-            _cbMode.SelectedItem = modeItem ?? _cbMode.Items.OfType<ModeItem>().FirstOrDefault();
-            if (_cbInteriorMode.Items.Count == 0)
+            foreach (var chip in _modeChips)
             {
-                _cbInteriorMode.Items.Add(new InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode.Black, "Black (совместимый)"));
-                _cbInteriorMode.Items.Add(new InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode.Custom, "Custom Color"));
+                bool active = (FractalMandelbrotFamilyForm.ColoringModeType)chip.Tag! == mode;
+                // Визуальный акцент: системные цвета, работают и со светлой и с тёмной темой
+                chip.FlatAppearance.BorderColor = active ? SystemColors.Highlight : SystemColors.ControlDark;
+                chip.Font = new Font(chip.Font, active ? FontStyle.Bold : FontStyle.Regular);
             }
-
-            _cbInteriorMode.SelectedItem = _cbInteriorMode.Items
-                .OfType<InteriorModeItem>()
-                .FirstOrDefault(m => m.Mode == _workingState.InteriorMode)
-                ?? _cbInteriorMode.Items.OfType<InteriorModeItem>().FirstOrDefault();
-            _pnlInteriorColorPreview.BackColor = _workingState.InteriorColor;
-            UpdateInteriorControlsState();
-            RebuildDynamicParametersPanel();
         }
 
-        private void RebuildDynamicParametersPanel()
+        private FractalMandelbrotFamilyForm.ColoringModeType SelectedMode()
         {
-            _dynamicParametersPanel.Controls.Clear();
+            foreach (var chip in _modeChips)
+                if (chip.Font.Bold)
+                    return (FractalMandelbrotFamilyForm.ColoringModeType)chip.Tag!;
+            return FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
+        }
+
+        // ── Вкладка «Параметры» (динамические поля) ──────────────────────────
+
+        private void RebuildModeParamsPanel()
+        {
+            _modeParamsPanel.Controls.Clear();
             _nudBlendPower = null;
             _nudIterationOffset = null;
             _chkHistogramEqualization = null;
@@ -204,378 +259,289 @@ namespace FractalExplorer.Utilities
             _nudStripeFrequency = null;
             _nudStripeStrength = null;
             _nudStripeBias = null;
-            _nudPalettePhaseOffset = null;
-            _nudPaletteScale = null;
-            _cbPaletteWrapMode = null;
 
-            var selectedMode = (_cbMode.SelectedItem as ModeItem)?.Mode
-                ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
-
-            var interiorLayout = new TableLayoutPanel
+            switch (SelectedMode())
             {
-                Dock = DockStyle.Top,
-                ColumnCount = 2,
-                AutoSize = true,
-                Margin = new Padding(0, 0, 0, 12)
-            };
-            interiorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-            interiorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                case FractalMandelbrotFamilyForm.ColoringModeType.Smooth:
+                    BuildSmoothParams();
+                    break;
+                case FractalMandelbrotFamilyForm.ColoringModeType.Histogram:
+                    BuildHistogramParams();
+                    break;
+                case FractalMandelbrotFamilyForm.ColoringModeType.OrbitTrap:
+                    BuildOrbitTrapParams();
+                    break;
+                case FractalMandelbrotFamilyForm.ColoringModeType.StripeAverage:
+                    BuildStripeAverageParams();
+                    break;
+                default:
+                    _modeParamsPanel.Controls.Add(new Label
+                    {
+                        Dock = DockStyle.Top,
+                        AutoSize = true,
+                        Text = "У выбранного режима нет дополнительных параметров.",
+                        Margin = new Padding(0, 8, 0, 0)
+                    });
+                    break;
+            }
+        }
 
+        private void BuildSmoothParams()
+        {
+            var layout = MakeTwoColumnLayout();
+
+            AddRow(layout, "Плавность (степень):", 0);
+            _nudBlendPower = MakeNud(0.10m, 5.00m, 0.05m, 2, _workingState.SmoothBlendPower, 0.10, 5.00);
+            layout.Controls.Add(_nudBlendPower, 1, 0);
+
+            AddRow(layout, "Смещение итерации:", 1);
+            _nudIterationOffset = MakeNud(-100m, 100m, 0.10m, 2, _workingState.SmoothIterationOffset, -100.0, 100.0);
+            layout.Controls.Add(_nudIterationOffset, 1, 1);
+
+            _modeParamsPanel.Controls.Add(layout);
+        }
+
+        private void BuildHistogramParams()
+        {
+            var layout = MakeTwoColumnLayout();
+
+            _chkHistogramEqualization = new CheckBox
+            {
+                Text = "Выравнивание (CDF)",
+                AutoSize = true,
+                Checked = _workingState.HistogramSettings.EnabledEqualization,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 6, 0, 6)
+            };
+            layout.Controls.Add(_chkHistogramEqualization, 0, 0);
+            layout.SetColumnSpan(_chkHistogramEqualization, 2);
+
+            AddRow(layout, "Контраст:", 1);
+            _nudHistogramContrast = MakeNud(0.10m, 4.00m, 0.05m, 2, _workingState.HistogramSettings.Contrast, 0.10, 4.00);
+            layout.Controls.Add(_nudHistogramContrast, 1, 1);
+
+            _chkHistogramInputUseSmooth = new CheckBox
+            {
+                Text = "Плавные итерации как вход",
+                AutoSize = true,
+                Checked = _workingState.HistogramSettings.InputUseSmooth,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 6, 0, 0)
+            };
+            layout.Controls.Add(_chkHistogramInputUseSmooth, 0, 2);
+            layout.SetColumnSpan(_chkHistogramInputUseSmooth, 2);
+
+            _modeParamsPanel.Controls.Add(layout);
+        }
+
+        private void BuildOrbitTrapParams()
+        {
+            var layout = MakeTwoColumnLayout();
+
+            AddRow(layout, "Сила ловушки:", 0);
+            _nudOrbitTrapStrength = MakeNud(0m, 5m, 0.05m, 2, _workingState.OrbitTrapSettings.Strength, 0.0, 5.0);
+            layout.Controls.Add(_nudOrbitTrapStrength, 1, 0);
+
+            AddRow(layout, "Смещение:", 1);
+            _nudOrbitTrapBias = MakeNud(-1m, 1m, 0.01m, 2, _workingState.OrbitTrapSettings.Bias, -1.0, 1.0);
+            layout.Controls.Add(_nudOrbitTrapBias, 1, 1);
+
+            _modeParamsPanel.Controls.Add(layout);
+        }
+
+        private void BuildStripeAverageParams()
+        {
+            var layout = MakeTwoColumnLayout();
+
+            AddRow(layout, "Частота:", 0);
+            _nudStripeFrequency = MakeNud(0.10m, 20m, 0.10m, 2, _workingState.StripeAverageSettings.Frequency, 0.10, 20.0);
+            layout.Controls.Add(_nudStripeFrequency, 1, 0);
+
+            AddRow(layout, "Сила:", 1);
+            _nudStripeStrength = MakeNud(0m, 1m, 0.01m, 2, _workingState.StripeAverageSettings.Strength, 0.0, 1.0);
+            layout.Controls.Add(_nudStripeStrength, 1, 1);
+
+            AddRow(layout, "Смещение:", 2);
+            _nudStripeBias = MakeNud(-1m, 1m, 0.01m, 2, _workingState.StripeAverageSettings.Bias, -1.0, 1.0);
+            layout.Controls.Add(_nudStripeBias, 1, 2);
+
+            _modeParamsPanel.Controls.Add(layout);
+        }
+
+        // ── Вкладка «Палитра» ────────────────────────────────────────────────
+
+        private void PopulatePalettesTab(string? activePaletteName)
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8), AutoScroll = true };
+            var layout = MakeTwoColumnLayout(rowCount: 5);
+
+            // Палитра
+            AddRow(layout, "Палитра:", 0);
+            _cbPalette.DropDownStyle = ComboBoxStyle.DropDownList;
+            _cbPalette.Dock = DockStyle.Fill;
+            foreach (var palette in _paletteManager.Palettes)
+            {
+                string label = palette.IsBuiltIn
+                    ? $"{palette.Name} [встроенная]"
+                    : $"{palette.Name} [пользовательская]";
+                _cbPalette.Items.Add(new PaletteItem(palette.Name, label));
+            }
+            if (_cbPalette.Items.Count > 0)
+            {
+                PaletteItem? selected = null;
+                if (!string.IsNullOrWhiteSpace(activePaletteName))
+                    selected = _cbPalette.Items.OfType<PaletteItem>().FirstOrDefault(p => p.PaletteName == activePaletteName);
+                _cbPalette.SelectedItem = selected ?? _cbPalette.Items[0];
+            }
+            layout.Controls.Add(_cbPalette, 1, 0);
+
+            // Разделитель
+            var sep = new Label
+            {
+                Text = "Преобразование палитры",
+                Font = new Font(Font, FontStyle.Bold),
+                AutoSize = true,
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(0, 12, 0, 4)
+            };
+            layout.Controls.Add(sep, 0, 1);
+            layout.SetColumnSpan(sep, 2);
+
+            // Phase offset
+            AddRow(layout, "Сдвиг фазы:", 2);
+            _nudPalettePhaseOffset = MakeNud(-2m, 2m, 0.010m, 3, _workingState.PaletteTransform.PhaseOffset, -2.0, 2.0);
+            layout.Controls.Add(_nudPalettePhaseOffset, 1, 2);
+
+            // Scale
+            AddRow(layout, "Масштаб:", 3);
+            _nudPaletteScale = MakeNud(-5m, 5m, 0.010m, 3, _workingState.PaletteTransform.Scale, -5.0, 5.0);
+            layout.Controls.Add(_nudPaletteScale, 1, 3);
+
+            // Wrap mode
+            AddRow(layout, "Режим повтора:", 4);
+            _cbPaletteWrapMode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
+            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Repeat, "Повтор"));
+            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Clamp, "Ограничение"));
+            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Mirror, "Зеркало"));
+            _cbPaletteWrapMode.SelectedItem = _cbPaletteWrapMode.Items
+                .OfType<PaletteWrapModeItem>()
+                .FirstOrDefault(x => x.Mode == _workingState.PaletteTransform.WrapMode)
+                ?? _cbPaletteWrapMode.Items[0];
+            layout.Controls.Add(_cbPaletteWrapMode, 1, 4);
+
+            panel.Controls.Add(layout);
+            _tabPalette.Controls.Add(panel);
+        }
+
+        // ── Вкладка «Внутренность» ────────────────────────────────────────────
+
+        private void PopulateInteriorTab()
+        {
+            var panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8), AutoScroll = true };
+            var layout = MakeTwoColumnLayout(rowCount: 2);
+
+            // Режим
+            AddRow(layout, "Режим:", 0);
             _cbInteriorMode.DropDownStyle = ComboBoxStyle.DropDownList;
             _cbInteriorMode.Dock = DockStyle.Fill;
-            _cbInteriorMode.SelectedIndexChanged -= InteriorModeChanged;
-            _cbInteriorMode.SelectedIndexChanged += InteriorModeChanged;
+            _cbInteriorMode.Items.Add(new InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode.Black, "Чёрный (совместимый)"));
+            _cbInteriorMode.Items.Add(new InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode.Custom, "Свой цвет"));
+            _cbInteriorMode.SelectedIndexChanged += (_, _) => UpdateInteriorControlsState();
+            layout.Controls.Add(_cbInteriorMode, 1, 0);
 
-            _btnPickInteriorColor.Text = "Выбрать цвет…";
+            // Цвет
+            AddRow(layout, "Цвет:", 1);
+            _btnPickInteriorColor.Text = "Выбрать…";
             _btnPickInteriorColor.AutoSize = true;
-            _btnPickInteriorColor.Click -= BtnPickInteriorColor_Click;
             _btnPickInteriorColor.Click += BtnPickInteriorColor_Click;
 
-            _pnlInteriorColorPreview.Width = 36;
-            _pnlInteriorColorPreview.Height = 22;
-            _pnlInteriorColorPreview.Margin = new Padding(8, 0, 0, 0);
+            _pnlInteriorColorPreview.Width = 40;
+            _pnlInteriorColorPreview.Height = 24;
             _pnlInteriorColorPreview.BorderStyle = BorderStyle.FixedSingle;
+            _pnlInteriorColorPreview.Margin = new Padding(6, 0, 0, 0);
 
-            var colorPickerRow = new FlowLayoutPanel
+            var colorRow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false
             };
-            colorPickerRow.Controls.Add(_btnPickInteriorColor);
-            colorPickerRow.Controls.Add(_pnlInteriorColorPreview);
+            colorRow.Controls.Add(_btnPickInteriorColor);
+            colorRow.Controls.Add(_pnlInteriorColorPreview);
+            layout.Controls.Add(colorRow, 1, 1);
 
-            interiorLayout.Controls.Add(new Label { Text = "Interior-режим:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-            interiorLayout.Controls.Add(_cbInteriorMode, 1, 0);
-            interiorLayout.Controls.Add(new Label { Text = "Interior-цвет:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-            interiorLayout.Controls.Add(colorPickerRow, 1, 1);
+            panel.Controls.Add(layout);
+            _tabInterior.Controls.Add(panel);
+        }
 
-            _dynamicParametersPanel.Controls.Add(interiorLayout);
+        // ── Применение состояния к UI ─────────────────────────────────────────
+
+        private void ApplyStateToUi()
+        {
+            // Выбрать нужный чип режима
+            SelectModeChip(_workingState.ActiveMode.ModeType);
+
+            // Interior-вкладка
+            var interiorItem = _cbInteriorMode.Items
+                .OfType<InteriorModeItem>()
+                .FirstOrDefault(m => m.Mode == _workingState.InteriorMode);
+            _cbInteriorMode.SelectedItem = interiorItem ?? _cbInteriorMode.Items.OfType<InteriorModeItem>().FirstOrDefault();
+            _pnlInteriorColorPreview.BackColor = _workingState.InteriorColor;
             UpdateInteriorControlsState();
 
-            var paletteTransformLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                ColumnCount = 2,
-                AutoSize = true,
-                Margin = new Padding(0, 0, 0, 12)
-            };
-            paletteTransformLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-            paletteTransformLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-            var lblPaletteTransform = new Label
-            {
-                Text = "Преобразование палитры",
-                AutoSize = true,
-                Font = new Font(Font, FontStyle.Bold),
-                Anchor = AnchorStyles.Left,
-                Margin = new Padding(0, 8, 8, 0)
-            };
-            paletteTransformLayout.Controls.Add(lblPaletteTransform, 0, 0);
-            paletteTransformLayout.SetColumnSpan(lblPaletteTransform, 2);
-
-            paletteTransformLayout.Controls.Add(new Label { Text = "Phase offset:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-            _nudPalettePhaseOffset = new NumericUpDown
-            {
-                DecimalPlaces = 3,
-                Minimum = -2.000m,
-                Maximum = 2.000m,
-                Increment = 0.010m,
-                Value = (decimal)Math.Max(-2.0, Math.Min(2.0, _workingState.PaletteTransform.PhaseOffset)),
-                Dock = DockStyle.Fill
-            };
-            paletteTransformLayout.Controls.Add(_nudPalettePhaseOffset, 1, 1);
-
-            paletteTransformLayout.Controls.Add(new Label { Text = "Scale:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 2);
-            _nudPaletteScale = new NumericUpDown
-            {
-                DecimalPlaces = 3,
-                Minimum = -5.000m,
-                Maximum = 5.000m,
-                Increment = 0.010m,
-                Value = (decimal)Math.Max(-5.0, Math.Min(5.0, _workingState.PaletteTransform.Scale)),
-                Dock = DockStyle.Fill
-            };
-            paletteTransformLayout.Controls.Add(_nudPaletteScale, 1, 2);
-
-            paletteTransformLayout.Controls.Add(new Label { Text = "Wrap mode:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 3);
-            _cbPaletteWrapMode = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Dock = DockStyle.Fill
-            };
-            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Repeat, "Repeat"));
-            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Clamp, "Clamp"));
-            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Mirror, "Mirror"));
-            _cbPaletteWrapMode.SelectedItem = _cbPaletteWrapMode.Items
-                .OfType<PaletteWrapModeItem>()
-                .FirstOrDefault(x => x.Mode == _workingState.PaletteTransform.WrapMode)
-                ?? _cbPaletteWrapMode.Items[0];
-            paletteTransformLayout.Controls.Add(_cbPaletteWrapMode, 1, 3);
-
-            _dynamicParametersPanel.Controls.Add(paletteTransformLayout);
-
-            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.Smooth)
-            {
-                var layout = new TableLayoutPanel
-                {
-                    Dock = DockStyle.Top,
-                    ColumnCount = 2,
-                    AutoSize = true
-                };
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-                layout.Controls.Add(new Label { Text = "Плавность (степень):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-                _nudBlendPower = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = 0.10m,
-                    Maximum = 5.00m,
-                    Increment = 0.05m,
-                    Value = (decimal)Math.Max(0.10, Math.Min(5.00, _workingState.SmoothBlendPower)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudBlendPower, 1, 0);
-
-                layout.Controls.Add(new Label { Text = "Смещение итерации:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-                _nudIterationOffset = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = -100.00m,
-                    Maximum = 100.00m,
-                    Increment = 0.10m,
-                    Value = (decimal)Math.Max(-100.00, Math.Min(100.00, _workingState.SmoothIterationOffset)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudIterationOffset, 1, 1);
-
-                _dynamicParametersPanel.Controls.Add(layout);
-                return;
-            }
-
-            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.Histogram)
-            {
-                var layout = new TableLayoutPanel
-                {
-                    Dock = DockStyle.Top,
-                    ColumnCount = 2,
-                    AutoSize = true
-                };
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-                _chkHistogramEqualization = new CheckBox
-                {
-                    AutoSize = true,
-                    Text = "Включить equalization (CDF)",
-                    Checked = _workingState.HistogramSettings.EnabledEqualization,
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_chkHistogramEqualization, 0, 0);
-                layout.SetColumnSpan(_chkHistogramEqualization, 2);
-
-                layout.Controls.Add(new Label { Text = "Контраст:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-                _nudHistogramContrast = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = 0.10m,
-                    Maximum = 4.00m,
-                    Increment = 0.05m,
-                    Value = (decimal)Math.Max(0.10, Math.Min(4.00, _workingState.HistogramSettings.Contrast)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudHistogramContrast, 1, 1);
-
-                _chkHistogramInputUseSmooth = new CheckBox
-                {
-                    AutoSize = true,
-                    Text = "Вход по smooth-итерациям",
-                    Checked = _workingState.HistogramSettings.InputUseSmooth,
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_chkHistogramInputUseSmooth, 0, 2);
-                layout.SetColumnSpan(_chkHistogramInputUseSmooth, 2);
-
-                _dynamicParametersPanel.Controls.Add(layout);
-                return;
-            }
-
-            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.OrbitTrap)
-            {
-                var layout = new TableLayoutPanel
-                {
-                    Dock = DockStyle.Top,
-                    ColumnCount = 2,
-                    AutoSize = true
-                };
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-                layout.Controls.Add(new Label { Text = "Trap Strength:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-                _nudOrbitTrapStrength = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = 0.00m,
-                    Maximum = 5.00m,
-                    Increment = 0.05m,
-                    Value = (decimal)Math.Max(0.00, Math.Min(5.00, _workingState.OrbitTrapSettings.Strength)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudOrbitTrapStrength, 1, 0);
-
-                layout.Controls.Add(new Label { Text = "Trap Bias:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-                _nudOrbitTrapBias = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = -1.00m,
-                    Maximum = 1.00m,
-                    Increment = 0.01m,
-                    Value = (decimal)Math.Max(-1.00, Math.Min(1.00, _workingState.OrbitTrapSettings.Bias)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudOrbitTrapBias, 1, 1);
-
-                _dynamicParametersPanel.Controls.Add(layout);
-                return;
-            }
-
-            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.StripeAverage)
-            {
-                var layout = new TableLayoutPanel
-                {
-                    Dock = DockStyle.Top,
-                    ColumnCount = 2,
-                    AutoSize = true
-                };
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-                layout.Controls.Add(new Label { Text = "Frequency:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-                _nudStripeFrequency = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = 0.10m,
-                    Maximum = 20.00m,
-                    Increment = 0.10m,
-                    Value = (decimal)Math.Max(0.10, Math.Min(20.00, _workingState.StripeAverageSettings.Frequency)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudStripeFrequency, 1, 0);
-
-                layout.Controls.Add(new Label { Text = "Strength:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-                _nudStripeStrength = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = 0.00m,
-                    Maximum = 1.00m,
-                    Increment = 0.01m,
-                    Value = (decimal)Math.Max(0.00, Math.Min(1.00, _workingState.StripeAverageSettings.Strength)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudStripeStrength, 1, 1);
-
-                layout.Controls.Add(new Label { Text = "Bias:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 2);
-                _nudStripeBias = new NumericUpDown
-                {
-                    DecimalPlaces = 2,
-                    Minimum = -1.00m,
-                    Maximum = 1.00m,
-                    Increment = 0.01m,
-                    Value = (decimal)Math.Max(-1.00, Math.Min(1.00, _workingState.StripeAverageSettings.Bias)),
-                    Dock = DockStyle.Fill
-                };
-                layout.Controls.Add(_nudStripeBias, 1, 2);
-
-                _dynamicParametersPanel.Controls.Add(layout);
-                return;
-            }
-
-            _dynamicParametersPanel.Controls.Add(new Label
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                Text = "У выбранного режима нет дополнительных параметров."
-            });
+            // Построить параметры выбранного режима
+            RebuildModeParamsPanel();
         }
+
+        // ── Обработчики ───────────────────────────────────────────────────────
 
         private void BtnApply_Click(object? sender, EventArgs e)
         {
-            var mode = (_cbMode.SelectedItem as ModeItem)?.Mode
-                ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
-
+            var mode = SelectedMode();
             _workingState.ActiveMode = FractalMandelbrotFamilyForm.ColoringModeRuntime.FromType(mode);
             _workingState.InteriorMode = (_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode
                 ?? FractalMandelbrotFamilyForm.InteriorMode.Black;
             _workingState.InteriorColor = _pnlInteriorColorPreview.BackColor;
-            if (_nudBlendPower is not null)
-            {
-                _workingState.SmoothBlendPower = (double)_nudBlendPower.Value;
-            }
 
+            if (_nudBlendPower is not null)
+                _workingState.SmoothBlendPower = (double)_nudBlendPower.Value;
             if (_nudIterationOffset is not null)
-            {
                 _workingState.SmoothIterationOffset = (double)_nudIterationOffset.Value;
-            }
             if (_chkHistogramEqualization is not null)
-            {
                 _workingState.HistogramSettings.EnabledEqualization = _chkHistogramEqualization.Checked;
-            }
             if (_nudHistogramContrast is not null)
-            {
                 _workingState.HistogramSettings.Contrast = (double)_nudHistogramContrast.Value;
-            }
             if (_chkHistogramInputUseSmooth is not null)
-            {
                 _workingState.HistogramSettings.InputUseSmooth = _chkHistogramInputUseSmooth.Checked;
-            }
             if (_nudOrbitTrapStrength is not null)
-            {
                 _workingState.OrbitTrapSettings.Strength = (double)_nudOrbitTrapStrength.Value;
-            }
             if (_nudOrbitTrapBias is not null)
-            {
                 _workingState.OrbitTrapSettings.Bias = (double)_nudOrbitTrapBias.Value;
-            }
             if (_nudStripeFrequency is not null)
-            {
                 _workingState.StripeAverageSettings.Frequency = (double)_nudStripeFrequency.Value;
-            }
             if (_nudStripeStrength is not null)
-            {
                 _workingState.StripeAverageSettings.Strength = (double)_nudStripeStrength.Value;
-            }
             if (_nudStripeBias is not null)
-            {
                 _workingState.StripeAverageSettings.Bias = (double)_nudStripeBias.Value;
-            }
             if (_nudPalettePhaseOffset is not null)
-            {
                 _workingState.PaletteTransform.PhaseOffset = (double)_nudPalettePhaseOffset.Value;
-            }
             if (_nudPaletteScale is not null)
-            {
                 _workingState.PaletteTransform.Scale = (double)_nudPaletteScale.Value;
-            }
             if (_cbPaletteWrapMode is not null)
-            {
                 _workingState.PaletteTransform.WrapMode = (_cbPaletteWrapMode.SelectedItem as PaletteWrapModeItem)?.Mode
                     ?? FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Repeat;
-            }
 
             var selectedPaletteName = (_cbPalette.SelectedItem as PaletteItem)?.PaletteName;
-
             SettingsApplied?.Invoke(this, new ColoringModeSettingsAppliedEventArgs(
                 _workingState.Clone(),
                 selectedPaletteName));
         }
 
-        private void InteriorModeChanged(object? sender, EventArgs e) => UpdateInteriorControlsState();
-
         private void UpdateInteriorControlsState()
         {
-            bool isCustom = (_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode == FractalMandelbrotFamilyForm.InteriorMode.Custom;
+            bool isCustom = (_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode
+                == FractalMandelbrotFamilyForm.InteriorMode.Custom;
             _btnPickInteriorColor.Enabled = isCustom;
             _pnlInteriorColorPreview.BackColor = isCustom ? _workingState.InteriorColor : Color.Black;
         }
@@ -583,21 +549,60 @@ namespace FractalExplorer.Utilities
         private void BtnPickInteriorColor_Click(object? sender, EventArgs e)
         {
             if (!_colorSelectionService.TrySelectColor(this, _workingState.InteriorColor, out var selectedColor))
-            {
                 return;
-            }
-
             _workingState.InteriorColor = selectedColor;
             if ((_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode == FractalMandelbrotFamilyForm.InteriorMode.Custom)
-            {
                 _pnlInteriorColorPreview.BackColor = selectedColor;
-            }
         }
 
-        private sealed record ModeItem(FractalMandelbrotFamilyForm.ColoringModeType Mode, string DisplayName)
+        // ── Вспомогательные фабричные методы ─────────────────────────────────
+
+        /// <summary>Создаёт TableLayoutPanel с двумя колонками: метка 140px + растяжение.</summary>
+        private static TableLayoutPanel MakeTwoColumnLayout(int rowCount = 10)
         {
-            public override string ToString() => DisplayName;
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                ColumnCount = 2,
+                AutoSize = true
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            for (int i = 0; i < rowCount; i++)
+                layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            return layout;
         }
+
+        /// <summary>Добавляет Label в указанную строку первой колонки.</summary>
+        private static void AddRow(TableLayoutPanel layout, string text, int row)
+        {
+            layout.Controls.Add(new Label
+            {
+                Text = text,
+                AutoSize = true,
+                Anchor = AnchorStyles.Left | AnchorStyles.Top,
+                Margin = new Padding(0, 8, 8, 0)
+            }, 0, row);
+        }
+
+        /// <summary>Создаёт NumericUpDown с ограничением значения по диапазону double.</summary>
+        private static NumericUpDown MakeNud(
+            decimal min, decimal max, decimal increment, int decimals,
+            double rawValue, double clampMin, double clampMax)
+        {
+            return new NumericUpDown
+            {
+                DecimalPlaces = decimals,
+                Minimum = min,
+                Maximum = max,
+                Increment = increment,
+                Value = (decimal)Math.Max(clampMin, Math.Min(clampMax, rawValue)),
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 4, 0, 0)
+            };
+        }
+
+        // ── Вспомогательные record-типы ───────────────────────────────────────
 
         private sealed record PaletteItem(string PaletteName, string DisplayName)
         {
