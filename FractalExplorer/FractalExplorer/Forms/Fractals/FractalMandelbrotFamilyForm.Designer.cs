@@ -38,6 +38,7 @@
             cbSSAA = new ComboBox();
             lbSSAA = new Label();
             cbSmooth = new ComboBox();
+            btnSmoothSettings = new Button();
             pnlCustomControls = new Panel();
             btnSaveHighRes = new Button();
             color_configurations = new Button();
@@ -129,6 +130,7 @@
             pnlControls.Controls.Add(cbSSAA, 0, 7);
             pnlControls.Controls.Add(lbSSAA, 1, 7);
             pnlControls.Controls.Add(cbSmooth, 0, 8);
+            pnlControls.Controls.Add(btnSmoothSettings, 1, 8);
             pnlControls.Controls.Add(pnlCustomControls, 0, 9);
             pnlControls.Controls.Add(btnSaveHighRes, 0, 10);
             pnlControls.Controls.Add(color_configurations, 0, 11);
@@ -332,15 +334,25 @@
             // 
             // cbSmooth
             // 
-            pnlControls.SetColumnSpan(cbSmooth, 2);
             cbSmooth.Dock = DockStyle.Fill;
             cbSmooth.DropDownStyle = ComboBoxStyle.DropDownList;
             cbSmooth.FormattingEnabled = true;
             cbSmooth.Location = new Point(6, 224);
             cbSmooth.Margin = new Padding(6, 3, 3, 3);
             cbSmooth.Name = "cbSmooth";
-            cbSmooth.Size = new Size(220, 23);
+            cbSmooth.Size = new Size(116, 23);
             cbSmooth.TabIndex = 14;
+            // 
+            // btnSmoothSettings
+            // 
+            btnSmoothSettings.Dock = DockStyle.Left;
+            btnSmoothSettings.Enabled = false;
+            btnSmoothSettings.Location = new Point(128, 224);
+            btnSmoothSettings.Name = "btnSmoothSettings";
+            btnSmoothSettings.Size = new Size(32, 23);
+            btnSmoothSettings.TabIndex = 21;
+            btnSmoothSettings.Text = "⚙";
+            btnSmoothSettings.UseVisualStyleBackColor = true;
             // 
             // pnlCustomControls
             // 
@@ -524,6 +536,7 @@
         private System.Windows.Forms.ComboBox cbSSAA;
         protected System.Windows.Forms.Label lbSSAA;
         private System.Windows.Forms.ComboBox cbSmooth;
+        private System.Windows.Forms.Button btnSmoothSettings;
         protected System.Windows.Forms.Panel pnlCustomControls;
     }
 }
