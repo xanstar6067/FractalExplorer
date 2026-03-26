@@ -514,8 +514,7 @@ namespace FractalDraving
                     _paletteManager,
                     _coloringRuntimeState,
                     _paletteManager.ActivePalette?.Name,
-                    this.Icon,
-                    ScheduleRender);
+                    this.Icon);
 
                 _coloringModeSettingsForm.SettingsApplied += ColoringModeSettingsForm_SettingsApplied;
                 _coloringModeSettingsForm.FormClosed += (s, args) => _coloringModeSettingsForm = null;
@@ -535,6 +534,7 @@ namespace FractalDraving
             _coloringRuntimeState.HistogramSettings = e.RuntimeState.HistogramSettings.Clone();
             _coloringRuntimeState.OrbitTrapSettings = e.RuntimeState.OrbitTrapSettings.Clone();
             _coloringRuntimeState.StripeAverageSettings = e.RuntimeState.StripeAverageSettings.Clone();
+            _coloringRuntimeState.PaletteTransform = e.RuntimeState.PaletteTransform.Clone();
             _coloringRuntimeState.InteriorMode = e.RuntimeState.InteriorMode;
             _coloringRuntimeState.InteriorColor = e.RuntimeState.InteriorColor;
 
@@ -551,6 +551,7 @@ namespace FractalDraving
             }
 
             UpdateEngineParameters();
+            ScheduleRender();
         }
 
         private void SyncLegacyModeComboFromRuntimeState()
@@ -1466,6 +1467,7 @@ namespace FractalDraving
                     // 2. Берем логарифм от ПРЯМОГО значения итерации (без цикличности).
                     double tLog = Math.Log(smoothIter + 1) / logMax;
                     tLog = Math.Pow(tLog, _coloringRuntimeState.SmoothBlendPower);
+                    tLog = TransformPaletteIndex(tLog);
 
                     // 3. Инвертируем значение для градиента от почти белого к черному.
                     int gray_level = (int)(255.0 * (1.0 - tLog));
@@ -1503,6 +1505,7 @@ namespace FractalDraving
                 //    (double) необходимо для корректного деления.
                 double t = cyclicIter / (double)effectiveMaxColorIterations;
                 t = Math.Pow(t, _coloringRuntimeState.SmoothBlendPower);
+                t = TransformPaletteIndex(t);
 
                 // 3. Остальная логика интерполяции цвета остается без изменений.
                 t = Math.Max(0.0, Math.Min(1.0, t));
@@ -1536,7 +1539,40 @@ namespace FractalDraving
             sb.Append(':');
             int effectiveMaxColorIterations = palette.AlignWithRenderIterations ? maxIterationsForAlignment : palette.MaxColorIterations;
             sb.Append(effectiveMaxColorIterations);
+            sb.Append(':');
+            sb.Append(_coloringRuntimeState.PaletteTransform.PhaseOffset.ToString("F4"));
+            sb.Append(':');
+            sb.Append(_coloringRuntimeState.PaletteTransform.Scale.ToString("F4"));
+            sb.Append(':');
+            sb.Append((int)_coloringRuntimeState.PaletteTransform.WrapMode);
             return sb.ToString();
+        }
+
+        private double TransformPaletteIndex(double t)
+        {
+            double scale = _coloringRuntimeState.PaletteTransform.Scale;
+            if (Math.Abs(scale) < 1e-9) scale = 1.0;
+
+            double transformed = t * scale + _coloringRuntimeState.PaletteTransform.PhaseOffset;
+            return _coloringRuntimeState.PaletteTransform.WrapMode switch
+            {
+                PaletteTransformWrapMode.Clamp => Math.Max(0.0, Math.Min(1.0, transformed)),
+                PaletteTransformWrapMode.Mirror => Mirror01(transformed),
+                _ => Repeat01(transformed)
+            };
+        }
+
+        private static double Repeat01(double t)
+        {
+            t -= Math.Floor(t);
+            return t;
+        }
+
+        private static double Mirror01(double t)
+        {
+            double period = t % 2.0;
+            if (period < 0.0) period += 2.0;
+            return period <= 1.0 ? period : 2.0 - period;
         }
 
         /// <summary>
@@ -1577,6 +1613,7 @@ namespace FractalDraving
                     double logMax = Math.Log(maxColorIter + 1);
                     if (logMax <= 0) return interiorColor;
                     double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
+                    tLog = TransformPaletteIndex(tLog);
                     int cVal = (int)(255.0 * (1 - tLog));
                     return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
                 };
@@ -1589,6 +1626,7 @@ namespace FractalDraving
             {
                 if (iter == maxIter) return interiorColor;
                 double normalizedIter = maxColorIter > 0 ? (double)Math.Min(iter, maxColorIter) / maxColorIter : 0;
+                normalizedIter = TransformPaletteIndex(normalizedIter);
                 Color baseColor;
                 if (isGradient)
                 {
@@ -1835,12 +1873,30 @@ namespace FractalDraving
                 }
             }
 
+            public sealed class PaletteTransformState
+            {
+                public double PhaseOffset { get; set; } = 0.0;
+                public double Scale { get; set; } = 1.0;
+                public PaletteTransformWrapMode WrapMode { get; set; } = PaletteTransformWrapMode.Repeat;
+
+                public PaletteTransformState Clone()
+                {
+                    return new PaletteTransformState
+                    {
+                        PhaseOffset = PhaseOffset,
+                        Scale = Scale,
+                        WrapMode = WrapMode
+                    };
+                }
+            }
+
             public ColoringModeRuntime ActiveMode { get; set; } = ColoringModeRuntime.Smooth;
             public double SmoothBlendPower { get; set; } = 1.0;
             public double SmoothIterationOffset { get; set; } = 0.0;
             public HistogramSettingsState HistogramSettings { get; set; } = new();
             public OrbitTrapSettingsState OrbitTrapSettings { get; set; } = new();
             public StripeAverageSettingsState StripeAverageSettings { get; set; } = new();
+            public PaletteTransformState PaletteTransform { get; set; } = new();
             public InteriorMode InteriorMode { get; set; } = InteriorMode.Black;
             public Color InteriorColor { get; set; } = Color.Black;
             public bool UseSmoothColoring => ActiveMode.ModeType == ColoringModeType.Smooth;
@@ -1865,10 +1921,18 @@ namespace FractalDraving
                     HistogramSettings = HistogramSettings.Clone(),
                     OrbitTrapSettings = OrbitTrapSettings.Clone(),
                     StripeAverageSettings = StripeAverageSettings.Clone(),
+                    PaletteTransform = PaletteTransform.Clone(),
                     InteriorMode = InteriorMode,
                     InteriorColor = InteriorColor
                 };
             }
+        }
+
+        public enum PaletteTransformWrapMode
+        {
+            Repeat = 0,
+            Clamp = 1,
+            Mirror = 2
         }
 
         public enum InteriorMode

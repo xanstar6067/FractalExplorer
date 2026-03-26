@@ -14,7 +14,6 @@ namespace FractalExplorer.Utilities
         private readonly PaletteManager _paletteManager;
         private readonly FractalMandelbrotFamilyForm.ColoringRuntimeState _workingState;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
-        private readonly Action? _scheduleRender;
 
         private readonly ComboBox _cbMode = new();
         private readonly ComboBox _cbPalette = new();
@@ -35,6 +34,9 @@ namespace FractalExplorer.Utilities
         private NumericUpDown? _nudStripeFrequency;
         private NumericUpDown? _nudStripeStrength;
         private NumericUpDown? _nudStripeBias;
+        private NumericUpDown? _nudPalettePhaseOffset;
+        private NumericUpDown? _nudPaletteScale;
+        private ComboBox? _cbPaletteWrapMode;
 
         public event EventHandler<ColoringModeSettingsAppliedEventArgs>? SettingsApplied;
 
@@ -42,12 +44,10 @@ namespace FractalExplorer.Utilities
             PaletteManager paletteManager,
             FractalMandelbrotFamilyForm.ColoringRuntimeState runtimeState,
             string? activePaletteName,
-            Icon? ownerIcon,
-            Action? scheduleRender = null)
+            Icon? ownerIcon)
         {
             _paletteManager = paletteManager ?? throw new ArgumentNullException(nameof(paletteManager));
             _workingState = runtimeState?.Clone() ?? throw new ArgumentNullException(nameof(runtimeState));
-            _scheduleRender = scheduleRender;
             ThemeManager.RegisterForm(this);
 
             InitializeUi();
@@ -204,6 +204,9 @@ namespace FractalExplorer.Utilities
             _nudStripeFrequency = null;
             _nudStripeStrength = null;
             _nudStripeBias = null;
+            _nudPalettePhaseOffset = null;
+            _nudPaletteScale = null;
+            _cbPaletteWrapMode = null;
 
             var selectedMode = (_cbMode.SelectedItem as ModeItem)?.Mode
                 ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
@@ -250,6 +253,68 @@ namespace FractalExplorer.Utilities
 
             _dynamicParametersPanel.Controls.Add(interiorLayout);
             UpdateInteriorControlsState();
+
+            var paletteTransformLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                ColumnCount = 2,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 12)
+            };
+            paletteTransformLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+            paletteTransformLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            var lblPaletteTransform = new Label
+            {
+                Text = "Преобразование палитры",
+                AutoSize = true,
+                Font = new Font(Font, FontStyle.Bold),
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(0, 8, 8, 0)
+            };
+            paletteTransformLayout.Controls.Add(lblPaletteTransform, 0, 0);
+            paletteTransformLayout.SetColumnSpan(lblPaletteTransform, 2);
+
+            paletteTransformLayout.Controls.Add(new Label { Text = "Phase offset:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
+            _nudPalettePhaseOffset = new NumericUpDown
+            {
+                DecimalPlaces = 3,
+                Minimum = -2.000m,
+                Maximum = 2.000m,
+                Increment = 0.010m,
+                Value = (decimal)Math.Max(-2.0, Math.Min(2.0, _workingState.PaletteTransform.PhaseOffset)),
+                Dock = DockStyle.Fill
+            };
+            paletteTransformLayout.Controls.Add(_nudPalettePhaseOffset, 1, 1);
+
+            paletteTransformLayout.Controls.Add(new Label { Text = "Scale:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 2);
+            _nudPaletteScale = new NumericUpDown
+            {
+                DecimalPlaces = 3,
+                Minimum = -5.000m,
+                Maximum = 5.000m,
+                Increment = 0.010m,
+                Value = (decimal)Math.Max(-5.0, Math.Min(5.0, _workingState.PaletteTransform.Scale)),
+                Dock = DockStyle.Fill
+            };
+            paletteTransformLayout.Controls.Add(_nudPaletteScale, 1, 2);
+
+            paletteTransformLayout.Controls.Add(new Label { Text = "Wrap mode:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 3);
+            _cbPaletteWrapMode = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Dock = DockStyle.Fill
+            };
+            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Repeat, "Repeat"));
+            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Clamp, "Clamp"));
+            _cbPaletteWrapMode.Items.Add(new PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Mirror, "Mirror"));
+            _cbPaletteWrapMode.SelectedItem = _cbPaletteWrapMode.Items
+                .OfType<PaletteWrapModeItem>()
+                .FirstOrDefault(x => x.Mode == _workingState.PaletteTransform.WrapMode)
+                ?? _cbPaletteWrapMode.Items[0];
+            paletteTransformLayout.Controls.Add(_cbPaletteWrapMode, 1, 3);
+
+            _dynamicParametersPanel.Controls.Add(paletteTransformLayout);
 
             if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.Smooth)
             {
@@ -485,13 +550,25 @@ namespace FractalExplorer.Utilities
             {
                 _workingState.StripeAverageSettings.Bias = (double)_nudStripeBias.Value;
             }
+            if (_nudPalettePhaseOffset is not null)
+            {
+                _workingState.PaletteTransform.PhaseOffset = (double)_nudPalettePhaseOffset.Value;
+            }
+            if (_nudPaletteScale is not null)
+            {
+                _workingState.PaletteTransform.Scale = (double)_nudPaletteScale.Value;
+            }
+            if (_cbPaletteWrapMode is not null)
+            {
+                _workingState.PaletteTransform.WrapMode = (_cbPaletteWrapMode.SelectedItem as PaletteWrapModeItem)?.Mode
+                    ?? FractalMandelbrotFamilyForm.PaletteTransformWrapMode.Repeat;
+            }
 
             var selectedPaletteName = (_cbPalette.SelectedItem as PaletteItem)?.PaletteName;
 
             SettingsApplied?.Invoke(this, new ColoringModeSettingsAppliedEventArgs(
                 _workingState.Clone(),
                 selectedPaletteName));
-            _scheduleRender?.Invoke();
 
             Close();
         }
@@ -530,6 +607,11 @@ namespace FractalExplorer.Utilities
         }
 
         private sealed record InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode Mode, string DisplayName)
+        {
+            public override string ToString() => DisplayName;
+        }
+
+        private sealed record PaletteWrapModeItem(FractalMandelbrotFamilyForm.PaletteTransformWrapMode Mode, string DisplayName)
         {
             public override string ToString() => DisplayName;
         }
