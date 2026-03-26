@@ -399,9 +399,6 @@ namespace FractalDraving
             _zoom = BaseScale / 4.0m;
             nudZoom.Value = _zoom;
 
-            cbSmooth.Items.Clear();
-            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
-            SyncLegacyModeComboFromRuntimeState();
             UpdateSmoothSettingsButtonState();
 
             if (nudRe != null && nudIm != null)
@@ -430,7 +427,6 @@ namespace FractalDraving
             nudZoom.ValueChanged += ParamControl_Changed;
             if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
-            cbSmooth.SelectedIndexChanged += CbSmooth_SelectedIndexChanged;
             btnSmoothSettings.Click += btnSmoothSettings_Click;
 
             btnRender.Click += (s, e) => ScheduleRender();
@@ -484,30 +480,8 @@ namespace FractalDraving
             ScheduleRender();
         }
 
-        private bool _isSyncingLegacyColoringMode;
-
-        private void CbSmooth_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_isSyncingLegacyColoringMode)
-            {
-                return;
-            }
-
-            _coloringRuntimeState.ActiveMode = cbSmooth.SelectedIndex == 1
-                ? ColoringModeRuntime.Smooth
-                : ColoringModeRuntime.Discrete;
-
-            UpdateSmoothSettingsButtonState();
-            ParamControl_Changed(sender, e);
-        }
-
         private void btnSmoothSettings_Click(object sender, EventArgs e)
         {
-            if (!btnSmoothSettings.Enabled)
-            {
-                return;
-            }
-
             if (_coloringModeSettingsForm == null || _coloringModeSettingsForm.IsDisposed)
             {
                 _coloringModeSettingsForm = new ColoringModeSettingsForm(
@@ -538,7 +512,6 @@ namespace FractalDraving
             _coloringRuntimeState.InteriorMode = e.RuntimeState.InteriorMode;
             _coloringRuntimeState.InteriorColor = e.RuntimeState.InteriorColor;
 
-            SyncLegacyModeComboFromRuntimeState();
             UpdateSmoothSettingsButtonState();
 
             if (!string.IsNullOrWhiteSpace(e.SelectedPaletteName))
@@ -554,22 +527,9 @@ namespace FractalDraving
             ScheduleRender();
         }
 
-        private void SyncLegacyModeComboFromRuntimeState()
-        {
-            _isSyncingLegacyColoringMode = true;
-            try
-            {
-                cbSmooth.SelectedIndex = _coloringRuntimeState.UseSmoothColoring ? 1 : 0;
-            }
-            finally
-            {
-                _isSyncingLegacyColoringMode = false;
-            }
-        }
-
         private void UpdateSmoothSettingsButtonState()
         {
-            btnSmoothSettings.Enabled = _coloringRuntimeState.ActiveMode.HasCustomParameters;
+            btnSmoothSettings.Enabled = true;
         }
 
         /// <summary>

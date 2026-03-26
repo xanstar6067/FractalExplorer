@@ -569,8 +569,6 @@ namespace FractalExplorer.Utilities
             SettingsApplied?.Invoke(this, new ColoringModeSettingsAppliedEventArgs(
                 _workingState.Clone(),
                 selectedPaletteName));
-
-            Close();
         }
 
         private void InteriorModeChanged(object? sender, EventArgs e) => UpdateInteriorControlsState();
