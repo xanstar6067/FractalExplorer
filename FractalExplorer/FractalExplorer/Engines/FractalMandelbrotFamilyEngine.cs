@@ -105,6 +105,7 @@ namespace FractalExplorer.Engines
         public bool HistogramEnabledEqualization { get; set; } = true;
         public double HistogramContrast { get; set; } = 1.0;
         public bool HistogramInputUseSmooth { get; set; } = true;
+        public Color InteriorColor { get; set; } = Color.Black;
 
         #endregion
 
@@ -188,11 +189,13 @@ namespace FractalExplorer.Engines
             {
                 ColoringModeType.Smooth when SmoothPalette != null => SmoothPalette(smoothValue),
                 ColoringModeType.Histogram => iter >= MaxIterations
-                    ? Color.Black
+                    ? ResolveInteriorColor()
                     : GetHistogramMappedColor((HistogramInputUseSmooth ? smoothValue : iter) / Math.Max(1.0, MaxIterations)),
                 _ => Palette(iter, MaxIterations, MaxColorIterations)
             };
         }
+
+        private Color ResolveInteriorColor() => InteriorColor;
 
         private Color GetHistogramMappedColor(double normalized)
         {
@@ -684,7 +687,7 @@ namespace FractalExplorer.Engines
                     int iter = iterData[idx];
                     int bin = Math.Max(0, Math.Min(MaxIterations, HistogramInputUseSmooth ? (int)Math.Floor(smoothData[idx]) : iter));
                     double normalized = HistogramEnabledEqualization ? cdf[bin] : bin / (double)Math.Max(1, MaxIterations);
-                    Color color = iter >= MaxIterations ? Color.Black : GetHistogramMappedColor(normalized);
+                    Color color = iter >= MaxIterations ? ResolveInteriorColor() : GetHistogramMappedColor(normalized);
                     int p = rowOffset + x * 3;
                     buffer[p] = color.B; buffer[p + 1] = color.G; buffer[p + 2] = color.R;
                 }
@@ -747,7 +750,7 @@ namespace FractalExplorer.Engines
                     int iter = iterData[idx];
                     int bin = Math.Max(0, Math.Min(MaxIterations, HistogramInputUseSmooth ? (int)Math.Floor(smoothData[idx]) : iter));
                     double normalized = HistogramEnabledEqualization ? cdf[bin] : bin / (double)Math.Max(1, MaxIterations);
-                    Color color = iter >= MaxIterations ? Color.Black : GetHistogramMappedColor(normalized);
+                    Color color = iter >= MaxIterations ? ResolveInteriorColor() : GetHistogramMappedColor(normalized);
                     int p = rowOffset + x * 3;
                     buffer[p] = color.B; buffer[p + 1] = color.G; buffer[p + 2] = color.R;
                 }

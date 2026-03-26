@@ -1,4 +1,5 @@
 ﻿using FractalDraving;
+using FractalExplorer.Utilities.ColorPicking;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.Theme;
 
@@ -12,12 +13,16 @@ namespace FractalExplorer.Utilities
     {
         private readonly PaletteManager _paletteManager;
         private readonly FractalMandelbrotFamilyForm.ColoringRuntimeState _workingState;
+        private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
 
         private readonly ComboBox _cbMode = new();
         private readonly ComboBox _cbPalette = new();
         private readonly Panel _dynamicParametersPanel = new();
         private readonly Button _btnApply = new();
         private readonly Button _btnCancel = new();
+        private readonly ComboBox _cbInteriorMode = new();
+        private readonly Button _btnPickInteriorColor = new();
+        private readonly Panel _pnlInteriorColorPreview = new();
 
         private NumericUpDown? _nudBlendPower;
         private NumericUpDown? _nudIterationOffset;
@@ -163,6 +168,18 @@ namespace FractalExplorer.Utilities
                 .FirstOrDefault(m => m.Mode == _workingState.ActiveMode.ModeType);
 
             _cbMode.SelectedItem = modeItem ?? _cbMode.Items.OfType<ModeItem>().FirstOrDefault();
+            if (_cbInteriorMode.Items.Count == 0)
+            {
+                _cbInteriorMode.Items.Add(new InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode.Black, "Black (совместимый)"));
+                _cbInteriorMode.Items.Add(new InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode.Custom, "Custom Color"));
+            }
+
+            _cbInteriorMode.SelectedItem = _cbInteriorMode.Items
+                .OfType<InteriorModeItem>()
+                .FirstOrDefault(m => m.Mode == _workingState.InteriorMode)
+                ?? _cbInteriorMode.Items.OfType<InteriorModeItem>().FirstOrDefault();
+            _pnlInteriorColorPreview.BackColor = _workingState.InteriorColor;
+            UpdateInteriorControlsState();
             RebuildDynamicParametersPanel();
         }
 
@@ -177,6 +194,49 @@ namespace FractalExplorer.Utilities
 
             var selectedMode = (_cbMode.SelectedItem as ModeItem)?.Mode
                 ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
+
+            var interiorLayout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                ColumnCount = 2,
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 12)
+            };
+            interiorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+            interiorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            _cbInteriorMode.DropDownStyle = ComboBoxStyle.DropDownList;
+            _cbInteriorMode.Dock = DockStyle.Fill;
+            _cbInteriorMode.SelectedIndexChanged -= InteriorModeChanged;
+            _cbInteriorMode.SelectedIndexChanged += InteriorModeChanged;
+
+            _btnPickInteriorColor.Text = "Выбрать цвет…";
+            _btnPickInteriorColor.AutoSize = true;
+            _btnPickInteriorColor.Click -= BtnPickInteriorColor_Click;
+            _btnPickInteriorColor.Click += BtnPickInteriorColor_Click;
+
+            _pnlInteriorColorPreview.Width = 36;
+            _pnlInteriorColorPreview.Height = 22;
+            _pnlInteriorColorPreview.Margin = new Padding(8, 0, 0, 0);
+            _pnlInteriorColorPreview.BorderStyle = BorderStyle.FixedSingle;
+
+            var colorPickerRow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+            colorPickerRow.Controls.Add(_btnPickInteriorColor);
+            colorPickerRow.Controls.Add(_pnlInteriorColorPreview);
+
+            interiorLayout.Controls.Add(new Label { Text = "Interior-режим:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
+            interiorLayout.Controls.Add(_cbInteriorMode, 1, 0);
+            interiorLayout.Controls.Add(new Label { Text = "Interior-цвет:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
+            interiorLayout.Controls.Add(colorPickerRow, 1, 1);
+
+            _dynamicParametersPanel.Controls.Add(interiorLayout);
+            UpdateInteriorControlsState();
 
             if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.Smooth)
             {
@@ -278,6 +338,9 @@ namespace FractalExplorer.Utilities
                 ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
 
             _workingState.ActiveMode = FractalMandelbrotFamilyForm.ColoringModeRuntime.FromType(mode);
+            _workingState.InteriorMode = (_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode
+                ?? FractalMandelbrotFamilyForm.InteriorMode.Black;
+            _workingState.InteriorColor = _pnlInteriorColorPreview.BackColor;
             if (_nudBlendPower is not null)
             {
                 _workingState.SmoothBlendPower = (double)_nudBlendPower.Value;
@@ -309,12 +372,40 @@ namespace FractalExplorer.Utilities
             Close();
         }
 
+        private void InteriorModeChanged(object? sender, EventArgs e) => UpdateInteriorControlsState();
+
+        private void UpdateInteriorControlsState()
+        {
+            bool isCustom = (_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode == FractalMandelbrotFamilyForm.InteriorMode.Custom;
+            _btnPickInteriorColor.Enabled = isCustom;
+            _pnlInteriorColorPreview.BackColor = isCustom ? _workingState.InteriorColor : Color.Black;
+        }
+
+        private void BtnPickInteriorColor_Click(object? sender, EventArgs e)
+        {
+            if (!_colorSelectionService.TrySelectColor(this, _workingState.InteriorColor, out var selectedColor))
+            {
+                return;
+            }
+
+            _workingState.InteriorColor = selectedColor;
+            if ((_cbInteriorMode.SelectedItem as InteriorModeItem)?.Mode == FractalMandelbrotFamilyForm.InteriorMode.Custom)
+            {
+                _pnlInteriorColorPreview.BackColor = selectedColor;
+            }
+        }
+
         private sealed record ModeItem(FractalMandelbrotFamilyForm.ColoringModeType Mode, string DisplayName)
         {
             public override string ToString() => DisplayName;
         }
 
         private sealed record PaletteItem(string PaletteName, string DisplayName)
+        {
+            public override string ToString() => DisplayName;
+        }
+
+        private sealed record InteriorModeItem(FractalMandelbrotFamilyForm.InteriorMode Mode, string DisplayName)
         {
             public override string ToString() => DisplayName;
         }

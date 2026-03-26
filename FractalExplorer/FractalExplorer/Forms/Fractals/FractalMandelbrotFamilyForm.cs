@@ -532,6 +532,8 @@ namespace FractalDraving
             _coloringRuntimeState.SmoothBlendPower = e.RuntimeState.SmoothBlendPower;
             _coloringRuntimeState.SmoothIterationOffset = e.RuntimeState.SmoothIterationOffset;
             _coloringRuntimeState.HistogramSettings = e.RuntimeState.HistogramSettings.Clone();
+            _coloringRuntimeState.InteriorMode = e.RuntimeState.InteriorMode;
+            _coloringRuntimeState.InteriorColor = e.RuntimeState.InteriorColor;
 
             SyncLegacyModeComboFromRuntimeState();
             UpdateSmoothSettingsButtonState();
@@ -776,6 +778,7 @@ namespace FractalDraving
             renderEngineCopy.HistogramEnabledEqualization = _fractalEngine.HistogramEnabledEqualization;
             renderEngineCopy.HistogramContrast = _fractalEngine.HistogramContrast;
             renderEngineCopy.HistogramInputUseSmooth = _fractalEngine.HistogramInputUseSmooth;
+            renderEngineCopy.InteriorColor = _fractalEngine.InteriorColor;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var threadCount = GetThreadCount();
@@ -925,6 +928,7 @@ namespace FractalDraving
             renderEngineCopy.HistogramEnabledEqualization = _fractalEngine.HistogramEnabledEqualization;
             renderEngineCopy.HistogramContrast = _fractalEngine.HistogramContrast;
             renderEngineCopy.HistogramInputUseSmooth = _fractalEngine.HistogramInputUseSmooth;
+            renderEngineCopy.InteriorColor = _fractalEngine.InteriorColor;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var threadCount = GetThreadCount();
@@ -1336,6 +1340,14 @@ namespace FractalDraving
             engine.HistogramEnabledEqualization = _coloringRuntimeState.HistogramSettings.EnabledEqualization;
             engine.HistogramContrast = _coloringRuntimeState.HistogramSettings.Contrast;
             engine.HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth;
+            engine.InteriorColor = ResolveInteriorColor();
+        }
+
+        private Color ResolveInteriorColor()
+        {
+            return _coloringRuntimeState.InteriorMode == InteriorMode.Custom
+                ? _coloringRuntimeState.InteriorColor
+                : Color.Black;
         }
 
         /// <summary>
@@ -1417,6 +1429,7 @@ namespace FractalDraving
             double gamma = palette.Gamma;
             var colors = new List<Color>(palette.Colors);
             int colorCount = colors.Count;
+            Color interiorColor = ResolveInteriorColor();
 
             // Эта палитра должна быть плавной по всему диапазону итераций,
             // поэтому она намеренно ИГНОРИРУЕТ effectiveMaxColorIterations, чтобы избежать "ломаных" переходов.
@@ -1425,13 +1438,13 @@ namespace FractalDraving
                 return (smoothIter) =>
                 {
                     smoothIter += _coloringRuntimeState.SmoothIterationOffset;
-                    if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                    if (smoothIter >= _fractalEngine.MaxIterations) return interiorColor;
                     if (smoothIter < 0) smoothIter = 0;
 
                     // 1. Используем ОБЩЕЕ количество итераций рендера для масштабирования.
                     //    Это ключ к плавному градиенту без разрывов.
                     double logMax = Math.Log(_fractalEngine.MaxIterations + 1);
-                    if (logMax <= 0) return Color.Black; // Защита от деления на ноль
+                    if (logMax <= 0) return interiorColor; // Защита от деления на ноль
 
                     // 2. Берем логарифм от ПРЯМОГО значения итерации (без цикличности).
                     double tLog = Math.Log(smoothIter + 1) / logMax;
@@ -1452,18 +1465,18 @@ namespace FractalDraving
             // Защита от деления на ноль, если период не задан.
             if (effectiveMaxColorIterations <= 0)
             {
-                return (smoothIter) => Color.Black;
+                return (smoothIter) => interiorColor;
             }
 
             // Обработка крайних случаев.
-            if (colorCount == 0) return (smoothIter) => Color.Black;
-            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? Color.Black : ColorCorrection.ApplyGamma(colors[0], gamma);
+            if (colorCount == 0) return (smoothIter) => interiorColor;
+            if (colorCount == 1) return (smoothIter) => (smoothIter >= _fractalEngine.MaxIterations) ? interiorColor : ColorCorrection.ApplyGamma(colors[0], gamma);
 
             // Общая логика для всех цветных градиентных палитр.
             return (smoothIter) =>
             {
                 smoothIter += _coloringRuntimeState.SmoothIterationOffset;
-                if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
+                if (smoothIter >= _fractalEngine.MaxIterations) return interiorColor;
                 if (smoothIter < 0) smoothIter = 0;
 
                 // 1. Берем остаток от деления, чтобы получить значение внутри одного цикла/периода.
@@ -1537,26 +1550,27 @@ namespace FractalDraving
             var colors = new List<Color>(palette.Colors);
             bool isGradient = palette.IsGradient;
             int colorCount = colors.Count;
+            Color interiorColor = ResolveInteriorColor();
 
             if (palette.Name == "Стандартный серый")
             {
                 return (iter, maxIter, maxColorIter) =>
                 {
-                    if (iter == maxIter) return Color.Black;
+                    if (iter == maxIter) return interiorColor;
                     double logMax = Math.Log(maxColorIter + 1);
-                    if (logMax <= 0) return Color.Black;
+                    if (logMax <= 0) return interiorColor;
                     double tLog = Math.Log(Math.Min(iter, maxColorIter) + 1) / logMax;
                     int cVal = (int)(255.0 * (1 - tLog));
                     return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
                 };
             }
 
-            if (colorCount == 0) return (i, m, mc) => Color.Black;
-            if (colorCount == 1) return (iter, max, clrMax) => ColorCorrection.ApplyGamma((iter == max) ? Color.Black : colors[0], gamma);
+            if (colorCount == 0) return (i, m, mc) => interiorColor;
+            if (colorCount == 1) return (iter, max, clrMax) => ColorCorrection.ApplyGamma((iter == max) ? interiorColor : colors[0], gamma);
 
             return (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter) return Color.Black;
+                if (iter == maxIter) return interiorColor;
                 double normalizedIter = maxColorIter > 0 ? (double)Math.Min(iter, maxColorIter) / maxColorIter : 0;
                 Color baseColor;
                 if (isGradient)
@@ -1604,7 +1618,7 @@ namespace FractalDraving
             _fractalEngine.MaxColorIterations = effectiveMaxColorIterations;
             _fractalEngine.Palette = (iter, maxIter, maxColorIter) =>
             {
-                if (iter == maxIter) return Color.Black;
+                if (iter == maxIter) return ResolveInteriorColor();
                 int index = Math.Min(iter, _gammaCorrectedPaletteCache.Length - 1);
                 return _gammaCorrectedPaletteCache[index];
             };
@@ -1776,11 +1790,18 @@ namespace FractalDraving
             public double SmoothBlendPower { get; set; } = 1.0;
             public double SmoothIterationOffset { get; set; } = 0.0;
             public HistogramSettingsState HistogramSettings { get; set; } = new();
+            public InteriorMode InteriorMode { get; set; } = InteriorMode.Black;
+            public Color InteriorColor { get; set; } = Color.Black;
             public bool UseSmoothColoring => ActiveMode.ModeType == ColoringModeType.Smooth;
 
             public static ColoringRuntimeState CreateDefault()
             {
-                return new ColoringRuntimeState { ActiveMode = ColoringModeRuntime.Smooth };
+                return new ColoringRuntimeState
+                {
+                    ActiveMode = ColoringModeRuntime.Smooth,
+                    InteriorMode = InteriorMode.Black,
+                    InteriorColor = Color.Black
+                };
             }
 
             public ColoringRuntimeState Clone()
@@ -1790,9 +1811,17 @@ namespace FractalDraving
                     ActiveMode = ActiveMode,
                     SmoothBlendPower = SmoothBlendPower,
                     SmoothIterationOffset = SmoothIterationOffset,
-                    HistogramSettings = HistogramSettings.Clone()
+                    HistogramSettings = HistogramSettings.Clone(),
+                    InteriorMode = InteriorMode,
+                    InteriorColor = InteriorColor
                 };
             }
+        }
+
+        public enum InteriorMode
+        {
+            Black = 0,
+            Custom = 1
         }
 
         public enum ColoringModeType
