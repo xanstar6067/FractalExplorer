@@ -23,6 +23,10 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public ComplexDecimal? JuliaC { get; set; }
         public string FileNameDetails { get; set; }
         public bool UseSmoothColoring { get; set; }
+        public int ColoringMode { get; set; }
+        public bool HistogramEnabledEqualization { get; set; }
+        public double HistogramContrast { get; set; }
+        public bool HistogramInputUseSmooth { get; set; }
         public decimal? Power { get; set; }
         public decimal Scale { get; set; }
         public bool UseInversion { get; set; }

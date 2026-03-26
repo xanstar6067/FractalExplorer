@@ -10,6 +10,15 @@ using System.Threading.Tasks;
 
 namespace FractalExplorer.Engines
 {
+    public enum ColoringModeType
+    {
+        Discrete = 0,
+        Smooth = 1,
+        Histogram = 2,
+        OrbitTrap = 3,
+        StripeAverage = 4
+    }
+
     /// <summary>
     /// Абстрактный базовый класс для движков рендеринга фракталов семейства Мандельброта.
     /// Инкапсулирует общую логику, управление параметрами и поддерживает адаптивную точность вычислений,
@@ -92,6 +101,10 @@ namespace FractalExplorer.Engines
         /// Получает или задает максимальное количество итераций для нормализации цвета в палитре (для дискретного режима).
         /// </summary>
         public int MaxColorIterations { get; set; } = 1000;
+        public ColoringModeType ActiveMode { get; set; } = ColoringModeType.Smooth;
+        public bool HistogramEnabledEqualization { get; set; } = true;
+        public double HistogramContrast { get; set; } = 1.0;
+        public bool HistogramInputUseSmooth { get; set; } = true;
 
         #endregion
 
@@ -169,6 +182,51 @@ namespace FractalExplorer.Engines
             return iter + 1 - nu;
         }
 
+        private Color GetColorByMode(int iter, double smoothValue)
+        {
+            return ActiveMode switch
+            {
+                ColoringModeType.Smooth when SmoothPalette != null => SmoothPalette(smoothValue),
+                ColoringModeType.Histogram => iter >= MaxIterations
+                    ? Color.Black
+                    : GetHistogramMappedColor((HistogramInputUseSmooth ? smoothValue : iter) / Math.Max(1.0, MaxIterations)),
+                _ => Palette(iter, MaxIterations, MaxColorIterations)
+            };
+        }
+
+        private Color GetHistogramMappedColor(double normalized)
+        {
+            if (normalized < 0) normalized = 0;
+            if (normalized > 1) normalized = 1;
+
+            if (HistogramContrast > 0 && Math.Abs(HistogramContrast - 1.0) > 0.0001)
+            {
+                normalized = Math.Pow(normalized, 1.0 / HistogramContrast);
+            }
+
+            if (SmoothPalette != null && HistogramInputUseSmooth)
+            {
+                return SmoothPalette(normalized * MaxColorIterations);
+            }
+
+            int paletteIter = (int)Math.Round(normalized * MaxColorIterations);
+            return Palette(paletteIter, MaxIterations, MaxColorIterations);
+        }
+
+        private static double[] BuildHistogramCdf(int[] bins, int totalSamples)
+        {
+            var cdf = new double[bins.Length];
+            if (totalSamples <= 0) return cdf;
+
+            long cumulative = 0;
+            for (int i = 0; i < bins.Length; i++)
+            {
+                cumulative += bins[i];
+                cdf[i] = (double)cumulative / totalSamples;
+            }
+            return cdf;
+        }
+
         #endregion
 
         #region Public Rendering Methods
@@ -244,6 +302,12 @@ namespace FractalExplorer.Engines
         public Bitmap RenderToBitmap(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken = default)
         {
             if (renderWidth <= 0 || renderHeight <= 0) return new Bitmap(1, 1);
+            if (ActiveMode == ColoringModeType.Histogram)
+            {
+                return Scale < SCALE_THRESHOLD_FOR_DECIMAL
+                    ? RenderToBitmapHistogramDecimal(renderWidth, renderHeight, numThreads, reportProgressCallback, cancellationToken)
+                    : RenderToBitmapHistogramDouble(renderWidth, renderHeight, numThreads, reportProgressCallback, cancellationToken);
+            }
 
             Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
             BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -273,9 +337,7 @@ namespace FractalExplorer.Engines
 
                             iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
-                            Color pixelColor = UseSmoothColoring && SmoothPalette != null
-                                ? SmoothPalette(CalculateSmoothValue(iter, z))
-                                : Palette(iter, MaxIterations, MaxColorIterations);
+                            Color pixelColor = GetColorByMode(iter, CalculateSmoothValue(iter, z));
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -309,9 +371,7 @@ namespace FractalExplorer.Engines
 
                             iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
-                            Color pixelColor = UseSmoothColoring && SmoothPalette != null
-                                ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                                : Palette(iter, MaxIterations, MaxColorIterations);
+                            Color pixelColor = GetColorByMode(iter, CalculateSmoothValueDouble(iter, z));
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -573,6 +633,132 @@ namespace FractalExplorer.Engines
             };
         }
 
+        private Bitmap RenderToBitmapHistogramDecimal(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken)
+        {
+            Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            byte[] buffer = new byte[Math.Abs(bmpData.Stride) * renderHeight];
+
+            int total = renderWidth * renderHeight;
+            int[] iterData = new int[total];
+            double[] smoothData = HistogramInputUseSmooth ? new double[total] : Array.Empty<double>();
+            int[] bins = new int[MaxIterations + 1];
+            object binsLock = new object();
+
+            decimal halfWidthPixels = renderWidth / 2.0m;
+            decimal halfHeightPixels = renderHeight / 2.0m;
+            decimal unitsPerPixel = Scale / renderWidth;
+            IterationCalculatorDecimal iterationCalculator = CreateDecimalIterationCalculator();
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
+
+            Parallel.For(0, renderHeight, po, y =>
+            {
+                int[] localBins = new int[bins.Length];
+                for (int x = 0; x < renderWidth; x++)
+                {
+                    int idx = y * renderWidth + x;
+                    decimal re = CenterX + (x - halfWidthPixels) * unitsPerPixel;
+                    decimal im = CenterY - (y - halfHeightPixels) * unitsPerPixel;
+
+                    iterationCalculator(re, im, out int iter, out ComplexDecimal z);
+                    iterData[idx] = iter;
+                    double smoothValue = CalculateSmoothValue(iter, z);
+                    if (HistogramInputUseSmooth) smoothData[idx] = smoothValue;
+                    int bin = Math.Max(0, Math.Min(MaxIterations, HistogramInputUseSmooth ? (int)Math.Floor(smoothValue) : iter));
+                    localBins[bin]++;
+                }
+                lock (binsLock)
+                {
+                    for (int i = 0; i < bins.Length; i++) bins[i] += localBins[i];
+                }
+                reportProgressCallback((int)(50.0 * (y + 1) / renderHeight));
+            });
+
+            var cdf = BuildHistogramCdf(bins, total);
+            for (int y = 0; y < renderHeight; y++)
+            {
+                int rowOffset = y * bmpData.Stride;
+                for (int x = 0; x < renderWidth; x++)
+                {
+                    int idx = y * renderWidth + x;
+                    int iter = iterData[idx];
+                    int bin = Math.Max(0, Math.Min(MaxIterations, HistogramInputUseSmooth ? (int)Math.Floor(smoothData[idx]) : iter));
+                    double normalized = HistogramEnabledEqualization ? cdf[bin] : bin / (double)Math.Max(1, MaxIterations);
+                    Color color = iter >= MaxIterations ? Color.Black : GetHistogramMappedColor(normalized);
+                    int p = rowOffset + x * 3;
+                    buffer[p] = color.B; buffer[p + 1] = color.G; buffer[p + 2] = color.R;
+                }
+                reportProgressCallback(50 + (int)(50.0 * (y + 1) / renderHeight));
+            }
+
+            Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+
+        private Bitmap RenderToBitmapHistogramDouble(int renderWidth, int renderHeight, int numThreads, Action<int> reportProgressCallback, CancellationToken cancellationToken)
+        {
+            Bitmap bmp = new Bitmap(renderWidth, renderHeight, PixelFormat.Format24bppRgb);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, renderWidth, renderHeight), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            byte[] buffer = new byte[Math.Abs(bmpData.Stride) * renderHeight];
+
+            int total = renderWidth * renderHeight;
+            int[] iterData = new int[total];
+            double[] smoothData = HistogramInputUseSmooth ? new double[total] : Array.Empty<double>();
+            int[] bins = new int[MaxIterations + 1];
+            object binsLock = new object();
+
+            double halfWidthPixels = renderWidth / 2.0;
+            double halfHeightPixels = renderHeight / 2.0;
+            double unitsPerPixel = (double)Scale / renderWidth;
+            IterationCalculatorDouble iterationCalculator = CreateDoubleIterationCalculator();
+            ParallelOptions po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = cancellationToken };
+
+            Parallel.For(0, renderHeight, po, y =>
+            {
+                int[] localBins = new int[bins.Length];
+                for (int x = 0; x < renderWidth; x++)
+                {
+                    int idx = y * renderWidth + x;
+                    double re = (double)CenterX + (x - halfWidthPixels) * unitsPerPixel;
+                    double im = (double)CenterY - (y - halfHeightPixels) * unitsPerPixel;
+
+                    iterationCalculator(re, im, out int iter, out ComplexDouble z);
+                    iterData[idx] = iter;
+                    double smoothValue = CalculateSmoothValueDouble(iter, z);
+                    if (HistogramInputUseSmooth) smoothData[idx] = smoothValue;
+                    int bin = Math.Max(0, Math.Min(MaxIterations, HistogramInputUseSmooth ? (int)Math.Floor(smoothValue) : iter));
+                    localBins[bin]++;
+                }
+                lock (binsLock)
+                {
+                    for (int i = 0; i < bins.Length; i++) bins[i] += localBins[i];
+                }
+                reportProgressCallback((int)(50.0 * (y + 1) / renderHeight));
+            });
+
+            var cdf = BuildHistogramCdf(bins, total);
+            for (int y = 0; y < renderHeight; y++)
+            {
+                int rowOffset = y * bmpData.Stride;
+                for (int x = 0; x < renderWidth; x++)
+                {
+                    int idx = y * renderWidth + x;
+                    int iter = iterData[idx];
+                    int bin = Math.Max(0, Math.Min(MaxIterations, HistogramInputUseSmooth ? (int)Math.Floor(smoothData[idx]) : iter));
+                    double normalized = HistogramEnabledEqualization ? cdf[bin] : bin / (double)Math.Max(1, MaxIterations);
+                    Color color = iter >= MaxIterations ? Color.Black : GetHistogramMappedColor(normalized);
+                    int p = rowOffset + x * 3;
+                    buffer[p] = color.B; buffer[p + 1] = color.G; buffer[p + 2] = color.R;
+                }
+                reportProgressCallback(50 + (int)(50.0 * (y + 1) / renderHeight));
+            }
+
+            Marshal.Copy(buffer, 0, bmpData.Scan0, buffer.Length);
+            bmp.UnlockBits(bmpData);
+            return bmp;
+        }
+
         /// <summary>
         /// Вспомогательный метод для рендеринга тайла с высокой точностью (<see cref="decimal"/>).
         /// </summary>
@@ -605,9 +791,7 @@ namespace FractalExplorer.Engines
 
                     iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
-                    Color pixelColor = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValue(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                    Color pixelColor = GetColorByMode(iter, CalculateSmoothValue(iter, z));
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
                     buffer[bufferIndex] = pixelColor.B;
@@ -652,9 +836,7 @@ namespace FractalExplorer.Engines
 
                     iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
-                    Color pixelColor = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                    Color pixelColor = GetColorByMode(iter, CalculateSmoothValueDouble(iter, z));
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
                     buffer[bufferIndex] = pixelColor.B;
@@ -702,9 +884,7 @@ namespace FractalExplorer.Engines
 
                     iterationCalculator(re, im, out int iter, out ComplexDecimal z);
 
-                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValue(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                    highResColorBuffer[x, y] = GetColorByMode(iter, CalculateSmoothValue(iter, z));
                 }
             });
 
@@ -773,9 +953,7 @@ namespace FractalExplorer.Engines
 
                     iterationCalculator(re, im, out int iter, out ComplexDouble z);
 
-                    highResColorBuffer[x, y] = UseSmoothColoring && SmoothPalette != null
-                        ? SmoothPalette(CalculateSmoothValueDouble(iter, z))
-                        : Palette(iter, MaxIterations, MaxColorIterations);
+                    highResColorBuffer[x, y] = GetColorByMode(iter, CalculateSmoothValueDouble(iter, z));
                 }
             });
 

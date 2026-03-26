@@ -531,6 +531,7 @@ namespace FractalDraving
             _coloringRuntimeState.ActiveMode = e.RuntimeState.ActiveMode;
             _coloringRuntimeState.SmoothBlendPower = e.RuntimeState.SmoothBlendPower;
             _coloringRuntimeState.SmoothIterationOffset = e.RuntimeState.SmoothIterationOffset;
+            _coloringRuntimeState.HistogramSettings = e.RuntimeState.HistogramSettings.Clone();
 
             SyncLegacyModeComboFromRuntimeState();
             UpdateSmoothSettingsButtonState();
@@ -771,6 +772,10 @@ namespace FractalDraving
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
+            renderEngineCopy.ActiveMode = _fractalEngine.ActiveMode;
+            renderEngineCopy.HistogramEnabledEqualization = _fractalEngine.HistogramEnabledEqualization;
+            renderEngineCopy.HistogramContrast = _fractalEngine.HistogramContrast;
+            renderEngineCopy.HistogramInputUseSmooth = _fractalEngine.HistogramInputUseSmooth;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var threadCount = GetThreadCount();
@@ -916,6 +921,10 @@ namespace FractalDraving
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
+            renderEngineCopy.ActiveMode = _fractalEngine.ActiveMode;
+            renderEngineCopy.HistogramEnabledEqualization = _fractalEngine.HistogramEnabledEqualization;
+            renderEngineCopy.HistogramContrast = _fractalEngine.HistogramContrast;
+            renderEngineCopy.HistogramInputUseSmooth = _fractalEngine.HistogramInputUseSmooth;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
             var threadCount = GetThreadCount();
@@ -1315,9 +1324,18 @@ namespace FractalDraving
             _fractalEngine.Scale = BaseScale / _zoom;
 
             _fractalEngine.UseSmoothColoring = IsSmoothColoringEnabled();
+            ApplyColoringRuntimeToEngine(_fractalEngine);
 
             UpdateEngineSpecificParameters();
             ApplyActivePalette();
+        }
+
+        private void ApplyColoringRuntimeToEngine(FractalMandelbrotFamilyEngine engine)
+        {
+            engine.ActiveMode = (FractalExplorer.Engines.ColoringModeType)_coloringRuntimeState.ActiveMode.ModeType;
+            engine.HistogramEnabledEqualization = _coloringRuntimeState.HistogramSettings.EnabledEqualization;
+            engine.HistogramContrast = _coloringRuntimeState.HistogramSettings.Contrast;
+            engine.HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth;
         }
 
         /// <summary>
@@ -1737,9 +1755,27 @@ namespace FractalDraving
         /// </summary>
         public sealed class ColoringRuntimeState
         {
+            public sealed class HistogramSettingsState
+            {
+                public bool EnabledEqualization { get; set; } = true;
+                public double Contrast { get; set; } = 1.0;
+                public bool InputUseSmooth { get; set; } = true;
+
+                public HistogramSettingsState Clone()
+                {
+                    return new HistogramSettingsState
+                    {
+                        EnabledEqualization = EnabledEqualization,
+                        Contrast = Contrast,
+                        InputUseSmooth = InputUseSmooth
+                    };
+                }
+            }
+
             public ColoringModeRuntime ActiveMode { get; set; } = ColoringModeRuntime.Smooth;
             public double SmoothBlendPower { get; set; } = 1.0;
             public double SmoothIterationOffset { get; set; } = 0.0;
+            public HistogramSettingsState HistogramSettings { get; set; } = new();
             public bool UseSmoothColoring => ActiveMode.ModeType == ColoringModeType.Smooth;
 
             public static ColoringRuntimeState CreateDefault()
@@ -1753,7 +1789,8 @@ namespace FractalDraving
                 {
                     ActiveMode = ActiveMode,
                     SmoothBlendPower = SmoothBlendPower,
-                    SmoothIterationOffset = SmoothIterationOffset
+                    SmoothIterationOffset = SmoothIterationOffset,
+                    HistogramSettings = HistogramSettings.Clone()
                 };
             }
         }
@@ -2035,7 +2072,11 @@ namespace FractalDraving
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = this.GetSaveFileNameDetails(),
-                UseSmoothColoring = IsSmoothColoringEnabled()
+                UseSmoothColoring = IsSmoothColoringEnabled(),
+                ColoringMode = (int)_coloringRuntimeState.ActiveMode.ModeType,
+                HistogramEnabledEqualization = _coloringRuntimeState.HistogramSettings.EnabledEqualization,
+                HistogramContrast = _coloringRuntimeState.HistogramSettings.Contrast,
+                HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
@@ -2098,6 +2139,10 @@ namespace FractalDraving
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
 
             engine.UseSmoothColoring = state.UseSmoothColoring;
+            engine.ActiveMode = (FractalExplorer.Engines.ColoringModeType)state.ColoringMode;
+            engine.HistogramEnabledEqualization = state.HistogramEnabledEqualization;
+            engine.HistogramContrast = state.HistogramContrast;
+            engine.HistogramInputUseSmooth = state.HistogramInputUseSmooth;
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
             engine.MaxColorIterations = effectiveMaxColorIterations;
 

@@ -21,6 +21,9 @@ namespace FractalExplorer.Utilities
 
         private NumericUpDown? _nudBlendPower;
         private NumericUpDown? _nudIterationOffset;
+        private CheckBox? _chkHistogramEqualization;
+        private NumericUpDown? _nudHistogramContrast;
+        private CheckBox? _chkHistogramInputUseSmooth;
 
         public event EventHandler<ColoringModeSettingsAppliedEventArgs>? SettingsApplied;
 
@@ -168,55 +171,105 @@ namespace FractalExplorer.Utilities
             _dynamicParametersPanel.Controls.Clear();
             _nudBlendPower = null;
             _nudIterationOffset = null;
+            _chkHistogramEqualization = null;
+            _nudHistogramContrast = null;
+            _chkHistogramInputUseSmooth = null;
 
             var selectedMode = (_cbMode.SelectedItem as ModeItem)?.Mode
                 ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
 
-            if (selectedMode != FractalMandelbrotFamilyForm.ColoringModeType.Smooth)
+            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.Smooth)
             {
-                _dynamicParametersPanel.Controls.Add(new Label
+                var layout = new TableLayoutPanel
                 {
                     Dock = DockStyle.Top,
-                    AutoSize = true,
-                    Text = "У выбранного режима нет дополнительных параметров."
-                });
+                    ColumnCount = 2,
+                    AutoSize = true
+                };
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+                layout.Controls.Add(new Label { Text = "Плавность (степень):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
+                _nudBlendPower = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = 0.10m,
+                    Maximum = 5.00m,
+                    Increment = 0.05m,
+                    Value = (decimal)Math.Max(0.10, Math.Min(5.00, _workingState.SmoothBlendPower)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudBlendPower, 1, 0);
+
+                layout.Controls.Add(new Label { Text = "Смещение итерации:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
+                _nudIterationOffset = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = -100.00m,
+                    Maximum = 100.00m,
+                    Increment = 0.10m,
+                    Value = (decimal)Math.Max(-100.00, Math.Min(100.00, _workingState.SmoothIterationOffset)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudIterationOffset, 1, 1);
+
+                _dynamicParametersPanel.Controls.Add(layout);
                 return;
             }
 
-            var layout = new TableLayoutPanel
+            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.Histogram)
+            {
+                var layout = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Top,
+                    ColumnCount = 2,
+                    AutoSize = true
+                };
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+                _chkHistogramEqualization = new CheckBox
+                {
+                    AutoSize = true,
+                    Text = "Включить equalization (CDF)",
+                    Checked = _workingState.HistogramSettings.EnabledEqualization,
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_chkHistogramEqualization, 0, 0);
+                layout.SetColumnSpan(_chkHistogramEqualization, 2);
+
+                layout.Controls.Add(new Label { Text = "Контраст:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
+                _nudHistogramContrast = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = 0.10m,
+                    Maximum = 4.00m,
+                    Increment = 0.05m,
+                    Value = (decimal)Math.Max(0.10, Math.Min(4.00, _workingState.HistogramSettings.Contrast)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudHistogramContrast, 1, 1);
+
+                _chkHistogramInputUseSmooth = new CheckBox
+                {
+                    AutoSize = true,
+                    Text = "Вход по smooth-итерациям",
+                    Checked = _workingState.HistogramSettings.InputUseSmooth,
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_chkHistogramInputUseSmooth, 0, 2);
+                layout.SetColumnSpan(_chkHistogramInputUseSmooth, 2);
+
+                _dynamicParametersPanel.Controls.Add(layout);
+                return;
+            }
+
+            _dynamicParametersPanel.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
-                ColumnCount = 2,
-                AutoSize = true
-            };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-            layout.Controls.Add(new Label { Text = "Плавность (степень):", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
-            _nudBlendPower = new NumericUpDown
-            {
-                DecimalPlaces = 2,
-                Minimum = 0.10m,
-                Maximum = 5.00m,
-                Increment = 0.05m,
-                Value = (decimal)Math.Max(0.10, Math.Min(5.00, _workingState.SmoothBlendPower)),
-                Dock = DockStyle.Fill
-            };
-            layout.Controls.Add(_nudBlendPower, 1, 0);
-
-            layout.Controls.Add(new Label { Text = "Смещение итерации:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
-            _nudIterationOffset = new NumericUpDown
-            {
-                DecimalPlaces = 2,
-                Minimum = -100.00m,
-                Maximum = 100.00m,
-                Increment = 0.10m,
-                Value = (decimal)Math.Max(-100.00, Math.Min(100.00, _workingState.SmoothIterationOffset)),
-                Dock = DockStyle.Fill
-            };
-            layout.Controls.Add(_nudIterationOffset, 1, 1);
-
-            _dynamicParametersPanel.Controls.Add(layout);
+                AutoSize = true,
+                Text = "У выбранного режима нет дополнительных параметров."
+            });
         }
 
         private void BtnApply_Click(object? sender, EventArgs e)
@@ -233,6 +286,18 @@ namespace FractalExplorer.Utilities
             if (_nudIterationOffset is not null)
             {
                 _workingState.SmoothIterationOffset = (double)_nudIterationOffset.Value;
+            }
+            if (_chkHistogramEqualization is not null)
+            {
+                _workingState.HistogramSettings.EnabledEqualization = _chkHistogramEqualization.Checked;
+            }
+            if (_nudHistogramContrast is not null)
+            {
+                _workingState.HistogramSettings.Contrast = (double)_nudHistogramContrast.Value;
+            }
+            if (_chkHistogramInputUseSmooth is not null)
+            {
+                _workingState.HistogramSettings.InputUseSmooth = _chkHistogramInputUseSmooth.Checked;
             }
 
             var selectedPaletteName = (_cbPalette.SelectedItem as PaletteItem)?.PaletteName;
