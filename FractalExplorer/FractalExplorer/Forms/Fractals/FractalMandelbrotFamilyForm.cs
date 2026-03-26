@@ -401,7 +401,7 @@ namespace FractalDraving
 
             cbSmooth.Items.Clear();
             cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
-            cbSmooth.SelectedIndex = _coloringRuntimeState.UseSmoothColoring ? 1 : 0;
+            SyncLegacyModeComboFromRuntimeState();
             UpdateSmoothSettingsButtonState();
 
             if (nudRe != null && nudIm != null)
@@ -484,8 +484,15 @@ namespace FractalDraving
             ScheduleRender();
         }
 
+        private bool _isSyncingLegacyColoringMode;
+
         private void CbSmooth_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_isSyncingLegacyColoringMode)
+            {
+                return;
+            }
+
             _coloringRuntimeState.ActiveMode = cbSmooth.SelectedIndex == 1
                 ? ColoringModeRuntime.Smooth
                 : ColoringModeRuntime.Discrete;
@@ -525,7 +532,7 @@ namespace FractalDraving
             _coloringRuntimeState.SmoothBlendPower = e.RuntimeState.SmoothBlendPower;
             _coloringRuntimeState.SmoothIterationOffset = e.RuntimeState.SmoothIterationOffset;
 
-            cbSmooth.SelectedIndex = _coloringRuntimeState.UseSmoothColoring ? 1 : 0;
+            SyncLegacyModeComboFromRuntimeState();
             UpdateSmoothSettingsButtonState();
 
             if (!string.IsNullOrWhiteSpace(e.SelectedPaletteName))
@@ -539,6 +546,19 @@ namespace FractalDraving
 
             UpdateEngineParameters();
             ScheduleRender();
+        }
+
+        private void SyncLegacyModeComboFromRuntimeState()
+        {
+            _isSyncingLegacyColoringMode = true;
+            try
+            {
+                cbSmooth.SelectedIndex = _coloringRuntimeState.UseSmoothColoring ? 1 : 0;
+            }
+            finally
+            {
+                _isSyncingLegacyColoringMode = false;
+            }
         }
 
         private void UpdateSmoothSettingsButtonState()
@@ -1741,16 +1761,22 @@ namespace FractalDraving
         public enum ColoringModeType
         {
             Discrete = 0,
-            Smooth = 1
+            Smooth = 1,
+            Histogram = 2,
+            OrbitTrap = 3,
+            StripeAverage = 4
         }
 
         public sealed class ColoringModeRuntime
         {
             public static readonly ColoringModeRuntime Discrete = new(ColoringModeType.Discrete);
             public static readonly ColoringModeRuntime Smooth = new(ColoringModeType.Smooth);
+            public static readonly ColoringModeRuntime Histogram = new(ColoringModeType.Histogram);
+            public static readonly ColoringModeRuntime OrbitTrap = new(ColoringModeType.OrbitTrap);
+            public static readonly ColoringModeRuntime StripeAverage = new(ColoringModeType.StripeAverage);
 
             public ColoringModeType ModeType { get; }
-            public bool HasCustomParameters => ModeType == ColoringModeType.Smooth;
+            public bool HasCustomParameters => ModeType != ColoringModeType.Discrete;
 
             private ColoringModeRuntime(ColoringModeType modeType)
             {
@@ -1759,7 +1785,14 @@ namespace FractalDraving
 
             public static ColoringModeRuntime FromType(ColoringModeType modeType)
             {
-                return modeType == ColoringModeType.Smooth ? Smooth : Discrete;
+                return modeType switch
+                {
+                    ColoringModeType.Smooth => Smooth,
+                    ColoringModeType.Histogram => Histogram,
+                    ColoringModeType.OrbitTrap => OrbitTrap,
+                    ColoringModeType.StripeAverage => StripeAverage,
+                    _ => Discrete
+                };
             }
         }
 

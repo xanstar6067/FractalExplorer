@@ -123,6 +123,9 @@ namespace FractalExplorer.Utilities
             _cbMode.Items.Clear();
             _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.Discrete, "Дискретно"));
             _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.Smooth, "Плавно"));
+            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.Histogram, "Histogram"));
+            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.OrbitTrap, "Orbit Trap"));
+            _cbMode.Items.Add(new ModeItem(FractalMandelbrotFamilyForm.ColoringModeType.StripeAverage, "Stripe Average"));
         }
 
         private void PopulatePalettes(string? activePaletteName)
