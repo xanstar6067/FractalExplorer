@@ -106,6 +106,11 @@ namespace FractalExplorer.Engines
         public double HistogramContrast { get; set; } = 1.0;
         public bool HistogramInputUseSmooth { get; set; } = true;
         public Color InteriorColor { get; set; } = Color.Black;
+        public double OrbitTrapStrength { get; set; } = 1.0;
+        public double OrbitTrapBias { get; set; } = 0.0;
+        public double StripeFrequency { get; set; } = 3.0;
+        public double StripeStrength { get; set; } = 0.5;
+        public double StripeBias { get; set; } = 0.0;
 
         #endregion
 
@@ -183,7 +188,7 @@ namespace FractalExplorer.Engines
             return iter + 1 - nu;
         }
 
-        private Color GetColorByMode(int iter, double smoothValue)
+        private Color ComputePixelColorByMode(int iter, double smoothValue, double orbitTrapMetric, double stripeMetric)
         {
             return ActiveMode switch
             {
@@ -191,6 +196,8 @@ namespace FractalExplorer.Engines
                 ColoringModeType.Histogram => iter >= MaxIterations
                     ? ResolveInteriorColor()
                     : GetHistogramMappedColor((HistogramInputUseSmooth ? smoothValue : iter) / Math.Max(1.0, MaxIterations)),
+                ColoringModeType.OrbitTrap => GetOrbitTrapMappedColor(iter, orbitTrapMetric),
+                ColoringModeType.StripeAverage => GetStripeAverageMappedColor(iter, smoothValue, stripeMetric),
                 _ => Palette(iter, MaxIterations, MaxColorIterations)
             };
         }
@@ -214,6 +221,127 @@ namespace FractalExplorer.Engines
 
             int paletteIter = (int)Math.Round(normalized * MaxColorIterations);
             return Palette(paletteIter, MaxIterations, MaxColorIterations);
+        }
+
+        private Color GetOrbitTrapMappedColor(int iter, double orbitTrapMetric)
+        {
+            if (iter >= MaxIterations)
+            {
+                return ResolveInteriorColor();
+            }
+
+            double trapSignal = 1.0 / (1.0 + orbitTrapMetric);
+            double normalized = Math.Max(0.0, Math.Min(1.0, trapSignal * OrbitTrapStrength + OrbitTrapBias));
+            if (SmoothPalette != null)
+            {
+                return SmoothPalette(normalized * MaxColorIterations);
+            }
+
+            int paletteIter = (int)Math.Round(normalized * MaxColorIterations);
+            return Palette(paletteIter, MaxIterations, MaxColorIterations);
+        }
+
+        private Color GetStripeAverageMappedColor(int iter, double smoothValue, double stripeMetric)
+        {
+            if (iter >= MaxIterations)
+            {
+                return ResolveInteriorColor();
+            }
+
+            double smoothNorm = Math.Max(0.0, Math.Min(1.0, smoothValue / Math.Max(1.0, MaxIterations)));
+            double stripedNorm = Math.Max(0.0, Math.Min(1.0, stripeMetric + StripeBias));
+            double blend = Math.Max(0.0, Math.Min(1.0, StripeStrength));
+            double combined = smoothNorm * (1.0 - blend) + stripedNorm * blend;
+
+            if (SmoothPalette != null)
+            {
+                return SmoothPalette(combined * MaxColorIterations);
+            }
+
+            int paletteIter = (int)Math.Round(combined * MaxColorIterations);
+            return Palette(paletteIter, MaxIterations, MaxColorIterations);
+        }
+
+        private void ComputePixelMetricsDecimal(decimal re, decimal im, out int iter, out ComplexDecimal z, out double orbitTrapMetric, out double stripeMetric)
+        {
+            GetCalculationParameters(re, im, out z, out ComplexDecimal c);
+            decimal thresholdSq = ThresholdSquared;
+            SpecializedEngineKind kind = GetSpecializedEngineKind();
+            iter = 0;
+            decimal minTrapDistance = decimal.MaxValue;
+            double stripeAccumulator = 0.0;
+            int stripeSamples = 0;
+
+            while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
+            {
+                decimal absRe = Math.Abs(z.Real);
+                decimal absIm = Math.Abs(z.Imaginary);
+                decimal trapDistance = Math.Min(absRe, absIm);
+                if (trapDistance < minTrapDistance)
+                {
+                    minTrapDistance = trapDistance;
+                }
+
+                double angle = Math.Atan2((double)z.Imaginary, (double)z.Real);
+                stripeAccumulator += 0.5 + 0.5 * Math.Sin(StripeFrequency * angle);
+                stripeSamples++;
+
+                z = IterateOneStepDecimal(kind, z, c);
+                iter++;
+            }
+
+            orbitTrapMetric = minTrapDistance == decimal.MaxValue ? 0.0 : (double)minTrapDistance;
+            stripeMetric = stripeSamples > 0 ? stripeAccumulator / stripeSamples : 0.0;
+        }
+
+        private void ComputePixelMetricsDouble(double re, double im, out int iter, out ComplexDouble z, out double orbitTrapMetric, out double stripeMetric)
+        {
+            GetCalculationParametersDouble(re, im, out z, out ComplexDouble c);
+            double thresholdSq = (double)ThresholdSquared;
+            SpecializedEngineKind kind = GetSpecializedEngineKind();
+            iter = 0;
+            double minTrapDistance = double.MaxValue;
+            double stripeAccumulator = 0.0;
+            int stripeSamples = 0;
+
+            while (iter < MaxIterations && z.MagnitudeSquared <= thresholdSq)
+            {
+                double absRe = Math.Abs(z.Real);
+                double absIm = Math.Abs(z.Imaginary);
+                double trapDistance = Math.Min(absRe, absIm);
+                if (trapDistance < minTrapDistance)
+                {
+                    minTrapDistance = trapDistance;
+                }
+
+                double angle = Math.Atan2(z.Imaginary, z.Real);
+                stripeAccumulator += 0.5 + 0.5 * Math.Sin(StripeFrequency * angle);
+                stripeSamples++;
+
+                z = IterateOneStepDouble(kind, z, c);
+                iter++;
+            }
+
+            orbitTrapMetric = minTrapDistance == double.MaxValue ? 0.0 : minTrapDistance;
+            stripeMetric = stripeSamples > 0 ? stripeAccumulator / stripeSamples : 0.0;
+        }
+
+        private static ComplexDecimal IterateOneStepDecimal(SpecializedEngineKind kind, ComplexDecimal z, ComplexDecimal c)
+        {
+            if (kind == SpecializedEngineKind.MandelbrotBurningShip || kind == SpecializedEngineKind.JuliaBurningShip)
+            {
+                z = new ComplexDecimal(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+            }
+            return z * z + c;
+        }
+
+        private static ComplexDouble IterateOneStepDouble(SpecializedEngineKind kind, ComplexDouble z, ComplexDouble c)
+        {
+            if (kind == SpecializedEngineKind.MandelbrotBurningShip || kind == SpecializedEngineKind.JuliaBurningShip)
+            {
+                z = new ComplexDouble(Math.Abs(z.Real), -Math.Abs(z.Imaginary));
+            }
+            return z * z + c;
         }
 
         private static double[] BuildHistogramCdf(int[] bins, int totalSamples)
@@ -338,9 +466,19 @@ namespace FractalExplorer.Engines
                             decimal re = centerX + (x - halfWidthPixels) * unitsPerPixel;
                             decimal im = centerY - (y - halfHeightPixels) * unitsPerPixel;
 
-                            iterationCalculator(re, im, out int iter, out ComplexDecimal z);
-
-                            Color pixelColor = GetColorByMode(iter, CalculateSmoothValue(iter, z));
+                            Color pixelColor;
+                            if (ActiveMode == ColoringModeType.OrbitTrap || ActiveMode == ColoringModeType.StripeAverage)
+                            {
+                                ComputePixelMetricsDecimal(re, im, out int iter, out ComplexDecimal z, out double orbitTrapMetric, out double stripeMetric);
+                                double smoothValue = CalculateSmoothValue(iter, z);
+                                pixelColor = ComputePixelColorByMode(iter, smoothValue, orbitTrapMetric, stripeMetric);
+                            }
+                            else
+                            {
+                                iterationCalculator(re, im, out int iter, out ComplexDecimal z);
+                                double smoothValue = CalculateSmoothValue(iter, z);
+                                pixelColor = ComputePixelColorByMode(iter, smoothValue, 0.0, 0.0);
+                            }
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -372,9 +510,19 @@ namespace FractalExplorer.Engines
                             double re = centerX_d + (x - halfWidthPixels_d) * unitsPerPixel_d;
                             double im = centerY_d - (y - halfHeightPixels_d) * unitsPerPixel_d;
 
-                            iterationCalculator(re, im, out int iter, out ComplexDouble z);
-
-                            Color pixelColor = GetColorByMode(iter, CalculateSmoothValueDouble(iter, z));
+                            Color pixelColor;
+                            if (ActiveMode == ColoringModeType.OrbitTrap || ActiveMode == ColoringModeType.StripeAverage)
+                            {
+                                ComputePixelMetricsDouble(re, im, out int iter, out ComplexDouble z, out double orbitTrapMetric, out double stripeMetric);
+                                double smoothValue = CalculateSmoothValueDouble(iter, z);
+                                pixelColor = ComputePixelColorByMode(iter, smoothValue, orbitTrapMetric, stripeMetric);
+                            }
+                            else
+                            {
+                                iterationCalculator(re, im, out int iter, out ComplexDouble z);
+                                double smoothValue = CalculateSmoothValueDouble(iter, z);
+                                pixelColor = ComputePixelColorByMode(iter, smoothValue, 0.0, 0.0);
+                            }
 
                             int index = rowOffset + x * 3;
                             if (index + 2 < buffer.Length)
@@ -792,9 +940,19 @@ namespace FractalExplorer.Engines
                     decimal re = centerX + (canvasX - halfWidthPixels) * unitsPerPixel;
                     decimal im = centerY - (canvasY - halfHeightPixels) * unitsPerPixel;
 
-                    iterationCalculator(re, im, out int iter, out ComplexDecimal z);
-
-                    Color pixelColor = GetColorByMode(iter, CalculateSmoothValue(iter, z));
+                    Color pixelColor;
+                    if (ActiveMode == ColoringModeType.OrbitTrap || ActiveMode == ColoringModeType.StripeAverage)
+                    {
+                        ComputePixelMetricsDecimal(re, im, out int iter, out ComplexDecimal z, out double orbitTrapMetric, out double stripeMetric);
+                        double smoothValue = CalculateSmoothValue(iter, z);
+                        pixelColor = ComputePixelColorByMode(iter, smoothValue, orbitTrapMetric, stripeMetric);
+                    }
+                    else
+                    {
+                        iterationCalculator(re, im, out int iter, out ComplexDecimal z);
+                        double smoothValue = CalculateSmoothValue(iter, z);
+                        pixelColor = ComputePixelColorByMode(iter, smoothValue, 0.0, 0.0);
+                    }
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
                     buffer[bufferIndex] = pixelColor.B;
@@ -837,9 +995,19 @@ namespace FractalExplorer.Engines
                     double re = centerX_d + (canvasX - halfWidthPixels) * unitsPerPixel;
                     double im = centerY_d - (canvasY - halfHeightPixels) * unitsPerPixel;
 
-                    iterationCalculator(re, im, out int iter, out ComplexDouble z);
-
-                    Color pixelColor = GetColorByMode(iter, CalculateSmoothValueDouble(iter, z));
+                    Color pixelColor;
+                    if (ActiveMode == ColoringModeType.OrbitTrap || ActiveMode == ColoringModeType.StripeAverage)
+                    {
+                        ComputePixelMetricsDouble(re, im, out int iter, out ComplexDouble z, out double orbitTrapMetric, out double stripeMetric);
+                        double smoothValue = CalculateSmoothValueDouble(iter, z);
+                        pixelColor = ComputePixelColorByMode(iter, smoothValue, orbitTrapMetric, stripeMetric);
+                    }
+                    else
+                    {
+                        iterationCalculator(re, im, out int iter, out ComplexDouble z);
+                        double smoothValue = CalculateSmoothValueDouble(iter, z);
+                        pixelColor = ComputePixelColorByMode(iter, smoothValue, 0.0, 0.0);
+                    }
 
                     int bufferIndex = (y * tile.Bounds.Width + x) * bytesPerPixel;
                     buffer[bufferIndex] = pixelColor.B;
@@ -885,9 +1053,18 @@ namespace FractalExplorer.Engines
                     decimal re = centerX + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
                     decimal im = centerY - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                    iterationCalculator(re, im, out int iter, out ComplexDecimal z);
-
-                    highResColorBuffer[x, y] = GetColorByMode(iter, CalculateSmoothValue(iter, z));
+                    if (ActiveMode == ColoringModeType.OrbitTrap || ActiveMode == ColoringModeType.StripeAverage)
+                    {
+                        ComputePixelMetricsDecimal(re, im, out int iter, out ComplexDecimal z, out double orbitTrapMetric, out double stripeMetric);
+                        double smoothValue = CalculateSmoothValue(iter, z);
+                        highResColorBuffer[x, y] = ComputePixelColorByMode(iter, smoothValue, orbitTrapMetric, stripeMetric);
+                    }
+                    else
+                    {
+                        iterationCalculator(re, im, out int iter, out ComplexDecimal z);
+                        double smoothValue = CalculateSmoothValue(iter, z);
+                        highResColorBuffer[x, y] = ComputePixelColorByMode(iter, smoothValue, 0.0, 0.0);
+                    }
                 }
             });
 
@@ -954,9 +1131,18 @@ namespace FractalExplorer.Engines
                     double re = centerX_d + (globalHighResX - highResHalfWidthPixels) * unitsPerSubPixel;
                     double im = centerY_d - (globalHighResY - highResHalfHeightPixels) * unitsPerSubPixel;
 
-                    iterationCalculator(re, im, out int iter, out ComplexDouble z);
-
-                    highResColorBuffer[x, y] = GetColorByMode(iter, CalculateSmoothValueDouble(iter, z));
+                    if (ActiveMode == ColoringModeType.OrbitTrap || ActiveMode == ColoringModeType.StripeAverage)
+                    {
+                        ComputePixelMetricsDouble(re, im, out int iter, out ComplexDouble z, out double orbitTrapMetric, out double stripeMetric);
+                        double smoothValue = CalculateSmoothValueDouble(iter, z);
+                        highResColorBuffer[x, y] = ComputePixelColorByMode(iter, smoothValue, orbitTrapMetric, stripeMetric);
+                    }
+                    else
+                    {
+                        iterationCalculator(re, im, out int iter, out ComplexDouble z);
+                        double smoothValue = CalculateSmoothValueDouble(iter, z);
+                        highResColorBuffer[x, y] = ComputePixelColorByMode(iter, smoothValue, 0.0, 0.0);
+                    }
                 }
             });
 

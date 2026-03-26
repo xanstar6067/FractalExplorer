@@ -514,7 +514,8 @@ namespace FractalDraving
                     _paletteManager,
                     _coloringRuntimeState,
                     _paletteManager.ActivePalette?.Name,
-                    this.Icon);
+                    this.Icon,
+                    ScheduleRender);
 
                 _coloringModeSettingsForm.SettingsApplied += ColoringModeSettingsForm_SettingsApplied;
                 _coloringModeSettingsForm.FormClosed += (s, args) => _coloringModeSettingsForm = null;
@@ -532,6 +533,8 @@ namespace FractalDraving
             _coloringRuntimeState.SmoothBlendPower = e.RuntimeState.SmoothBlendPower;
             _coloringRuntimeState.SmoothIterationOffset = e.RuntimeState.SmoothIterationOffset;
             _coloringRuntimeState.HistogramSettings = e.RuntimeState.HistogramSettings.Clone();
+            _coloringRuntimeState.OrbitTrapSettings = e.RuntimeState.OrbitTrapSettings.Clone();
+            _coloringRuntimeState.StripeAverageSettings = e.RuntimeState.StripeAverageSettings.Clone();
             _coloringRuntimeState.InteriorMode = e.RuntimeState.InteriorMode;
             _coloringRuntimeState.InteriorColor = e.RuntimeState.InteriorColor;
 
@@ -548,7 +551,6 @@ namespace FractalDraving
             }
 
             UpdateEngineParameters();
-            ScheduleRender();
         }
 
         private void SyncLegacyModeComboFromRuntimeState()
@@ -778,6 +780,11 @@ namespace FractalDraving
             renderEngineCopy.HistogramEnabledEqualization = _fractalEngine.HistogramEnabledEqualization;
             renderEngineCopy.HistogramContrast = _fractalEngine.HistogramContrast;
             renderEngineCopy.HistogramInputUseSmooth = _fractalEngine.HistogramInputUseSmooth;
+            renderEngineCopy.OrbitTrapStrength = _fractalEngine.OrbitTrapStrength;
+            renderEngineCopy.OrbitTrapBias = _fractalEngine.OrbitTrapBias;
+            renderEngineCopy.StripeFrequency = _fractalEngine.StripeFrequency;
+            renderEngineCopy.StripeStrength = _fractalEngine.StripeStrength;
+            renderEngineCopy.StripeBias = _fractalEngine.StripeBias;
             renderEngineCopy.InteriorColor = _fractalEngine.InteriorColor;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
@@ -928,6 +935,11 @@ namespace FractalDraving
             renderEngineCopy.HistogramEnabledEqualization = _fractalEngine.HistogramEnabledEqualization;
             renderEngineCopy.HistogramContrast = _fractalEngine.HistogramContrast;
             renderEngineCopy.HistogramInputUseSmooth = _fractalEngine.HistogramInputUseSmooth;
+            renderEngineCopy.OrbitTrapStrength = _fractalEngine.OrbitTrapStrength;
+            renderEngineCopy.OrbitTrapBias = _fractalEngine.OrbitTrapBias;
+            renderEngineCopy.StripeFrequency = _fractalEngine.StripeFrequency;
+            renderEngineCopy.StripeStrength = _fractalEngine.StripeStrength;
+            renderEngineCopy.StripeBias = _fractalEngine.StripeBias;
             renderEngineCopy.InteriorColor = _fractalEngine.InteriorColor;
             renderEngineCopy.CopySpecificParametersFrom(_fractalEngine);
 
@@ -1340,6 +1352,11 @@ namespace FractalDraving
             engine.HistogramEnabledEqualization = _coloringRuntimeState.HistogramSettings.EnabledEqualization;
             engine.HistogramContrast = _coloringRuntimeState.HistogramSettings.Contrast;
             engine.HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth;
+            engine.OrbitTrapStrength = _coloringRuntimeState.OrbitTrapSettings.Strength;
+            engine.OrbitTrapBias = _coloringRuntimeState.OrbitTrapSettings.Bias;
+            engine.StripeFrequency = _coloringRuntimeState.StripeAverageSettings.Frequency;
+            engine.StripeStrength = _coloringRuntimeState.StripeAverageSettings.Strength;
+            engine.StripeBias = _coloringRuntimeState.StripeAverageSettings.Bias;
             engine.InteriorColor = ResolveInteriorColor();
         }
 
@@ -1786,10 +1803,44 @@ namespace FractalDraving
                 }
             }
 
+            public sealed class OrbitTrapSettingsState
+            {
+                public double Strength { get; set; } = 1.0;
+                public double Bias { get; set; } = 0.0;
+
+                public OrbitTrapSettingsState Clone()
+                {
+                    return new OrbitTrapSettingsState
+                    {
+                        Strength = Strength,
+                        Bias = Bias
+                    };
+                }
+            }
+
+            public sealed class StripeAverageSettingsState
+            {
+                public double Frequency { get; set; } = 3.0;
+                public double Strength { get; set; } = 0.5;
+                public double Bias { get; set; } = 0.0;
+
+                public StripeAverageSettingsState Clone()
+                {
+                    return new StripeAverageSettingsState
+                    {
+                        Frequency = Frequency,
+                        Strength = Strength,
+                        Bias = Bias
+                    };
+                }
+            }
+
             public ColoringModeRuntime ActiveMode { get; set; } = ColoringModeRuntime.Smooth;
             public double SmoothBlendPower { get; set; } = 1.0;
             public double SmoothIterationOffset { get; set; } = 0.0;
             public HistogramSettingsState HistogramSettings { get; set; } = new();
+            public OrbitTrapSettingsState OrbitTrapSettings { get; set; } = new();
+            public StripeAverageSettingsState StripeAverageSettings { get; set; } = new();
             public InteriorMode InteriorMode { get; set; } = InteriorMode.Black;
             public Color InteriorColor { get; set; } = Color.Black;
             public bool UseSmoothColoring => ActiveMode.ModeType == ColoringModeType.Smooth;
@@ -1812,6 +1863,8 @@ namespace FractalDraving
                     SmoothBlendPower = SmoothBlendPower,
                     SmoothIterationOffset = SmoothIterationOffset,
                     HistogramSettings = HistogramSettings.Clone(),
+                    OrbitTrapSettings = OrbitTrapSettings.Clone(),
+                    StripeAverageSettings = StripeAverageSettings.Clone(),
                     InteriorMode = InteriorMode,
                     InteriorColor = InteriorColor
                 };
@@ -2105,7 +2158,12 @@ namespace FractalDraving
                 ColoringMode = (int)_coloringRuntimeState.ActiveMode.ModeType,
                 HistogramEnabledEqualization = _coloringRuntimeState.HistogramSettings.EnabledEqualization,
                 HistogramContrast = _coloringRuntimeState.HistogramSettings.Contrast,
-                HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth
+                HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth,
+                OrbitTrapStrength = _coloringRuntimeState.OrbitTrapSettings.Strength,
+                OrbitTrapBias = _coloringRuntimeState.OrbitTrapSettings.Bias,
+                StripeFrequency = _coloringRuntimeState.StripeAverageSettings.Frequency,
+                StripeStrength = _coloringRuntimeState.StripeAverageSettings.Strength,
+                StripeBias = _coloringRuntimeState.StripeAverageSettings.Bias
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
@@ -2172,6 +2230,11 @@ namespace FractalDraving
             engine.HistogramEnabledEqualization = state.HistogramEnabledEqualization;
             engine.HistogramContrast = state.HistogramContrast;
             engine.HistogramInputUseSmooth = state.HistogramInputUseSmooth;
+            engine.OrbitTrapStrength = state.OrbitTrapStrength;
+            engine.OrbitTrapBias = state.OrbitTrapBias;
+            engine.StripeFrequency = state.StripeFrequency;
+            engine.StripeStrength = state.StripeStrength;
+            engine.StripeBias = state.StripeBias;
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
             engine.MaxColorIterations = effectiveMaxColorIterations;
 

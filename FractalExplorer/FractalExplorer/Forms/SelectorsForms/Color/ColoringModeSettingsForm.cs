@@ -14,6 +14,7 @@ namespace FractalExplorer.Utilities
         private readonly PaletteManager _paletteManager;
         private readonly FractalMandelbrotFamilyForm.ColoringRuntimeState _workingState;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
+        private readonly Action? _scheduleRender;
 
         private readonly ComboBox _cbMode = new();
         private readonly ComboBox _cbPalette = new();
@@ -29,6 +30,11 @@ namespace FractalExplorer.Utilities
         private CheckBox? _chkHistogramEqualization;
         private NumericUpDown? _nudHistogramContrast;
         private CheckBox? _chkHistogramInputUseSmooth;
+        private NumericUpDown? _nudOrbitTrapStrength;
+        private NumericUpDown? _nudOrbitTrapBias;
+        private NumericUpDown? _nudStripeFrequency;
+        private NumericUpDown? _nudStripeStrength;
+        private NumericUpDown? _nudStripeBias;
 
         public event EventHandler<ColoringModeSettingsAppliedEventArgs>? SettingsApplied;
 
@@ -36,10 +42,12 @@ namespace FractalExplorer.Utilities
             PaletteManager paletteManager,
             FractalMandelbrotFamilyForm.ColoringRuntimeState runtimeState,
             string? activePaletteName,
-            Icon? ownerIcon)
+            Icon? ownerIcon,
+            Action? scheduleRender = null)
         {
             _paletteManager = paletteManager ?? throw new ArgumentNullException(nameof(paletteManager));
             _workingState = runtimeState?.Clone() ?? throw new ArgumentNullException(nameof(runtimeState));
+            _scheduleRender = scheduleRender;
             ThemeManager.RegisterForm(this);
 
             InitializeUi();
@@ -191,6 +199,11 @@ namespace FractalExplorer.Utilities
             _chkHistogramEqualization = null;
             _nudHistogramContrast = null;
             _chkHistogramInputUseSmooth = null;
+            _nudOrbitTrapStrength = null;
+            _nudOrbitTrapBias = null;
+            _nudStripeFrequency = null;
+            _nudStripeStrength = null;
+            _nudStripeBias = null;
 
             var selectedMode = (_cbMode.SelectedItem as ModeItem)?.Mode
                 ?? FractalMandelbrotFamilyForm.ColoringModeType.Smooth;
@@ -324,6 +337,96 @@ namespace FractalExplorer.Utilities
                 return;
             }
 
+            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.OrbitTrap)
+            {
+                var layout = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Top,
+                    ColumnCount = 2,
+                    AutoSize = true
+                };
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+                layout.Controls.Add(new Label { Text = "Trap Strength:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
+                _nudOrbitTrapStrength = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = 0.00m,
+                    Maximum = 5.00m,
+                    Increment = 0.05m,
+                    Value = (decimal)Math.Max(0.00, Math.Min(5.00, _workingState.OrbitTrapSettings.Strength)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudOrbitTrapStrength, 1, 0);
+
+                layout.Controls.Add(new Label { Text = "Trap Bias:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
+                _nudOrbitTrapBias = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = -1.00m,
+                    Maximum = 1.00m,
+                    Increment = 0.01m,
+                    Value = (decimal)Math.Max(-1.00, Math.Min(1.00, _workingState.OrbitTrapSettings.Bias)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudOrbitTrapBias, 1, 1);
+
+                _dynamicParametersPanel.Controls.Add(layout);
+                return;
+            }
+
+            if (selectedMode == FractalMandelbrotFamilyForm.ColoringModeType.StripeAverage)
+            {
+                var layout = new TableLayoutPanel
+                {
+                    Dock = DockStyle.Top,
+                    ColumnCount = 2,
+                    AutoSize = true
+                };
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+                layout.Controls.Add(new Label { Text = "Frequency:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 0);
+                _nudStripeFrequency = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = 0.10m,
+                    Maximum = 20.00m,
+                    Increment = 0.10m,
+                    Value = (decimal)Math.Max(0.10, Math.Min(20.00, _workingState.StripeAverageSettings.Frequency)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudStripeFrequency, 1, 0);
+
+                layout.Controls.Add(new Label { Text = "Strength:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 1);
+                _nudStripeStrength = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = 0.00m,
+                    Maximum = 1.00m,
+                    Increment = 0.01m,
+                    Value = (decimal)Math.Max(0.00, Math.Min(1.00, _workingState.StripeAverageSettings.Strength)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudStripeStrength, 1, 1);
+
+                layout.Controls.Add(new Label { Text = "Bias:", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 8, 8, 0) }, 0, 2);
+                _nudStripeBias = new NumericUpDown
+                {
+                    DecimalPlaces = 2,
+                    Minimum = -1.00m,
+                    Maximum = 1.00m,
+                    Increment = 0.01m,
+                    Value = (decimal)Math.Max(-1.00, Math.Min(1.00, _workingState.StripeAverageSettings.Bias)),
+                    Dock = DockStyle.Fill
+                };
+                layout.Controls.Add(_nudStripeBias, 1, 2);
+
+                _dynamicParametersPanel.Controls.Add(layout);
+                return;
+            }
+
             _dynamicParametersPanel.Controls.Add(new Label
             {
                 Dock = DockStyle.Top,
@@ -362,12 +465,33 @@ namespace FractalExplorer.Utilities
             {
                 _workingState.HistogramSettings.InputUseSmooth = _chkHistogramInputUseSmooth.Checked;
             }
+            if (_nudOrbitTrapStrength is not null)
+            {
+                _workingState.OrbitTrapSettings.Strength = (double)_nudOrbitTrapStrength.Value;
+            }
+            if (_nudOrbitTrapBias is not null)
+            {
+                _workingState.OrbitTrapSettings.Bias = (double)_nudOrbitTrapBias.Value;
+            }
+            if (_nudStripeFrequency is not null)
+            {
+                _workingState.StripeAverageSettings.Frequency = (double)_nudStripeFrequency.Value;
+            }
+            if (_nudStripeStrength is not null)
+            {
+                _workingState.StripeAverageSettings.Strength = (double)_nudStripeStrength.Value;
+            }
+            if (_nudStripeBias is not null)
+            {
+                _workingState.StripeAverageSettings.Bias = (double)_nudStripeBias.Value;
+            }
 
             var selectedPaletteName = (_cbPalette.SelectedItem as PaletteItem)?.PaletteName;
 
             SettingsApplied?.Invoke(this, new ColoringModeSettingsAppliedEventArgs(
                 _workingState.Clone(),
                 selectedPaletteName));
+            _scheduleRender?.Invoke();
 
             Close();
         }

@@ -27,6 +27,11 @@ namespace FractalExplorer.Utilities.RenderUtilities
         public bool HistogramEnabledEqualization { get; set; }
         public double HistogramContrast { get; set; }
         public bool HistogramInputUseSmooth { get; set; }
+        public double OrbitTrapStrength { get; set; }
+        public double OrbitTrapBias { get; set; }
+        public double StripeFrequency { get; set; }
+        public double StripeStrength { get; set; }
+        public double StripeBias { get; set; }
         public decimal? Power { get; set; }
         public decimal Scale { get; set; }
         public bool UseInversion { get; set; }
