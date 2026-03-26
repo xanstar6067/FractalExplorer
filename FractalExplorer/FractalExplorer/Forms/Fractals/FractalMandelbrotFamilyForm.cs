@@ -54,6 +54,7 @@ namespace FractalDraving
         /// Форма конфигурации палитр, связанная с этой формой, для настройки цветов.
         /// </summary>
         private ColorConfigurationForm _colorConfigForm;
+        private ColoringModeSettingsForm _coloringModeSettingsForm;
 
         /// <summary>
         /// Размер одной плитки (тайла) в пикселях для пошагового рендеринга.
@@ -185,6 +186,12 @@ namespace FractalDraving
         /// Признак видимости панели управления.
         /// </summary>
         private bool _controlsPanelVisible = true;
+
+        /// <summary>
+        /// Runtime-состояние выбранного режима окрашивания и его параметров.
+        /// Существует только в памяти текущей формы и не сериализуется.
+        /// </summary>
+        private readonly ColoringRuntimeState _coloringRuntimeState = ColoringRuntimeState.CreateDefault();
 
         #endregion
 
@@ -394,7 +401,8 @@ namespace FractalDraving
 
             cbSmooth.Items.Clear();
             cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
-            cbSmooth.SelectedIndex = 1;
+            cbSmooth.SelectedIndex = _coloringRuntimeState.UseSmoothColoring ? 1 : 0;
+            UpdateSmoothSettingsButtonState();
 
             if (nudRe != null && nudIm != null)
             {
@@ -422,7 +430,8 @@ namespace FractalDraving
             nudZoom.ValueChanged += ParamControl_Changed;
             if (nudRe != null) nudRe.ValueChanged += ParamControl_Changed;
             if (nudIm != null) nudIm.ValueChanged += ParamControl_Changed;
-            cbSmooth.SelectedIndexChanged += ParamControl_Changed;
+            cbSmooth.SelectedIndexChanged += CbSmooth_SelectedIndexChanged;
+            btnSmoothSettings.Click += btnSmoothSettings_Click;
 
             btnRender.Click += (s, e) => ScheduleRender();
 
@@ -473,6 +482,68 @@ namespace FractalDraving
         {
             UpdateEngineParameters();
             ScheduleRender();
+        }
+
+        private void CbSmooth_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            _coloringRuntimeState.ActiveMode = cbSmooth.SelectedIndex == 1
+                ? ColoringModeRuntime.Smooth
+                : ColoringModeRuntime.Discrete;
+
+            UpdateSmoothSettingsButtonState();
+            ParamControl_Changed(sender, e);
+        }
+
+        private void btnSmoothSettings_Click(object sender, EventArgs e)
+        {
+            if (!btnSmoothSettings.Enabled)
+            {
+                return;
+            }
+
+            if (_coloringModeSettingsForm == null || _coloringModeSettingsForm.IsDisposed)
+            {
+                _coloringModeSettingsForm = new ColoringModeSettingsForm(
+                    _paletteManager,
+                    _coloringRuntimeState,
+                    _paletteManager.ActivePalette?.Name,
+                    this.Icon);
+
+                _coloringModeSettingsForm.SettingsApplied += ColoringModeSettingsForm_SettingsApplied;
+                _coloringModeSettingsForm.FormClosed += (s, args) => _coloringModeSettingsForm = null;
+                _coloringModeSettingsForm.Show(this);
+            }
+            else
+            {
+                _coloringModeSettingsForm.Activate();
+            }
+        }
+
+        private void ColoringModeSettingsForm_SettingsApplied(object? sender, ColoringModeSettingsAppliedEventArgs e)
+        {
+            _coloringRuntimeState.ActiveMode = e.RuntimeState.ActiveMode;
+            _coloringRuntimeState.SmoothBlendPower = e.RuntimeState.SmoothBlendPower;
+            _coloringRuntimeState.SmoothIterationOffset = e.RuntimeState.SmoothIterationOffset;
+
+            cbSmooth.SelectedIndex = _coloringRuntimeState.UseSmoothColoring ? 1 : 0;
+            UpdateSmoothSettingsButtonState();
+
+            if (!string.IsNullOrWhiteSpace(e.SelectedPaletteName))
+            {
+                var paletteToApply = _paletteManager.Palettes.FirstOrDefault(p => p.Name == e.SelectedPaletteName);
+                if (paletteToApply != null)
+                {
+                    _paletteManager.ActivePalette = paletteToApply;
+                }
+            }
+
+            UpdateEngineParameters();
+            ScheduleRender();
+        }
+
+        private void UpdateSmoothSettingsButtonState()
+        {
+            btnSmoothSettings.Enabled = _coloringRuntimeState.ActiveMode.HasCustomParameters;
         }
 
         /// <summary>
@@ -1265,7 +1336,7 @@ namespace FractalDraving
         /// <returns>True, если выбран режим "Плавно".</returns>
         private bool IsSmoothColoringEnabled()
         {
-            return cbSmooth.SelectedIndex == 1;
+            return _coloringRuntimeState.UseSmoothColoring;
         }
 
         /// <summary>
@@ -1315,6 +1386,7 @@ namespace FractalDraving
             {
                 return (smoothIter) =>
                 {
+                    smoothIter += _coloringRuntimeState.SmoothIterationOffset;
                     if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                     if (smoothIter < 0) smoothIter = 0;
 
@@ -1325,6 +1397,7 @@ namespace FractalDraving
 
                     // 2. Берем логарифм от ПРЯМОГО значения итерации (без цикличности).
                     double tLog = Math.Log(smoothIter + 1) / logMax;
+                    tLog = Math.Pow(tLog, _coloringRuntimeState.SmoothBlendPower);
 
                     // 3. Инвертируем значение для градиента от почти белого к черному.
                     int gray_level = (int)(255.0 * (1.0 - tLog));
@@ -1351,6 +1424,7 @@ namespace FractalDraving
             // Общая логика для всех цветных градиентных палитр.
             return (smoothIter) =>
             {
+                smoothIter += _coloringRuntimeState.SmoothIterationOffset;
                 if (smoothIter >= _fractalEngine.MaxIterations) return Color.Black;
                 if (smoothIter < 0) smoothIter = 0;
 
@@ -1360,6 +1434,7 @@ namespace FractalDraving
                 // 2. Нормализуем его по отношению к длине этого периода.
                 //    (double) необходимо для корректного деления.
                 double t = cyclicIter / (double)effectiveMaxColorIterations;
+                t = Math.Pow(t, _coloringRuntimeState.SmoothBlendPower);
 
                 // 3. Остальная логика интерполяции цвета остается без изменений.
                 t = Math.Max(0.0, Math.Min(1.0, t));
@@ -1634,6 +1709,58 @@ namespace FractalDraving
             /// Тип движка для рендеринга превью.
             /// </summary>
             public string PreviewEngineType { get; set; }
+        }
+
+        /// <summary>
+        /// In-memory состояние режима окрашивания и его параметров.
+        /// Не сохраняется в SaveState.
+        /// </summary>
+        public sealed class ColoringRuntimeState
+        {
+            public ColoringModeRuntime ActiveMode { get; set; } = ColoringModeRuntime.Smooth;
+            public double SmoothBlendPower { get; set; } = 1.0;
+            public double SmoothIterationOffset { get; set; } = 0.0;
+            public bool UseSmoothColoring => ActiveMode.ModeType == ColoringModeType.Smooth;
+
+            public static ColoringRuntimeState CreateDefault()
+            {
+                return new ColoringRuntimeState { ActiveMode = ColoringModeRuntime.Smooth };
+            }
+
+            public ColoringRuntimeState Clone()
+            {
+                return new ColoringRuntimeState
+                {
+                    ActiveMode = ActiveMode,
+                    SmoothBlendPower = SmoothBlendPower,
+                    SmoothIterationOffset = SmoothIterationOffset
+                };
+            }
+        }
+
+        public enum ColoringModeType
+        {
+            Discrete = 0,
+            Smooth = 1
+        }
+
+        public sealed class ColoringModeRuntime
+        {
+            public static readonly ColoringModeRuntime Discrete = new(ColoringModeType.Discrete);
+            public static readonly ColoringModeRuntime Smooth = new(ColoringModeType.Smooth);
+
+            public ColoringModeType ModeType { get; }
+            public bool HasCustomParameters => ModeType == ColoringModeType.Smooth;
+
+            private ColoringModeRuntime(ColoringModeType modeType)
+            {
+                ModeType = modeType;
+            }
+
+            public static ColoringModeRuntime FromType(ColoringModeType modeType)
+            {
+                return modeType == ColoringModeType.Smooth ? Smooth : Discrete;
+            }
         }
 
         /// <summary>
