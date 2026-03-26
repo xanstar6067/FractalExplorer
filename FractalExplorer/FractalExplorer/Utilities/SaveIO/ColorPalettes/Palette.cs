@@ -9,11 +9,6 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
     public class Palette
     {
         #region Properties
-        /// <summary>
-        /// Получает или устанавливает стабильный идентификатор палитры.
-        /// Используется для связывания палитры с внешними сущностями (например, метапрофилями).
-        /// </summary>
-        public Guid PaletteId { get; set; } = Guid.NewGuid();
 
         /// <summary>
         /// Получает или устанавливает имя палитры.
@@ -78,17 +73,8 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <param name="maxColorIterations">Длина цветового цикла.</param>
         /// <param name="gamma">Значение гамма-коррекции.</param>
         /// <param name="alignWithRenderIterations">Флаг для синхронизации с итерациями рендера.</param> // НОВОЕ
-        public Palette(
-            string name,
-            List<Color> colors,
-            bool isGradient,
-            bool isBuiltIn = false,
-            int maxColorIterations = 500,
-            double gamma = 1.0,
-            bool alignWithRenderIterations = false,
-            Guid? paletteId = null)
+        public Palette(string name, List<Color> colors, bool isGradient, bool isBuiltIn = false, int maxColorIterations = 500, double gamma = 1.0, bool alignWithRenderIterations = false)
         {
-            PaletteId = paletteId is { } id && id != Guid.Empty ? id : Guid.NewGuid();
             Name = name;
             Colors = colors;
             IsGradient = isGradient;

@@ -393,7 +393,7 @@ namespace FractalDraving
             nudZoom.Value = _zoom;
 
             cbSmooth.Items.Clear();
-            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно", "Гистограмма" });
+            cbSmooth.Items.AddRange(new object[] { "Дискретно", "Плавно" });
             cbSmooth.SelectedIndex = 1;
 
             if (nudRe != null && nudIm != null)
@@ -677,7 +677,6 @@ namespace FractalDraving
             renderEngineCopy.Scale = GetRenderSurfaceScale(renderSurfaceSize, viewportRect);
             renderEngineCopy.C = _fractalEngine.C;
             renderEngineCopy.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
-            renderEngineCopy.UseHistogramColoring = _fractalEngine.UseHistogramColoring;
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
@@ -823,7 +822,6 @@ namespace FractalDraving
             renderEngineCopy.Scale = GetRenderSurfaceScale(renderSurfaceSize, viewportRect);
             renderEngineCopy.C = _fractalEngine.C;
             renderEngineCopy.UseSmoothColoring = _fractalEngine.UseSmoothColoring;
-            renderEngineCopy.UseHistogramColoring = _fractalEngine.UseHistogramColoring;
             renderEngineCopy.Palette = _fractalEngine.Palette;
             renderEngineCopy.SmoothPalette = _fractalEngine.SmoothPalette;
             renderEngineCopy.MaxColorIterations = _fractalEngine.MaxColorIterations;
@@ -1226,7 +1224,6 @@ namespace FractalDraving
             _fractalEngine.Scale = BaseScale / _zoom;
 
             _fractalEngine.UseSmoothColoring = IsSmoothColoringEnabled();
-            _fractalEngine.UseHistogramColoring = IsHistogramColoringEnabled();
 
             UpdateEngineSpecificParameters();
             ApplyActivePalette();
@@ -1269,11 +1266,6 @@ namespace FractalDraving
         private bool IsSmoothColoringEnabled()
         {
             return cbSmooth.SelectedIndex == 1;
-        }
-
-        private bool IsHistogramColoringEnabled()
-        {
-            return cbSmooth.SelectedIndex == 2;
         }
 
         /// <summary>
@@ -1638,7 +1630,6 @@ namespace FractalDraving
             /// Использовать ли плавную раскраску.
             /// </summary>
             public bool UseSmoothColoring { get; set; }
-            public bool UseHistogramColoring { get; set; }
             /// <summary>
             /// Тип движка для рендеринга превью.
             /// </summary>
@@ -1684,7 +1675,6 @@ namespace FractalDraving
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 UseSmoothColoring = IsSmoothColoringEnabled(),
-                UseHistogramColoring = IsHistogramColoringEnabled(),
                 PreviewEngineType = state.PreviewEngineType
             };
 
@@ -1785,7 +1775,6 @@ namespace FractalDraving
                         : paletteForPreview.MaxColorIterations;
 
                 previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-                previewEngine.UseHistogramColoring = previewParams.UseHistogramColoring;
                 if (previewEngine.UseSmoothColoring)
                 {
                     previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
@@ -1843,7 +1832,6 @@ namespace FractalDraving
                     : paletteForPreview.MaxColorIterations;
 
             previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-            previewEngine.UseHistogramColoring = previewParams.UseHistogramColoring;
             if (previewEngine.UseSmoothColoring)
             {
                 previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
@@ -1887,8 +1875,7 @@ namespace FractalDraving
                 Threshold = nudThreshold.Value,
                 ActivePaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый",
                 FileNameDetails = this.GetSaveFileNameDetails(),
-                UseSmoothColoring = IsSmoothColoringEnabled(),
-                UseHistogramColoring = IsHistogramColoringEnabled()
+                UseSmoothColoring = IsSmoothColoringEnabled()
             };
 
             if (this is FractalJulia || this is FractalJuliaBurningShip)
@@ -1951,7 +1938,6 @@ namespace FractalDraving
             var paletteForRender = _paletteManager.Palettes.FirstOrDefault(p => p.Name == state.ActivePaletteName) ?? _paletteManager.Palettes.First();
 
             engine.UseSmoothColoring = state.UseSmoothColoring;
-            engine.UseHistogramColoring = state.UseHistogramColoring;
             int effectiveMaxColorIterations = paletteForRender.AlignWithRenderIterations ? engine.MaxIterations : paletteForRender.MaxColorIterations;
             engine.MaxColorIterations = effectiveMaxColorIterations;
 

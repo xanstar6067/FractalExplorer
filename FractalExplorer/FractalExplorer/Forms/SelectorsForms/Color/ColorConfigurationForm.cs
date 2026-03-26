@@ -1,6 +1,5 @@
 ﻿using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.ColorPicking;
-using FractalExplorer.Utilities.SaveIO;
 using System.Drawing.Drawing2D;
 
 using FractalExplorer.Utilities.Theme;
@@ -19,15 +18,11 @@ namespace FractalExplorer.Utilities
         /// Менеджер палитр, управляющий доступными палитрами.
         /// </summary>
         private readonly PaletteManager _paletteManager;
-        private readonly ColorMetadataProfileManager _metadataProfileManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
-        private readonly int _compactClientWidth;
-        private readonly Dictionary<string, Func<UserControl>> _advancedEditorFactories;
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
         private Palette _selectedPalette;
-        private IColorModeEditor? _activeColorModeEditor;
         private bool _hasUnsavedChanges;
         #endregion
 
@@ -48,16 +43,6 @@ namespace FractalExplorer.Utilities
             InitializeComponent();
             ThemeManager.RegisterForm(this);
             _paletteManager = paletteManager;
-            _metadataProfileManager = _paletteManager.MetadataProfileManager;
-            _compactClientWidth = ClientSize.Width;
-            _advancedEditorFactories = new Dictionary<string, Func<UserControl>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["discrete"] = () => new DiscreteEditor(),
-                ["smooth"] = () => new SmoothEditor(),
-                // Будущие режимы:
-                // ["histogram"] = () => new HistogramEditor(),
-                // ["orbittrap"] = () => new OrbitTrapEditor(),
-            };
 
             nudGamma.Minimum = 0.1m;
             nudGamma.Maximum = 5.0m;
@@ -74,57 +59,6 @@ namespace FractalExplorer.Utilities
             lbColorStops.MouseDown += new MouseEventHandler(lbColorStops_MouseDown);
             lbColorStops.DragOver += new DragEventHandler(lbColorStops_DragOver);
             lbColorStops.DragDrop += new DragEventHandler(lbColorStops_DragDrop);
-        }
-        #endregion
-
-        #region Advanced Editor
-        public void SetAdvancedMode(bool enabled)
-        {
-            pnlAdvancedHost.Visible = enabled;
-
-            int advancedWidth = pnlAdvancedHost.Width + 10;
-            int targetClientWidth = enabled
-                ? _compactClientWidth + advancedWidth
-                : _compactClientWidth;
-
-            ClientSize = new Size(targetClientWidth, ClientSize.Height);
-        }
-
-        public void LoadAdvancedEditor(string coloringMode)
-        {
-            foreach (Control control in pnlAdvancedHost.Controls)
-            {
-                control.Dispose();
-            }
-
-            pnlAdvancedHost.Controls.Clear();
-            _activeColorModeEditor = null;
-
-            UserControl? advancedEditor = CreateAdvancedEditor(coloringMode);
-            if (advancedEditor == null)
-            {
-                SetAdvancedMode(false);
-                return;
-            }
-
-            _activeColorModeEditor = advancedEditor as IColorModeEditor;
-            _activeColorModeEditor?.LoadFromPalette(_selectedPalette);
-            advancedEditor.Dock = DockStyle.Fill;
-            pnlAdvancedHost.Controls.Add(advancedEditor);
-            SetAdvancedMode(true);
-        }
-
-        private UserControl? CreateAdvancedEditor(string coloringMode)
-        {
-            if (string.IsNullOrWhiteSpace(coloringMode))
-            {
-                return null;
-            }
-
-            string key = coloringMode.Trim();
-            return _advancedEditorFactories.TryGetValue(key, out Func<UserControl>? editorFactory)
-                ? editorFactory()
-                : null;
         }
         #endregion
 
@@ -174,7 +108,6 @@ namespace FractalExplorer.Utilities
             {
                 // Если ничего не выбрано, очищаем детали и выключаем кнопки
                 _selectedPalette = null;
-                lbMetadataProfiles.Items.Clear();
                 UpdateControlsState();
                 panelPreview.Invalidate();
                 return;
@@ -185,8 +118,6 @@ namespace FractalExplorer.Utilities
 
             ResetUnsavedChanges();
             DisplayPaletteDetails();
-            LoadMetadataProfilesForSelectedPalette();
-            _activeColorModeEditor?.LoadFromPalette(_selectedPalette);
             UpdateControlsState();
         }
 
@@ -246,7 +177,6 @@ namespace FractalExplorer.Utilities
                 nudGamma.Enabled = isEnabled;
                 nudMaxColorIterations.Enabled = isEnabled;
                 btnCopy.Enabled = isEnabled;
-                btnCreateMetadataProfile.Enabled = isEnabled;
                 return;
             }
 
@@ -265,22 +195,7 @@ namespace FractalExplorer.Utilities
             nudMaxColorIterations.Enabled = isCustom && !_selectedPalette.AlignWithRenderIterations;
 
             btnCopy.Enabled = _selectedPalette != null;
-            btnCreateMetadataProfile.Enabled = _selectedPalette != null;
             btnSave.Enabled = isCustom && _hasUnsavedChanges;
-        }
-
-        private void LoadMetadataProfilesForSelectedPalette()
-        {
-            lbMetadataProfiles.Items.Clear();
-            if (_selectedPalette == null || _selectedPalette.PaletteId == Guid.Empty)
-            {
-                return;
-            }
-
-            foreach (ColorMetadataProfile profile in _metadataProfileManager.GetProfilesForPalette(_selectedPalette.PaletteId))
-            {
-                lbMetadataProfiles.Items.Add(profile.Name);
-            }
         }
 
         private void MarkUnsavedChanges()
@@ -490,22 +405,6 @@ namespace FractalExplorer.Utilities
             lbPalettes.SelectedItem = newPalette.Name;
         }
 
-        private void btnCreateMetadataProfile_Click(object sender, EventArgs e)
-        {
-            if (_selectedPalette == null)
-            {
-                return;
-            }
-
-            if (_selectedPalette.PaletteId == Guid.Empty)
-            {
-                _selectedPalette.PaletteId = Guid.NewGuid();
-            }
-
-            _metadataProfileManager.CreateProfile(_selectedPalette.PaletteId);
-            LoadMetadataProfilesForSelectedPalette();
-        }
-
         /// <summary>
         /// Обработчик события клика по кнопке "Delete Palette".
         /// Удаляет текущую выбранную палитру (если она не встроенная).
@@ -519,7 +418,9 @@ namespace FractalExplorer.Utilities
                 DialogResult confirmResult = MessageBox.Show($"Вы уверены, что хотите удалить палитру '{_selectedPalette.Name}'?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (confirmResult == DialogResult.Yes)
                 {
-                    bool removed = DeletePaletteWithMetadataProfilesTransactional(_selectedPalette);
+                    // ИЗМЕНЕНО: Используем безопасный метод менеджера для удаления
+                    bool removed = _paletteManager.RemovePalette(_selectedPalette);
+
                     if (removed)
                     {
                         _paletteManager.SaveCustomPalettes();
@@ -538,35 +439,6 @@ namespace FractalExplorer.Utilities
                         }
                     }
                 }
-            }
-        }
-
-        private bool DeletePaletteWithMetadataProfilesTransactional(Palette palette)
-        {
-            List<ColorMetadataProfile> snapshot = _metadataProfileManager.GetAllProfiles();
-            List<ColorMetadataProfile> profileSubset = snapshot
-                .Where(p => p.PaletteId == palette.PaletteId)
-                .ToList();
-
-            try
-            {
-                _metadataProfileManager.DeleteProfilesForPalette(palette.PaletteId);
-                bool removed = _paletteManager.RemovePalette(palette);
-
-                if (!removed)
-                {
-                    _metadataProfileManager.ReplaceAllProfiles(snapshot);
-                    return false;
-                }
-
-                return true;
-            }
-            catch
-            {
-                List<ColorMetadataProfile> current = _metadataProfileManager.GetAllProfiles();
-                current.AddRange(profileSubset);
-                _metadataProfileManager.ReplaceAllProfiles(current);
-                return false;
             }
         }
 
@@ -639,7 +511,6 @@ namespace FractalExplorer.Utilities
         /// <param name="e">Аргументы события.</param>
         private void btnSave_Click(object sender, EventArgs e)
         {
-            _activeColorModeEditor?.SaveChanges(_paletteManager);
             _paletteManager.SaveCustomPalettes();
             ResetUnsavedChanges();
             MessageBox.Show("Изменения палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -678,7 +549,6 @@ namespace FractalExplorer.Utilities
         {
             if (_selectedPalette != null)
             {
-                _activeColorModeEditor?.ApplyToPalette(_selectedPalette);
                 _paletteManager.ActivePalette = _selectedPalette;
                 PaletteApplied?.Invoke(this, EventArgs.Empty);
             }

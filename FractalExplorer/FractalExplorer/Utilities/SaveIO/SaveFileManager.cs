@@ -70,9 +70,7 @@ namespace FractalExplorer.Utilities.SaveIO
                 // Десериализует содержимое JSON в список указанного типа состояния сохранения.
                 // Использует оператор объединения с null, чтобы убедиться, что пустой список возвращается,
                 // если десериализация приводит к null (например, из-за пустого или некорректного JSON-файла).
-                var saves = JsonSerializer.Deserialize<List<T>>(json, GetJsonOptions()) ?? new List<T>();
-                SaveMetadataManager.ApplyMetadata(filePath, saves);
-                return saves;
+                return JsonSerializer.Deserialize<List<T>>(json, GetJsonOptions()) ?? new List<T>();
             }
             catch (Exception ex)
             {
@@ -102,7 +100,6 @@ namespace FractalExplorer.Utilities.SaveIO
                 // Записывает строку JSON в указанный файл, перезаписывая любое существующее содержимое.
                 // Это гарантирует, что сохраненные данные всегда являются самым актуальным состоянием.
                 File.WriteAllText(filePath, json);
-                SaveMetadataManager.WriteMetadata(filePath, states);
             }
             catch (Exception ex)
             {
