@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.VisualBasic.FileIO;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO;
@@ -35,6 +38,7 @@ namespace FractalExplorer.Forms
         private readonly object _bitmapLock = new object();
         private const int TILE_SIZE = 16;
         private bool _isRenderingPreview = false;
+        private const string PreviewScreenshotsFolderName = "SavePrevData";
 
         // --- Поля для прогрессивного кэширования превью ---
 
@@ -153,7 +157,14 @@ namespace FractalExplorer.Forms
             {
                 var selectedState = _displayedItems[listBoxSaves.SelectedIndex];
                 textBoxSaveName.Text = selectedState.SaveName;
-                StartTiledPreviewRender(selectedState);
+                if (ShouldUseRenderedPreview())
+                {
+                    StartTiledPreviewRender(selectedState);
+                }
+                else
+                {
+                    LoadScreenshotPreview(selectedState);
+                }
             }
             else
             {
@@ -532,6 +543,7 @@ namespace FractalExplorer.Forms
             {
                 if (MessageBox.Show($"Сохранение с именем '{saveName}' уже существует. Перезаписать?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
+                    DeleteScreenshotForState(existingSave);
                     userSaves.Remove(existingSave);
                 }
                 else
@@ -543,6 +555,7 @@ namespace FractalExplorer.Forms
             var newState = _ownerFractalForm.GetCurrentStateForSave(saveName);
             userSaves.Add(newState);
             _ownerFractalForm.SaveAllSavesForThisType(userSaves);
+            SaveScreenshotForState(newState);
 
             PopulateList(false);
             int newIndex = _displayedItems.FindIndex(s => s.SaveName == saveName && s.Timestamp == newState.Timestamp);
@@ -569,6 +582,7 @@ namespace FractalExplorer.Forms
                     var itemToRemove = userSaves.FirstOrDefault(s => s.SaveName == stateToDelete.SaveName && s.Timestamp == stateToDelete.Timestamp);
                     if (itemToRemove != null)
                     {
+                        DeleteScreenshotForState(itemToRemove);
                         userSaves.Remove(itemToRemove);
                         _ownerFractalForm.SaveAllSavesForThisType(userSaves);
                         PopulateList(false);
@@ -611,6 +625,151 @@ namespace FractalExplorer.Forms
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
+        }
+
+        /// <summary>
+        /// Определяет, должен ли диалог использовать рендеринг превью.
+        /// Для пользовательских сохранений рендеринг отключен, кроме фрактала Серпинского.
+        /// </summary>
+        private bool ShouldUseRenderedPreview()
+        {
+            if (string.Equals(_ownerFractalForm.FractalTypeIdentifier, "Serpinsky", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox
+                                 ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
+            return presetsCheckBox?.Checked == true;
+        }
+
+        /// <summary>
+        /// Загружает превью из файла скриншота для пользовательского сохранения.
+        /// </summary>
+        private void LoadScreenshotPreview(FractalSaveStateBase state)
+        {
+            string screenshotPath = GetScreenshotPathForState(state);
+            if (!File.Exists(screenshotPath))
+            {
+                ClearPreview();
+                return;
+            }
+
+            try
+            {
+                using (var fs = new FileStream(screenshotPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var rawImage = Image.FromStream(fs))
+                {
+                    var loadedBitmap = new Bitmap(rawImage);
+                    lock (_bitmapLock)
+                    {
+                        _previewBitmap?.Dispose();
+                        _previewBitmap = loadedBitmap;
+                        _currentRenderingBitmap?.Dispose();
+                        _currentRenderingBitmap = null;
+                    }
+                }
+
+                if (pictureBoxPreview.IsHandleCreated)
+                {
+                    pictureBoxPreview.Invalidate();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка загрузки скриншота превью: {ex.Message}");
+                ClearPreview();
+            }
+        }
+
+        /// <summary>
+        /// Сохраняет PNG-скриншот превью в папке SavePrevData для конкретного состояния.
+        /// </summary>
+        private void SaveScreenshotForState(FractalSaveStateBase state)
+        {
+            if (state == null || pictureBoxPreview.Width <= 0 || pictureBoxPreview.Height <= 0)
+            {
+                return;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(GetScreenshotDirectoryForFractal());
+                string screenshotPath = GetScreenshotPathForState(state);
+
+                // При сохранении используем готовый механизм построения буфера превью.
+                using (var preview = _ownerFractalForm.RenderPreview(state, pictureBoxPreview.Width, pictureBoxPreview.Height))
+                {
+                    preview.Save(screenshotPath, ImageFormat.Png);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка сохранения скриншота превью: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Перемещает скриншот превью, привязанный к указанному сохранению, в корзину.
+        /// </summary>
+        private void DeleteScreenshotForState(FractalSaveStateBase state)
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            string screenshotPath = GetScreenshotPathForState(state);
+            try
+            {
+                if (File.Exists(screenshotPath))
+                {
+                    FileSystem.DeleteFile(
+                        screenshotPath,
+                        UIOption.OnlyErrorDialogs,
+                        RecycleOption.SendToRecycleBin,
+                        UICancelOption.DoNothing);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка перемещения скриншота превью в корзину: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Возвращает полный путь к директории скриншотов конкретного фрактала.
+        /// </summary>
+        private string GetScreenshotDirectoryForFractal()
+        {
+            return Path.Combine(Application.StartupPath, "Saves", PreviewScreenshotsFolderName, _ownerFractalForm.FractalTypeIdentifier);
+        }
+
+        /// <summary>
+        /// Возвращает полный путь к файлу скриншота для указанного состояния.
+        /// </summary>
+        private string GetScreenshotPathForState(FractalSaveStateBase state)
+        {
+            string safeSaveName = MakeSafeFileName(state.SaveName);
+            string timestampSuffix = state.Timestamp.ToString("yyyyMMdd_HHmmss_fffffff", CultureInfo.InvariantCulture);
+            string fileName = $"{safeSaveName}_{timestampSuffix}.png";
+            return Path.Combine(GetScreenshotDirectoryForFractal(), fileName);
+        }
+
+        /// <summary>
+        /// Удаляет потенциально недопустимые символы из части имени файла.
+        /// </summary>
+        private static string MakeSafeFileName(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "Save";
+            }
+
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var safeChars = value.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray();
+            string safeValue = new string(safeChars).Trim();
+            return string.IsNullOrWhiteSpace(safeValue) ? "Save" : safeValue;
         }
     }
 }
