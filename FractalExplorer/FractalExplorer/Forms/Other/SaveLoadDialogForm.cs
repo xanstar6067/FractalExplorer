@@ -421,21 +421,70 @@ namespace FractalExplorer.Forms
         private void PictureBoxPreview_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+            Rectangle clientRect = pictureBoxPreview.ClientRectangle;
+            RectangleF? renderingBitmapRect = null;
+
             lock (_bitmapLock)
             {
                 if (_previewBitmap != null)
                 {
-                    e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
+                    RectangleF previewRect = CalculateAspectFitRectangle(clientRect, _previewBitmap.Size);
+                    e.Graphics.DrawImage(_previewBitmap, previewRect);
                 }
                 if (_currentRenderingBitmap != null)
                 {
-                    e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                    renderingBitmapRect = CalculateAspectFitRectangle(clientRect, _currentRenderingBitmap.Size);
+                    e.Graphics.DrawImage(_currentRenderingBitmap, renderingBitmapRect.Value);
                 }
             }
             if (_renderVisualizer != null && _isRenderingPreview)
             {
-                _renderVisualizer.DrawVisualization(e.Graphics);
+                RectangleF? visualizationRect = renderingBitmapRect;
+                if (!visualizationRect.HasValue)
+                {
+                    lock (_bitmapLock)
+                    {
+                        if (_previewBitmap != null)
+                        {
+                            visualizationRect = CalculateAspectFitRectangle(clientRect, _previewBitmap.Size);
+                        }
+                    }
+                }
+
+                if (visualizationRect.HasValue)
+                {
+                    GraphicsState state = e.Graphics.Save();
+                    e.Graphics.SetClip(visualizationRect.Value);
+                    e.Graphics.TranslateTransform(visualizationRect.Value.X, visualizationRect.Value.Y);
+                    float scaleX = visualizationRect.Value.Width / Math.Max(1f, _currentRenderingBitmap?.Width ?? _previewBitmap?.Width ?? 1f);
+                    float scaleY = visualizationRect.Value.Height / Math.Max(1f, _currentRenderingBitmap?.Height ?? _previewBitmap?.Height ?? 1f);
+                    e.Graphics.ScaleTransform(scaleX, scaleY);
+                    _renderVisualizer.DrawVisualization(e.Graphics);
+                    e.Graphics.Restore(state);
+                }
             }
+        }
+
+        /// <summary>
+        /// Вычисляет прямоугольник "вписывания" изображения в целевую область с сохранением пропорций и центрированием.
+        /// </summary>
+        private static RectangleF CalculateAspectFitRectangle(Rectangle targetBounds, Size imageSize)
+        {
+            if (targetBounds.Width <= 0 || targetBounds.Height <= 0 || imageSize.Width <= 0 || imageSize.Height <= 0)
+            {
+                return RectangleF.Empty;
+            }
+
+            float scale = Math.Min((float)targetBounds.Width / imageSize.Width, (float)targetBounds.Height / imageSize.Height);
+            float drawWidth = imageSize.Width * scale;
+            float drawHeight = imageSize.Height * scale;
+            float drawX = targetBounds.X + (targetBounds.Width - drawWidth) / 2f;
+            float drawY = targetBounds.Y + (targetBounds.Height - drawHeight) / 2f;
+
+            return new RectangleF(drawX, drawY, drawWidth, drawHeight);
         }
 
         /// <summary>
