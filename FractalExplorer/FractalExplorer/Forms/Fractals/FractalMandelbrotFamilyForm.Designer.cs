@@ -84,7 +84,7 @@
             contentPanel.Dock = DockStyle.Fill;
             contentPanel.Location = new Point(0, 0);
             contentPanel.Name = "contentPanel";
-            contentPanel.Size = new Size(1084, 642);
+            contentPanel.Size = new Size(1084, 662);
             contentPanel.TabIndex = 0;
             // 
             // canvasHost
@@ -95,7 +95,7 @@
             canvasHost.Dock = DockStyle.Fill;
             canvasHost.Location = new Point(0, 0);
             canvasHost.Name = "canvasHost";
-            canvasHost.Size = new Size(1084, 642);
+            canvasHost.Size = new Size(1084, 662);
             canvasHost.TabIndex = 0;
             // 
             // controlsHost
@@ -106,7 +106,7 @@
             controlsHost.Controls.Add(pnlControls);
             controlsHost.Location = new Point(0, 0);
             controlsHost.Name = "controlsHost";
-            controlsHost.Size = new Size(231, 642);
+            controlsHost.Size = new Size(231, 662);
             controlsHost.TabIndex = 0;
             // 
             // pnlControls
@@ -160,7 +160,7 @@
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 161F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             pnlControls.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
-            pnlControls.Size = new Size(229, 640);
+            pnlControls.Size = new Size(229, 660);
             pnlControls.TabIndex = 0;
             // 
             // nudRe
@@ -337,7 +337,7 @@
             btnSmoothSettings.Location = new Point(6, 224);
             btnSmoothSettings.Margin = new Padding(6, 3, 6, 3);
             btnSmoothSettings.Name = "btnSmoothSettings";
-            btnSmoothSettings.Size = new Size(217, 23);
+            btnSmoothSettings.Size = new Size(217, 39);
             btnSmoothSettings.TabIndex = 21;
             btnSmoothSettings.Text = "Параметры окраски";
             btnSmoothSettings.UseVisualStyleBackColor = true;
@@ -346,9 +346,9 @@
             // 
             pnlControls.SetColumnSpan(pnlCustomControls, 2);
             pnlCustomControls.Dock = DockStyle.Fill;
-            pnlCustomControls.Location = new Point(3, 253);
+            pnlCustomControls.Location = new Point(3, 269);
             pnlCustomControls.Name = "pnlCustomControls";
-            pnlCustomControls.Size = new Size(223, 29);
+            pnlCustomControls.Size = new Size(223, 0);
             pnlCustomControls.TabIndex = 10;
             pnlCustomControls.Visible = false;
             // 
@@ -356,7 +356,7 @@
             // 
             pnlControls.SetColumnSpan(btnSaveHighRes, 2);
             btnSaveHighRes.Dock = DockStyle.Fill;
-            btnSaveHighRes.Location = new Point(6, 288);
+            btnSaveHighRes.Location = new Point(6, 272);
             btnSaveHighRes.Margin = new Padding(6, 3, 6, 3);
             btnSaveHighRes.Name = "btnSaveHighRes";
             btnSaveHighRes.Size = new Size(217, 39);
@@ -449,13 +449,13 @@
             canvas.Dock = DockStyle.Fill;
             canvas.Location = new Point(0, 0);
             canvas.Name = "canvas";
-            canvas.Size = new Size(1084, 642);
+            canvas.Size = new Size(1084, 662);
             canvas.TabIndex = 1;
             canvas.TabStop = false;
             // 
             // nudBaseScale
             // 
-            nudBaseScale.Location = new Point(219, 645);
+            nudBaseScale.Location = new Point(219, 665);
             nudBaseScale.Minimum = new decimal(new int[] { 1, 0, 0, 196608 });
             nudBaseScale.Name = "nudBaseScale";
             nudBaseScale.Size = new Size(87, 23);
@@ -467,11 +467,11 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1084, 642);
+            ClientSize = new Size(1084, 662);
             Controls.Add(contentPanel);
             Controls.Add(nudBaseScale);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            MinimumSize = new Size(1100, 675);
+            MinimumSize = new Size(1100, 695);
             Name = "FractalMandelbrotFamilyForm";
             Text = "FractalFormBase";
             Load += FormBase_Load;
