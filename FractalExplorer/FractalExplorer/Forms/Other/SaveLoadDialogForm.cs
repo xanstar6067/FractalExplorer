@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
+using FractalExplorer.Utilities.Imaging.Filters;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
 using FractalExplorer.Utilities.RenderUtilities;
@@ -34,6 +36,8 @@ namespace FractalExplorer.Forms
         private const int PREVIEW_TARGET_TILE_COUNT = 120;
         private const int PREVIEW_MIN_TILE_SIZE = 24;
         private const int PREVIEW_MAX_TILE_SIZE = 40;
+        private const int PREVIEW_SUPERSAMPLE_FACTOR = 2;
+        private const int PREVIEW_MAX_RENDER_EDGE = 2048;
         private bool _isPreviewRendering = false;
         private int _previewTotalTiles = 0;
         private int _previewRenderedTiles = 0;
@@ -154,7 +158,7 @@ namespace FractalExplorer.Forms
         /// <param name="state">Состояние фрактала для рендера превью.</param>
         private async void StartPreviewRender(FractalSaveStateBase state)
         {
-            if (state == null || pictureBoxPreview.Width <= 0 || pictureBoxPreview.Height <= 0)
+            if (state == null || pictureBoxPreview.ClientSize.Width <= 0 || pictureBoxPreview.ClientSize.Height <= 0)
             {
                 ClearPreview();
                 return;
@@ -167,8 +171,11 @@ namespace FractalExplorer.Forms
 
             try
             {
-                int previewWidth = pictureBoxPreview.Width;
-                int previewHeight = pictureBoxPreview.Height;
+                int previewDisplayWidth = pictureBoxPreview.ClientSize.Width;
+                int previewDisplayHeight = pictureBoxPreview.ClientSize.Height;
+                var previewRenderSize = GetPreviewRenderSize(previewDisplayWidth, previewDisplayHeight);
+                int previewWidth = previewRenderSize.Width;
+                int previewHeight = previewRenderSize.Height;
                 int previewTileSize = GetPreviewTileSize(previewWidth, previewHeight);
                 Bitmap renderedPreview = new Bitmap(previewWidth, previewHeight, PixelFormat.Format32bppArgb);
                 var tiles = GeneratePreviewTiles(previewWidth, previewHeight, previewTileSize);
@@ -187,16 +194,16 @@ namespace FractalExplorer.Forms
 
                 lock (_bitmapLock)
                 {
-                    _previewBitmap = renderedPreview;
-                    if (!pictureBoxPreview.IsDisposed)
+                    if (_previewBitmap != null && !ReferenceEquals(_previewBitmap, renderedPreview))
                     {
-                        var oldImage = pictureBoxPreview.Image;
-                        pictureBoxPreview.Image = _previewBitmap;
-                        if (oldImage != null && !ReferenceEquals(oldImage, _previewBitmap))
-                        {
-                            oldImage.Dispose();
-                        }
+                        _previewBitmap.Dispose();
                     }
+                    _previewBitmap = renderedPreview;
+                }
+
+                if (!pictureBoxPreview.IsDisposed)
+                {
+                    pictureBoxPreview.Invalidate();
                 }
 
                 await dispatcher.RenderAsync(async (tile, ct) =>
@@ -237,6 +244,47 @@ namespace FractalExplorer.Forms
                     renderedPreview?.Dispose();
                     return;
                 }
+
+                if (previewWidth != previewDisplayWidth || previewHeight != previewDisplayHeight)
+                {
+                    token.ThrowIfCancellationRequested();
+                    Bitmap downsampledPreview = await Task.Run(() =>
+                    {
+                        var lanczosFilter = new LanczosResizeFilter(previewDisplayWidth, previewDisplayHeight, 3);
+                        return lanczosFilter.Apply(renderedPreview);
+                    }, token);
+
+                    if (token.IsCancellationRequested)
+                    {
+                        downsampledPreview.Dispose();
+                        token.ThrowIfCancellationRequested();
+                    }
+                    await InvokeOnUiThreadAsync(() =>
+                    {
+                        if (token.IsCancellationRequested
+                            || requestId != Interlocked.Read(ref _previewRequestId)
+                            || this.IsDisposed
+                            || pictureBoxPreview.IsDisposed)
+                        {
+                            downsampledPreview.Dispose();
+                            return;
+                        }
+
+                        lock (_bitmapLock)
+                        {
+                            if (!ReferenceEquals(_previewBitmap, renderedPreview))
+                            {
+                                downsampledPreview.Dispose();
+                                return;
+                            }
+
+                            _previewBitmap = downsampledPreview;
+                            renderedPreview.Dispose();
+                        }
+
+                        pictureBoxPreview.Invalidate();
+                    });
+                }
             }
             catch (OperationCanceledException)
             {
@@ -259,12 +307,55 @@ namespace FractalExplorer.Forms
 
         private void pictureBoxPreview_Paint(object sender, PaintEventArgs e)
         {
+            e.Graphics.Clear(Color.Black);
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
+            e.Graphics.CompositingQuality = CompositingQuality.HighQuality;
+
+            Bitmap previewBitmapSnapshot;
+            Rectangle imageDestinationBounds = Rectangle.Empty;
+            lock (_bitmapLock)
+            {
+                previewBitmapSnapshot = _previewBitmap;
+            }
+
+            if (previewBitmapSnapshot != null)
+            {
+                imageDestinationBounds = CalculateImageDestinationBounds(
+                    previewBitmapSnapshot.Width,
+                    previewBitmapSnapshot.Height,
+                    pictureBoxPreview.ClientSize.Width,
+                    pictureBoxPreview.ClientSize.Height);
+
+                if (imageDestinationBounds.Width > 0 && imageDestinationBounds.Height > 0)
+                {
+                    e.Graphics.DrawImage(previewBitmapSnapshot, imageDestinationBounds);
+                }
+            }
+
             if (!_isPreviewRendering)
             {
                 return;
             }
 
-            _previewRenderVisualizer?.DrawVisualization(e.Graphics);
+            if (previewBitmapSnapshot != null
+                && imageDestinationBounds.Width > 0
+                && imageDestinationBounds.Height > 0)
+            {
+                GraphicsState graphicsState = e.Graphics.Save();
+                try
+                {
+                    float scaleX = imageDestinationBounds.Width / (float)previewBitmapSnapshot.Width;
+                    float scaleY = imageDestinationBounds.Height / (float)previewBitmapSnapshot.Height;
+                    e.Graphics.TranslateTransform(imageDestinationBounds.X, imageDestinationBounds.Y);
+                    e.Graphics.ScaleTransform(scaleX, scaleY);
+                    _previewRenderVisualizer?.DrawVisualization(e.Graphics);
+                }
+                finally
+                {
+                    e.Graphics.Restore(graphicsState);
+                }
+            }
 
             int rendered = Math.Max(0, Interlocked.CompareExchange(ref _previewRenderedTiles, 0, 0));
             int total = Math.Max(1, _previewTotalTiles);
@@ -340,6 +431,54 @@ namespace FractalExplorer.Forms
 
             int estimatedTileSize = (int)Math.Sqrt((width * height) / (double)PREVIEW_TARGET_TILE_COUNT);
             return Math.Max(PREVIEW_MIN_TILE_SIZE, Math.Min(PREVIEW_MAX_TILE_SIZE, estimatedTileSize));
+        }
+
+        private static Size GetPreviewRenderSize(int displayWidth, int displayHeight)
+        {
+            if (displayWidth <= 0 || displayHeight <= 0)
+            {
+                return Size.Empty;
+            }
+
+            int renderWidth = displayWidth * PREVIEW_SUPERSAMPLE_FACTOR;
+            int renderHeight = displayHeight * PREVIEW_SUPERSAMPLE_FACTOR;
+
+            if (renderWidth > PREVIEW_MAX_RENDER_EDGE || renderHeight > PREVIEW_MAX_RENDER_EDGE)
+            {
+                float scale = Math.Min(PREVIEW_MAX_RENDER_EDGE / (float)renderWidth, PREVIEW_MAX_RENDER_EDGE / (float)renderHeight);
+                renderWidth = Math.Max(displayWidth, (int)Math.Round(renderWidth * scale));
+                renderHeight = Math.Max(displayHeight, (int)Math.Round(renderHeight * scale));
+            }
+
+            return new Size(renderWidth, renderHeight);
+        }
+
+        private static Rectangle CalculateImageDestinationBounds(int imageWidth, int imageHeight, int targetWidth, int targetHeight)
+        {
+            if (imageWidth <= 0 || imageHeight <= 0 || targetWidth <= 0 || targetHeight <= 0)
+            {
+                return Rectangle.Empty;
+            }
+
+            float imageAspect = imageWidth / (float)imageHeight;
+            float targetAspect = targetWidth / (float)targetHeight;
+
+            int drawWidth;
+            int drawHeight;
+            if (imageAspect > targetAspect)
+            {
+                drawWidth = targetWidth;
+                drawHeight = Math.Max(1, (int)Math.Round(targetWidth / imageAspect));
+            }
+            else
+            {
+                drawHeight = targetHeight;
+                drawWidth = Math.Max(1, (int)Math.Round(targetHeight * imageAspect));
+            }
+
+            int drawX = (targetWidth - drawWidth) / 2;
+            int drawY = (targetHeight - drawHeight) / 2;
+            return new Rectangle(drawX, drawY, drawWidth, drawHeight);
         }
 
         private static List<TileInfo> GeneratePreviewTiles(int width, int height, int tileSize)
@@ -419,9 +558,7 @@ namespace FractalExplorer.Forms
             }
             if (!pictureBoxPreview.IsDisposed)
             {
-                var oldImage = pictureBoxPreview.Image;
-                pictureBoxPreview.Image = null;
-                oldImage?.Dispose();
+                pictureBoxPreview.Invalidate();
             }
         }
 
