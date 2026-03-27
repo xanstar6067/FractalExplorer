@@ -268,6 +268,10 @@ namespace FractalExplorer
                 _colorConfigForm.FormClosed += (s, args) => _colorConfigForm = null;
                 _colorConfigForm.Show(this);
             }
+            else if (!_colorConfigForm.Visible)
+            {
+                _colorConfigForm.Show(this);
+            }
             else
             {
                 _colorConfigForm.Activate();
