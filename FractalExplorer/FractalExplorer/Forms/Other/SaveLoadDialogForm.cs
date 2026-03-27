@@ -11,6 +11,7 @@ using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
+using FractalExplorer.Utilities.RenderUtilities;
 
 using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms
@@ -36,8 +37,7 @@ namespace FractalExplorer.Forms
         private bool _isPreviewRendering = false;
         private int _previewTotalTiles = 0;
         private int _previewRenderedTiles = 0;
-        private readonly System.Windows.Forms.Timer _previewOverlayTimer = new System.Windows.Forms.Timer();
-        private int _overlayFrame = 0;
+        private RenderVisualizerComponent _previewRenderVisualizer;
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="SaveLoadDialogForm"/>.
@@ -52,15 +52,6 @@ namespace FractalExplorer.Forms
             this.Text = $"Сохранение/Загрузка: {_ownerFractalForm.FractalTypeIdentifier}";
             pictureBoxPreview.SizeChanged += pictureBoxPreview_SizeChanged;
             pictureBoxPreview.Paint += pictureBoxPreview_Paint;
-            _previewOverlayTimer.Interval = 120;
-            _previewOverlayTimer.Tick += (_, __) =>
-            {
-                _overlayFrame = (_overlayFrame + 1) % 4;
-                if (!pictureBoxPreview.IsDisposed)
-                {
-                    pictureBoxPreview.Invalidate();
-                }
-            };
 
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
             if (presetsCheckBox != null)
@@ -136,6 +127,26 @@ namespace FractalExplorer.Forms
             UpdateButtonsState();
         }
 
+        private void EnsurePreviewRenderVisualizer(int tileSize)
+        {
+            if (_previewRenderVisualizer != null)
+            {
+                _previewRenderVisualizer.NeedsRedraw -= OnPreviewVisualizerNeedsRedraw;
+                _previewRenderVisualizer.Dispose();
+            }
+
+            _previewRenderVisualizer = new RenderVisualizerComponent(tileSize);
+            _previewRenderVisualizer.NeedsRedraw += OnPreviewVisualizerNeedsRedraw;
+        }
+
+        private void OnPreviewVisualizerNeedsRedraw()
+        {
+            if (pictureBoxPreview.IsHandleCreated && !pictureBoxPreview.IsDisposed)
+            {
+                pictureBoxPreview.BeginInvoke((Action)(() => pictureBoxPreview.Invalidate()));
+            }
+        }
+
         /// <summary>
         /// Запускает асинхронный рендер превью для указанного состояния фрактала.
         /// Использует тот же путь RenderPreview, что и у владельца формы фрактала.
@@ -163,10 +174,11 @@ namespace FractalExplorer.Forms
                 var tiles = GeneratePreviewTiles(previewWidth, previewHeight, previewTileSize);
                 int tileConcurrency = Math.Max(1, Math.Min(Environment.ProcessorCount, 4));
                 var dispatcher = new TileRenderDispatcher(tiles, tileConcurrency, RenderPatternSettings.SelectedPattern);
+                EnsurePreviewRenderVisualizer(previewTileSize);
+                _previewRenderVisualizer?.NotifyRenderSessionStart();
                 _previewTotalTiles = tiles.Count;
                 _previewRenderedTiles = 0;
                 _isPreviewRendering = true;
-                _previewOverlayTimer.Start();
 
                 using (Graphics g = Graphics.FromImage(renderedPreview))
                 {
@@ -190,6 +202,7 @@ namespace FractalExplorer.Forms
                 await dispatcher.RenderAsync(async (tile, ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
+                    _previewRenderVisualizer?.NotifyTileRenderStart(tile.Bounds);
                     byte[] tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, previewWidth, previewHeight, previewTileSize);
                     ct.ThrowIfCancellationRequested();
                     await InvokeOnUiThreadAsync(() =>
@@ -212,6 +225,7 @@ namespace FractalExplorer.Forms
                             CopyTileBufferToBitmap(renderedPreview, tile, tileBuffer);
                         }
 
+                        _previewRenderVisualizer?.NotifyTileRenderComplete(tile.Bounds);
                         Interlocked.Increment(ref _previewRenderedTiles);
                         pictureBoxPreview.Invalidate();
                     });
@@ -235,7 +249,7 @@ namespace FractalExplorer.Forms
             finally
             {
                 _isPreviewRendering = false;
-                _previewOverlayTimer.Stop();
+                _previewRenderVisualizer?.NotifyRenderSessionComplete();
                 if (!pictureBoxPreview.IsDisposed)
                 {
                     pictureBoxPreview.Invalidate();
@@ -250,24 +264,32 @@ namespace FractalExplorer.Forms
                 return;
             }
 
+            _previewRenderVisualizer?.DrawVisualization(e.Graphics);
+
             int rendered = Math.Max(0, Interlocked.CompareExchange(ref _previewRenderedTiles, 0, 0));
             int total = Math.Max(1, _previewTotalTiles);
             int percent = Math.Min(100, (int)Math.Round(rendered * 100.0 / total));
-            string dots = new string('.', _overlayFrame);
-            string overlayText = $"Рендер превью{dots} {percent}%";
+            string overlayText = $"Рендер превью: {percent}%";
+            const int overlayPadding = 6;
+            Size textSize = TextRenderer.MeasureText(overlayText, this.Font);
+            Rectangle overlayBounds = new Rectangle(
+                overlayPadding,
+                overlayPadding,
+                textSize.Width + overlayPadding * 2,
+                textSize.Height + overlayPadding * 2);
 
-            using (var background = new SolidBrush(Color.FromArgb(130, 0, 0, 0)))
+            using (var background = new SolidBrush(Color.FromArgb(150, 0, 0, 0)))
             {
-                e.Graphics.FillRectangle(background, pictureBoxPreview.ClientRectangle);
+                e.Graphics.FillRectangle(background, overlayBounds);
             }
 
             TextRenderer.DrawText(
                 e.Graphics,
                 overlayText,
                 this.Font,
-                pictureBoxPreview.ClientRectangle,
+                new Rectangle(overlayBounds.X + overlayPadding, overlayBounds.Y + overlayPadding, overlayBounds.Width, overlayBounds.Height),
                 Color.White,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.EndEllipsis);
         }
 
         private Task InvokeOnUiThreadAsync(Action action)
@@ -387,7 +409,7 @@ namespace FractalExplorer.Forms
         {
             CancelAndDisposePreviewCts();
             _isPreviewRendering = false;
-            _previewOverlayTimer.Stop();
+            _previewRenderVisualizer?.NotifyRenderSessionComplete();
             _previewTotalTiles = 0;
             _previewRenderedTiles = 0;
             lock (_bitmapLock)
@@ -410,8 +432,12 @@ namespace FractalExplorer.Forms
         {
             CancelAndDisposePreviewCts();
             ClearPreview();
-            _previewOverlayTimer.Stop();
-            _previewOverlayTimer.Dispose();
+            if (_previewRenderVisualizer != null)
+            {
+                _previewRenderVisualizer.NeedsRedraw -= OnPreviewVisualizerNeedsRedraw;
+                _previewRenderVisualizer.Dispose();
+                _previewRenderVisualizer = null;
+            }
         }
 
         /// <summary>
