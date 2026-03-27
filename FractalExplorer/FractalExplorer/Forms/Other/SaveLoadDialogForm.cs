@@ -533,8 +533,35 @@ namespace FractalExplorer.Forms
         private void SaveLoadDialogForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             CancelAndDisposePreviewCts();
+            ResetStaticPreviewCache();
             ClearPreview();
             _renderVisualizer?.Dispose();
+        }
+
+        /// <summary>
+        /// Сбрасывает статический кеш превью с инвалидированием поколения.
+        /// Метод безопасен при повторных вызовах.
+        /// </summary>
+        private void ResetStaticPreviewCache()
+        {
+            lock (_previewCacheLock)
+            {
+                bool cacheAlreadyReset = _cachedFullPreviewBitmap == null
+                                         && _renderedTilesCache == null
+                                         && _cachedPreviewStateIdentifier == null;
+
+                if (cacheAlreadyReset)
+                {
+                    return;
+                }
+
+                _cachedFullPreviewBitmap?.Dispose();
+                _cachedFullPreviewBitmap = null;
+                _renderedTilesCache?.Clear();
+                _renderedTilesCache = null;
+                _cachedPreviewStateIdentifier = null;
+                _previewCacheGeneration++;
+            }
         }
 
         /// <summary>
