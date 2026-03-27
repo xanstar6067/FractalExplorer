@@ -46,6 +46,12 @@
         public string PreviewEngineType { get; set; }
 
         /// <summary>
+        /// Получает или задает активный режим окрашивания.
+        /// Значение nullable для обратной совместимости со старыми сохранениями.
+        /// </summary>
+        public int? ColoringMode { get; set; }
+
+        /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="MandelbrotFamilySaveState"/>.
         /// Этот конструктор предназначен для использования десериализатором JSON.
         /// </summary>

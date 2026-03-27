@@ -1773,6 +1773,35 @@ namespace FractalDraving
             /// </summary>
             public bool UseSmoothColoring { get; set; }
             /// <summary>
+            /// Режим окрашивания для превью.
+            /// null означает старое сохранение — режим определяется через <see cref="UseSmoothColoring"/>.
+            /// </summary>
+            public int? ColoringMode { get; set; }
+            /// <summary>
+            /// Использовать ли сглаженное значение итераций во входе histogram-режима.
+            /// </summary>
+            public bool? HistogramInputUseSmooth { get; set; }
+            /// <summary>
+            /// Сила влияния Orbit Trap режима.
+            /// </summary>
+            public double? OrbitTrapStrength { get; set; }
+            /// <summary>
+            /// Смещение Orbit Trap режима.
+            /// </summary>
+            public double? OrbitTrapBias { get; set; }
+            /// <summary>
+            /// Частота полос для Stripe Average режима.
+            /// </summary>
+            public double? StripeFrequency { get; set; }
+            /// <summary>
+            /// Сила полос для Stripe Average режима.
+            /// </summary>
+            public double? StripeStrength { get; set; }
+            /// <summary>
+            /// Смещение полос для Stripe Average режима.
+            /// </summary>
+            public double? StripeBias { get; set; }
+            /// <summary>
             /// Тип движка для рендеринга превью.
             /// </summary>
             public string PreviewEngineType { get; set; }
@@ -1968,6 +1997,7 @@ namespace FractalDraving
             state.Iterations = (int)nudIterations.Value;
             state.PaletteName = _paletteManager.ActivePalette?.Name ?? "Стандартный серый";
             state.PreviewEngineType = this.FractalTypeIdentifier;
+            state.ColoringMode = (int)_coloringRuntimeState.ActiveMode.ModeType;
 
             var previewParams = new PreviewParams
             {
@@ -1978,6 +2008,13 @@ namespace FractalDraving
                 PaletteName = state.PaletteName,
                 Threshold = state.Threshold,
                 UseSmoothColoring = IsSmoothColoringEnabled(),
+                ColoringMode = (int)_coloringRuntimeState.ActiveMode.ModeType,
+                HistogramInputUseSmooth = _coloringRuntimeState.HistogramSettings.InputUseSmooth,
+                OrbitTrapStrength = _coloringRuntimeState.OrbitTrapSettings.Strength,
+                OrbitTrapBias = _coloringRuntimeState.OrbitTrapSettings.Bias,
+                StripeFrequency = _coloringRuntimeState.StripeAverageSettings.Frequency,
+                StripeStrength = _coloringRuntimeState.StripeAverageSettings.Strength,
+                StripeBias = _coloringRuntimeState.StripeAverageSettings.Bias,
                 PreviewEngineType = state.PreviewEngineType
             };
 
@@ -2026,6 +2063,8 @@ namespace FractalDraving
                     nudIm.Value = ClampDecimal(juliaState.CIm, nudIm.Minimum, nudIm.Maximum);
                 }
             }
+
+            ApplyColoringStateOnLoad(state);
             lock (_bitmapLock)
             {
                 _previewBitmap?.Dispose(); _previewBitmap = null;
@@ -2036,6 +2075,71 @@ namespace FractalDraving
             _renderedZoom = _zoom;
             UpdateEngineParameters();
             ScheduleRender();
+        }
+
+        private void ApplyColoringStateOnLoad(MandelbrotFamilySaveState state)
+        {
+            var mode = ResolveLoadedColoringMode(state);
+            _coloringRuntimeState.ActiveMode = ColoringModeRuntime.FromType(mode);
+
+            if (!string.IsNullOrWhiteSpace(state.PreviewParametersJson))
+            {
+                try
+                {
+                    var previewParams = JsonSerializer.Deserialize<PreviewParams>(state.PreviewParametersJson);
+                    if (previewParams is not null)
+                    {
+                        if (previewParams.HistogramInputUseSmooth.HasValue)
+                            _coloringRuntimeState.HistogramSettings.InputUseSmooth = previewParams.HistogramInputUseSmooth.Value;
+                        if (previewParams.OrbitTrapStrength.HasValue)
+                            _coloringRuntimeState.OrbitTrapSettings.Strength = previewParams.OrbitTrapStrength.Value;
+                        if (previewParams.OrbitTrapBias.HasValue)
+                            _coloringRuntimeState.OrbitTrapSettings.Bias = previewParams.OrbitTrapBias.Value;
+                        if (previewParams.StripeFrequency.HasValue)
+                            _coloringRuntimeState.StripeAverageSettings.Frequency = previewParams.StripeFrequency.Value;
+                        if (previewParams.StripeStrength.HasValue)
+                            _coloringRuntimeState.StripeAverageSettings.Strength = previewParams.StripeStrength.Value;
+                        if (previewParams.StripeBias.HasValue)
+                            _coloringRuntimeState.StripeAverageSettings.Bias = previewParams.StripeBias.Value;
+                    }
+                }
+                catch
+                {
+                    // Игнорируем ошибки превью-параметров: базовый режим уже определён выше.
+                }
+            }
+        }
+
+        private ColoringModeType ResolveLoadedColoringMode(MandelbrotFamilySaveState state)
+        {
+            if (state.ColoringMode.HasValue)
+            {
+                int rawMode = state.ColoringMode.Value;
+                if (Enum.IsDefined(typeof(ColoringModeType), rawMode))
+                {
+                    return (ColoringModeType)rawMode;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(state.PreviewParametersJson))
+            {
+                try
+                {
+                    var previewParams = JsonSerializer.Deserialize<PreviewParams>(state.PreviewParametersJson);
+                    if (previewParams is not null)
+                    {
+                        return ResolvePreviewColoringMode(previewParams);
+                    }
+                }
+                catch
+                {
+                    // Старые/битые параметры превью: используем fallback ниже.
+                }
+            }
+
+            // Исторически отсутствие параметра означало классические режимы (Smooth/Discrete).
+            // При полном отсутствии данных сохраняем предыдущее поведение по умолчанию — Smooth.
+            return ColoringModeType.Smooth;
         }
 
         /// <inheritdoc/>
@@ -2077,16 +2181,7 @@ namespace FractalDraving
                         ? previewEngine.MaxIterations
                         : paletteForPreview.MaxColorIterations;
 
-                previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-                if (previewEngine.UseSmoothColoring)
-                {
-                    previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
-                }
-                else
-                {
-                    previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-                    previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
-                }
+                ApplyPreviewColoring(previewEngine, previewParams, paletteForPreview, effectiveMaxColorIterations);
 
                 return previewEngine.RenderSingleTile(tile, totalWidth, totalHeight, out _);
             });
@@ -2134,18 +2229,47 @@ namespace FractalDraving
                     ? previewEngine.MaxIterations
                     : paletteForPreview.MaxColorIterations;
 
-            previewEngine.UseSmoothColoring = previewParams.UseSmoothColoring;
-            if (previewEngine.UseSmoothColoring)
-            {
-                previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
-            }
-            else
-            {
-                previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-                previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
-            }
+            ApplyPreviewColoring(previewEngine, previewParams, paletteForPreview, effectiveMaxColorIterations);
 
             return previewEngine.RenderToBitmap(previewWidth, previewHeight, 1, progress => { });
+        }
+
+        private void ApplyPreviewColoring(
+            FractalMandelbrotFamilyEngine previewEngine,
+            PreviewParams previewParams,
+            Palette paletteForPreview,
+            int effectiveMaxColorIterations)
+        {
+            var resolvedMode = ResolvePreviewColoringMode(previewParams);
+            previewEngine.ActiveMode = (FractalExplorer.Engines.ColoringModeType)resolvedMode;
+            previewEngine.UseSmoothColoring = resolvedMode == ColoringModeType.Smooth;
+
+            previewEngine.HistogramInputUseSmooth = previewParams.HistogramInputUseSmooth ?? true;
+            previewEngine.OrbitTrapStrength = previewParams.OrbitTrapStrength ?? 1.0;
+            previewEngine.OrbitTrapBias = previewParams.OrbitTrapBias ?? 0.0;
+            previewEngine.StripeFrequency = previewParams.StripeFrequency ?? 6.0;
+            previewEngine.StripeStrength = previewParams.StripeStrength ?? 0.5;
+            previewEngine.StripeBias = previewParams.StripeBias ?? 0.0;
+
+            previewEngine.MaxColorIterations = effectiveMaxColorIterations;
+            previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
+            previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+        }
+
+        private static ColoringModeType ResolvePreviewColoringMode(PreviewParams previewParams)
+        {
+            if (previewParams.ColoringMode.HasValue)
+            {
+                int modeValue = previewParams.ColoringMode.Value;
+                if (Enum.IsDefined(typeof(ColoringModeType), modeValue))
+                {
+                    return (ColoringModeType)modeValue;
+                }
+            }
+
+            // Обратная совместимость со старыми сохранениями:
+            // если нового параметра нет, используем прежний флаг Smooth/Discrete.
+            return previewParams.UseSmoothColoring ? ColoringModeType.Smooth : ColoringModeType.Discrete;
         }
 
         /// <inheritdoc/>
