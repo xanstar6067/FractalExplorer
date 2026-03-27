@@ -516,12 +516,30 @@ namespace FractalExplorer.Forms
         /// </summary>
         private void btnLoad_Click(object sender, EventArgs e)
         {
-            if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
+            TryLoadSelectedState();
+        }
+
+        /// <summary>
+        /// Обрабатывает двойной клик по элементу списка сохранений/точек интереса.
+        /// </summary>
+        private void listBoxSaves_DoubleClick(object sender, EventArgs e)
+        {
+            TryLoadSelectedState();
+        }
+
+        /// <summary>
+        /// Загружает выбранное состояние (пользовательское сохранение или точку интереса) и закрывает диалог.
+        /// </summary>
+        private void TryLoadSelectedState()
+        {
+            if (listBoxSaves.SelectedIndex < 0 || _displayedItems == null || listBoxSaves.SelectedIndex >= _displayedItems.Count)
             {
-                _ownerFractalForm.LoadState(_displayedItems[listBoxSaves.SelectedIndex]);
-                this.DialogResult = DialogResult.OK;
-                this.Close();
+                return;
             }
+
+            _ownerFractalForm.LoadState(_displayedItems[listBoxSaves.SelectedIndex]);
+            DialogResult = DialogResult.OK;
+            Close();
         }
 
         /// <summary>

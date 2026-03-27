@@ -52,6 +52,7 @@
             listBoxSaves.Name = "listBoxSaves";
             listBoxSaves.Size = new Size(280, 289);
             listBoxSaves.TabIndex = 0;
+            listBoxSaves.DoubleClick += listBoxSaves_DoubleClick;
             listBoxSaves.SelectedIndexChanged += listBoxSaves_SelectedIndexChanged;
             // 
             // pictureBoxPreview
