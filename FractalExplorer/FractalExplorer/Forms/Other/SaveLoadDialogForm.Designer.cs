@@ -57,6 +57,7 @@
             // pictureBoxPreview
             // 
             pictureBoxPreview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            pictureBoxPreview.BackColor = Color.Black;
             pictureBoxPreview.BorderStyle = BorderStyle.FixedSingle;
             pictureBoxPreview.Location = new Point(307, 35);
             pictureBoxPreview.Name = "pictureBoxPreview";

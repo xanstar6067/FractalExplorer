@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -11,8 +9,6 @@ using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using FractalExplorer.Projects; // Добавлено для доступа к классам превью-параметров
-using System.Text.Json; // Добавлено для десериализации
 
 using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms
@@ -20,51 +16,18 @@ namespace FractalExplorer.Forms
     /// <summary>
     /// Представляет диалоговое окно для сохранения и загрузки состояний фракталов.
     /// Предоставляет функциональность для управления пользовательскими сохранениями и предустановками,
-    /// включая асинхронный, мозаичный рендер предварительного просмотра с прогрессивным кэшированием.
+    /// включая асинхронный рендер предварительного просмотра.
     /// </summary>
     public partial class SaveLoadDialogForm : Form
     {
         private readonly ISaveLoadCapableFractal _ownerFractalForm;
         private List<FractalSaveStateBase> _displayedItems;
 
-        // --- Поля для мозаичного рендера ---
-        private readonly RenderVisualizerComponent _renderVisualizer;
+        // --- Поля для рендера превью ---
         private CancellationTokenSource _previewRenderCts;
         private Bitmap _previewBitmap;
-        private Bitmap _currentRenderingBitmap;
         private readonly object _bitmapLock = new object();
-        private const int TILE_SIZE = 16;
-        private bool _isRenderingPreview = false;
-
-        // --- Поля для прогрессивного кэширования превью ---
-
-        /// <summary>
-        /// Кешированный битмап полного превью. Заполняется по мере рендеринга плиток.
-        /// Является статическим для сохранения между открытиями диалогового окна.
-        /// </summary>
-        private static Bitmap _cachedFullPreviewBitmap;
-
-        /// <summary>
-        /// Уникальный идентификатор состояния, для которого был создан текущий кеш.
-        /// </summary>
-        private static string _cachedPreviewStateIdentifier;
-
-        /// <summary>
-        /// Набор для отслеживания уже отрендеренных плиток в кеше, чтобы избежать повторной работы.
-        /// Использует Point(X, Y) плитки в качестве ключа.
-        /// </summary>
-        private static HashSet<Point> _renderedTilesCache;
-
-        /// <summary>
-        /// Поколение кеш-сессии превью. Увеличивается при полной пересборке кеша,
-        /// чтобы отбрасывать устаревшие результаты асинхронного рендера.
-        /// </summary>
-        private static long _previewCacheGeneration;
-
-        /// <summary>
-        /// Объект для синхронизации доступа к статическим полям кеша из разных потоков.
-        /// </summary>
-        private static readonly object _previewCacheLock = new object();
+        private long _previewRequestId = 0;
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="SaveLoadDialogForm"/>.
@@ -77,16 +40,7 @@ namespace FractalExplorer.Forms
             ThemeManager.RegisterForm(this);
             _ownerFractalForm = ownerFractalForm ?? throw new ArgumentNullException(nameof(ownerFractalForm));
             this.Text = $"Сохранение/Загрузка: {_ownerFractalForm.FractalTypeIdentifier}";
-
-            _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
-            _renderVisualizer.NeedsRedraw += () =>
-            {
-                if (pictureBoxPreview.IsHandleCreated)
-                {
-                    pictureBoxPreview.Invalidate();
-                }
-            };
-            pictureBoxPreview.Paint += PictureBoxPreview_Paint;
+            pictureBoxPreview.SizeChanged += pictureBoxPreview_SizeChanged;
 
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
             if (presetsCheckBox != null)
@@ -153,7 +107,7 @@ namespace FractalExplorer.Forms
             {
                 var selectedState = _displayedItems[listBoxSaves.SelectedIndex];
                 textBoxSaveName.Text = selectedState.SaveName;
-                StartTiledPreviewRender(selectedState);
+                StartPreviewRender(selectedState);
             }
             else
             {
@@ -163,11 +117,11 @@ namespace FractalExplorer.Forms
         }
 
         /// <summary>
-        /// Запускает асинхронный мозаичный рендер превью для указанного состояния фрактала.
-        /// Управляет жизненным циклом рендеринга, включая отмену, обработку ошибок и обновление UI.
+        /// Запускает асинхронный рендер превью для указанного состояния фрактала.
+        /// Использует тот же путь RenderPreview, что и у владельца формы фрактала.
         /// </summary>
         /// <param name="state">Состояние фрактала для рендера превью.</param>
-        private async void StartTiledPreviewRender(FractalSaveStateBase state)
+        private async void StartPreviewRender(FractalSaveStateBase state)
         {
             if (state == null || pictureBoxPreview.Width <= 0 || pictureBoxPreview.Height <= 0)
             {
@@ -175,252 +129,47 @@ namespace FractalExplorer.Forms
                 return;
             }
 
-            _isRenderingPreview = true;
             CancelAndDisposePreviewCts();
             _previewRenderCts = new CancellationTokenSource();
             var token = _previewRenderCts.Token;
-
-            _renderVisualizer.NotifyRenderSessionStart();
-
-            var newRenderingBitmap = new Bitmap(pictureBoxPreview.Width, pictureBoxPreview.Height, PixelFormat.Format32bppArgb);
-            lock (_bitmapLock)
-            {
-                _currentRenderingBitmap?.Dispose();
-                _currentRenderingBitmap = newRenderingBitmap;
-                _previewBitmap?.Dispose();
-                _previewBitmap = null;
-            }
-            pictureBoxPreview.Invalidate();
+            long requestId = Interlocked.Increment(ref _previewRequestId);
 
             try
             {
-                var tiles = GenerateTiles(pictureBoxPreview.Width, pictureBoxPreview.Height);
-                var dispatcher = new TileRenderDispatcher(tiles, Environment.ProcessorCount, RenderPatternSettings.SelectedPattern);
-
-                await dispatcher.RenderAsync(async (tile, ct) =>
-                {
-                    ct.ThrowIfCancellationRequested();
-                    _renderVisualizer.NotifyTileRenderStart(tile.Bounds);
-
-                    byte[] tileBuffer = await GetOrRenderPreviewTileAsync(state, tile, pictureBoxPreview.Width, pictureBoxPreview.Height, TILE_SIZE, ct);
-
-                    ct.ThrowIfCancellationRequested();
-
-                    // Потокобезопасно обновляем часть растрового изображения данными из отрендеренной плитки.
-                    lock (_bitmapLock)
-                    {
-                        if (ct.IsCancellationRequested || _currentRenderingBitmap != newRenderingBitmap) return;
-
-                        BitmapData bmpData = _currentRenderingBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _currentRenderingBitmap.PixelFormat);
-                        int tileRowWidthInBytes = tile.Bounds.Width * 4;
-
-                        // Копируем данные построчно, чтобы учесть возможную разницу между Stride и шириной строки.
-                        for (int y = 0; y < tile.Bounds.Height; y++)
-                        {
-                            IntPtr currentDestPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
-                            int sourceOffset = y * tileRowWidthInBytes;
-                            Marshal.Copy(tileBuffer, sourceOffset, currentDestPtr, tileRowWidthInBytes);
-                        }
-                        _currentRenderingBitmap.UnlockBits(bmpData);
-                    }
-
-                    _renderVisualizer.NotifyTileRenderComplete(tile.Bounds);
-
-                }, token);
-
+                int previewWidth = pictureBoxPreview.Width;
+                int previewHeight = pictureBoxPreview.Height;
+                Bitmap renderedPreview = await Task.Run(() => _ownerFractalForm.RenderPreview(state, previewWidth, previewHeight), token);
                 token.ThrowIfCancellationRequested();
 
-                // Если рендер завершился успешно, делаем временный битмап основным.
+                if (requestId != Interlocked.Read(ref _previewRequestId))
+                {
+                    renderedPreview?.Dispose();
+                    return;
+                }
+
                 lock (_bitmapLock)
                 {
-                    if (_currentRenderingBitmap == newRenderingBitmap)
+                    _previewBitmap?.Dispose();
+                    _previewBitmap = renderedPreview;
+                }
+
+                if (!pictureBoxPreview.IsDisposed)
+                {
+                    var oldImage = pictureBoxPreview.Image;
+                    pictureBoxPreview.Image = _previewBitmap;
+                    if (oldImage != null && !ReferenceEquals(oldImage, _previewBitmap))
                     {
-                        _previewBitmap?.Dispose();
-                        _previewBitmap = _currentRenderingBitmap;
-                        _currentRenderingBitmap = null;
+                        oldImage.Dispose();
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                // Отмена — это штатное поведение, игнорируем исключение.
-                lock (_bitmapLock)
-                {
-                    if (_currentRenderingBitmap == newRenderingBitmap)
-                    {
-                        _currentRenderingBitmap?.Dispose();
-                        _currentRenderingBitmap = null;
-                    }
-                }
+                // Отмена — штатное поведение.
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка мозаичного рендера превью: {ex.Message}");
-            }
-            finally
-            {
-                _isRenderingPreview = false;
-                _renderVisualizer.NotifyRenderSessionComplete();
-                if (pictureBoxPreview.IsHandleCreated)
-                {
-                    pictureBoxPreview.Invalidate();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Асинхронно получает плитку для превью из кеша или рендерит её, если в кеше её нет.
-        /// Использует статический прогрессивный кеш для ускорения повторного отображения.
-        /// </summary>
-        /// <param name="state">Состояние фрактала для рендеринга.</param>
-        /// <param name="tile">Информация о запрашиваемой плитке.</param>
-        /// <param name="totalWidth">Общая ширина изображения превью.</param>
-        /// <param name="totalHeight">Общая высота изображения превью.</param>
-        /// <param name="tileSize">Размер одной плитки.</param>
-        /// <returns>Массив байтов с пиксельными данными для запрошенной плитки (формат 32bpp ARGB).</returns>
-        private async Task<byte[]> GetOrRenderPreviewTileAsync(FractalSaveStateBase state, TileInfo tile, int totalWidth, int totalHeight, int tileSize, CancellationToken cancellationToken)
-        {
-            const int maxAttempts = 2;
-            for (int attempt = 0; attempt < maxAttempts; attempt++)
-            {
-                string currentStateIdentifier = $"{state.FractalType}_{state.SaveName}_{state.Timestamp.Ticks}";
-                var tileCoord = new Point(tile.Bounds.X, tile.Bounds.Y);
-                long cacheGeneration;
-                bool needsRender;
-
-                lock (_previewCacheLock)
-                {
-                    bool isSameSession = _cachedPreviewStateIdentifier == currentStateIdentifier;
-                    bool hasValidBitmap = _cachedFullPreviewBitmap != null
-                                          && _cachedFullPreviewBitmap.Width == totalWidth
-                                          && _cachedFullPreviewBitmap.Height == totalHeight;
-
-                    // Если кеш не соответствует текущей сессии или размеру превью, сбрасываем его.
-                    if (!isSameSession || !hasValidBitmap || _renderedTilesCache == null)
-                    {
-                        _cachedFullPreviewBitmap?.Dispose();
-                        _cachedFullPreviewBitmap = new Bitmap(totalWidth, totalHeight, PixelFormat.Format32bppArgb);
-                        _renderedTilesCache = new HashSet<Point>();
-                        _cachedPreviewStateIdentifier = currentStateIdentifier;
-                        _previewCacheGeneration++;
-                    }
-
-                    cacheGeneration = _previewCacheGeneration;
-                    needsRender = !_renderedTilesCache.Contains(tileCoord);
-                }
-
-                byte[] tileBuffer;
-                if (needsRender)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    string expectedStateIdentifier = currentStateIdentifier;
-                    long expectedCacheGeneration = cacheGeneration;
-
-                    // Anti-race guard: перед записью в кеш обязательно повторно проверяем,
-                    // что сессия/поколение кеша не сменились, пока шёл await рендера.
-                    // Делегируем вызов рендеринга соответствующей реализации фрактала.
-                    tileBuffer = await _ownerFractalForm.RenderPreviewTileAsync(state, tile, totalWidth, totalHeight, tileSize);
-
-                    lock (_previewCacheLock)
-                    {
-                        bool cacheSessionStillValid = _cachedPreviewStateIdentifier == expectedStateIdentifier
-                                                      && _previewCacheGeneration == expectedCacheGeneration
-                                                      && _cachedFullPreviewBitmap != null
-                                                      && _cachedFullPreviewBitmap.Width == totalWidth
-                                                      && _cachedFullPreviewBitmap.Height == totalHeight
-                                                      && _renderedTilesCache != null;
-
-                        if (cancellationToken.IsCancellationRequested || !cacheSessionStillValid)
-                        {
-                            return tileBuffer;
-                        }
-
-                        // Повторная проверка на случай, если другой поток уже отрендерил эту плитку.
-                        if (!_renderedTilesCache.Contains(tileCoord))
-                        {
-                            // Построчно копируем отрендеренную плитку в общий кеш-битмап.
-                            BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
-                            int tileRowBytes = tile.Bounds.Width * 4;
-                            for (int y = 0; y < tile.Bounds.Height; y++)
-                            {
-                                IntPtr destPtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
-                                Marshal.Copy(tileBuffer, y * tileRowBytes, destPtr, tileRowBytes);
-                            }
-                            _cachedFullPreviewBitmap.UnlockBits(bmpData);
-                            _renderedTilesCache.Add(tileCoord);
-                        }
-                    }
-
-                    return tileBuffer;
-                }
-
-                bool shouldReTry;
-                bool canRetryByCacheRace;
-
-                // Если плитка уже есть в кеше, извлекаем ее данные.
-                tileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-                lock (_previewCacheLock)
-                {
-                    bool cacheSessionStillValid = _cachedPreviewStateIdentifier == currentStateIdentifier
-                                                  && _cachedFullPreviewBitmap != null
-                                                  && _cachedFullPreviewBitmap.Width == totalWidth
-                                                  && _cachedFullPreviewBitmap.Height == totalHeight
-                                                  && _renderedTilesCache != null
-                                                  && _renderedTilesCache.Contains(tileCoord);
-
-                    canRetryByCacheRace = !cancellationToken.IsCancellationRequested && !cacheSessionStillValid;
-                    shouldReTry = !cacheSessionStillValid;
-                    if (!shouldReTry)
-                    {
-                        // Построчно читаем данные плитки из общего кеш-битмапа.
-                        BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.ReadOnly, _cachedFullPreviewBitmap.PixelFormat);
-                        int tileRowBytes = tile.Bounds.Width * 4;
-                        for (int y = 0; y < tile.Bounds.Height; y++)
-                        {
-                            IntPtr sourcePtr = IntPtr.Add(bmpData.Scan0, y * bmpData.Stride);
-                            Marshal.Copy(sourcePtr, tileBuffer, y * tileRowBytes, tileRowBytes);
-                        }
-                        _cachedFullPreviewBitmap.UnlockBits(bmpData);
-                    }
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-                if (shouldReTry)
-                {
-                    // Рекурсия запрещена: здесь возможна гонка с отменой, поэтому retry только в ограниченном цикле.
-                    if (canRetryByCacheRace && attempt < maxAttempts - 1)
-                    {
-                        continue;
-                    }
-                }
-
-                return tileBuffer;
-            }
-
-            throw new InvalidOperationException("Не удалось получить плитку превью после ограниченного числа попыток.");
-        }
-
-        /// <summary>
-        /// Обрабатывает событие Paint для PictureBox. Отображает текущее превью и/или процесс рендеринга.
-        /// </summary>
-        private void PictureBoxPreview_Paint(object sender, PaintEventArgs e)
-        {
-            e.Graphics.Clear(Color.Black);
-            lock (_bitmapLock)
-            {
-                if (_previewBitmap != null)
-                {
-                    e.Graphics.DrawImageUnscaled(_previewBitmap, Point.Empty);
-                }
-                if (_currentRenderingBitmap != null)
-                {
-                    e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
-                }
-            }
-            if (_renderVisualizer != null && _isRenderingPreview)
-            {
-                _renderVisualizer.DrawVisualization(e.Graphics);
+                Console.WriteLine($"Ошибка рендера превью: {ex.Message}");
             }
         }
 
@@ -434,34 +183,13 @@ namespace FractalExplorer.Forms
             {
                 _previewBitmap?.Dispose();
                 _previewBitmap = null;
-                _currentRenderingBitmap?.Dispose();
-                _currentRenderingBitmap = null;
             }
-            if (pictureBoxPreview.IsHandleCreated)
+            if (!pictureBoxPreview.IsDisposed)
             {
-                pictureBoxPreview.Invalidate();
+                var oldImage = pictureBoxPreview.Image;
+                pictureBoxPreview.Image = null;
+                oldImage?.Dispose();
             }
-        }
-
-        /// <summary>
-        /// Генерирует и сортирует список плиток для мозаичного рендеринга.
-        /// Сортировка по удаленности от центра создает более естественный эффект появления изображения.
-        /// </summary>
-        /// <returns>Список объектов <see cref="TileInfo"/>, отсортированный от центра к краям.</returns>
-        private List<TileInfo> GenerateTiles(int width, int height)
-        {
-            var tiles = new List<TileInfo>();
-            Point center = new Point(width / 2, height / 2);
-            for (int y = 0; y < height; y += TILE_SIZE)
-            {
-                for (int x = 0; x < width; x += TILE_SIZE)
-                {
-                    int tileWidth = Math.Min(TILE_SIZE, width - x);
-                    int tileHeight = Math.Min(TILE_SIZE, height - y);
-                    tiles.Add(new TileInfo(x, y, tileWidth, tileHeight));
-                }
-            }
-            return tiles.OrderBy(t => Math.Pow(t.Center.X - center.X, 2) + Math.Pow(t.Center.Y - center.Y, 2)).ToList();
         }
 
         /// <summary>
@@ -471,7 +199,6 @@ namespace FractalExplorer.Forms
         {
             CancelAndDisposePreviewCts();
             ClearPreview();
-            _renderVisualizer?.Dispose();
         }
 
         /// <summary>
@@ -495,6 +222,16 @@ namespace FractalExplorer.Forms
 
             _previewRenderCts.Dispose();
             _previewRenderCts = null;
+        }
+
+        private void pictureBoxPreview_SizeChanged(object sender, EventArgs e)
+        {
+            if (listBoxSaves.SelectedIndex >= 0
+                && _displayedItems != null
+                && listBoxSaves.SelectedIndex < _displayedItems.Count)
+            {
+                StartPreviewRender(_displayedItems[listBoxSaves.SelectedIndex]);
+            }
         }
 
         /// <summary>
