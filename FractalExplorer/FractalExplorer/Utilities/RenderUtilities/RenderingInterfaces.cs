@@ -1,9 +1,5 @@
 ﻿using FractalExplorer.Engines;
 using FractalExplorer.Resources;
-using System;
-using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FractalExplorer.Utilities.RenderUtilities
 {

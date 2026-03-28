@@ -1,14 +1,8 @@
 ﻿using FractalExplorer.Properties;
 using FractalExplorer.Utilities.Imaging.Filters;
 using FractalExplorer.Utilities.RenderUtilities;
-using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.Other

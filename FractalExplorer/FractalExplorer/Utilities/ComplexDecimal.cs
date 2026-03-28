@@ -1,6 +1,4 @@
 ﻿using FractalExplorer.Utilities;
-using System;
-using System.Security.Policy;
 
 namespace FractalExplorer.Resources
 {

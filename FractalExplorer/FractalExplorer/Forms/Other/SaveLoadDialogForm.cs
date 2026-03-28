@@ -1,21 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
+﻿using System.Drawing.Imaging;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using Microsoft.VisualBasic.FileIO;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using FractalExplorer.Projects; // Добавлено для доступа к классам превью-параметров
-using System.Text.Json; // Добавлено для десериализации
 
 using FractalExplorer.Utilities.Theme;
 using System.Drawing.Drawing2D;

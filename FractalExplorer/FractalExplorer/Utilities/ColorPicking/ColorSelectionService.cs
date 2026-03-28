@@ -1,5 +1,4 @@
 using FractalExplorer.Forms.Common;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities.ColorPicking
 {

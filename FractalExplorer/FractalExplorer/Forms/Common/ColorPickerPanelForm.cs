@@ -3,7 +3,6 @@ using FractalExplorer.Utilities.ColorPicking;
 using FractalExplorer.Utilities.Theme;
 using System.Globalization;
 using System.Reflection;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Forms.Common
 {

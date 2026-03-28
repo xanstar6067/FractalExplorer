@@ -1,12 +1,8 @@
 ﻿using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
-using System;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.Numerics; // Для Complex.Pow в double-версии
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FractalExplorer.Engines
 {

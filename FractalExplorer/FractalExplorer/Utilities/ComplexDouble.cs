@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FractalExplorer.Utilities
+﻿namespace FractalExplorer.Utilities
 {
     /// <summary>
     /// Представляет комплексное число, используя тип <see cref="double"/> для высокой производительности.

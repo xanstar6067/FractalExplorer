@@ -6,18 +6,11 @@ using FractalExplorer.Utilities.RenderUtilities;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.ColorPalettes;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.Fractals
@@ -185,7 +178,7 @@ namespace FractalExplorer.Forms.Fractals
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.000000000000001m;
-            
+
             //nudZoom.Maximum = decimal.MaxValue;
             nudZoom.Maximum = 1434648375m;
             _zoom = BASE_SCALE / 4.0m;

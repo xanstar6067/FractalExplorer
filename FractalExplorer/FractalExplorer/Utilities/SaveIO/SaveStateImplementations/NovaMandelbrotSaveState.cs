@@ -1,6 +1,4 @@
-﻿using FractalExplorer.Resources;
-
-namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
+﻿namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
 {
     /// <summary>
     /// Представляет состояние сохранения для фракталов Нова (разновидность Мандельброта).

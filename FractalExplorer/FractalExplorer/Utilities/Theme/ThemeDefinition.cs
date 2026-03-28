@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace FractalExplorer.Utilities.Theme
 {
     public sealed class ThemeDefinition

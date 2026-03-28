@@ -1,6 +1,4 @@
 ﻿using FractalExplorer.Properties;
-using System.Drawing;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities.Theme
 {

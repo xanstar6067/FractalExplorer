@@ -4,7 +4,6 @@ using FractalExplorer.Forms.SelectorsForms.Selector;
 using FractalExplorer.Resources;
 using FractalExplorer.Utilities.SaveIO;
 using FractalExplorer.Utilities.SaveIO.SaveStateImplementations;
-using System.Drawing.Imaging;
 using System.Globalization;
 
 namespace FractalExplorer.Projects

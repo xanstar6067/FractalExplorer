@@ -1,12 +1,8 @@
 ﻿using FractalExplorer.Resources;
 using FractalExplorer.Utilities;
-using System;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FractalExplorer.Engines
 {
@@ -1768,40 +1764,40 @@ namespace FractalExplorer.Engines
                 case 2:
                     return z * z;
                 case 3:
-                {
-                    ComplexDouble z2 = z * z;
-                    return z2 * z;
-                }
+                    {
+                        ComplexDouble z2 = z * z;
+                        return z2 * z;
+                    }
                 case 4:
-                {
-                    ComplexDouble z2 = z * z;
-                    return z2 * z2;
-                }
+                    {
+                        ComplexDouble z2 = z * z;
+                        return z2 * z2;
+                    }
                 case 5:
-                {
-                    ComplexDouble z2 = z * z;
-                    ComplexDouble z4 = z2 * z2;
-                    return z4 * z;
-                }
+                    {
+                        ComplexDouble z2 = z * z;
+                        ComplexDouble z4 = z2 * z2;
+                        return z4 * z;
+                    }
                 case 6:
-                {
-                    ComplexDouble z2 = z * z;
-                    ComplexDouble z4 = z2 * z2;
-                    return z4 * z2;
-                }
+                    {
+                        ComplexDouble z2 = z * z;
+                        ComplexDouble z4 = z2 * z2;
+                        return z4 * z2;
+                    }
                 case 7:
-                {
-                    ComplexDouble z2 = z * z;
-                    ComplexDouble z4 = z2 * z2;
-                    ComplexDouble z6 = z4 * z2;
-                    return z6 * z;
-                }
+                    {
+                        ComplexDouble z2 = z * z;
+                        ComplexDouble z4 = z2 * z2;
+                        ComplexDouble z6 = z4 * z2;
+                        return z6 * z;
+                    }
                 case 8:
-                {
-                    ComplexDouble z2 = z * z;
-                    ComplexDouble z4 = z2 * z2;
-                    return z4 * z4;
-                }
+                    {
+                        ComplexDouble z2 = z * z;
+                        ComplexDouble z4 = z2 * z2;
+                        return z4 * z4;
+                    }
                 default:
                     throw new ArgumentOutOfRangeException(nameof(power), "Поддерживаются только степени 2..8.");
             }

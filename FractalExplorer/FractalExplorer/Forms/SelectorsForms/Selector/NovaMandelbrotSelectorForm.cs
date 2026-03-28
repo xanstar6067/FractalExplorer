@@ -1,11 +1,7 @@
 ﻿using FractalExplorer.Resources;
-using System;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 using FractalExplorer.Utilities.Theme;
 namespace FractalExplorer.Forms.SelectorsForms.Selector

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
+﻿namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
 {
     /// <summary>
     /// Представляет состояние сохранения для фракталов Nova Julia.

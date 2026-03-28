@@ -1,15 +1,9 @@
 ﻿using FractalExplorer.Parsers;
 using FractalExplorer.Resources;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FractalExplorer.Engines
 {

@@ -1,6 +1,4 @@
 using System.Drawing.Imaging;
-using System.Threading;
-using System.Windows.Forms;
 
 namespace FractalExplorer.Utilities.ColorPicking
 {

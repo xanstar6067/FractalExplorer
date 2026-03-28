@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace FractalExplorer.Engines
+﻿namespace FractalExplorer.Engines
 {
     #region Enums
 

@@ -1,5 +1,4 @@
-﻿using FractalExplorer.Resources;
-using FractalExplorer.Properties;
+﻿using FractalExplorer.Properties;
 using FractalExplorer.Utilities.Theme;
 
 namespace FractalExplorer.Main
