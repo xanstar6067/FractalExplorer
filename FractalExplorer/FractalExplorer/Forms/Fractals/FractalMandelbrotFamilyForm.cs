@@ -2169,7 +2169,7 @@ namespace FractalDraving
                     default: return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 }
 
-                previewEngine.MaxIterations = previewParams.Iterations;
+                previewEngine.MaxIterations = Math.Max(1, previewParams.Iterations);
                 previewEngine.CenterX = previewParams.CenterX;
                 previewEngine.CenterY = previewParams.CenterY;
                 if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
@@ -2221,7 +2221,7 @@ namespace FractalDraving
             previewEngine.CenterY = previewParams.CenterY;
             if (previewParams.Zoom == 0) previewParams.Zoom = 0.001m;
             previewEngine.Scale = this.BaseScale / previewParams.Zoom;
-            previewEngine.MaxIterations = previewParams.Iterations;
+            previewEngine.MaxIterations = Math.Max(1, previewParams.Iterations);
             previewEngine.ThresholdSquared = previewParams.Threshold * previewParams.Threshold;
             var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
 
@@ -2251,9 +2251,120 @@ namespace FractalDraving
             previewEngine.StripeStrength = previewParams.StripeStrength ?? 0.5;
             previewEngine.StripeBias = previewParams.StripeBias ?? 0.0;
 
-            previewEngine.MaxColorIterations = effectiveMaxColorIterations;
-            previewEngine.SmoothPalette = GenerateSmoothPaletteFunction(paletteForPreview, effectiveMaxColorIterations);
-            previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
+            int safeMaxColorIterations = Math.Max(2, effectiveMaxColorIterations);
+            previewEngine.MaxColorIterations = safeMaxColorIterations;
+            previewEngine.SmoothPalette = GenerateSmoothPaletteFunctionForPreview(paletteForPreview, previewEngine.MaxIterations, safeMaxColorIterations);
+            previewEngine.Palette = GenerateDiscretePaletteFunctionForPreview(paletteForPreview);
+        }
+
+        /// <summary>
+        /// Вариант генератора плавной палитры для превью, не зависящий от текущего runtime-состояния формы.
+        /// Это предотвращает артефакты/черные кадры, когда рендер превью выполняется для сохраненного состояния
+        /// с параметрами, отличными от текущих параметров открытой формы.
+        /// </summary>
+        private Func<double, Color> GenerateSmoothPaletteFunctionForPreview(Palette palette, int previewMaxIterations, int effectiveMaxColorIterations)
+        {
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            int colorCount = colors.Count;
+            Color interiorColor = ResolveInteriorColor();
+
+            if (palette.Name == "Стандартный серый")
+            {
+                return (smoothIter) =>
+                {
+                    if (smoothIter >= previewMaxIterations) return interiorColor;
+                    if (smoothIter < 0) smoothIter = 0;
+
+                    double logMax = Math.Log(previewMaxIterations + 1);
+                    if (logMax <= 0) return interiorColor;
+                    double tLog = Math.Log(smoothIter + 1) / logMax;
+                    tLog = Math.Max(0.0, Math.Min(1.0, tLog));
+
+                    int grayLevel = (int)(255.0 * (1.0 - tLog));
+                    grayLevel = Math.Max(0, Math.Min(255, grayLevel));
+                    return ColorCorrection.ApplyGamma(Color.FromArgb(grayLevel, grayLevel, grayLevel), gamma);
+                };
+            }
+
+            if (effectiveMaxColorIterations <= 0)
+            {
+                return _ => interiorColor;
+            }
+
+            if (colorCount == 0) return _ => interiorColor;
+            if (colorCount == 1) return smoothIter => smoothIter >= previewMaxIterations ? interiorColor : ColorCorrection.ApplyGamma(colors[0], gamma);
+
+            return (smoothIter) =>
+            {
+                if (smoothIter >= previewMaxIterations) return interiorColor;
+                if (smoothIter < 0) smoothIter = 0;
+
+                double cyclicIter = smoothIter % effectiveMaxColorIterations;
+                double t = cyclicIter / effectiveMaxColorIterations;
+                t = Math.Max(0.0, Math.Min(1.0, t));
+
+                double scaledT = t * (colorCount - 1);
+                int index1 = (int)Math.Floor(scaledT);
+                int index2 = Math.Min(index1 + 1, colorCount - 1);
+                double localT = scaledT - index1;
+                Color baseColor = LerpColor(colors[index1], colors[index2], localT);
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
+        }
+
+        /// <summary>
+        /// Вариант генератора дискретной палитры для превью, не зависящий от transform-параметров активной формы.
+        /// </summary>
+        private Func<int, int, int, Color> GenerateDiscretePaletteFunctionForPreview(Palette palette)
+        {
+            double gamma = palette.Gamma;
+            var colors = new List<Color>(palette.Colors);
+            bool isGradient = palette.IsGradient;
+            int colorCount = colors.Count;
+            Color interiorColor = ResolveInteriorColor();
+
+            if (palette.Name == "Стандартный серый")
+            {
+                return (iter, maxIter, maxColorIter) =>
+                {
+                    if (iter >= maxIter) return interiorColor;
+                    int safeMaxColorIter = Math.Max(2, maxColorIter);
+                    double logMax = Math.Log(safeMaxColorIter + 1);
+                    if (logMax <= 0) return interiorColor;
+                    double tLog = Math.Log(Math.Min(iter, safeMaxColorIter) + 1) / logMax;
+                    int cVal = (int)(255.0 * (1 - tLog));
+                    cVal = Math.Max(0, Math.Min(255, cVal));
+                    return ColorCorrection.ApplyGamma(Color.FromArgb(cVal, cVal, cVal), gamma);
+                };
+            }
+
+            if (colorCount == 0) return (_, _, _) => interiorColor;
+            if (colorCount == 1) return (iter, maxIter, _) => ColorCorrection.ApplyGamma((iter >= maxIter) ? interiorColor : colors[0], gamma);
+
+            return (iter, maxIter, maxColorIter) =>
+            {
+                if (iter >= maxIter) return interiorColor;
+                int safeMaxColorIter = Math.Max(2, maxColorIter);
+                double normalizedIter = (double)Math.Min(iter, safeMaxColorIter) / safeMaxColorIter;
+                Color baseColor;
+                if (isGradient)
+                {
+                    double scaledT = normalizedIter * (colorCount - 1);
+                    int index1 = (int)Math.Floor(scaledT);
+                    int index2 = Math.Min(index1 + 1, colorCount - 1);
+                    double localT = scaledT - index1;
+                    baseColor = LerpColor(colors[index1], colors[index2], localT);
+                }
+                else
+                {
+                    int colorIndex = (int)(normalizedIter * colorCount);
+                    if (colorIndex >= colorCount) colorIndex = colorCount - 1;
+                    baseColor = colors[colorIndex];
+                }
+
+                return ColorCorrection.ApplyGamma(baseColor, gamma);
+            };
         }
 
         private static ColoringModeType ResolvePreviewColoringMode(PreviewParams previewParams)

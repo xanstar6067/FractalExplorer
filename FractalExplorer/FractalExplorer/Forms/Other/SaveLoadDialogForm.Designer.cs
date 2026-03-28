@@ -40,6 +40,8 @@
             labelPreview = new Label();
             labelSaveName = new Label();
             cbPresets = new CheckBox();
+            btnRenderPreview = new Button();
+            labelRenderStatus = new Label();
             ((System.ComponentModel.ISupportInitialize)pictureBoxPreview).BeginInit();
             SuspendLayout();
             // 
@@ -156,11 +158,33 @@
             cbPresets.Text = "Точки интереса";
             cbPresets.UseVisualStyleBackColor = true;
             // 
+            // btnRenderPreview
+            // 
+            btnRenderPreview.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnRenderPreview.Location = new Point(307, 330);
+            btnRenderPreview.Name = "btnRenderPreview";
+            btnRenderPreview.Size = new Size(126, 28);
+            btnRenderPreview.TabIndex = 11;
+            btnRenderPreview.Text = "Рендер превью";
+            btnRenderPreview.UseVisualStyleBackColor = true;
+            btnRenderPreview.Click += btnRenderPreview_Click;
+            // 
+            // labelRenderStatus
+            // 
+            labelRenderStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            labelRenderStatus.AutoSize = true;
+            labelRenderStatus.Location = new Point(439, 337);
+            labelRenderStatus.Name = "labelRenderStatus";
+            labelRenderStatus.Size = new Size(0, 15);
+            labelRenderStatus.TabIndex = 12;
+            // 
             // SaveLoadDialogForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(684, 369);
+            Controls.Add(labelRenderStatus);
+            Controls.Add(btnRenderPreview);
             Controls.Add(cbPresets);
             Controls.Add(labelSaveName);
             Controls.Add(labelPreview);
@@ -200,5 +224,7 @@
         private System.Windows.Forms.Label labelPreview;
         private System.Windows.Forms.Label labelSaveName;
         private CheckBox cbPresets;
+        private Button btnRenderPreview;
+        private Label labelRenderStatus;
     }
 }
