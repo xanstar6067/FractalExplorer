@@ -171,11 +171,12 @@
             // 
             // labelRenderStatus
             // 
-            labelRenderStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            labelRenderStatus.AutoSize = true;
-            labelRenderStatus.Location = new Point(439, 337);
+            labelRenderStatus.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            labelRenderStatus.AutoEllipsis = true;
+            labelRenderStatus.Location = new Point(103, 337);
             labelRenderStatus.Name = "labelRenderStatus";
-            labelRenderStatus.Size = new Size(0, 15);
+            labelRenderStatus.Size = new Size(198, 15);
+            labelRenderStatus.TextAlign = ContentAlignment.MiddleLeft;
             labelRenderStatus.TabIndex = 12;
             // 
             // SaveLoadDialogForm

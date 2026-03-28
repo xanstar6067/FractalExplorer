@@ -147,6 +147,7 @@ namespace FractalExplorer.Forms
         private void listBoxSaves_SelectedIndexChanged(object sender, EventArgs e)
         {
             CancelAndDisposePreviewCts();
+            SetRenderStatus(string.Empty);
 
             if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
             {
