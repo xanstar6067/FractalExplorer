@@ -825,9 +825,12 @@ namespace FractalExplorer.Forms
             Bitmap sourceBitmap = null;
             try
             {
-                sourceBitmap = TryGetBitmapFromOwnerField(ownerForm, "_previewBitmap")
-                               ?? TryGetBitmapFromOwnerField(ownerForm, "canvasBitmap")
-                               ?? TryCaptureOwnerCanvasBitmap(ownerForm);
+                // Важно: сначала пытаемся брать полноразмерный буфер рендера, чтобы превью
+                // масштабировалось из немного большего размера в меньший (downscale),
+                // а не наоборот из маленького в большой (upscale).
+                sourceBitmap = TryGetBitmapFromOwnerField(ownerForm, "canvasBitmap")
+                               ?? TryCaptureOwnerCanvasBitmap(ownerForm)
+                               ?? TryGetBitmapFromOwnerField(ownerForm, "_previewBitmap");
 
                 if (sourceBitmap == null)
                 {
@@ -897,8 +900,16 @@ namespace FractalExplorer.Forms
 
             sourceRect = ExpandSourceRect(sourceRect, source.Size, SavedPreviewOverscanFactor);
 
-            int intermediateWidth = Math.Max(targetWidth + 1, (int)Math.Round(targetWidth * SavedPreviewDownscaleFactor));
-            int intermediateHeight = Math.Max(targetHeight + 1, (int)Math.Round(targetHeight * SavedPreviewDownscaleFactor));
+            int desiredIntermediateWidth = Math.Max(targetWidth + 1, (int)Math.Round(targetWidth * SavedPreviewDownscaleFactor));
+            int desiredIntermediateHeight = Math.Max(targetHeight + 1, (int)Math.Round(targetHeight * SavedPreviewDownscaleFactor));
+
+            // Не допускаем промежуточный upscale относительно источника.
+            // Если источник недостаточно большой, используем максимально возможный размер без увеличения.
+            int intermediateWidth = Math.Min(sourceRect.Width, desiredIntermediateWidth);
+            int intermediateHeight = Math.Min(sourceRect.Height, desiredIntermediateHeight);
+
+            if (intermediateWidth <= 0) intermediateWidth = targetWidth;
+            if (intermediateHeight <= 0) intermediateHeight = targetHeight;
 
             using var intermediate = new Bitmap(intermediateWidth, intermediateHeight, PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(intermediate))
