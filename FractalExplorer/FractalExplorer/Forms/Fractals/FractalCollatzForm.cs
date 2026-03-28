@@ -1547,7 +1547,6 @@ namespace FractalExplorer.Forms.Fractals
                 }
 
                 var previewEngine = CreateEngineFromPreviewParams(previewParams);
-                previewEngine.UseSmoothColoring = false; // Упрощение для превью
                 var paletteForPreview = _paletteManager.Palettes.FirstOrDefault(p => p.Name == previewParams.PaletteName) ?? _paletteManager.Palettes.First();
                 previewEngine.Palette = GenerateDiscretePaletteFunction(paletteForPreview);
 
