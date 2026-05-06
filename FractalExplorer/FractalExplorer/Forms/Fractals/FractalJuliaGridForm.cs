@@ -4,6 +4,7 @@ using FractalExplorer.Utilities;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using FractalExplorer.Utilities.RenderUtilities;
+using FractalExplorer.Utilities.UI;
 
 namespace FractalExplorer.Forms.Fractals
 {
@@ -13,7 +14,7 @@ namespace FractalExplorer.Forms.Fractals
         private readonly object _bitmapLock = new();
         private List<GridCellInfo> _cells = new();
         private bool _isRendering;
-        private readonly System.Windows.Forms.Timer _autoRenderTimer = new();
+        private readonly DebounceTimer _autoRenderTimer = new();
         private bool _renderRestartRequested;
         private bool _isColsTrackBarDragging;
         private bool _isRowsTrackBarDragging;

@@ -33,7 +33,7 @@ namespace FractalExplorer.Forms.Fractals
         private ColorConfigurationLyapunovForm? _lyapunovColorConfigForm;
         private readonly object _frameBufferLock = new();
         private readonly RenderVisualizerComponent _renderVisualizer = new(PreviewTileSize);
-        private readonly System.Windows.Forms.Timer _renderRestartTimer = new() { Interval = 350 };
+        private readonly DebounceTimer _renderRestartTimer = new() { Interval = 350 };
         private readonly HashSet<Rectangle> _currentRenderedTiles = new();
         private Bitmap? _previewFrameBuffer;
         private Bitmap? _currentRenderingFrameBuffer;

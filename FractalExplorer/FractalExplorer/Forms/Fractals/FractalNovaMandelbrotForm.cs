@@ -28,7 +28,7 @@ namespace FractalExplorer.Forms
         private RenderVisualizerComponent _renderVisualizer;
         private PaletteManager _paletteManager;
         private ColorConfigurationForm _colorConfigForm;
-        private System.Windows.Forms.Timer _renderDebounceTimer;
+        private DebounceTimer _renderDebounceTimer;
 
         private Color[] _gammaCorrectedPaletteCache;
         private string _paletteCacheSignature;
@@ -981,7 +981,7 @@ namespace FractalExplorer.Forms
             _baseTitle = this.Text;
             _fractalEngine = new NovaMandelbrotEngine();
             _paletteManager = new PaletteManager();
-            _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 350 };
+            _renderDebounceTimer = new DebounceTimer { Interval = 350 };
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
 
             InitializeControls();

@@ -139,7 +139,7 @@ namespace FractalDraving
         /// <summary>
         /// Таймер для отложенного запуска рендеринга.
         /// </summary>
-        private System.Windows.Forms.Timer _renderDebounceTimer;
+        private DebounceTimer _renderDebounceTimer;
 
         /// <summary>
         /// Базовый заголовок окна для восстановления после отображения времени рендера.
@@ -1803,7 +1803,7 @@ namespace FractalDraving
             _baseTitle = this.Text;
             _paletteManager = new PaletteManager();
             _fractalEngine = CreateEngine();
-            _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 350 };
+            _renderDebounceTimer = new DebounceTimer { Interval = 350 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;

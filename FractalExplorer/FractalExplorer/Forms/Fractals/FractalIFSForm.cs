@@ -17,8 +17,8 @@ namespace FractalExplorer.Forms.Fractals
         private readonly FractalIFSGeometryEngine _engine = new();
         private readonly List<IfsPointOfInterest> _pointsOfInterest = PresetManager.GetIfsPointsOfInterest();
         private CancellationTokenSource? _renderCts;
-        private readonly System.Windows.Forms.Timer _rerenderTimer = new() { Interval = 260 };
-        private readonly System.Windows.Forms.Timer _wheelDebounceTimer = new() { Interval = 360 };
+        private readonly DebounceTimer _rerenderTimer = new() { Interval = 260 };
+        private readonly DebounceTimer _wheelDebounceTimer = new() { Interval = 360 };
         private bool _isPanning;
         private Point _panStartPoint;
         private double _panStartCenterX;

@@ -49,7 +49,7 @@ namespace FractalExplorer
         /// <summary>
         /// Таймер для отложенного запуска рендеринга после взаимодействия с пользователем.
         /// </summary>
-        private System.Windows.Forms.Timer renderTimer;
+        private DebounceTimer renderTimer;
         /// <summary>
         /// Текущий уровень масштабирования.
         /// </summary>
@@ -124,7 +124,7 @@ namespace FractalExplorer
         /// </summary>
         private void InitializeCustomComponents()
         {
-            renderTimer = new System.Windows.Forms.Timer { Interval = 350 };
+            renderTimer = new DebounceTimer { Interval = 350 };
             renderTimer.Tick += RenderTimer_Tick;
 
             int cores = Environment.ProcessorCount;

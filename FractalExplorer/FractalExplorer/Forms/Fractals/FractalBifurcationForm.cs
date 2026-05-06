@@ -20,8 +20,8 @@ namespace FractalExplorer.Forms.Fractals
         private readonly object _bitmapLock = new();
         private readonly FullscreenToggleController _fullscreenController = new();
         private readonly string _baseTitle;
-        private readonly System.Windows.Forms.Timer _wheelDebounceTimer = new();
-        private readonly System.Windows.Forms.Timer _resizeDebounceTimer = new();
+        private readonly DebounceTimer _wheelDebounceTimer = new();
+        private readonly DebounceTimer _resizeDebounceTimer = new();
 
         private Bitmap? _previewBitmap;
         private CancellationTokenSource? _renderCts;

@@ -131,7 +131,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Таймер для отложенного запуска рендеринга после изменения параметров.
         /// </summary>
-        private System.Windows.Forms.Timer _renderDebounceTimer;
+        private DebounceTimer _renderDebounceTimer;
         /// <summary>
         /// Флаг, отключающий запуск полного рендера при программном изменении layout.
         /// </summary>
@@ -1286,7 +1286,7 @@ namespace FractalExplorer.Forms
             _baseTitle = this.Text;
             _paletteManager = new PaletteManager();
             _fractalEngine = new PhoenixEngine();
-            _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 350 };
+            _renderDebounceTimer = new DebounceTimer { Interval = 350 };
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
             _renderVisualizer = new RenderVisualizerComponent(TILE_SIZE);
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;

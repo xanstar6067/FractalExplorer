@@ -21,8 +21,8 @@ namespace FractalExplorer.Forms.Fractals
         private Point _panStartPoint;
         private double _panStartCenterX;
         private double _panStartCenterY;
-        private readonly System.Windows.Forms.Timer _renderRestartTimer = new() { Interval = 350 };
-        private readonly System.Windows.Forms.Timer _wheelDebounceTimer = new() { Interval = 500 };
+        private readonly DebounceTimer _renderRestartTimer = new() { Interval = 350 };
+        private readonly DebounceTimer _wheelDebounceTimer = new() { Interval = 500 };
         private bool _isQueuingRenderRestart;
         private bool _isUserResizingWindow;
         private bool _hasPendingCanvasResizeRender;

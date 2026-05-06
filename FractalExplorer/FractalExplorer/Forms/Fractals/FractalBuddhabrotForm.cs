@@ -30,7 +30,7 @@ namespace FractalExplorer.Forms.Fractals
         private readonly BuddhabrotPaletteManager _paletteManager = new();
         private ColorConfigurationBuddhabrotForm? _buddhabrotColorConfigForm;
         private CancellationTokenSource? _renderCts;
-        private readonly System.Windows.Forms.Timer _renderRestartTimer = new() { Interval = 350 };
+        private readonly DebounceTimer _renderRestartTimer = new() { Interval = 350 };
         private readonly FullscreenToggleController _fullscreenController = new();
 
         private decimal _centerX = 0;
@@ -46,7 +46,7 @@ namespace FractalExplorer.Forms.Fractals
         private Bitmap? _interactionSourceBitmap;
         private Bitmap? _interactivePreviewBitmap;
         private Bitmap? _displayBitmap;
-        private readonly System.Windows.Forms.Timer _interactivePreviewTimer = new() { Interval = InteractivePreviewFrameIntervalMs };
+        private readonly DebounceTimer _interactivePreviewTimer = new() { Interval = InteractivePreviewFrameIntervalMs };
         private long _lastInstantPreviewTimestamp;
         private bool _instantPreviewQueued;
         private decimal _interactionSourceCenterX;

@@ -31,7 +31,7 @@ namespace FractalExplorer
         /// <summary>
         /// Таймер для отложенного запуска рендеринга, чтобы избежать частых перерисовок.
         /// </summary>
-        private readonly System.Windows.Forms.Timer _renderDebounceTimer;
+        private readonly DebounceTimer _renderDebounceTimer;
 
         /// <summary>
         /// Компонент для визуализации процесса рендеринга плиток.
@@ -198,7 +198,7 @@ namespace FractalExplorer
             KeyPreview = true;
             ThemeManager.RegisterForm(this);
             _engine = new FractalNewtonIterativeEngine();
-            _renderDebounceTimer = new System.Windows.Forms.Timer { Interval = 350 };
+            _renderDebounceTimer = new DebounceTimer { Interval = 350 };
             _paletteManager = new NewtonPaletteManager();
             InitializeForm();
         }
