@@ -13,6 +13,7 @@ namespace FractalExplorer.Forms.Fractals
         private bool _suppressSync;
 
         public List<IfsAffineTransform> ResultTransforms { get; private set; }
+        public event Action<IReadOnlyList<IfsAffineTransform>>? TransformsApplied;
 
         public IfsTransformEditorForm(IEnumerable<IfsAffineTransform> source)
         {
@@ -43,6 +44,7 @@ namespace FractalExplorer.Forms.Fractals
             _btnAdd.Click += BtnAdd_Click;
             _btnUndo.Click += BtnUndo_Click;
             _btnNormalize.Click += BtnNormalize_Click;
+            _btnRandomize.Click += BtnRandomize_Click;
             _btnOk.Click += BtnOk_Click;
 
             _nudA.ValueChanged += EditorControl_Changed;
@@ -226,9 +228,138 @@ namespace FractalExplorer.Forms.Fractals
             }
 
             ResultTransforms = _transforms.Select(t => t.Clone()).ToList();
+            TransformsApplied?.Invoke(ResultTransforms);
             DialogResult = DialogResult.OK;
             Close();
         }
+
+        private void BtnRandomize_Click(object? sender, EventArgs e)
+        {
+            PushUndoSnapshot();
+
+            int selectedIndex = _selectedIndex;
+            _transforms.Clear();
+            _transforms.AddRange(CreateRandomIfsTransforms());
+
+            RebuildList();
+            SelectTransform(Math.Clamp(selectedIndex, 0, _transforms.Count - 1));
+            ApplyTransformsWithoutClosing();
+        }
+
+        private void ApplyTransformsWithoutClosing()
+        {
+            if (_selectedIndex >= 0 && _selectedIndex < _transforms.Count)
+                SaveEditorToTransform(_transforms[_selectedIndex]);
+
+            if (_transforms.Count == 0)
+            {
+                return;
+            }
+
+            ResultTransforms = _transforms.Select(t => t.Clone()).ToList();
+            TransformsApplied?.Invoke(ResultTransforms);
+        }
+
+        private static List<IfsAffineTransform> CreateRandomIfsTransforms()
+        {
+            var random = Random.Shared;
+            int count = random.Next(3, 7);
+            var transforms = new List<IfsAffineTransform>(count + 1);
+            double[] rawProbabilities = new double[count];
+            double totalProbability = 0.0;
+            double baseAngle = RandomRange(random, -Math.PI, Math.PI);
+
+            for (int i = 0; i < count; i++)
+            {
+                double anchorAngle = baseAngle + i * (Math.PI * 2.0 / count) + RandomRange(random, -0.35, 0.35);
+                double anchorRadius = RandomRange(random, 0.25, 0.9);
+                double rotation = anchorAngle + RandomRange(random, -0.9, 0.9);
+                double scaleX = RandomRange(random, 0.28, 0.68);
+                double scaleY = RandomRange(random, 0.24, 0.68);
+                double shear = RandomRange(random, -0.18, 0.18);
+
+                transforms.Add(CreateTransform(
+                    rotation,
+                    scaleX,
+                    scaleY,
+                    shear,
+                    Math.Cos(anchorAngle) * anchorRadius,
+                    Math.Sin(anchorAngle) * anchorRadius,
+                    probability: 0.0));
+
+                rawProbabilities[i] = Math.Max(0.03, scaleX * scaleY) * RandomRange(random, 0.8, 1.35);
+                totalProbability += rawProbabilities[i];
+            }
+
+            if (random.NextDouble() < 0.35)
+            {
+                transforms.Add(CreateTransform(
+                    RandomRange(random, -0.2, 0.2),
+                    RandomRange(random, 0.03, 0.16),
+                    RandomRange(random, 0.32, 0.62),
+                    RandomRange(random, -0.05, 0.05),
+                    RandomRange(random, -0.08, 0.08),
+                    RandomRange(random, -0.85, -0.35),
+                    probability: RandomRange(random, 0.02, 0.08)));
+            }
+
+            double fixedProbability = transforms.Skip(count).Sum(t => t.Probability);
+            double remainingProbability = Math.Max(0.1, 1.0 - fixedProbability);
+            for (int i = 0; i < count; i++)
+            {
+                transforms[i].Probability = rawProbabilities[i] / Math.Max(totalProbability, 1e-12) * remainingProbability;
+            }
+
+            NormalizeProbabilities(transforms);
+            return transforms;
+        }
+
+        private static IfsAffineTransform CreateTransform(
+            double rotation,
+            double scaleX,
+            double scaleY,
+            double shear,
+            double translateX,
+            double translateY,
+            double probability)
+        {
+            double cos = Math.Cos(rotation);
+            double sin = Math.Sin(rotation);
+
+            return new IfsAffineTransform
+            {
+                A = cos * scaleX + sin * shear,
+                B = -sin * scaleY,
+                C = sin * scaleX,
+                D = cos * scaleY + cos * shear,
+                E = translateX,
+                F = translateY,
+                Probability = probability
+            };
+        }
+
+        private static void NormalizeProbabilities(List<IfsAffineTransform> transforms)
+        {
+            double total = transforms.Sum(t => Math.Max(0.0, t.Probability));
+            if (total <= 0)
+            {
+                double p = 1.0 / Math.Max(1, transforms.Count);
+                foreach (IfsAffineTransform transform in transforms)
+                {
+                    transform.Probability = p;
+                }
+
+                return;
+            }
+
+            foreach (IfsAffineTransform transform in transforms)
+            {
+                transform.Probability = Math.Max(0.0, transform.Probability) / total;
+            }
+        }
+
+        private static double RandomRange(Random random, double min, double max) =>
+            min + random.NextDouble() * (max - min);
 
         private void BtnUndo_Click(object? sender, EventArgs e) => UndoLastAction();
 

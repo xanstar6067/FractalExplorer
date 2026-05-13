@@ -45,6 +45,7 @@ namespace FractalExplorer.Forms.Fractals
         private Panel _footerPanel;
         private Button _btnUndo;
         private Button _btnNormalize;
+        private Button _btnRandomize;
         private Button _btnCancel;
         private Button _btnOk;
 
@@ -95,6 +96,7 @@ namespace FractalExplorer.Forms.Fractals
             _footerPanel = new Panel();
             _btnOk = new Button();
             _btnCancel = new Button();
+            _btnRandomize = new Button();
             _btnNormalize = new Button();
             _btnUndo = new Button();
             ((System.ComponentModel.ISupportInitialize)_split).BeginInit();
@@ -532,6 +534,7 @@ namespace FractalExplorer.Forms.Fractals
             // 
             _footerPanel.Controls.Add(_btnOk);
             _footerPanel.Controls.Add(_btnCancel);
+            _footerPanel.Controls.Add(_btnRandomize);
             _footerPanel.Controls.Add(_btnNormalize);
             _footerPanel.Controls.Add(_btnUndo);
             _footerPanel.Dock = DockStyle.Bottom;
@@ -561,6 +564,15 @@ namespace FractalExplorer.Forms.Fractals
             _btnCancel.TabIndex = 2;
             _btnCancel.Text = "Отмена";
             _btnCancel.UseVisualStyleBackColor = true;
+            // 
+            // _btnRandomize
+            // 
+            _btnRandomize.Location = new Point(300, 11);
+            _btnRandomize.Name = "_btnRandomize";
+            _btnRandomize.Size = new Size(150, 30);
+            _btnRandomize.TabIndex = 4;
+            _btnRandomize.Text = "Сделать случайно";
+            _btnRandomize.UseVisualStyleBackColor = true;
             // 
             // _btnNormalize
             // 

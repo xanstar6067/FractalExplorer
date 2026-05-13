@@ -136,12 +136,18 @@ namespace FractalExplorer.Forms.Fractals
         private void BtnEditTransforms_Click(object? sender, EventArgs e)
         {
             using var editor = new IfsTransformEditorForm(_engine.Transforms);
+            editor.TransformsApplied += ApplyEditorTransforms;
             if (editor.ShowDialog(this) != DialogResult.OK)
             {
                 return;
             }
 
-            _engine.SetTransforms(editor.ResultTransforms);
+            ApplyEditorTransforms(editor.ResultTransforms);
+        }
+
+        private void ApplyEditorTransforms(IEnumerable<IfsAffineTransform> transforms)
+        {
+            _engine.SetTransforms(transforms);
             QueueRenderRestart(immediate: true);
         }
 
