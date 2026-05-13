@@ -61,6 +61,7 @@ namespace FractalExplorer.Forms.Fractals
         // ── нижняя полоска кнопок ─────────────────────────────────────────────
         private Panel _footerPanel;
         private Button _btnUndo;
+        private Button _btnRandomize;
         private Button _btnCancel;
         private Button _btnOk;
         private Button _btnClose;
@@ -124,6 +125,7 @@ namespace FractalExplorer.Forms.Fractals
             _btnClose = new Button();
             _btnOk = new Button();
             _btnCancel = new Button();
+            _btnRandomize = new Button();
             _btnUndo = new Button();
             ((System.ComponentModel.ISupportInitialize)_split).BeginInit();
             _split.Panel1.SuspendLayout();
@@ -406,7 +408,6 @@ namespace FractalExplorer.Forms.Fractals
             _trkWeight.Location = new Point(0, 4);
             _trkWeight.Margin = new Padding(0, 4, 4, 4);
             _trkWeight.Maximum = 10000;
-            _trkWeight.Minimum = 0;
             _trkWeight.Name = "_trkWeight";
             _trkWeight.Size = new Size(501, 30);
             _trkWeight.TabIndex = 3;
@@ -651,6 +652,7 @@ namespace FractalExplorer.Forms.Fractals
             _footerPanel.Controls.Add(_btnClose);
             _footerPanel.Controls.Add(_btnOk);
             _footerPanel.Controls.Add(_btnCancel);
+            _footerPanel.Controls.Add(_btnRandomize);
             _footerPanel.Controls.Add(_btnUndo);
             _footerPanel.Dock = DockStyle.Bottom;
             _footerPanel.Location = new Point(0, 434);
@@ -690,6 +692,16 @@ namespace FractalExplorer.Forms.Fractals
             _btnCancel.Size = new Size(84, 34);
             _btnCancel.TabIndex = 51;
             _btnCancel.Text = "Отмена";
+            // 
+            // _btnRandomize
+            // 
+            _btnRandomize.Dock = DockStyle.Left;
+            _btnRandomize.FlatStyle = FlatStyle.Flat;
+            _btnRandomize.Location = new Point(157, 6);
+            _btnRandomize.Name = "_btnRandomize";
+            _btnRandomize.Size = new Size(150, 34);
+            _btnRandomize.TabIndex = 53;
+            _btnRandomize.Text = "Сделать случайно";
             // 
             // _btnUndo
             // 

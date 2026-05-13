@@ -115,6 +115,7 @@ namespace FractalExplorer.Forms.Fractals
         private void WireEvents()
         {
             _btnAdd.Click += BtnAdd_Click;
+            _btnRandomize.Click += BtnRandomize_Click;
             _btnUndo.Click += BtnUndo_Click;
             _btnOk.Click += (_, _) => CommitChanges();
             _btnClose.Click += (_, _) => CommitAndClose();
@@ -340,6 +341,106 @@ namespace FractalExplorer.Forms.Fractals
             _transforms.Add(t);
             RebuildList();
             SelectTransform(_transforms.Count - 1);
+        }
+
+        private void BtnRandomize_Click(object? sender, EventArgs e)
+        {
+            PushUndoSnapshot();
+
+            int selectedIndex = _selectedIndex;
+            _transforms.Clear();
+            _transforms.AddRange(CreateRandomFlameTransforms());
+
+            RebuildList();
+            SelectTransform(Math.Clamp(selectedIndex, 0, _transforms.Count - 1));
+            CommitChanges();
+        }
+
+        private static List<FlameTransform> CreateRandomFlameTransforms()
+        {
+            var random = Random.Shared;
+            var transforms = new List<FlameTransform>();
+            int count = random.Next(3, 7);
+            double[] rawWeights = new double[count];
+            double totalWeight = 0.0;
+
+            for (int i = 0; i < count; i++)
+            {
+                rawWeights[i] = 0.25 + random.NextDouble() * random.NextDouble() * 2.5;
+                totalWeight += rawWeights[i];
+            }
+
+            double hue = random.NextDouble() * 360.0;
+            for (int i = 0; i < count; i++)
+            {
+                transforms.Add(CreateRandomTransform(
+                    random,
+                    rawWeights[i] / Math.Max(totalWeight, 1e-12),
+                    hue + i * (360.0 / count) + RandomRange(random, -28.0, 28.0)));
+            }
+
+            return transforms;
+        }
+
+        private static FlameTransform CreateRandomTransform(Random random, double weight, double hue)
+        {
+            double angle = RandomRange(random, -Math.PI, Math.PI);
+            double scaleX = RandomRange(random, 0.22, 0.82);
+            double scaleY = RandomRange(random, 0.22, 0.82);
+            double shear = RandomRange(random, -0.28, 0.28);
+            double cos = Math.Cos(angle);
+            double sin = Math.Sin(angle);
+
+            var variation = PickRandomVariation(random);
+            double translationRadius = variation == FlameVariation.Spherical
+                ? RandomRange(random, 0.04, 0.48)
+                : RandomRange(random, 0.12, 0.92);
+            double translationAngle = RandomRange(random, -Math.PI, Math.PI);
+
+            return new FlameTransform
+            {
+                Weight = weight,
+                A = cos * scaleX + sin * shear,
+                B = -sin * scaleY,
+                C = Math.Cos(translationAngle) * translationRadius,
+                D = sin * scaleX,
+                E = cos * scaleY + cos * shear,
+                F = Math.Sin(translationAngle) * translationRadius,
+                Variation = variation,
+                Color = ColorFromHsv(hue, RandomRange(random, 0.62, 0.95), RandomRange(random, 0.72, 1.0))
+            };
+        }
+
+        private static FlameVariation PickRandomVariation(Random random)
+        {
+            var values = Enum.GetValues<FlameVariation>();
+            return values[random.Next(values.Length)];
+        }
+
+        private static double RandomRange(Random random, double min, double max) =>
+            min + random.NextDouble() * (max - min);
+
+        private static Color ColorFromHsv(double hue, double saturation, double value)
+        {
+            hue = ((hue % 360.0) + 360.0) % 360.0;
+            double chroma = value * saturation;
+            double x = chroma * (1.0 - Math.Abs(hue / 60.0 % 2.0 - 1.0));
+            double m = value - chroma;
+
+            (double r, double g, double b) = hue switch
+            {
+                < 60.0 => (chroma, x, 0.0),
+                < 120.0 => (x, chroma, 0.0),
+                < 180.0 => (0.0, chroma, x),
+                < 240.0 => (0.0, x, chroma),
+                < 300.0 => (x, 0.0, chroma),
+                _ => (chroma, 0.0, x)
+            };
+
+            return Color.FromArgb(
+                (int)Math.Round((r + m) * 255.0),
+                (int)Math.Round((g + m) * 255.0),
+                (int)Math.Round((b + m) * 255.0));
         }
 
         private void DeleteTransform(int index)
