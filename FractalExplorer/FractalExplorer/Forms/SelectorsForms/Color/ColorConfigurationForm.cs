@@ -19,6 +19,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         private readonly PaletteManager _paletteManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
+        private readonly Random _random = new();
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
@@ -189,6 +190,7 @@ namespace FractalExplorer.Utilities
                 btnRemoveColor.Enabled = isEnabled;
                 btnDelete.Enabled = isEnabled;
                 nudGamma.Enabled = isEnabled;
+                btnRandomizeColors.Enabled = isEnabled;
                 nudMaxColorIterations.Enabled = isEnabled;
                 btnCopy.Enabled = isEnabled;
                 return;
@@ -205,6 +207,7 @@ namespace FractalExplorer.Utilities
             btnRemoveColor.Enabled = isCustom;
             btnDelete.Enabled = isCustom;
             nudGamma.Enabled = isCustom;
+            btnRandomizeColors.Enabled = isCustom;
 
             nudMaxColorIterations.Enabled = isCustom && !_selectedPalette.AlignWithRenderIterations;
 
@@ -354,6 +357,36 @@ namespace FractalExplorer.Utilities
                 DisplayPaletteDetails();
                 MarkUnsavedChanges();
             }
+        }
+
+        /// <summary>
+        /// Обработчик события клика по кнопке "Случайная палитра".
+        /// Заменяет текущий список цветов случайным набором с разным количеством ключевых точек.
+        /// </summary>
+        private void btnRandomizeColors_Click(object sender, EventArgs e)
+        {
+            if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
+            {
+                return;
+            }
+
+            int colorCount = _random.Next(3, 13);
+            List<Color> colors = new(colorCount);
+            double baseHue = _random.NextDouble() * 360.0;
+            double hueStep = 360.0 / colorCount;
+
+            for (int i = 0; i < colorCount; i++)
+            {
+                double hue = NormalizeHue(baseHue + (hueStep * i) + RandomDouble(-18.0, 18.0));
+                double saturation = RandomDouble(0.65, 1.0);
+                double value = RandomDouble(0.62, 1.0);
+                colors.Add(ColorFromHsv(hue, saturation, value));
+            }
+
+            _selectedPalette.Colors = colors;
+            DisplayPaletteDetails();
+            lbColorStops.SelectedIndex = 0;
+            MarkUnsavedChanges();
         }
 
         /// <summary>
@@ -528,6 +561,70 @@ namespace FractalExplorer.Utilities
             _paletteManager.SaveCustomPalettes();
             ResetUnsavedChanges();
             MessageBox.Show("Изменения палитры сохранены.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private double RandomDouble(double minValue, double maxValue)
+        {
+            return minValue + (_random.NextDouble() * (maxValue - minValue));
+        }
+
+        private static double NormalizeHue(double hue)
+        {
+            hue %= 360.0;
+            return hue < 0 ? hue + 360.0 : hue;
+        }
+
+        private static Color ColorFromHsv(double hue, double saturation, double value)
+        {
+            double chroma = value * saturation;
+            double huePrime = hue / 60.0;
+            double x = chroma * (1.0 - Math.Abs((huePrime % 2.0) - 1.0));
+
+            double red = 0;
+            double green = 0;
+            double blue = 0;
+
+            if (huePrime < 1.0)
+            {
+                red = chroma;
+                green = x;
+            }
+            else if (huePrime < 2.0)
+            {
+                red = x;
+                green = chroma;
+            }
+            else if (huePrime < 3.0)
+            {
+                green = chroma;
+                blue = x;
+            }
+            else if (huePrime < 4.0)
+            {
+                green = x;
+                blue = chroma;
+            }
+            else if (huePrime < 5.0)
+            {
+                red = x;
+                blue = chroma;
+            }
+            else
+            {
+                red = chroma;
+                blue = x;
+            }
+
+            double match = value - chroma;
+            return Color.FromArgb(
+                ToColorChannel(red + match),
+                ToColorChannel(green + match),
+                ToColorChannel(blue + match));
+        }
+
+        private static int ToColorChannel(double value)
+        {
+            return Math.Clamp((int)Math.Round(value * 255.0), 0, 255);
         }
         #endregion
 

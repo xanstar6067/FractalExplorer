@@ -34,6 +34,7 @@
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
             checkAlignSteps = new CheckBox();
+            btnRandomizeColors = new Button();
             nudGamma = new NumericUpDown();
             labelGamma = new Label();
             nudMaxColorIterations = new NumericUpDown();
@@ -215,6 +216,7 @@
             // 
             groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             groupBox2.Controls.Add(checkAlignSteps);
+            groupBox2.Controls.Add(btnRandomizeColors);
             groupBox2.Controls.Add(nudGamma);
             groupBox2.Controls.Add(labelGamma);
             groupBox2.Controls.Add(nudMaxColorIterations);
@@ -245,6 +247,16 @@
             checkAlignSteps.Text = "Как в старые добрые";
             checkAlignSteps.UseVisualStyleBackColor = true;
             checkAlignSteps.CheckedChanged += checkAlignSteps_CheckedChanged;
+            // 
+            // btnRandomizeColors
+            // 
+            btnRandomizeColors.Location = new Point(118, 178);
+            btnRandomizeColors.Name = "btnRandomizeColors";
+            btnRandomizeColors.Size = new Size(169, 25);
+            btnRandomizeColors.TabIndex = 15;
+            btnRandomizeColors.Text = "Случайная палитра";
+            btnRandomizeColors.UseVisualStyleBackColor = true;
+            btnRandomizeColors.Click += btnRandomizeColors_Click;
             // 
             // nudGamma
             // 
@@ -351,6 +363,7 @@
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.CheckBox checkAlignSteps;
+        private System.Windows.Forms.Button btnRandomizeColors;
         private System.Windows.Forms.NumericUpDown nudGamma;
         private System.Windows.Forms.Label labelGamma;
         private System.Windows.Forms.NumericUpDown nudMaxColorIterations;
