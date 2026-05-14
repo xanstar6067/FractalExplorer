@@ -41,7 +41,9 @@
             pnlFormulaInput = new Panel();
             richTextInput = new RichTextBox();
             lblFormulaExample = new Label();
+            pnlFormulaButtons = new TableLayoutPanel();
             btnApplyFormula = new Button();
+            btnRandomFormula = new Button();
             nudIterations = new NumericUpDown();
             lblIterations = new Label();
             nudZoom = new NumericUpDown();
@@ -68,6 +70,7 @@
             pnlControls.SuspendLayout();
             pnlFormulaGlow.SuspendLayout();
             pnlFormulaInput.SuspendLayout();
+            pnlFormulaButtons.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)nudIterations).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)nudHouseholderOrder).BeginInit();
@@ -128,7 +131,7 @@
             pnlControls.Controls.Add(lblFormula, 0, 0);
             pnlControls.Controls.Add(cbSelector, 0, 1);
             pnlControls.Controls.Add(pnlFormulaGlow, 0, 2);
-            pnlControls.Controls.Add(btnApplyFormula, 0, 3);
+            pnlControls.Controls.Add(pnlFormulaButtons, 0, 3);
             pnlControls.Controls.Add(nudIterations, 0, 4);
             pnlControls.Controls.Add(lblIterations, 1, 4);
             pnlControls.Controls.Add(nudZoom, 0, 5);
@@ -240,17 +243,45 @@
             lblFormulaExample.Text = "Пример: z^3 - 1";
             lblFormulaExample.TextAlign = ContentAlignment.MiddleLeft;
             // 
+            // pnlFormulaButtons
+            // 
+            pnlFormulaButtons.ColumnCount = 2;
+            pnlFormulaButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            pnlFormulaButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 30F));
+            pnlControls.SetColumnSpan(pnlFormulaButtons, 2);
+            pnlFormulaButtons.Controls.Add(btnApplyFormula);
+            pnlFormulaButtons.Controls.Add(btnRandomFormula, 1, 0);
+            pnlFormulaButtons.Dock = DockStyle.Fill;
+            pnlFormulaButtons.Location = new Point(6, 172);
+            pnlFormulaButtons.Margin = new Padding(6, 3, 6, 3);
+            pnlFormulaButtons.Name = "pnlFormulaButtons";
+            pnlFormulaButtons.RowCount = 1;
+            pnlFormulaButtons.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            pnlFormulaButtons.Size = new Size(219, 23);
+            pnlFormulaButtons.TabIndex = 3;
+            // 
             // btnApplyFormula
             // 
-            pnlControls.SetColumnSpan(btnApplyFormula, 2);
             btnApplyFormula.Dock = DockStyle.Fill;
-            btnApplyFormula.Location = new Point(6, 172);
-            btnApplyFormula.Margin = new Padding(6, 3, 6, 3);
+            btnApplyFormula.Location = new Point(0, 0);
+            btnApplyFormula.Margin = new Padding(0, 0, 3, 0);
             btnApplyFormula.Name = "btnApplyFormula";
-            btnApplyFormula.Size = new Size(219, 23);
-            btnApplyFormula.TabIndex = 3;
+            btnApplyFormula.Size = new Size(186, 23);
+            btnApplyFormula.TabIndex = 0;
             btnApplyFormula.Text = "Применить формулу";
             btnApplyFormula.UseVisualStyleBackColor = true;
+            // 
+            // btnRandomFormula
+            // 
+            btnRandomFormula.Dock = DockStyle.Fill;
+            btnRandomFormula.Font = new Font("Segoe UI Symbol", 9F);
+            btnRandomFormula.Location = new Point(189, 0);
+            btnRandomFormula.Margin = new Padding(0);
+            btnRandomFormula.Name = "btnRandomFormula";
+            btnRandomFormula.Size = new Size(30, 23);
+            btnRandomFormula.TabIndex = 1;
+            btnRandomFormula.Text = "⚂";
+            btnRandomFormula.UseVisualStyleBackColor = true;
             // 
             // nudIterations
             // 
@@ -490,6 +521,7 @@
             pnlControls.PerformLayout();
             pnlFormulaGlow.ResumeLayout(false);
             pnlFormulaInput.ResumeLayout(false);
+            pnlFormulaButtons.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)nudIterations).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)nudHouseholderOrder).EndInit();
@@ -510,7 +542,9 @@
         private System.Windows.Forms.Panel pnlFormulaInput;
         private System.Windows.Forms.RichTextBox richTextInput;
         private System.Windows.Forms.Label lblFormulaExample;
+        private System.Windows.Forms.TableLayoutPanel pnlFormulaButtons;
         private System.Windows.Forms.Button btnApplyFormula;
+        private System.Windows.Forms.Button btnRandomFormula;
         private System.Windows.Forms.NumericUpDown nudIterations;
         private System.Windows.Forms.Label lblIterations;
         private System.Windows.Forms.NumericUpDown nudZoom;

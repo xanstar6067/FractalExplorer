@@ -39,6 +39,7 @@ namespace FractalExplorer
         private RenderVisualizerComponent _renderVisualizer;
         private EventHandler? _themeChangedHandler;
         private bool _isFormulaInputHovered;
+        private readonly Random _randomFormulaGenerator = new();
 
         /// <summary>
         /// Менеджер палитр, специфичный для фракталов Ньютона.
@@ -265,12 +266,14 @@ namespace FractalExplorer
             lblFormulaExample.MouseEnter += FormulaInput_MouseEnter;
             lblFormulaExample.MouseLeave += FormulaInput_MouseLeave;
             btnApplyFormula.Click += btnApplyFormula_Click;
+            btnRandomFormula.Click += btnRandomFormula_Click;
             btnRender.Click += (s, e) => ScheduleRender();
 
             toolTipFormula.SetToolTip(richTextInput,
                 "Синтаксис: используйте z, числа, i, +, -, *, /, ^ и скобки.\n" +
                 "Пример: (z^3-1)/(z^2+1)");
             toolTipFormula.SetToolTip(lblFormulaExample, "Поддерживаются комплексные коэффициенты, например: (2+3*i)*z^2 - 1");
+            toolTipFormula.SetToolTip(btnRandomFormula, "Случайная формула для бассейнов Ньютона");
 
             _themeChangedHandler = (_, _) => ApplyFormulaInputTheme();
             ThemeManager.ThemeChanged += _themeChangedHandler;
@@ -363,6 +366,161 @@ namespace FractalExplorer
             RefreshColorSettingsRootCount();
             ScheduleRender();
             UpdateFormulaAccentState();
+        }
+
+        private void btnRandomFormula_Click(object? sender, EventArgs e)
+        {
+            string formula = GenerateValidRandomFormula();
+            richTextInput.Text = formula;
+            cbSelector.SelectedIndex = -1;
+            btnApplyFormula_Click(sender, e);
+        }
+
+        private string GenerateValidRandomFormula()
+        {
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                string formula = GenerateRandomFormula();
+                var validationEngine = new FractalNewtonIterativeEngine();
+                if (validationEngine.SetFormula(formula, out _))
+                {
+                    return formula;
+                }
+            }
+
+            return presetPolynomials[_randomFormulaGenerator.Next(presetPolynomials.Length)];
+        }
+
+        private string GenerateRandomFormula()
+        {
+            return _randomFormulaGenerator.Next(4) switch
+            {
+                0 => GenerateCyclotomicLikeFormula(),
+                1 => GenerateSparsePolynomialFormula(),
+                2 => GenerateFactoredPolynomialFormula(),
+                _ => GeneratePerturbedPowerFormula()
+            };
+        }
+
+        private string GenerateCyclotomicLikeFormula()
+        {
+            int degree = _randomFormulaGenerator.Next(3, 11);
+            string coefficient = RandomComplexCoefficient();
+            string constant = RandomSignedConstant();
+
+            if (coefficient == "1")
+            {
+                return $"z^{degree} {constant}";
+            }
+
+            return $"{coefficient}*z^{degree} {constant}";
+        }
+
+        private string GenerateSparsePolynomialFormula()
+        {
+            int highDegree = _randomFormulaGenerator.Next(4, 9);
+            int lowDegree = _randomFormulaGenerator.Next(1, highDegree - 1);
+            string middleCoefficient = RandomRealCoefficient(allowOne: false);
+            string constant = RandomSignedConstant();
+
+            return $"z^{highDegree} {RandomSign()} {middleCoefficient}*z^{lowDegree} {constant}";
+        }
+
+        private string GenerateFactoredPolynomialFormula()
+        {
+            int factors = _randomFormulaGenerator.Next(3, 6);
+            var terms = new List<string>();
+
+            for (int i = 0; i < factors; i++)
+            {
+                terms.Add($"(z{RandomRootOffset()})");
+            }
+
+            if (_randomFormulaGenerator.NextDouble() < 0.35)
+            {
+                int repeatedIndex = _randomFormulaGenerator.Next(terms.Count);
+                terms.Add(terms[repeatedIndex]);
+            }
+
+            return string.Join("*", terms);
+        }
+
+        private string GeneratePerturbedPowerFormula()
+        {
+            int degree = _randomFormulaGenerator.Next(3, 8);
+            int perturbDegree = _randomFormulaGenerator.Next(1, degree);
+            string perturbCoefficient = RandomComplexCoefficient();
+            string constant = RandomSignedConstant();
+
+            return $"z^{degree} {RandomSign()} {perturbCoefficient}*z^{perturbDegree} {constant}";
+        }
+
+        private string RandomComplexCoefficient()
+        {
+            if (_randomFormulaGenerator.NextDouble() < 0.45)
+            {
+                return RandomRealCoefficient(allowOne: true);
+            }
+
+            string real = RandomRealCoefficient(allowOne: false);
+            string imaginary = RandomRealCoefficient(allowOne: false);
+            string sign = _randomFormulaGenerator.Next(2) == 0 ? "+" : "-";
+
+            return $"({real}{sign}{imaginary}*i)";
+        }
+
+        private string RandomRealCoefficient(bool allowOne)
+        {
+            string[] coefficients = allowOne
+                ? new[] { "1", "0.25", "0.5", "0.75", "1.25", "1.5", "2", "3" }
+                : new[] { "0.25", "0.5", "0.75", "1.25", "1.5", "2", "3" };
+
+            return coefficients[_randomFormulaGenerator.Next(coefficients.Length)];
+        }
+
+        private string RandomSignedConstant()
+        {
+            string[] constants =
+            {
+                "- 1",
+                "+ 1",
+                "- 2",
+                "+ 2",
+                "- 0.5",
+                "+ 0.5",
+                "- i",
+                "+ i",
+                "- (1+i)",
+                "+ (1-i)"
+            };
+
+            return constants[_randomFormulaGenerator.Next(constants.Length)];
+        }
+
+        private string RandomRootOffset()
+        {
+            string[] roots =
+            {
+                "-1",
+                "+1",
+                "-0.5",
+                "+0.5",
+                "-0.25",
+                "+0.25",
+                "-i",
+                "+i",
+                "-0.5*i",
+                "+0.5*i",
+                "-(1+i)",
+                "+(1-i)"
+            };
+
+            return roots[_randomFormulaGenerator.Next(roots.Length)];
+        }
+
+        private string RandomSign()
+        {
+            return _randomFormulaGenerator.Next(2) == 0 ? "+" : "-";
         }
 
         private void ApplyFormulaInputTheme()
