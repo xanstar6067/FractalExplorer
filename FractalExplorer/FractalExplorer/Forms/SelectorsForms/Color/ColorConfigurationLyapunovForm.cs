@@ -18,6 +18,7 @@ namespace FractalExplorer.SelectorsForms
 
         private readonly LyapunovPaletteManager _paletteManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
+        private readonly Random _random = new();
 
         private LyapunovColorPalette? _selectedPalette;
         private bool _isProgrammaticChange;
@@ -121,6 +122,7 @@ namespace FractalExplorer.SelectorsForms
             _btnAddColor.Enabled = editable;
             _btnEditColor.Enabled = editable && _lbColors.SelectedIndex >= 0;
             _btnRemoveColor.Enabled = editable && _lbColors.SelectedIndex >= 0 && _selectedPalette!.Colors.Count > 1;
+            _btnRandomizeColors.Enabled = editable;
             _btnDelete.Enabled = editable;
             _btnCopy.Enabled = has;
             _btnApply.Enabled = has;
@@ -255,6 +257,21 @@ namespace FractalExplorer.SelectorsForms
             _lbColors.Items.RemoveAt(idx);
             MarkUnsaved();
             _panelPreview.Invalidate();
+        }
+
+        private void RandomizeColors()
+        {
+            if (!IsEditable() || _selectedPalette == null)
+            {
+                return;
+            }
+
+            _selectedPalette.Colors = CreateRandomColors();
+            RefreshColorsList();
+            _lbColors.SelectedIndex = 0;
+            MarkUnsaved();
+            _panelPreview.Invalidate();
+            UpdateControlsState();
         }
 
         private void DrawPreview(Graphics g)
@@ -434,6 +451,7 @@ namespace FractalExplorer.SelectorsForms
             _btnAddColor.Click += (_, _) => AddColor();
             _btnEditColor.Click += (_, _) => EditColor();
             _btnRemoveColor.Click += (_, _) => RemoveColor();
+            _btnRandomizeColors.Click += (_, _) => RandomizeColors();
             _btnSave.Click += (_, _) => SaveSelected();
             _btnApply.Click += (_, _) => ApplySelected();
             _btnClose.Click += (_, _) => Close();
@@ -445,6 +463,88 @@ namespace FractalExplorer.SelectorsForms
             return index >= 0 && index < ModeUiItems.Length
                 ? ModeUiItems[index].Mode
                 : LyapunovColoringMode.LegacyBuiltIn;
+        }
+
+        private List<Color> CreateRandomColors()
+        {
+            int colorCount = _random.Next(3, 13);
+            List<Color> colors = new(colorCount);
+            double baseHue = _random.NextDouble() * 360.0;
+            double hueStep = 360.0 / colorCount;
+
+            for (int i = 0; i < colorCount; i++)
+            {
+                double hue = NormalizeHue(baseHue + (hueStep * i) + RandomDouble(-18.0, 18.0));
+                double saturation = RandomDouble(0.65, 1.0);
+                double value = RandomDouble(0.62, 1.0);
+                colors.Add(ColorFromHsv(hue, saturation, value));
+            }
+
+            return colors;
+        }
+
+        private double RandomDouble(double minValue, double maxValue)
+        {
+            return minValue + (_random.NextDouble() * (maxValue - minValue));
+        }
+
+        private static double NormalizeHue(double hue)
+        {
+            hue %= 360.0;
+            return hue < 0 ? hue + 360.0 : hue;
+        }
+
+        private static Color ColorFromHsv(double hue, double saturation, double value)
+        {
+            double chroma = value * saturation;
+            double huePrime = hue / 60.0;
+            double x = chroma * (1.0 - Math.Abs((huePrime % 2.0) - 1.0));
+
+            double red = 0;
+            double green = 0;
+            double blue = 0;
+
+            if (huePrime < 1.0)
+            {
+                red = chroma;
+                green = x;
+            }
+            else if (huePrime < 2.0)
+            {
+                red = x;
+                green = chroma;
+            }
+            else if (huePrime < 3.0)
+            {
+                green = chroma;
+                blue = x;
+            }
+            else if (huePrime < 4.0)
+            {
+                green = x;
+                blue = chroma;
+            }
+            else if (huePrime < 5.0)
+            {
+                red = x;
+                blue = chroma;
+            }
+            else
+            {
+                red = chroma;
+                blue = x;
+            }
+
+            double match = value - chroma;
+            return Color.FromArgb(
+                ToColorChannel(red + match),
+                ToColorChannel(green + match),
+                ToColorChannel(blue + match));
+        }
+
+        private static int ToColorChannel(double value)
+        {
+            return Math.Clamp((int)Math.Round(value * 255.0), 0, 255);
         }
     }
 }

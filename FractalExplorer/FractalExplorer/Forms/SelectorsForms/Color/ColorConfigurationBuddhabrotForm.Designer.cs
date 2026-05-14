@@ -24,6 +24,7 @@
             _btnNew = new Button();
             _lbPalettes = new ListBox();
             grpEditor = new GroupBox();
+            _btnRandomizeColors = new Button();
             _btnRemoveColor = new Button();
             _btnEditColor = new Button();
             _btnAddColor = new Button();
@@ -100,6 +101,7 @@
             // 
             // grpEditor
             // 
+            grpEditor.Controls.Add(_btnRandomizeColors);
             grpEditor.Controls.Add(_btnRemoveColor);
             grpEditor.Controls.Add(_btnEditColor);
             grpEditor.Controls.Add(_btnAddColor);
@@ -124,9 +126,18 @@
             grpEditor.TabStop = false;
             grpEditor.Text = "Редактор палитры Буддаброта";
             // 
+            // _btnRandomizeColors
+            // 
+            _btnRandomizeColors.Location = new Point(9, 400);
+            _btnRandomizeColors.Name = "_btnRandomizeColors";
+            _btnRandomizeColors.Size = new Size(178, 23);
+            _btnRandomizeColors.TabIndex = 17;
+            _btnRandomizeColors.Text = "Случайная палитра";
+            _btnRandomizeColors.UseVisualStyleBackColor = true;
+            // 
             // _btnRemoveColor
             // 
-            _btnRemoveColor.Location = new Point(271, 321);
+            _btnRemoveColor.Location = new Point(271, 346);
             _btnRemoveColor.Name = "_btnRemoveColor";
             _btnRemoveColor.Size = new Size(107, 28);
             _btnRemoveColor.TabIndex = 16;
@@ -135,7 +146,7 @@
             // 
             // _btnEditColor
             // 
-            _btnEditColor.Location = new Point(271, 287);
+            _btnEditColor.Location = new Point(271, 312);
             _btnEditColor.Name = "_btnEditColor";
             _btnEditColor.Size = new Size(107, 28);
             _btnEditColor.TabIndex = 15;
@@ -144,7 +155,7 @@
             // 
             // _btnAddColor
             // 
-            _btnAddColor.Location = new Point(271, 253);
+            _btnAddColor.Location = new Point(271, 278);
             _btnAddColor.Name = "_btnAddColor";
             _btnAddColor.Size = new Size(107, 28);
             _btnAddColor.TabIndex = 14;
@@ -154,15 +165,15 @@
             // _lbColors
             // 
             _lbColors.FormattingEnabled = true;
-            _lbColors.Location = new Point(9, 253);
+            _lbColors.Location = new Point(9, 278);
             _lbColors.Name = "_lbColors";
-            _lbColors.Size = new Size(256, 139);
+            _lbColors.Size = new Size(256, 109);
             _lbColors.TabIndex = 13;
             // 
             // lblColors
             // 
             lblColors.AutoSize = true;
-            lblColors.Location = new Point(9, 235);
+            lblColors.Location = new Point(9, 260);
             lblColors.Name = "lblColors";
             lblColors.Size = new Size(101, 15);
             lblColors.TabIndex = 12;
@@ -171,7 +182,7 @@
             // _panelPreview
             // 
             _panelPreview.BorderStyle = BorderStyle.FixedSingle;
-            _panelPreview.Location = new Point(9, 188);
+            _panelPreview.Location = new Point(9, 213);
             _panelPreview.Name = "_panelPreview";
             _panelPreview.Size = new Size(369, 38);
             _panelPreview.TabIndex = 11;
@@ -179,7 +190,7 @@
             // lblPreview
             // 
             lblPreview.AutoSize = true;
-            lblPreview.Location = new Point(9, 170);
+            lblPreview.Location = new Point(9, 195);
             lblPreview.Name = "lblPreview";
             lblPreview.Size = new Size(54, 15);
             lblPreview.TabIndex = 10;
@@ -202,7 +213,7 @@
             lblGamma.AutoSize = true;
             lblGamma.Location = new Point(200, 120);
             lblGamma.Name = "lblGamma";
-            lblGamma.Size = new Size(52, 15);
+            lblGamma.Size = new Size(46, 15);
             lblGamma.TabIndex = 8;
             lblGamma.Text = "Гамма:";
             // 
@@ -361,5 +372,6 @@
         private Button _btnAddColor;
         private Button _btnEditColor;
         private Button _btnRemoveColor;
+        private Button _btnRandomizeColors;
     }
 }
