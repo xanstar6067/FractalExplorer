@@ -171,6 +171,7 @@ namespace FractalDraving
         /// Размер отступа кнопки сворачивания панели управления.
         /// </summary>
         private const int ToggleButtonMargin = 12;
+        private const int PreviewInteractionHintMinHeight = 20;
 
         /// <summary>
         /// Видимая область внутри полной буферной поверхности для последнего завершенного кадра.
@@ -221,12 +222,13 @@ namespace FractalDraving
             {
                 Dock = DockStyle.Top,
                 AutoSize = false,
-                Height = 20,
+                Height = PreviewInteractionHintMinHeight,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Text = "Кликните по изображению для выбора точки",
+                Text = "Кликните по миниатюре, чтобы выбрать точку",
                 Padding = new Padding(0, 0, 0, 4),
                 Visible = false
             };
+            _previewInteractionHintLabel.SizeChanged += (_, _) => UpdatePreviewInteractionHintLabelHeight();
 
             _previewCanvasBorderPanel = new Panel
             {
@@ -254,7 +256,31 @@ namespace FractalDraving
 
             _previewThemeChangedHandler = (_, _) => ApplyPreviewCanvasInteractiveStyles();
             ThemeManager.ThemeChanged += _previewThemeChangedHandler;
+            UpdatePreviewInteractionHintLabelHeight();
             ApplyPreviewCanvasInteractiveStyles();
+        }
+
+        private void UpdatePreviewInteractionHintLabelHeight()
+        {
+            if (_previewInteractionHintLabel is null)
+            {
+                return;
+            }
+
+            int textWidth = Math.Max(1, _previewInteractionHintLabel.ClientSize.Width - _previewInteractionHintLabel.Padding.Horizontal);
+            Size preferredSize = TextRenderer.MeasureText(
+                _previewInteractionHintLabel.Text,
+                _previewInteractionHintLabel.Font,
+                new Size(textWidth, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
+            int preferredHeight = Math.Max(
+                PreviewInteractionHintMinHeight,
+                preferredSize.Height + _previewInteractionHintLabel.Padding.Vertical);
+
+            if (_previewInteractionHintLabel.Height != preferredHeight)
+            {
+                _previewInteractionHintLabel.Height = preferredHeight;
+            }
         }
 
         /// <summary>
