@@ -48,7 +48,7 @@
             pbRenderProgress = new ProgressBar();
             mandelbrotPreviewPanel = new Panel();
             mandelbrotPreviewCanvas = new PictureBox();
-            canvas = new PictureBox();
+            canvas = new FractalExplorer.Controls.FractalRenderCanvas();
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();
             controlsHost.SuspendLayout();

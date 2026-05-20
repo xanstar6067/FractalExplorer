@@ -182,6 +182,8 @@ namespace FractalDraving
         /// Флаг, отключающий запуск полного рендера при программном изменении layout.
         /// </summary>
         private bool _suppressResizeRender = false;
+        private bool _isUserResizingWindow = false;
+        private bool _hasPendingCanvasResizeRender = false;
         private readonly FullscreenToggleController _fullscreenController = new();
 
         /// <summary>
@@ -476,6 +478,31 @@ namespace FractalDraving
             KeyDown += Form_KeyDown;
             FormClosing += Form_FormClosing;
             FormClosed += FractalMandelbrotFamilyForm_FormClosed;
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
+        }
+
+        private void Form_ResizeBegin(object? sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            _renderDebounceTimer?.Stop();
+        }
+
+        private void Form_ResizeEnd(object? sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow)
+            {
+                return;
+            }
+
+            _isUserResizingWindow = false;
+            canvas.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                ScheduleRender(cancelCurrentRender: false);
+            }
         }
 
         private void ToggleFullscreenSafely()
@@ -813,6 +840,7 @@ namespace FractalDraving
             Rectangle currentViewportRect = GetCurrentViewportRect();
             lock (_bitmapLock)
             {
+                bool drewStablePreview = false;
                 if (_previewBitmap != null)
                 {
                     if (_renderedCenterX == _centerX && _renderedCenterY == _centerY && _renderedZoom == _zoom)
@@ -824,13 +852,15 @@ namespace FractalDraving
                     {
                         DrawTransformedPreview(e.Graphics, _previewBitmap, canvas.ClientRectangle);
                     }
+                    drewStablePreview = true;
                 }
-                if (_currentRenderingBitmap != null)
+
+                if (_currentRenderingBitmap != null && (!_isUserResizingWindow || !drewStablePreview))
                 {
                     DrawVisibleBitmap(e.Graphics, _currentRenderingBitmap, currentViewportRect, canvas.ClientRectangle);
                 }
             }
-            if (_renderVisualizer != null && _isRenderingPreview)
+            if (!_isUserResizingWindow && _renderVisualizer != null && _isRenderingPreview)
             {
                 _renderVisualizer.DrawVisualization(e.Graphics);
             }
@@ -1302,9 +1332,15 @@ namespace FractalDraving
         private void Canvas_Resize(object sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized) return;
+            canvas.Invalidate();
             if (_suppressResizeRender)
             {
-                canvas.Invalidate();
+                return;
+            }
+
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
                 return;
             }
 
