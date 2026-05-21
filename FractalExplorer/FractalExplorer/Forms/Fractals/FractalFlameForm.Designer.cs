@@ -93,7 +93,7 @@ namespace FractalExplorer.Forms.Fractals
             _contentPanel = new Panel();
             _canvasHost = new Panel();
             _btnToggleControls = new Button();
-            _canvas = new PictureBox();
+            _canvas = new FractalExplorer.Controls.FractalRenderCanvas();
             _controlsPanel.SuspendLayout();
             _settingsLayout.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_samples).BeginInit();

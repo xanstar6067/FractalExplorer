@@ -318,6 +318,7 @@ namespace FractalExplorer.Forms.Fractals
 
             if (_isUserResizingWindow)
             {
+                _canvas.Invalidate();
                 _hasPendingCanvasResizeRender = true;
                 return;
             }

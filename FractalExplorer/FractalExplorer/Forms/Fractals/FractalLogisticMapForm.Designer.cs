@@ -92,7 +92,7 @@ namespace FractalExplorer.Forms.Fractals
             _btnBackgroundColor = new Button();
             _pbRenderProgress = new ProgressBar();
             _btnToggleControls = new Button();
-            _canvas = new PictureBox();
+            _canvas = new FractalExplorer.Controls.FractalRenderCanvas();
             _canvasHost.SuspendLayout();
             _controlsHost.SuspendLayout();
             _pnlControls.SuspendLayout();

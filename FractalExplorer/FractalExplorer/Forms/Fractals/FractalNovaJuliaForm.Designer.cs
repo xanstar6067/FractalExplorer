@@ -64,7 +64,7 @@ namespace FractalExplorer.Forms
             pbRenderProgress = new ProgressBar();
             pnlMapPreview = new Panel();
             pbMandelbrotPreview = new PictureBox();
-            canvas = new PictureBox();
+            canvas = new FractalExplorer.Controls.FractalRenderCanvas();
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();
             controlsHost.SuspendLayout();

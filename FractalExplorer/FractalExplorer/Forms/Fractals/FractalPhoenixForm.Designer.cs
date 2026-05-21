@@ -48,7 +48,7 @@
             btnStateManager = new System.Windows.Forms.Button();
             lblProgress = new System.Windows.Forms.Label();
             pbRenderProgress = new System.Windows.Forms.ProgressBar();
-            canvas = new System.Windows.Forms.PictureBox();
+            canvas = new FractalExplorer.Controls.FractalRenderCanvas();
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();
             controlsHost.SuspendLayout();

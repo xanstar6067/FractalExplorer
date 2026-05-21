@@ -123,6 +123,8 @@ namespace FractalExplorer.Forms.Fractals
         /// Флаг, отключающий запуск полного рендера при программном изменении layout.
         /// </summary>
         private bool _suppressResizeRender = false;
+        private bool _isUserResizingWindow = false;
+        private bool _hasPendingCanvasResizeRender = false;
         private readonly FullscreenToggleController _fullscreenController = new();
         /// <summary>
         /// Признак видимости панели управления.
@@ -235,6 +237,31 @@ namespace FractalExplorer.Forms.Fractals
             controlsHost.SizeChanged += ControlsHost_SizeChanged;
             KeyDown += Form_KeyDown;
             FormClosing += Form_FormClosing;
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
+        }
+
+        private void Form_ResizeBegin(object sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            _renderDebounceTimer?.Stop();
+        }
+
+        private void Form_ResizeEnd(object sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow)
+            {
+                return;
+            }
+
+            _isUserResizingWindow = false;
+            canvas.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                ScheduleRender(cancelCurrentRender: false);
+            }
         }
         private void ToggleFullscreenSafely()
         {
@@ -398,6 +425,13 @@ namespace FractalExplorer.Forms.Fractals
                 return;
             }
 
+            canvas.Invalidate();
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
+                return;
+            }
+
             ScheduleRender(cancelCurrentRender: false);
         }
 
@@ -526,6 +560,7 @@ namespace FractalExplorer.Forms.Fractals
 
             lock (_bitmapLock)
             {
+                bool drewStablePreview = false;
                 if (_previewBitmap != null)
                 {
                     // Если позиция и зум не менялись, просто отрисовываем готовый битмап
@@ -579,14 +614,15 @@ namespace FractalExplorer.Forms.Fractals
                             catch (Exception) { /* Игнорировать редкие сбои отрисовки GDI+ */ }
                         }
                     }
+                    drewStablePreview = true;
                 }
 
                 // Отрисовываем поверх всего текущий рендеринг (если он идет)
-                if (_currentRenderingBitmap != null) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
+                if (_currentRenderingBitmap != null && (!_isUserResizingWindow || !drewStablePreview)) e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
             }
 
             // Отрисовываем визуализацию тайлов
-            if (_renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
+            if (!_isUserResizingWindow && _renderVisualizer != null && _isRenderingPreview) _renderVisualizer.DrawVisualization(e.Graphics);
         }
         #endregion
 

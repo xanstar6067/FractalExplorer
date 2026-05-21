@@ -62,7 +62,7 @@
             progressBar = new ProgressBar();
             lblDebug = new Label();
             richTextDebugOutput = new RichTextBox();
-            fractal_bitmap = new PictureBox();
+            fractal_bitmap = new FractalExplorer.Controls.FractalRenderCanvas();
             toolTipFormula = new ToolTip(components);
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();

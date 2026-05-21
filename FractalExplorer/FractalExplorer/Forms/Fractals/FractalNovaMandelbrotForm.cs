@@ -56,6 +56,8 @@ namespace FractalExplorer.Forms
         private string _baseTitle;
         private const int ToggleButtonMargin = 12;
         private bool _suppressResizeRender = false;
+        private bool _isUserResizingWindow = false;
+        private bool _hasPendingCanvasResizeRender = false;
         private readonly FullscreenToggleController _fullscreenController = new();
         private bool _controlsPanelVisible = true;
         private const decimal BASE_SCALE = 4.0m;
@@ -132,9 +134,34 @@ namespace FractalExplorer.Forms
             controlsHost.SizeChanged += ControlsHost_SizeChanged;
             KeyDown += Form_KeyDown;
             FormClosing += Form_FormClosing;
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
 
             _renderDebounceTimer.Tick += RenderDebounceTimer_Tick;
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
+        }
+
+        private void Form_ResizeBegin(object sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            _renderDebounceTimer?.Stop();
+        }
+
+        private void Form_ResizeEnd(object sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow)
+            {
+                return;
+            }
+
+            _isUserResizingWindow = false;
+            canvas.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                ScheduleRender(cancelCurrentRender: false);
+            }
         }
         private void ToggleFullscreenSafely()
         {
@@ -335,15 +362,17 @@ namespace FractalExplorer.Forms
 
             lock (_bitmapLock)
             {
+                bool drewStablePreview = false;
                 DrawTransformedBitmap(e.Graphics, _previewBitmap, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
+                drewStablePreview = _previewBitmap != null;
 
-                if (_currentRenderingBitmap != null)
+                if (_currentRenderingBitmap != null && (!_isUserResizingWindow || !drewStablePreview))
                 {
                     e.Graphics.DrawImageUnscaled(_currentRenderingBitmap, Point.Empty);
                 }
             }
 
-            if (_renderVisualizer != null && _isRenderingPreview)
+            if (!_isUserResizingWindow && _renderVisualizer != null && _isRenderingPreview)
             {
                 _renderVisualizer.DrawVisualization(e.Graphics);
             }
@@ -596,6 +625,13 @@ namespace FractalExplorer.Forms
             if (_suppressResizeRender)
             {
                 canvas.Invalidate();
+                return;
+            }
+
+            canvas.Invalidate();
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
                 return;
             }
 

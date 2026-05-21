@@ -55,7 +55,7 @@
             btnStateManager = new Button();
             lblProgress = new Label();
             pbRenderProgress = new ProgressBar();
-            canvas = new PictureBox();
+            canvas = new FractalExplorer.Controls.FractalRenderCanvas();
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();
             controlsHost.SuspendLayout();

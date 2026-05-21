@@ -52,6 +52,8 @@ namespace FractalExplorer.Forms.Fractals
         private bool _isPanning;
         private bool _isFormClosing;
         private bool _suppressZoomValueChanged;
+        private bool _isUserResizingWindow;
+        private bool _hasPendingCanvasResizeRender;
         private int _controlsOpenWidth = 231;
         private Point _panStart;
 
@@ -95,6 +97,8 @@ namespace FractalExplorer.Forms.Fractals
             _canvas.MouseLeave += Canvas_MouseUp;
             _canvas.MouseEnter += (_, _) => _canvas.Focus();
             _canvas.Resize += (_, _) => QueueRenderAfterResizeInteraction();
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
             KeyDown += Form_KeyDown;
 
             FormClosing += (_, _) =>
@@ -356,8 +360,35 @@ namespace FractalExplorer.Forms.Fractals
         private void QueueRenderAfterResizeInteraction()
         {
             if (_isHighResRendering || IsDisposed) return;
+            _canvas.Invalidate();
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
+                _resizeDebounceTimer.Stop();
+                return;
+            }
+
             _resizeDebounceTimer.Stop();
             _resizeDebounceTimer.Start();
+        }
+
+        private void Form_ResizeBegin(object? sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            _resizeDebounceTimer.Stop();
+        }
+
+        private void Form_ResizeEnd(object? sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow) return;
+            _isUserResizingWindow = false;
+            _canvas.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                ScheduleRender();
+            }
         }
 
         private void ScheduleRender()

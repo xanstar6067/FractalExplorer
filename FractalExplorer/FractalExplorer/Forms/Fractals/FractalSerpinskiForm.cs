@@ -96,6 +96,8 @@ namespace FractalExplorer
         private ColorConfigurationSerpinskyForm _colorConfigForm;
         private const int ToggleButtonMargin = 12;
         private bool _suppressResizeRender = false;
+        private bool _isUserResizingWindow = false;
+        private bool _hasPendingCanvasResizeRender = false;
         private readonly FullscreenToggleController _fullscreenController = new();
         private bool _controlsPanelVisible = true;
         private bool _pendingRenderRestart = false;
@@ -153,7 +155,8 @@ namespace FractalExplorer
             controlsHost.SizeChanged += ControlsHost_SizeChanged;
             KeyDown += Form_KeyDown;
             FormClosing += Form_FormClosing;
-            Resize += (s, e) => { if (WindowState != FormWindowState.Minimized && !_suppressResizeRender) ScheduleRender(); };
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
             canvasSerpinsky.Resize += CanvasSerpinsky_Resize;
 
             nudZoom.ValueChanged += ParamControl_Changed;
@@ -166,12 +169,42 @@ namespace FractalExplorer
             UpdateAbortButtonState();
         }
 
+        private void Form_ResizeBegin(object sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            renderTimer?.Stop();
+        }
+
+        private void Form_ResizeEnd(object sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow)
+            {
+                return;
+            }
+
+            _isUserResizingWindow = false;
+            canvasSerpinsky.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                ScheduleRender();
+            }
+        }
+
         private void CanvasSerpinsky_Resize(object sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized) return;
             if (_suppressResizeRender)
             {
                 canvasSerpinsky.Invalidate();
+                return;
+            }
+
+            canvasSerpinsky.Invalidate();
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
                 return;
             }
 

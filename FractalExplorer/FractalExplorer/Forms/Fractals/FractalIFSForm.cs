@@ -24,6 +24,8 @@ namespace FractalExplorer.Forms.Fractals
         private double _panStartCenterX;
         private double _panStartCenterY;
         private bool _suppressEvents;
+        private bool _isUserResizingWindow;
+        private bool _hasPendingCanvasResizeRender;
         private readonly FullscreenToggleController _fullscreenController = new();
         private const int ToggleButtonMargin = 12;
         private bool _controlsPanelVisible = true;
@@ -41,7 +43,9 @@ namespace FractalExplorer.Forms.Fractals
             canvas.MouseMove += Canvas_MouseMove;
             canvas.MouseUp += Canvas_MouseUp;
             canvas.MouseLeave += Canvas_MouseLeave;
-            canvas.Resize += (_, _) => QueueRenderRestart(immediate: true);
+            canvas.Resize += Canvas_Resize;
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
             canvasHost.Resize += (_, _) => UpdateToggleControlsPosition();
             controlsHost.SizeChanged += (_, _) => UpdateToggleControlsPosition();
             btnToggleControls.Click += (_, _) => ToggleControlsPanel();
@@ -60,6 +64,46 @@ namespace FractalExplorer.Forms.Fractals
             };
 
             AttachControlTriggers();
+        }
+
+        private void Form_ResizeBegin(object? sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            _rerenderTimer.Stop();
+        }
+
+        private void Form_ResizeEnd(object? sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow)
+            {
+                return;
+            }
+
+            _isUserResizingWindow = false;
+            canvas.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                QueueRenderRestart(immediate: true);
+            }
+        }
+
+        private void Canvas_Resize(object? sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                return;
+            }
+
+            canvas.Invalidate();
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
+                return;
+            }
+
+            QueueRenderRestart(immediate: true);
         }
 
         private void AttachControlTriggers()

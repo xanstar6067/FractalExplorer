@@ -52,7 +52,7 @@
             abortRender = new System.Windows.Forms.Button();
             label8 = new System.Windows.Forms.Label();
             progressBarSerpinsky = new System.Windows.Forms.ProgressBar();
-            canvasSerpinsky = new System.Windows.Forms.PictureBox();
+            canvasSerpinsky = new FractalExplorer.Controls.FractalRenderCanvas();
             contentPanel.SuspendLayout();
             canvasHost.SuspendLayout();
             controlsHost.SuspendLayout();

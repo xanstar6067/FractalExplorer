@@ -41,6 +41,8 @@ namespace FractalExplorer.Forms.Fractals
         private bool _isQueuingRenderRestart;
         private bool _queuedRenderImmediate;
         private bool _isProcessingRenderQueue;
+        private bool _isUserResizingWindow;
+        private bool _hasPendingCanvasResizeRender;
         private readonly SemaphoreSlim _renderExecutionLock = new(1, 1);
         private Point _panStartPoint;
         private Bitmap? _interactionSourceBitmap;
@@ -87,11 +89,36 @@ namespace FractalExplorer.Forms.Fractals
             _canvas.MouseLeave += Canvas_MouseLeave;
             _canvas.MouseEnter += (_, _) => _canvas.Focus();
             _canvas.SizeChanged += Canvas_SizeChanged;
+            ResizeBegin += Form_ResizeBegin;
+            ResizeEnd += Form_ResizeEnd;
             _renderRestartTimer.Tick += RenderRestartTimer_Tick;
             _interactivePreviewTimer.Tick += InteractivePreviewTimer_Tick;
             _btnSaveImage.Click += BtnSaveImage_Click;
             KeyDown += Form_KeyDown;
             AttachAutoRenderControlTriggers();
+        }
+
+        private void Form_ResizeBegin(object? sender, EventArgs e)
+        {
+            _isUserResizingWindow = true;
+            _hasPendingCanvasResizeRender = false;
+            _renderRestartTimer.Stop();
+        }
+
+        private void Form_ResizeEnd(object? sender, EventArgs e)
+        {
+            if (!_isUserResizingWindow)
+            {
+                return;
+            }
+
+            _isUserResizingWindow = false;
+            _canvas.Invalidate();
+            if (_hasPendingCanvasResizeRender && WindowState != FormWindowState.Minimized)
+            {
+                _hasPendingCanvasResizeRender = false;
+                QueueRenderRestart(immediate: true);
+            }
         }
 
         private void FractalBuddhabrotForm_Load(object? sender, EventArgs e)
@@ -256,6 +283,13 @@ namespace FractalExplorer.Forms.Fractals
         {
             if (_canvas.Width <= 1 || _canvas.Height <= 1)
             {
+                return;
+            }
+
+            _canvas.Invalidate();
+            if (_isUserResizingWindow)
+            {
+                _hasPendingCanvasResizeRender = true;
                 return;
             }
 
