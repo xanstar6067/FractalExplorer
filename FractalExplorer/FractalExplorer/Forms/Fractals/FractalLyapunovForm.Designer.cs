@@ -8,7 +8,6 @@ namespace FractalExplorer.Forms.Fractals
         private System.ComponentModel.IContainer components = null;
 
         private Panel _canvasHost;
-        private PictureBox _canvas;
         private Panel _controlsHost;
         private TableLayoutPanel _pnlControls;
         private Button _btnToggleControls;
@@ -31,7 +30,6 @@ namespace FractalExplorer.Forms.Fractals
         private Button _btnSaveImage;
         private Button _btnPalette;
         private Button _btnRender;
-        private Button _btnPresets;
         private Button _btnState;
         private NumericUpDown _nudZoom;
         private Label _lblZoom;
@@ -81,7 +79,6 @@ namespace FractalExplorer.Forms.Fractals
             _btnSaveImage = new Button();
             _btnPalette = new Button();
             _btnRender = new Button();
-            _btnPresets = new Button();
             _btnState = new Button();
             _pbRenderProgress = new ProgressBar();
             _btnToggleControls = new Button();
@@ -149,8 +146,7 @@ namespace FractalExplorer.Forms.Fractals
             _pnlControls.Controls.Add(_btnSaveImage, 0, 10);
             _pnlControls.Controls.Add(_btnPalette, 0, 11);
             _pnlControls.Controls.Add(_btnRender, 0, 12);
-            _pnlControls.Controls.Add(_btnPresets, 0, 13);
-            _pnlControls.Controls.Add(_btnState, 0, 14);
+            _pnlControls.Controls.Add(_btnState, 0, 13);
             _pnlControls.Controls.Add(_pbRenderProgress, 0, 15);
             _pnlControls.Dock = DockStyle.Fill;
             _pnlControls.Location = new Point(0, 0);
@@ -419,24 +415,11 @@ namespace FractalExplorer.Forms.Fractals
             _btnRender.UseVisualStyleBackColor = true;
             _btnRender.Click += btnRender_Click;
             // 
-            // _btnPresets
-            // 
-            _pnlControls.SetColumnSpan(_btnPresets, 2);
-            _btnPresets.Dock = DockStyle.Fill;
-            _btnPresets.Location = new Point(6, 431);
-            _btnPresets.Margin = new Padding(6, 3, 6, 3);
-            _btnPresets.Name = "_btnPresets";
-            _btnPresets.Size = new Size(217, 39);
-            _btnPresets.TabIndex = 23;
-            _btnPresets.Text = "Пресеты";
-            _btnPresets.UseVisualStyleBackColor = true;
-            _btnPresets.Click += btnPresets_Click;
-            // 
             // _btnState
             // 
             _pnlControls.SetColumnSpan(_btnState, 2);
             _btnState.Dock = DockStyle.Fill;
-            _btnState.Location = new Point(6, 476);
+            _btnState.Location = new Point(6, 431);
             _btnState.Margin = new Padding(6, 3, 6, 3);
             _btnState.Name = "_btnState";
             _btnState.Size = new Size(217, 39);
@@ -516,5 +499,7 @@ namespace FractalExplorer.Forms.Fractals
         {
             UpdateOverlayLayout();
         }
+
+        private Controls.FractalRenderCanvas _canvas;
     }
 }
