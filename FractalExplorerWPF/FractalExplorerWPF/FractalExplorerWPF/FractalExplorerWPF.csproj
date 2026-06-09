@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\Icons\FractalExplorer.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="MigrationSource\**\*.cs" />
+    <EmbeddedResource Remove="MigrationSource\**\*.resx" />
+    <None Include="MigrationSource\**\*" />
+    <Resource Include="Assets\Previews\**\*" />
+    <Resource Include="Assets\Icons\**\*" />
+  </ItemGroup>
+
+</Project>
