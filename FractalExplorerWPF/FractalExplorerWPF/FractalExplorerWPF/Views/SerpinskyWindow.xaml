@@ -1,0 +1,114 @@
+<Window x:Class="FractalExplorerWPF.Views.SerpinskyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Треугольник Серпинского"
+        Width="1120" Height="700"
+        MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/Serpinski.ico"
+        KeyDown="Window_OnKeyDown"
+        Closing="Window_OnClosing">
+    <Window.Resources>
+        <SolidColorBrush x:Key="WindowBg" Color="#171A21"/>
+        <SolidColorBrush x:Key="PanelBg" Color="#20242D"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#3B4250"/>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#F2F4F8"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Margin" Value="0,4"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource WindowBg}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Margin="10" Padding="14"
+                Background="{StaticResource PanelBg}"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="1" CornerRadius="7">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="Параметры"/>
+
+                    <TextBlock Margin="0,14,0,0" Text="Режим"/>
+                    <ComboBox x:Name="RenderModeBox"
+                              SelectionChanged="Parameter_OnChanged">
+                        <ComboBoxItem Content="Геометрический"/>
+                        <ComboBoxItem Content="Игра хаоса"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Итерации / точки"/>
+                    <TextBox x:Name="IterationsBox"
+                             TextChanged="Parameter_OnChanged"/>
+
+                    <TextBlock Text="Приближение"/>
+                    <TextBox x:Name="ZoomBox"
+                             TextChanged="ZoomBox_OnTextChanged"/>
+
+                    <TextBlock Text="Потоки ЦП"/>
+                    <ComboBox x:Name="ThreadsBox"
+                              SelectionChanged="Parameter_OnChanged"/>
+
+                    <Button Content="Запустить рендер"
+                            Click="RenderButton_OnClick"/>
+                    <Button x:Name="CancelButton"
+                            Content="Отмена"
+                            IsEnabled="False"
+                            Click="CancelButton_OnClick"/>
+                    <Button Content="Настроить палитру"
+                            Click="PaletteButton_OnClick"/>
+                    <Button Content="Менеджер сохранений"
+                            Click="SavesButton_OnClick"/>
+                    <Button Content="Сохранить изображение"
+                            Click="ExportButton_OnClick"/>
+
+                    <TextBlock Margin="0,12,0,4"
+                               Foreground="#B8C0CC"
+                               Text="Прогресс"/>
+                    <ProgressBar x:Name="RenderProgress"
+                                 Height="20"
+                                 Minimum="0" Maximum="100"/>
+                    <TextBlock x:Name="StatusText"
+                               Margin="0,8,0,0"
+                               Foreground="#B8C0CC"
+                               TextWrapping="Wrap"
+                               Text="Готово"/>
+
+                    <TextBlock Margin="0,16,0,0"
+                               Foreground="#8F98A6"
+                               TextWrapping="Wrap"
+                               Text="Колесо мыши: масштаб. Левая кнопка: перемещение. F11: полноэкранный режим."/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border x:Name="CanvasHost"
+                Grid.Column="1" Margin="0,10,10,10"
+                Background="Black"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="1" CornerRadius="7"
+                SizeChanged="CanvasHost_OnSizeChanged"
+                MouseWheel="CanvasHost_OnMouseWheel"
+                MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
+                MouseMove="CanvasHost_OnMouseMove"
+                MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+            <Image x:Name="CanvasImage"
+                   Stretch="Fill"
+                   SnapsToDevicePixels="True"/>
+        </Border>
+    </Grid>
+</Window>

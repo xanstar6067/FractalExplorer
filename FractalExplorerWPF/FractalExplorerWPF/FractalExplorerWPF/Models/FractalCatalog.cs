@@ -22,7 +22,7 @@ public static class FractalCatalog
         Item("Итерируемые функции", "Фрактал Нова (Жюлиа)", "Julia-вариант семейства Nova.", "NovaJulia_preview_sq512.png"),
         Item("Итерируемые функции", "Буддаброт / Анти-Буддаброт", "Накопительный рендер плотности посещения орбит.", "buddhabrot_f_preview_sq512.png"),
         Item("Итерируемые функции", "Фрактальное пламя (стохастическое)", "Стохастический рендер с накоплением HDR-гистограммы.", "flame_fractal_preview_sq512.png"),
-        Item("Геометрические", "Треугольник Серпинского", "Классический самоподобный геометрический фрактал.", "serpinski_preview_sq512.png"),
+        Item("Геометрические", "Треугольник Серпинского", "Классический самоподобный геометрический фрактал.", "serpinski_preview_sq512.png", "Serpinsky"),
         Item("Геометрические", "IFS Барнсли / Хейуэя", "Стохастическая система аффинных преобразований.", "ifs_fractal_preview_sq512.png"),
         Item("Динамические системы", "Экспонента Ляпунова", "Карта экспонент Ляпунова логистического отображения.", "lyapunov_preview_sq512.png"),
         Item("Динамические системы", "Аттрактор Лоренца", "Визуализация классической хаотической системы Лоренца.", "sig_preview_sq512.png"),
@@ -37,6 +37,7 @@ public static class FractalCatalog
         string family,
         string name,
         string description,
-        string previewFile) =>
-        new(family, name, description, $"Assets/Previews/{previewFile}");
+        string previewFile,
+        string? launchKey = null) =>
+        new(family, name, description, $"Assets/Previews/{previewFile}", launchKey);
 }

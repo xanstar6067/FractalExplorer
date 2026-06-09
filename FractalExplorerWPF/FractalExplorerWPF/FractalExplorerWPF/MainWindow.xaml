@@ -44,7 +44,8 @@
                 <TreeView x:Name="FractalTree"
                           Background="Transparent"
                           BorderThickness="0"
-                          SelectedItemChanged="FractalTree_OnSelectedItemChanged"/>
+                          SelectedItemChanged="FractalTree_OnSelectedItemChanged"
+                          MouseDoubleClick="FractalTree_OnMouseDoubleClick"/>
             </DockPanel>
         </Border>
 
@@ -98,9 +99,11 @@
                             <ComboBoxItem Content="Тёмная (временно фиксирована)"/>
                         </ComboBox>
 
-                        <Button Margin="0,22,0,0" Height="44"
+                        <Button x:Name="LaunchButton"
+                                Margin="0,22,0,0" Height="44"
                                 IsEnabled="False"
-                                Content="Запуск будет перенесён позже"
+                                Content="Запуск недоступен"
+                                Click="LaunchButton_OnClick"
                                 FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Grid>
