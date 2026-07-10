@@ -79,12 +79,15 @@ public partial class MainWindow : Window
 
     private void LaunchSelected()
     {
-        if (_selectedItem?.LaunchKey != "Serpinsky")
+        if (_selectedItem?.LaunchKey == "Serpinsky")
         {
+            new SerpinskyWindow { Owner = this }.Show();
             return;
         }
 
-        var window = new SerpinskyWindow { Owner = this };
-        window.Show();
+        if (Enum.TryParse(_selectedItem?.LaunchKey, out MandelbrotVariant variant))
+        {
+            new MandelbrotWindow(variant) { Owner = this }.Show();
+        }
     }
 }

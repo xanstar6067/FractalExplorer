@@ -1,0 +1,19 @@
+<Window x:Class="FractalExplorerWPF.Views.MandelbrotExportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Экспорт изображения" Width="390" Height="285" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Icon="../Assets/Icons/Save.ico">
+    <StackPanel Margin="18">
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Параметры изображения"/>
+        <TextBlock Margin="0,14,0,3" Text="Ширина"/><TextBox x:Name="WidthBox" Padding="7"/>
+        <TextBlock Margin="0,8,0,3" Text="Высота"/><TextBox x:Name="HeightBox" Padding="7"/>
+        <TextBlock Margin="0,8,0,3" Text="Сглаживание SSAA"/>
+        <ComboBox x:Name="SsaaBox" SelectedIndex="0">
+            <ComboBoxItem Content="1"/><ComboBoxItem Content="2"/><ComboBoxItem Content="3"/><ComboBoxItem Content="4"/>
+        </ComboBox>
+        <StackPanel Margin="0,15,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Width="100" Margin="4" Content="Экспорт" Click="Accept_OnClick"/>
+            <Button Width="100" Margin="4" Content="Отмена" IsCancel="True"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

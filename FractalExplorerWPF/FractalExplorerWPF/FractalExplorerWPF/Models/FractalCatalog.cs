@@ -39,5 +39,17 @@ public static class FractalCatalog
         string description,
         string previewFile,
         string? launchKey = null) =>
-        new(family, name, description, $"Assets/Previews/{previewFile}", launchKey);
+        new(family, name, description, $"Assets/Previews/{previewFile}", launchKey ?? GetLaunchKey(previewFile));
+
+    private static string? GetLaunchKey(string previewFile) => previewFile switch
+    {
+        "mandelbrot_preview_sq512.png" => "Mandelbrot",
+        "burningship_preview_sq512.png" => "BurningShip",
+        "tricorn__preview_sq512.png" => "Tricorn",
+        "buffalo_preview_sq512.png" => "Buffalo",
+        "celtic_mandelbrot_preview_sq512.png" => "Celtic",
+        "simonobrot_preview_sq512.png" => "Simonobrot",
+        "general_mandelbrot_preview_sq512.png" => "Generalized",
+        _ => null
+    };
 }
