@@ -41,6 +41,7 @@ public partial class MandelbrotPaletteWindow : Window
         ColorsBox.Text = string.Join("; ", palette.Colors.Select(ToHex));
         InteriorColorBox.Text = ToHex(palette.InteriorColor);
         GradientBox.IsChecked = palette.IsGradient;
+        AlignIterationsBox.IsChecked = palette.AlignWithRenderIterations;
         GammaBox.Text = palette.Gamma.ToString(CultureInfo.InvariantCulture);
         PeriodBox.Text = palette.ColorPeriod.ToString(CultureInfo.InvariantCulture);
         _updating = false;
@@ -97,14 +98,30 @@ public partial class MandelbrotPaletteWindow : Window
         DialogResult = true;
     }
 
+    private void Randomize_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_selected is not { IsBuiltIn: false }) return;
+        int colorCount = Math.Max(3, ParseColors(ColorsBox.Text).Count);
+        double baseHue = Random.Shared.NextDouble() * 360;
+        var colors = new List<Color>(colorCount);
+        for (int index = 0; index < colorCount; index++)
+        {
+            double hue = (baseHue + index * 360.0 / colorCount + Random.Shared.NextDouble() * 36 - 18 + 360) % 360;
+            double saturation = 0.65 + Random.Shared.NextDouble() * 0.35;
+            double value = 0.62 + Random.Shared.NextDouble() * 0.38;
+            colors.Add(FromHsv(hue, saturation, value));
+        }
+        ColorsBox.Text = string.Join("; ", colors.Select(ToHex));
+    }
+
     private bool ApplyEdits()
     {
         if (_selected is null || _selected.IsBuiltIn) return _selected is not null;
         List<Color> colors = ParseColors(ColorsBox.Text);
         if (string.IsNullOrWhiteSpace(NameBox.Text) || colors.Count == 0 ||
             !TryParseColor(InteriorColorBox.Text.Trim(), out Color interior) ||
-            !double.TryParse(GammaBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gamma) || gamma is < 0.01 or > 100 ||
-            !int.TryParse(PeriodBox.Text, out int period) || period is < 1 or > 100_000)
+            !double.TryParse(GammaBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gamma) || gamma is < 0.1 or > 5 ||
+            !int.TryParse(PeriodBox.Text, out int period) || period is < 2 or > 100_000)
         {
             MessageBox.Show(this, "Проверьте имя, цвета, гамму и период палитры.", "Палитра",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -114,6 +131,7 @@ public partial class MandelbrotPaletteWindow : Window
         _selected.Colors = colors;
         _selected.InteriorColor = interior;
         _selected.IsGradient = GradientBox.IsChecked == true;
+        _selected.AlignWithRenderIterations = AlignIterationsBox.IsChecked == true;
         _selected.Gamma = gamma;
         _selected.ColorPeriod = period;
         return true;
@@ -139,6 +157,8 @@ public partial class MandelbrotPaletteWindow : Window
         bool editable = _selected is { IsBuiltIn: false };
         NameBox.IsEnabled = editable; ColorsBox.IsEnabled = editable; InteriorColorBox.IsEnabled = editable;
         GradientBox.IsEnabled = editable; GammaBox.IsEnabled = editable; PeriodBox.IsEnabled = editable;
+        AlignIterationsBox.IsEnabled = editable;
+        RandomizeButton.IsEnabled = editable;
         EditHint.Text = editable ? "Пользовательскую палитру можно редактировать."
             : "Встроенную палитру можно применить или скопировать.";
     }
@@ -155,6 +175,27 @@ public partial class MandelbrotPaletteWindow : Window
     }
 
     private static string ToHex(Color color) => $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+
+    private static Color FromHsv(double hue, double saturation, double value)
+    {
+        double chroma = value * saturation;
+        double sector = hue / 60;
+        double x = chroma * (1 - Math.Abs(sector % 2 - 1));
+        (double red, double green, double blue) = sector switch
+        {
+            < 1 => (chroma, x, 0d),
+            < 2 => (x, chroma, 0d),
+            < 3 => (0d, chroma, x),
+            < 4 => (0d, x, chroma),
+            < 5 => (x, 0d, chroma),
+            _ => (chroma, 0d, x)
+        };
+        double match = value - chroma;
+        return Color.FromRgb(
+            (byte)Math.Round((red + match) * 255),
+            (byte)Math.Round((green + match) * 255),
+            (byte)Math.Round((blue + match) * 255));
+    }
 
     private static bool TryParseColor(string value, out Color color)
     {

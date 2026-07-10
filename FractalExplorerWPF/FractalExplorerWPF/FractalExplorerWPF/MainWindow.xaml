@@ -81,7 +81,8 @@
                         <TextBlock Margin="0,0,0,5"
                                    Foreground="{StaticResource SecondaryText}"
                                    Text="Тип рендера:"/>
-                        <ComboBox x:Name="RenderPatternSelector" SelectedIndex="0">
+                        <ComboBox x:Name="RenderPatternSelector" SelectedIndex="0"
+                                  SelectionChanged="RenderPatternSelector_OnSelectionChanged">
                             <ComboBoxItem Content="Классический (от центра)"/>
                             <ComboBoxItem Content="Построчный"/>
                             <ComboBoxItem Content="Спиральный"/>

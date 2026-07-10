@@ -25,6 +25,13 @@ public enum MandelbrotColoringMode
     SmoothEscapePolynomial
 }
 
+public enum MandelbrotPaletteWrapMode
+{
+    Repeat,
+    Clamp,
+    Mirror
+}
+
 public sealed record MandelbrotVariantDefinition(
     MandelbrotVariant Variant,
     string DisplayName,
@@ -38,13 +45,13 @@ public sealed record MandelbrotVariantDefinition(
 {
     public static MandelbrotVariantDefinition For(MandelbrotVariant variant) => variant switch
     {
-        MandelbrotVariant.Mandelbrot => new(variant, "Множество Мандельброта", "Mandelbrot", -0.5m, 0, 1),
-        MandelbrotVariant.BurningShip => new(variant, "Множество «Горящий корабль»", "MandelbrotBurningShip", 0, 0.5m, 1),
-        MandelbrotVariant.Tricorn => new(variant, "Трикорн (Mandelbar)", "Tricorn", 0, 0, 1),
-        MandelbrotVariant.Buffalo => new(variant, "Фрактал Буффало", "Buffalo", 0, 0, 1),
-        MandelbrotVariant.Celtic => new(variant, "Кельтский Мандельброт", "CelticMandelbrot", 0, 0, 1),
-        MandelbrotVariant.Simonobrot => new(variant, "Симоноброт", "Simonobrot", 0, 0, 1, true, true, 2),
-        MandelbrotVariant.Generalized => new(variant, "Обобщённый Мандельброт", "GeneralizedMandelbrot", 0, 0, 1, true, false, 3),
+        MandelbrotVariant.Mandelbrot => new(variant, "Множество Мандельброта", "Mandelbrot", -0.5m, 0, 0.75m),
+        MandelbrotVariant.BurningShip => new(variant, "Множество «Горящий корабль»", "MandelbrotBurningShip", 0, 0.5m, 0.75m),
+        MandelbrotVariant.Tricorn => new(variant, "Трикорн (Mandelbar)", "Tricorn", 0, 0, 0.75m),
+        MandelbrotVariant.Buffalo => new(variant, "Фрактал Буффало", "Buffalo", 0, 0, 0.75m),
+        MandelbrotVariant.Celtic => new(variant, "Кельтский Мандельброт", "CelticMandelbrot", 0, 0, 0.75m),
+        MandelbrotVariant.Simonobrot => new(variant, "Симоноброт", "Simonobrot", 0, 0, 0.75m, true, true, 2),
+        MandelbrotVariant.Generalized => new(variant, "Обобщённый Мандельброт", "GeneralizedMandelbrot", 0, 0, 0.75m, true, false, 3),
         _ => throw new ArgumentOutOfRangeException(nameof(variant))
     };
 }
@@ -58,6 +65,7 @@ public sealed class MandelbrotPalette
     public bool IsBuiltIn { get; set; }
     public double Gamma { get; set; } = 1.0;
     public int ColorPeriod { get; set; } = 500;
+    public bool AlignWithRenderIterations { get; set; }
 
     public MandelbrotPalette Clone(string name) => new()
     {
@@ -66,7 +74,8 @@ public sealed class MandelbrotPalette
         InteriorColor = InteriorColor,
         IsGradient = IsGradient,
         Gamma = Gamma,
-        ColorPeriod = ColorPeriod
+        ColorPeriod = ColorPeriod,
+        AlignWithRenderIterations = AlignWithRenderIterations
     };
 
     public override string ToString() => Name;
@@ -89,6 +98,15 @@ public sealed class MandelbrotState
     public decimal Power { get; set; } = 2;
     public bool UseInversion { get; set; }
     public double HistogramContrast { get; set; } = 1;
+    public bool HistogramEnabledEqualization { get; set; } = true;
+    public bool HistogramInputUseSmooth { get; set; } = true;
+    public double SmoothBlendPower { get; set; } = 1;
+    public double SmoothIterationOffset { get; set; }
+    public double PalettePhaseOffset { get; set; }
+    public double PaletteScale { get; set; } = 1;
+    public MandelbrotPaletteWrapMode PaletteWrapMode { get; set; }
+    public bool UseCustomInteriorColor { get; set; }
+    public Color InteriorColor { get; set; } = MediaColors.Black;
     public double OrbitTrapStrength { get; set; } = 1;
     public double OrbitTrapBias { get; set; }
     public double StripeFrequency { get; set; } = 3;

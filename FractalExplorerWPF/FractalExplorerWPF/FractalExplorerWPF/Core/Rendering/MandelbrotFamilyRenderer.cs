@@ -10,6 +10,44 @@ public static class MandelbrotFamilyRenderer
 {
     private readonly record struct PixelMetrics(int Iterations, double Smooth, double OrbitTrap, double Stripe);
 
+    public static byte[] RenderTile(
+        MandelbrotState state,
+        int canvasWidth,
+        int canvasHeight,
+        MandelbrotRenderTile tile,
+        CancellationToken token)
+    {
+        int stride = checked(tile.Width * 4);
+        var buffer = new byte[checked(stride * tile.Height)];
+        decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewHeight = viewWidth * canvasHeight / canvasWidth;
+
+        for (int localY = 0; localY < tile.Height; localY++)
+        {
+            token.ThrowIfCancellationRequested();
+            int y = tile.Y + localY;
+            decimal im = state.CenterY + (0.5m - (decimal)y / canvasHeight) * viewHeight;
+            int row = localY * stride;
+            for (int localX = 0; localX < tile.Width; localX++)
+            {
+                int x = tile.X + localX;
+                decimal re = state.CenterX + ((decimal)x / canvasWidth - 0.5m) * viewWidth;
+                PixelMetrics metrics = IterateAt(state, re, im);
+                double histogramValue = state.ColoringMode == MandelbrotColoringMode.Histogram
+                    ? Math.Clamp((state.HistogramInputUseSmooth ? metrics.Smooth : metrics.Iterations) /
+                                 Math.Max(1, state.Iterations), 0, 1)
+                    : 0;
+                Color color = ResolveColor(state, metrics, histogramValue);
+                int offset = row + localX * 4;
+                buffer[offset] = color.B;
+                buffer[offset + 1] = color.G;
+                buffer[offset + 2] = color.R;
+                buffer[offset + 3] = 255;
+            }
+        }
+        return buffer;
+    }
+
     public static void Render(
         MandelbrotState state,
         byte[] buffer,
@@ -43,17 +81,17 @@ public static class MandelbrotFamilyRenderer
         Parallel.For(0, height, options, y =>
         {
             int row = y * stride;
-            decimal im = state.CenterY + (0.5m - ((decimal)y + 0.5m) / height) * viewHeight;
+            decimal im = state.CenterY + (0.5m - (decimal)y / height) * viewHeight;
             for (int x = 0; x < width; x++)
             {
-                decimal re = state.CenterX + (((decimal)x + 0.5m) / width - 0.5m) * viewWidth;
+                decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
                 PixelMetrics metrics = IterateAt(state, re, im);
                 Color color = ResolveColor(state, metrics, 0);
                 int offset = row + x * 4;
                 buffer[offset] = color.B;
                 buffer[offset + 1] = color.G;
                 buffer[offset + 2] = color.R;
-                buffer[offset + 3] = color.A;
+                buffer[offset + 3] = 255;
             }
             int done = Interlocked.Increment(ref completedRows);
             reportProgress?.Invoke(done * 100 / height);
@@ -74,14 +112,17 @@ public static class MandelbrotFamilyRenderer
         Parallel.For(0, height, options, y =>
         {
             var localBins = new int[bins.Length];
-            decimal im = state.CenterY + (0.5m - ((decimal)y + 0.5m) / height) * viewHeight;
+            decimal im = state.CenterY + (0.5m - (decimal)y / height) * viewHeight;
             int row = y * width;
             for (int x = 0; x < width; x++)
             {
-                decimal re = state.CenterX + (((decimal)x + 0.5m) / width - 0.5m) * viewWidth;
+                decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
                 PixelMetrics value = IterateAt(state, re, im);
                 metrics[row + x] = value;
-                if (value.Iterations < state.Iterations) localBins[value.Iterations]++;
+                int bin = state.HistogramInputUseSmooth
+                    ? Math.Clamp((int)Math.Floor(value.Smooth), 0, state.Iterations)
+                    : Math.Clamp(value.Iterations, 0, state.Iterations);
+                localBins[bin]++;
             }
             lock (histogramLock)
             {
@@ -91,10 +132,10 @@ public static class MandelbrotFamilyRenderer
             progress?.Invoke(done * 65 / height);
         });
 
-        long total = bins.Take(state.Iterations).Sum(value => (long)value);
+        long total = (long)width * height;
         var cdf = new double[bins.Length];
         long cumulative = 0;
-        for (int i = 0; i < state.Iterations; i++)
+        for (int i = 0; i <= state.Iterations; i++)
         {
             cumulative += bins[i];
             cdf[i] = total == 0 ? 0 : (double)cumulative / total;
@@ -108,13 +149,20 @@ public static class MandelbrotFamilyRenderer
             for (int x = 0; x < width; x++)
             {
                 PixelMetrics value = metrics[metricRow + x];
-                double normalized = value.Iterations >= state.Iterations ? 0 : cdf[value.Iterations];
+                int bin = state.HistogramInputUseSmooth
+                    ? Math.Clamp((int)Math.Floor(value.Smooth), 0, state.Iterations)
+                    : Math.Clamp(value.Iterations, 0, state.Iterations);
+                double normalized = value.Iterations >= state.Iterations
+                    ? 0
+                    : state.HistogramEnabledEqualization
+                        ? cdf[bin]
+                        : bin / (double)Math.Max(1, state.Iterations);
                 Color color = ResolveColor(state, value, normalized);
                 int offset = outputRow + x * 4;
                 buffer[offset] = color.B;
                 buffer[offset + 1] = color.G;
                 buffer[offset + 2] = color.R;
-                buffer[offset + 3] = color.A;
+                buffer[offset + 3] = 255;
             }
             int done = Interlocked.Increment(ref coloredRows);
             progress?.Invoke(65 + done * 35 / height);
@@ -122,12 +170,14 @@ public static class MandelbrotFamilyRenderer
     }
 
     private static PixelMetrics IterateAt(MandelbrotState state, decimal re, decimal im) =>
-        state.Zoom > 2_000_000_000m
+        state.Zoom > 1_500_000_000m
             ? IterateDecimal(state, re, im)
             : Iterate(state, (double)re, (double)im);
 
     private static PixelMetrics Iterate(MandelbrotState state, double re, double im)
     {
+        if (state.Variant == MandelbrotVariant.Mandelbrot && IsInsideMandelbrot(re, im))
+            return new PixelMetrics(state.Iterations, state.Iterations, 0, 0);
         double cr = state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -re : re;
         double ci = im;
         double zr = 0;
@@ -139,10 +189,10 @@ public static class MandelbrotFamilyRenderer
 
         while (iterations < state.Iterations && zr * zr + zi * zi <= thresholdSquared)
         {
-            IterateOnce(state, ref zr, ref zi, cr, ci);
-            iterations++;
             minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
             stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(zi, zr));
+            IterateOnce(state, ref zr, ref zi, cr, ci);
+            iterations++;
         }
 
         double magnitudeSquared = zr * zr + zi * zi;
@@ -150,10 +200,9 @@ public static class MandelbrotFamilyRenderer
         if (iterations < state.Iterations && magnitudeSquared > 1)
         {
             double logZn = Math.Log(magnitudeSquared) / 2;
-            double power = state.Variant is MandelbrotVariant.Generalized or MandelbrotVariant.Simonobrot
-                ? Math.Max(1.0001, (double)state.Power)
-                : 2;
-            double nu = Math.Log(Math.Max(logZn, 1e-300) / Math.Log(power)) / Math.Log(power);
+            const double smoothingPower = 2;
+            double nu = Math.Log(Math.Max(logZn, 1e-300) / Math.Log(smoothingPower)) /
+                        Math.Log(smoothingPower);
             if (double.IsFinite(nu)) smooth = iterations + 1 - nu;
         }
 
@@ -166,6 +215,8 @@ public static class MandelbrotFamilyRenderer
 
     private static PixelMetrics IterateDecimal(MandelbrotState state, decimal re, decimal im)
     {
+        if (state.Variant == MandelbrotVariant.Mandelbrot && IsInsideMandelbrot(re, im))
+            return new PixelMetrics(state.Iterations, state.Iterations, 0, 0);
         decimal cr = state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -re : re;
         decimal ci = im;
         decimal zr = 0;
@@ -177,6 +228,8 @@ public static class MandelbrotFamilyRenderer
 
         while (iterations < state.Iterations && zr * zr + zi * zi <= thresholdSquared)
         {
+            minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
+            stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2((double)zi, (double)zr));
             try
             {
                 IterateOnceDecimal(state, ref zr, ref zi, cr, ci);
@@ -187,8 +240,6 @@ public static class MandelbrotFamilyRenderer
                 zi = 0;
             }
             iterations++;
-            minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
-            stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2((double)zi, (double)zr));
         }
 
         decimal magnitudeSquared = zr * zr + zi * zi;
@@ -196,11 +247,10 @@ public static class MandelbrotFamilyRenderer
         if (iterations < state.Iterations && magnitudeSquared > 1)
         {
             double magnitudeAsDouble = (double)magnitudeSquared;
-            double power = state.Variant is MandelbrotVariant.Generalized or MandelbrotVariant.Simonobrot
-                ? Math.Max(1.0001, (double)state.Power)
-                : 2;
             double logZn = Math.Log(magnitudeAsDouble) / 2;
-            double nu = Math.Log(Math.Max(logZn, 1e-300) / Math.Log(power)) / Math.Log(power);
+            const double smoothingPower = 2;
+            double nu = Math.Log(Math.Max(logZn, 1e-300) / Math.Log(smoothingPower)) /
+                        Math.Log(smoothingPower);
             if (double.IsFinite(nu)) smooth = iterations + 1 - nu;
         }
 
@@ -336,29 +386,41 @@ public static class MandelbrotFamilyRenderer
         zr = real;
     }
 
+    private static bool IsInsideMandelbrot(double x, double y)
+    {
+        double shiftedX = x - 0.25;
+        double ySquared = y * y;
+        double q = shiftedX * shiftedX + ySquared;
+        if (q * (q + shiftedX) <= 0.25 * ySquared) return true;
+        double bulbX = x + 1;
+        return bulbX * bulbX + ySquared <= 0.0625;
+    }
+
+    private static bool IsInsideMandelbrot(decimal x, decimal y)
+    {
+        decimal shiftedX = x - 0.25m;
+        decimal ySquared = y * y;
+        decimal q = shiftedX * shiftedX + ySquared;
+        if (q * (q + shiftedX) <= 0.25m * ySquared) return true;
+        decimal bulbX = x + 1;
+        return bulbX * bulbX + ySquared <= 0.0625m;
+    }
+
     private static Color ResolveColor(MandelbrotState state, PixelMetrics value, double histogramValue)
     {
         MandelbrotPalette palette = state.Palette;
-        if (value.Iterations >= state.Iterations) return palette.InteriorColor;
+        if (value.Iterations >= state.Iterations) return ResolveInteriorColor(state);
+        double colorPeriod = palette.AlignWithRenderIterations
+            ? Math.Max(1, state.Iterations)
+            : Math.Max(1, palette.ColorPeriod);
 
-        if (palette.Name == "Стандартный серый" &&
-            state.ColoringMode is MandelbrotColoringMode.Discrete or MandelbrotColoringMode.Smooth)
-        {
-            double source = state.ColoringMode == MandelbrotColoringMode.Discrete
-                ? Math.Min(value.Iterations, palette.ColorPeriod)
-                : Math.Max(0, value.Smooth);
-            double maximum = state.ColoringMode == MandelbrotColoringMode.Discrete
-                ? palette.ColorPeriod
-                : state.Iterations;
-            double mapped = Math.Log(source + 1) / Math.Log(Math.Max(1, maximum) + 1);
-            byte gray = (byte)Math.Round(255 * Math.Pow(Math.Clamp(1 - mapped, 0, 1), 1 / Math.Max(0.01, palette.Gamma)));
-            return Color.FromRgb(gray, gray, gray);
-        }
+        if (state.ColoringMode == MandelbrotColoringMode.Discrete)
+            return SampleDiscretePalette(state, value.Iterations, colorPeriod);
+        if (state.ColoringMode == MandelbrotColoringMode.Smooth)
+            return SampleSmoothPalette(state, value.Smooth, colorPeriod);
 
         double normalized = state.ColoringMode switch
         {
-            MandelbrotColoringMode.Discrete => (double)(value.Iterations % Math.Max(1, palette.ColorPeriod)) / Math.Max(1, palette.ColorPeriod),
-            MandelbrotColoringMode.Smooth => PositiveModulo(value.Smooth, palette.ColorPeriod) / Math.Max(1, palette.ColorPeriod),
             MandelbrotColoringMode.Histogram => Math.Pow(Math.Clamp(histogramValue, 0, 1), 1 / Math.Max(0.01, state.HistogramContrast)),
             MandelbrotColoringMode.OrbitTrap => Math.Clamp(1 / (1 + value.OrbitTrap) * state.OrbitTrapStrength + state.OrbitTrapBias, 0, 1),
             MandelbrotColoringMode.StripeAverage => Math.Clamp(
@@ -367,8 +429,55 @@ public static class MandelbrotFamilyRenderer
             MandelbrotColoringMode.SmoothEscapePolynomial => PolynomialMap(state, value.Smooth / Math.Max(1, state.Iterations)),
             _ => 0
         };
+
+        bool useSmoothPalette = state.ColoringMode != MandelbrotColoringMode.Histogram ||
+                                state.HistogramInputUseSmooth;
+        return useSmoothPalette
+            ? SampleSmoothPalette(state, normalized * colorPeriod, colorPeriod)
+            : SampleDiscretePalette(state, (int)Math.Round(normalized * colorPeriod), colorPeriod);
+    }
+
+    private static Color SampleDiscretePalette(MandelbrotState state, int iteration, double colorPeriod)
+    {
+        MandelbrotPalette palette = state.Palette;
+        if (palette.Name == "Стандартный серый")
+        {
+            double grayNormalized = Math.Log(Math.Min(iteration, colorPeriod) + 1) /
+                                    Math.Log(colorPeriod + 1);
+            grayNormalized = TransformPaletteIndex(grayNormalized, state);
+            byte gray = (byte)Math.Clamp((int)(255 * (1 - grayNormalized)), 0, 255);
+            return ApplyGamma(Color.FromRgb(gray, gray, gray), palette.Gamma);
+        }
+        double normalized = Math.Min(iteration, colorPeriod) / colorPeriod;
+        normalized = TransformPaletteIndex(normalized, state);
         return SamplePalette(palette, normalized);
     }
+
+    private static Color SampleSmoothPalette(MandelbrotState state, double smoothIteration, double colorPeriod)
+    {
+        MandelbrotPalette palette = state.Palette;
+        smoothIteration += state.SmoothIterationOffset;
+        if (smoothIteration >= state.Iterations) return ResolveInteriorColor(state);
+        smoothIteration = Math.Max(0, smoothIteration);
+
+        double normalized;
+        if (palette.Name == "Стандартный серый")
+        {
+            normalized = Math.Log(smoothIteration + 1) / Math.Log(Math.Max(1, state.Iterations) + 1);
+            normalized = Math.Pow(Math.Clamp(normalized, 0, 1), Math.Max(0.01, state.SmoothBlendPower));
+            normalized = TransformPaletteIndex(normalized, state);
+            byte gray = (byte)Math.Clamp((int)(255 * (1 - normalized)), 0, 255);
+            return ApplyGamma(Color.FromRgb(gray, gray, gray), palette.Gamma);
+        }
+
+        normalized = PositiveModulo(smoothIteration, colorPeriod) / colorPeriod;
+        normalized = Math.Pow(normalized, Math.Max(0.01, state.SmoothBlendPower));
+        normalized = TransformPaletteIndex(normalized, state);
+        return SamplePalette(palette, normalized);
+    }
+
+    private static Color ResolveInteriorColor(MandelbrotState state) =>
+        state.UseCustomInteriorColor ? state.InteriorColor : state.Palette.InteriorColor;
 
     private static double PolynomialMap(MandelbrotState state, double t)
     {
@@ -386,20 +495,59 @@ public static class MandelbrotFamilyRenderer
     private static Color SamplePalette(MandelbrotPalette palette, double normalized)
     {
         if (palette.Colors.Count == 0) return Colors.White;
-        if (palette.Colors.Count == 1) return palette.Colors[0];
+        if (palette.Colors.Count == 1) return ApplyGamma(palette.Colors[0], palette.Gamma);
         normalized = Math.Clamp(normalized, 0, 1);
-        if (palette.Name == "Стандартный серый") normalized = 1 - normalized;
-        normalized = Math.Pow(normalized, 1 / Math.Max(0.01, palette.Gamma));
-        double position = normalized * (palette.Colors.Count - 1);
-        int left = Math.Min((int)position, palette.Colors.Count - 1);
-        if (!palette.IsGradient || left == palette.Colors.Count - 1) return palette.Colors[left];
-        Color a = palette.Colors[left];
-        Color b = palette.Colors[left + 1];
-        double t = position - left;
-        return Color.FromArgb(
-            Lerp(a.A, b.A, t), Lerp(a.R, b.R, t), Lerp(a.G, b.G, t), Lerp(a.B, b.B, t));
+        Color result;
+        if (!palette.IsGradient)
+        {
+            int index = Math.Min((int)(normalized * palette.Colors.Count), palette.Colors.Count - 1);
+            result = palette.Colors[index];
+        }
+        else
+        {
+            double position = normalized * (palette.Colors.Count - 1);
+            int left = Math.Min((int)position, palette.Colors.Count - 1);
+            if (left == palette.Colors.Count - 1) result = palette.Colors[left];
+            else
+            {
+                Color a = palette.Colors[left];
+                Color b = palette.Colors[left + 1];
+                double t = position - left;
+                result = Color.FromArgb(
+                    Lerp(a.A, b.A, t), Lerp(a.R, b.R, t), Lerp(a.G, b.G, t), Lerp(a.B, b.B, t));
+            }
+        }
+        return ApplyGamma(result, palette.Gamma);
+    }
+
+    private static Color ApplyGamma(Color color, double gamma)
+    {
+        double correction = 1 / Math.Max(0.01, gamma);
+        return Color.FromArgb(color.A,
+            (byte)(255 * Math.Pow(color.R / 255.0, correction)),
+            (byte)(255 * Math.Pow(color.G / 255.0, correction)),
+            (byte)(255 * Math.Pow(color.B / 255.0, correction)));
     }
 
     private static byte Lerp(byte a, byte b, double t) => (byte)Math.Round(a + (b - a) * t);
     private static double PositiveModulo(double value, double period) => (value % period + period) % period;
+
+    private static double TransformPaletteIndex(double value, MandelbrotState state)
+    {
+        double scale = Math.Abs(state.PaletteScale) < 1e-9 ? 1 : state.PaletteScale;
+        double transformed = value * scale + state.PalettePhaseOffset;
+        return state.PaletteWrapMode switch
+        {
+            MandelbrotPaletteWrapMode.Clamp => Math.Clamp(transformed, 0, 1),
+            MandelbrotPaletteWrapMode.Mirror => Mirror01(transformed),
+            _ => transformed - Math.Floor(transformed)
+        };
+    }
+
+    private static double Mirror01(double value)
+    {
+        double period = value % 2;
+        if (period < 0) period += 2;
+        return period <= 1 ? period : 2 - period;
+    }
 }

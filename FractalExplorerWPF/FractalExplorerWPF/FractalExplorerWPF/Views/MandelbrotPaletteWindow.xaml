@@ -24,6 +24,8 @@
             <TextBlock Text="Цвет внутренней области (#AARRGGBB)"/>
             <TextBox x:Name="InteriorColorBox" Padding="7" TextChanged="ColorsBox_OnTextChanged"/>
             <CheckBox x:Name="GradientBox" Margin="0,8,0,6" Content="Плавный градиент"/>
+            <CheckBox x:Name="AlignIterationsBox" Margin="0,0,0,6" Content="Период равен числу итераций"/>
+            <Button x:Name="RandomizeButton" Margin="0,0,0,8" Content="Случайная палитра" Click="Randomize_OnClick"/>
             <UniformGrid Columns="2">
                 <StackPanel Margin="0,0,6,0"><TextBlock Text="Гамма"/><TextBox x:Name="GammaBox" Padding="7"/></StackPanel>
                 <StackPanel Margin="6,0,0,0"><TextBlock Text="Период цвета"/><TextBox x:Name="PeriodBox" Padding="7"/></StackPanel>
