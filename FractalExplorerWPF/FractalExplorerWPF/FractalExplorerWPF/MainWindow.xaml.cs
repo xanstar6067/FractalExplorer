@@ -4,6 +4,7 @@ using System.Windows.Media.Imaging;
 using FractalExplorerWPF.Models;
 using FractalExplorerWPF.Views;
 using FractalExplorerWPF.Infrastructure;
+using FractalExplorerWPF.Theming;
 
 namespace FractalExplorerWPF;
 
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     private readonly IReadOnlyList<FractalCatalogItem> _catalog = FractalCatalog.Create();
     private FractalCatalogItem? _selectedItem;
     private bool _initializingRenderPattern = true;
+    private bool _updatingThemes;
 
     public MainWindow()
     {
@@ -20,8 +22,41 @@ public partial class MainWindow : Window
         RenderPatternSelector.SelectedIndex = patternIndex;
         RenderPatternSettings.SelectedPattern = (TileSchedulingStrategy)patternIndex;
         _initializingRenderPattern = false;
+        ThemeManager.ThemeChanged += ThemeManager_OnThemeChanged;
+        ThemeManager.ThemesChanged += ThemeManager_OnThemesChanged;
+        Closed += (_, _) =>
+        {
+            ThemeManager.ThemeChanged -= ThemeManager_OnThemeChanged;
+            ThemeManager.ThemesChanged -= ThemeManager_OnThemesChanged;
+        };
+        ReloadThemeSelector();
         PopulateCatalog();
     }
+
+    private void ReloadThemeSelector()
+    {
+        _updatingThemes = true;
+        IReadOnlyList<ThemeDefinition> themes = ThemeManager.GetAllThemes();
+        ThemeSelector.ItemsSource = themes;
+        ThemeSelector.SelectedItem = themes.FirstOrDefault(theme =>
+            string.Equals(theme.Id, ThemeManager.CurrentThemeId, StringComparison.OrdinalIgnoreCase));
+        _updatingThemes = false;
+    }
+
+    private void ThemeSelector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_updatingThemes && ThemeSelector.SelectedItem is ThemeDefinition theme)
+            ThemeManager.SetTheme(theme.Id);
+    }
+
+    private void ThemeEditor_OnClick(object sender, RoutedEventArgs e)
+    {
+        new ThemeEditorWindow { Owner = this }.ShowDialog();
+        ReloadThemeSelector();
+    }
+
+    private void ThemeManager_OnThemeChanged(object? sender, EventArgs e) => ReloadThemeSelector();
+    private void ThemeManager_OnThemesChanged(object? sender, EventArgs e) => ReloadThemeSelector();
 
     private void PopulateCatalog()
     {

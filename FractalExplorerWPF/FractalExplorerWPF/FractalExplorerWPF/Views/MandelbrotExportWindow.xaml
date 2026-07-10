@@ -68,7 +68,7 @@
                         </ComboBox>
                         <TextBlock x:Name="QualityFactorLabel" Margin="0,8,0,3" Text="Сглаживание (SSAA)"/>
                         <ComboBox x:Name="QualityFactorBox"/>
-                        <TextBlock x:Name="QualityHint" Margin="0,8,0,0" Foreground="#777" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="QualityHint" Margin="0,8,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
@@ -76,7 +76,7 @@
 
         <Grid Grid.Row="1" Margin="0,14,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock x:Name="MemoryHint" VerticalAlignment="Center" Foreground="#777" TextWrapping="Wrap"/>
+            <TextBlock x:Name="MemoryHint" VerticalAlignment="Center" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Width="105" Margin="4" Content="Экспорт" IsDefault="True" Click="Accept_OnClick"/>
                 <Button Width="105" Margin="4" Content="Отмена" IsCancel="True"/>

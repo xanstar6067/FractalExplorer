@@ -1,6 +1,7 @@
 <Window x:Class="FractalExplorerWPF.Views.SerpinskyWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
         Title="Треугольник Серпинского"
         Width="1120" Height="700"
         MinWidth="900" MinHeight="560"
@@ -9,36 +10,30 @@
         KeyDown="Window_OnKeyDown"
         Closing="Window_OnClosing">
     <Window.Resources>
-        <SolidColorBrush x:Key="WindowBg" Color="#171A21"/>
-        <SolidColorBrush x:Key="PanelBg" Color="#20242D"/>
-        <SolidColorBrush x:Key="BorderColor" Color="#3B4250"/>
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#F2F4F8"/>
-        </Style>
-        <Style TargetType="Button">
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="MinHeight" Value="34"/>
             <Setter Property="Margin" Value="0,4"/>
         </Style>
-        <Style TargetType="ComboBox">
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Margin" Value="0,3,0,8"/>
         </Style>
-        <Style TargetType="TextBox">
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="MinHeight" Value="30"/>
             <Setter Property="Padding" Value="6,3"/>
             <Setter Property="Margin" Value="0,3,0,8"/>
         </Style>
     </Window.Resources>
 
-    <Grid Background="{StaticResource WindowBg}">
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" Margin="10" Padding="14"
-                Background="{StaticResource PanelBg}"
-                BorderBrush="{StaticResource BorderColor}"
+                Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
@@ -77,19 +72,19 @@
                             Click="ExportButton_OnClick"/>
 
                     <TextBlock Margin="0,12,0,4"
-                               Foreground="#B8C0CC"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                                Text="Прогресс"/>
                     <ProgressBar x:Name="RenderProgress"
                                  Height="20"
                                  Minimum="0" Maximum="100"/>
                     <TextBlock x:Name="StatusText"
                                Margin="0,8,0,0"
-                               Foreground="#B8C0CC"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                                TextWrapping="Wrap"
                                Text="Готово"/>
 
                     <TextBlock Margin="0,16,0,0"
-                               Foreground="#8F98A6"
+                               Foreground="{DynamicResource Theme.DisabledTextBrush}"
                                TextWrapping="Wrap"
                                Text="Колесо мыши: масштаб. Левая кнопка: перемещение. F11: полноэкранный режим."/>
                 </StackPanel>
@@ -99,8 +94,9 @@
         <Border x:Name="CanvasHost"
                 Grid.Column="1" Margin="0,10,10,10"
                 Background="Black"
-                BorderBrush="{StaticResource BorderColor}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7"
+                theme:ThemeContract.IgnoreAudit="True"
                 SizeChanged="CanvasHost_OnSizeChanged"
                 MouseWheel="CanvasHost_OnMouseWheel"
                 MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"

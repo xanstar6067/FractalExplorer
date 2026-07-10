@@ -34,7 +34,7 @@
         </ComboBox>
 
         <TextBlock Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0"
-                   Foreground="#666"
+                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                    TextWrapping="Wrap"
                    Text="SSAA применяется к геометрическому режиму. В режиме хаоса изображение строится сразу в заданном разрешении."/>
 

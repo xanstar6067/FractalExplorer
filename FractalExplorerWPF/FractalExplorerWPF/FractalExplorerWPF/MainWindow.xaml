@@ -9,33 +9,24 @@
         WindowStartupLocation="CenterScreen"
         Icon="Assets/Icons/FractalExplorer.ico">
     <Window.Resources>
-        <SolidColorBrush x:Key="WindowBackground" Color="#171A21"/>
-        <SolidColorBrush x:Key="PanelBackground" Color="#20242D"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#3B4250"/>
-        <SolidColorBrush x:Key="PrimaryText" Color="#F2F4F8"/>
-        <SolidColorBrush x:Key="SecondaryText" Color="#B8C0CC"/>
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
-        </Style>
-        <Style TargetType="ComboBox">
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="MinHeight" Value="32"/>
             <Setter Property="Padding" Value="8,3"/>
         </Style>
-        <Style TargetType="TreeViewItem">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
+        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
             <Setter Property="Padding" Value="3"/>
         </Style>
     </Window.Resources>
 
-    <Grid Background="{StaticResource WindowBackground}">
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="310"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" Margin="12" Padding="10"
-                Background="{StaticResource PanelBackground}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Margin="5,3,5,12"
@@ -50,8 +41,8 @@
         </Border>
 
         <Border Grid.Column="1" Margin="0,12,12,12" Padding="20"
-                Background="{StaticResource PanelBackground}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7">
             <Grid>
                 <Grid.RowDefinitions>
@@ -71,15 +62,15 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Background="#101218"
-                            BorderBrush="{StaticResource BorderBrush}"
+                    <Border Background="{DynamicResource Theme.ControlBackgroundAltBrush}"
+                            BorderBrush="{DynamicResource Theme.BorderBrush}"
                             BorderThickness="1" CornerRadius="5">
                         <Image x:Name="FractalPreview" Margin="6" Stretch="Uniform"/>
                     </Border>
 
                     <StackPanel Grid.Column="2">
                         <TextBlock Margin="0,0,0,5"
-                                   Foreground="{StaticResource SecondaryText}"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                                    Text="Тип рендера:"/>
                         <ComboBox x:Name="RenderPatternSelector" SelectedIndex="0"
                                   SelectionChanged="RenderPatternSelector_OnSelectionChanged">
@@ -94,14 +85,14 @@
                         </ComboBox>
 
                         <TextBlock Margin="0,18,0,5"
-                                   Foreground="{StaticResource SecondaryText}"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                                    Text="Тема оформления приложения:"/>
-                        <ComboBox IsEnabled="False" SelectedIndex="0">
-                            <ComboBoxItem Content="Тёмная (временно фиксирована)"/>
-                        </ComboBox>
+                        <ComboBox x:Name="ThemeSelector" DisplayMemberPath="DisplayName"
+                                  SelectionChanged="ThemeSelector_OnSelectionChanged"/>
+                        <Button Margin="0,7,0,0" Content="Настроить темы…" Click="ThemeEditor_OnClick"/>
 
                         <Button x:Name="LaunchButton"
-                                Margin="0,22,0,0" Height="44"
+                                Margin="0,14,0,0" Height="44"
                                 IsEnabled="False"
                                 Content="Запуск недоступен"
                                 Click="LaunchButton_OnClick"
@@ -112,7 +103,7 @@
                 <ScrollViewer Grid.Row="2" Margin="0,18,0,0"
                               VerticalScrollBarVisibility="Auto">
                     <TextBlock x:Name="FractalDescription"
-                               Foreground="{StaticResource SecondaryText}"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                                FontSize="15" LineHeight="23"
                                TextWrapping="Wrap"/>
                 </ScrollViewer>

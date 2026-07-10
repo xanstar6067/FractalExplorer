@@ -1,0 +1,69 @@
+<Window x:Class="FractalExplorerWPF.Views.ThemeEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        Title="Темы оформления" Width="1040" Height="720" MinWidth="860" MinHeight="600"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Grid Margin="14">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+        <Border Padding="10" Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <TextBlock Margin="4,2,4,10" FontSize="18" FontWeight="SemiBold" Text="Темы"/>
+                <ListBox x:Name="ThemeList" Grid.Row="1" SelectionChanged="ThemeList_OnSelectionChanged"/>
+                <UniformGrid Grid.Row="2" Columns="3" Margin="0,9,0,0">
+                    <Button Margin="2" Content="Новая" Click="New_OnClick"/>
+                    <Button Margin="2" Content="Копия" Click="Copy_OnClick"/>
+                    <Button x:Name="DeleteButton" Margin="2" Content="Удалить" Click="Delete_OnClick"/>
+                </UniformGrid>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="2" Padding="14" Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,8,0">
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Редактор темы"/>
+                        <TextBlock Margin="0,14,0,4" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Название"/>
+                        <TextBox x:Name="ThemeNameBox" TextChanged="ThemeNameBox_OnTextChanged"/>
+                        <CheckBox x:Name="HighVisibilityBox" Margin="0,12,0,4"
+                                  Content="Высококонтрастная интерактивная подсветка"
+                                  Checked="HighVisibilityBox_OnChanged" Unchecked="HighVisibilityBox_OnChanged"/>
+
+                        <TextBlock Margin="0,18,0,8" FontSize="16" FontWeight="SemiBold" Text="Цвета интерфейса"/>
+                        <StackPanel x:Name="ColorPropertiesPanel"/>
+
+                        <TextBlock Margin="0,18,0,8" FontSize="16" FontWeight="SemiBold" Text="Предпросмотр"/>
+                        <Border x:Name="PreviewPanel" Padding="14" CornerRadius="7" BorderThickness="1"
+                                theme:ThemeContract.IgnoreAudit="True">
+                            <StackPanel>
+                                <TextBlock x:Name="PreviewTitle" FontSize="17" FontWeight="SemiBold" Text="Заголовок и основной текст"/>
+                                <TextBlock x:Name="PreviewSecondary" Margin="0,4,0,10" Text="Вторичный текст и пояснения"/>
+                                <TextBox x:Name="PreviewInput" IsReadOnly="True" Text="Поле ввода"/>
+                                <Button x:Name="PreviewButton" Margin="0,10,0,0" HorizontalAlignment="Left" Content="Акцентное действие"/>
+                                <Border x:Name="InteractivePreview" Height="28" Margin="0,10,0,0" BorderThickness="2" CornerRadius="4"
+                                        MouseEnter="InteractivePreview_OnMouseEnter" MouseLeave="InteractivePreview_OnMouseLeave">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="Интерактивная граница"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Grid Grid.Row="1" Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Button Width="180" Content="Импорт темы Windows" Click="ImportWindows_OnClick"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button x:Name="SaveButton" Width="110" Margin="4,0" Content="Сохранить" Click="Save_OnClick"/>
+                        <Button x:Name="ApplyButton" Width="110" Margin="4,0" Content="Применить" IsDefault="True" Click="Apply_OnClick"/>
+                        <Button Width="100" Margin="4,0" Content="Закрыть" IsCancel="True"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
