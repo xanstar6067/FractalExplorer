@@ -10,7 +10,7 @@ public static class MandelbrotFamilyRenderer
 {
     private readonly record struct PixelMetrics(int Iterations, double Smooth, double OrbitTrap, double Stripe);
 
-    public static byte[] RenderTile(
+    public static byte[]? RenderTile(
         MandelbrotState state,
         int canvasWidth,
         int canvasHeight,
@@ -24,7 +24,7 @@ public static class MandelbrotFamilyRenderer
 
         for (int localY = 0; localY < tile.Height; localY++)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested) return null;
             int y = tile.Y + localY;
             decimal im = state.CenterY + (0.5m - (decimal)y / canvasHeight) * viewHeight;
             int row = localY * stride;

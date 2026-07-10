@@ -379,7 +379,12 @@ public partial class MandelbrotWindow : Window
             _visualizationTimer.Start();
 
             await RenderTilesAsync(state, tiles, session, token);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                if (_activeSession is not null) CommitAndBakePreview();
+                if (ReferenceEquals(_renderCts, cts)) StatusText.Text = "Рендер отменён";
+                return;
+            }
             FlushVisualizationEvents(session, true);
             BitmapSource completed = session.Bitmap.Clone();
             completed.Freeze();
@@ -428,14 +433,14 @@ public partial class MandelbrotWindow : Window
         {
             while (queue.TryDequeue(out MandelbrotRenderTile tile))
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(true, tile, null));
-                byte[] pixels = MandelbrotFamilyRenderer.RenderTile(
+                byte[]? pixels = MandelbrotFamilyRenderer.RenderTile(
                     state, session.RenderWidth, session.RenderHeight, tile, token);
-                token.ThrowIfCancellationRequested();
+                if (pixels is null || token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(false, tile, pixels));
             }
-        }, token)).ToArray();
+        })).ToArray();
         await Task.WhenAll(workers);
     }
 
