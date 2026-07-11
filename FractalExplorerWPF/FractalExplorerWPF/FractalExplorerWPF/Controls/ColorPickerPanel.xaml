@@ -1,0 +1,165 @@
+<UserControl x:Class="FractalExplorerWPF.Controls.ColorPickerPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <DrawingBrush x:Key="TransparencyBrush" TileMode="Tile" Viewport="0,0,10,10" ViewportUnits="Absolute" Stretch="None">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#FFF0F0F0" Geometry="M0,0 H10 V10 H0 Z"/>
+                    <GeometryDrawing Brush="#FFBDBDBD" Geometry="M0,0 H5 V5 H0 Z M5,5 H10 V10 H5 Z"/>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <Grid MinWidth="720" MinHeight="445">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="390"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*" MinWidth="330"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="230"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="30"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid x:Name="ColorMatrix" Margin="0,0,10,0" Cursor="Cross"
+                          Background="Transparent" SizeChanged="ColorMatrix_OnSizeChanged"
+                          MouseLeftButtonDown="ColorMatrix_OnMouseLeftButtonDown"
+                          MouseMove="ColorMatrix_OnMouseMove">
+                        <Image x:Name="ColorMatrixImage" Stretch="Fill"/>
+                        <Canvas IsHitTestVisible="False">
+                            <Ellipse x:Name="MatrixMarker" Width="12" Height="12" Stroke="White" StrokeThickness="2">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="0" Opacity="1"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                        </Canvas>
+                    </Grid>
+                    <Grid x:Name="HueSlider" Grid.Column="1" Cursor="SizeNS" Background="Transparent"
+                          MouseLeftButtonDown="HueSlider_OnMouseLeftButtonDown" MouseMove="HueSlider_OnMouseMove">
+                        <Border BorderBrush="#707070" BorderThickness="1">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                    <GradientStop Color="#FFFF0000" Offset="0"/>
+                                    <GradientStop Color="#FFFF00FF" Offset="0.1667"/>
+                                    <GradientStop Color="#FF0000FF" Offset="0.3333"/>
+                                    <GradientStop Color="#FF00FFFF" Offset="0.5"/>
+                                    <GradientStop Color="#FF00FF00" Offset="0.6667"/>
+                                    <GradientStop Color="#FFFFFF00" Offset="0.8333"/>
+                                    <GradientStop Color="#FFFF0000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Canvas IsHitTestVisible="False">
+                            <Rectangle x:Name="HueMarker" Width="30" Height="6" Stroke="White" StrokeThickness="2">
+                                <Rectangle.Effect>
+                                    <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="0" Opacity="1"/>
+                                </Rectangle.Effect>
+                            </Rectangle>
+                        </Canvas>
+                    </Grid>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="38"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock VerticalAlignment="Center" Text="R"/>
+                    <Slider x:Name="RedSlider" Grid.Column="1" Maximum="255" TickFrequency="1" ValueChanged="ChannelSlider_OnValueChanged"/>
+                    <TextBlock x:Name="RedValue" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="G"/>
+                    <Slider x:Name="GreenSlider" Grid.Row="1" Grid.Column="1" Maximum="255" TickFrequency="1" ValueChanged="ChannelSlider_OnValueChanged"/>
+                    <TextBlock x:Name="GreenValue" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="B"/>
+                    <Slider x:Name="BlueSlider" Grid.Row="2" Grid.Column="1" Maximum="255" TickFrequency="1" ValueChanged="ChannelSlider_OnValueChanged"/>
+                    <TextBlock x:Name="BlueValue" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="A" ToolTip="Непрозрачность"/>
+                    <Slider x:Name="AlphaSlider" Grid.Row="3" Grid.Column="1" Maximum="255" TickFrequency="1" ValueChanged="ChannelSlider_OnValueChanged"/>
+                    <TextBlock x:Name="AlphaValue" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                </Grid>
+
+                <Grid Grid.Row="2" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="EyedropperButton" MinWidth="105" Height="52" Margin="0,0,10,0"
+                            Content="⌾  Пипетка" Click="Eyedropper_OnClick"
+                            ToolTip="Выбрать цвет с экрана. ЛКМ — выбрать, ПКМ или Esc — отменить."/>
+                    <Grid Grid.Column="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Margin="0,0,4,0" BorderBrush="#707070" BorderThickness="1" Background="{StaticResource TransparencyBrush}">
+                            <Grid>
+                                <Border x:Name="OriginalPreview"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="OriginalLabel" HorizontalAlignment="Center" Text="Текущий"/>
+                                    <TextBlock x:Name="OriginalHex" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Grid.Column="1" Margin="4,0,0,0" BorderBrush="#707070" BorderThickness="1" Background="{StaticResource TransparencyBrush}">
+                            <Grid>
+                                <Border x:Name="SelectedPreview"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="SelectedLabel" HorizontalAlignment="Center" Text="Новый"/>
+                                    <TextBlock x:Name="SelectedHex" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <GroupBox Header="Основные цвета">
+                    <UniformGrid x:Name="StandardPalette" Columns="12" Rows="4" Margin="6"/>
+                </GroupBox>
+                <GroupBox Grid.Row="1" Margin="0,10,0,0" Header="Пользовательские цвета">
+                    <StackPanel Margin="6">
+                        <UniformGrid x:Name="CustomPalette" Columns="16" Rows="1"/>
+                        <Button Margin="0,8,0,0" HorizontalAlignment="Right" Content="Добавить текущий цвет"
+                                Click="AddCustomColor_OnClick"/>
+                        <TextBlock Margin="0,5,0,0" Opacity="0.65" TextWrapping="Wrap"
+                                   Text="ЛКМ — выбрать или заполнить пустую ячейку; ПКМ — очистить."/>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Grid.Row="2" Margin="0,10,0,0" Header="HEX">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="#RRGGBB или #AARRGGBB"/>
+                        <TextBox x:Name="HexBox" Margin="0,4,0,8" Padding="7" KeyDown="HexBox_OnKeyDown"/>
+                        <WrapPanel>
+                            <Button Margin="0,0,6,6" Content="Применить HEX" Click="ApplyHex_OnClick"/>
+                            <Button Margin="0,0,6,6" Content="Копировать" Click="CopyHex_OnClick"/>
+                            <Button Margin="0,0,0,6" Content="Прозрачный" Click="Transparent_OnClick"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

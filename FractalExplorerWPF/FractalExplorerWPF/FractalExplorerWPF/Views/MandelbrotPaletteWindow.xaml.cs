@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using FractalExplorerWPF.Infrastructure;
+using FractalExplorerWPF.Infrastructure.ColorPicking;
 using FractalExplorerWPF.Models;
 using Color = System.Windows.Media.Color;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -17,6 +17,7 @@ public partial class MandelbrotPaletteWindow : Window
     private const string ColorDragFormat = "FractalExplorerWPF.MandelbrotPaletteColorIndex";
 
     private readonly MandelbrotPaletteManager _manager;
+    private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
     private readonly List<Color> _editingColors = [];
     private MandelbrotPalette? _selected;
     private Point _dragStartPoint;
@@ -351,24 +352,7 @@ public partial class MandelbrotPaletteWindow : Window
     private bool CanEdit => _selected is { IsBuiltIn: false };
 
     private bool TryChooseColor(Color initial, out Color selected)
-    {
-        using var dialog = new System.Windows.Forms.ColorDialog
-        {
-            AllowFullOpen = true,
-            AnyColor = true,
-            FullOpen = true,
-            Color = System.Drawing.Color.FromArgb(initial.A, initial.R, initial.G, initial.B)
-        };
-        var owner = new Win32Window(new WindowInteropHelper(this).Handle);
-        if (dialog.ShowDialog(owner) != System.Windows.Forms.DialogResult.OK)
-        {
-            selected = initial;
-            return false;
-        }
-
-        selected = Color.FromArgb(initial.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
-        return true;
-    }
+        => _colorSelectionService.TrySelectColor(this, initial, out selected);
 
     private string UniqueName(string basis)
     {
@@ -420,8 +404,4 @@ public partial class MandelbrotPaletteWindow : Window
         return true;
     }
 
-    private sealed class Win32Window(nint handle) : System.Windows.Forms.IWin32Window
-    {
-        public nint Handle { get; } = handle;
-    }
 }

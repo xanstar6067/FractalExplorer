@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
     <Compile Remove="MigrationSource\**\*.cs" />
     <EmbeddedResource Remove="MigrationSource\**\*.resx" />
     <None Include="MigrationSource\**\*" />
