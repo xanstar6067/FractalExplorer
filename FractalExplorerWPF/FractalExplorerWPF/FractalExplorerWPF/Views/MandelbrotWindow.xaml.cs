@@ -280,11 +280,12 @@ public partial class MandelbrotWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
+        (int canvasPixelWidth, int canvasPixelHeight, _, _) = GetCanvasPixelSize();
         var options = new MandelbrotExportWindow
         {
             Owner = this,
-            ExportWidth = Math.Max(1, (int)CanvasHost.ActualWidth),
-            ExportHeight = Math.Max(1, (int)CanvasHost.ActualHeight)
+            ExportWidth = canvasPixelWidth,
+            ExportHeight = canvasPixelHeight
         };
         if (options.ShowDialog() != true) return;
 
@@ -401,8 +402,9 @@ public partial class MandelbrotWindow : Window
         try { state = CaptureState("preview"); }
         catch (Exception ex) { StatusText.Text = ex.Message; return; }
 
-        int width = Math.Max(1, (int)CanvasHost.ActualWidth);
-        int height = Math.Max(1, (int)CanvasHost.ActualHeight);
+        int logicalWidth = Math.Max(1, (int)Math.Round(CanvasHost.ActualWidth));
+        int logicalHeight = Math.Max(1, (int)Math.Round(CanvasHost.ActualHeight));
+        (int pixelWidth, int pixelHeight, _, _) = GetCanvasPixelSize();
         _renderCts?.Dispose();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
@@ -413,8 +415,8 @@ public partial class MandelbrotWindow : Window
         try
         {
             int factor = SelectedPreviewSsaaFactor;
-            int renderWidth = checked(width * factor);
-            int renderHeight = checked(height * factor);
+            int renderWidth = checked(pixelWidth * factor);
+            int renderHeight = checked(pixelHeight * factor);
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(
                 renderWidth, renderHeight, 16 * factor, strategy);
             var bitmap = new WriteableBitmap(renderWidth, renderHeight, 96, 96, PixelFormats.Bgra32, null);
@@ -434,7 +436,7 @@ public partial class MandelbrotWindow : Window
             FlushVisualizationEvents(session, true);
             BitmapSource completed = session.Bitmap.Clone();
             completed.Freeze();
-            SetStableBitmap(completed, state.CenterX, state.CenterY, state.Zoom, width, height);
+            SetStableBitmap(completed, state.CenterX, state.CenterY, state.Zoom, logicalWidth, logicalHeight);
             CanvasImage.Source = null;
             RenderOverlay.EndSession();
             if (ReferenceEquals(_activeSession, session)) _activeSession = null;
@@ -554,14 +556,18 @@ public partial class MandelbrotWindow : Window
 
         session.Cancellation.Cancel();
         FlushVisualizationEvents(session, true);
-        int width = Math.Max(1, (int)ImageLayer.ActualWidth);
-        int height = Math.Max(1, (int)ImageLayer.ActualHeight);
+        int logicalWidth = Math.Max(1, (int)Math.Round(ImageLayer.ActualWidth));
+        int logicalHeight = Math.Max(1, (int)Math.Round(ImageLayer.ActualHeight));
+        DpiScale dpi = VisualTreeHelper.GetDpi(ImageLayer);
+        int pixelWidth = Math.Max(1, (int)Math.Ceiling(ImageLayer.ActualWidth * dpi.DpiScaleX));
+        int pixelHeight = Math.Max(1, (int)Math.Ceiling(ImageLayer.ActualHeight * dpi.DpiScaleY));
         try
         {
-            var baked = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            var baked = new RenderTargetBitmap(pixelWidth, pixelHeight, dpi.PixelsPerInchX,
+                dpi.PixelsPerInchY, PixelFormats.Pbgra32);
             baked.Render(ImageLayer);
             baked.Freeze();
-            SetStableBitmap(baked, _centerX, _centerY, _zoom, width, height);
+            SetStableBitmap(baked, _centerX, _centerY, _zoom, logicalWidth, logicalHeight);
         }
         catch (InvalidOperationException)
         {
@@ -613,6 +619,14 @@ public partial class MandelbrotWindow : Window
         TileSchedulingStrategy.MortonCurve => "Z-кривая Мортона",
         _ => strategy.ToString()
     };
+
+    private (int PixelWidth, int PixelHeight, double DpiScaleX, double DpiScaleY) GetCanvasPixelSize()
+    {
+        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+        int width = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+        return (width, height, dpi.DpiScaleX, dpi.DpiScaleY);
+    }
 
     private static async Task<BitmapSource> RenderBitmapAsync(MandelbrotState state, int width, int height,
         int ssaaFactor, CancellationToken token, IProgress<int>? progress)
