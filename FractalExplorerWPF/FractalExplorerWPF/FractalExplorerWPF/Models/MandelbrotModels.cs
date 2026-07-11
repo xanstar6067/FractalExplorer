@@ -12,7 +12,9 @@ public enum MandelbrotVariant
     Buffalo,
     Celtic,
     Simonobrot,
-    Generalized
+    Generalized,
+    Julia,
+    JuliaBurningShip
 }
 
 public enum MandelbrotColoringMode
@@ -41,7 +43,10 @@ public sealed record MandelbrotVariantDefinition(
     decimal InitialZoom,
     bool HasPower = false,
     bool HasInversion = false,
-    decimal DefaultPower = 2.0m)
+    decimal DefaultPower = 2.0m,
+    bool HasJuliaConstant = false,
+    decimal DefaultJuliaReal = 0m,
+    decimal DefaultJuliaImaginary = 0m)
 {
     public static MandelbrotVariantDefinition For(MandelbrotVariant variant) => variant switch
     {
@@ -52,6 +57,10 @@ public sealed record MandelbrotVariantDefinition(
         MandelbrotVariant.Celtic => new(variant, "Кельтский Мандельброт", "CelticMandelbrot", 0, 0, 0.75m),
         MandelbrotVariant.Simonobrot => new(variant, "Симоноброт", "Simonobrot", 0, 0, 0.75m, true, true, 2),
         MandelbrotVariant.Generalized => new(variant, "Обобщённый Мандельброт", "GeneralizedMandelbrot", 0, 0, 0.75m, true, false, 3),
+        MandelbrotVariant.Julia => new(variant, "Классическое множество Жюлиа", "Julia", 0, 0, 0.75m,
+            HasJuliaConstant: true, DefaultJuliaReal: -0.745m, DefaultJuliaImaginary: 0.113m),
+        MandelbrotVariant.JuliaBurningShip => new(variant, "Горящий Корабль (Жюлиа)", "JuliaBurningShip", 0, 0, 0.75m,
+            HasJuliaConstant: true, DefaultJuliaReal: -1.7551867961883m, DefaultJuliaImaginary: 0.01068m),
         _ => throw new ArgumentOutOfRangeException(nameof(variant))
     };
 }
@@ -97,6 +106,8 @@ public sealed class MandelbrotState
     public MandelbrotPalette Palette { get; set; } = new();
     public decimal Power { get; set; } = 2;
     public bool UseInversion { get; set; }
+    public decimal JuliaCReal { get; set; }
+    public decimal JuliaCImaginary { get; set; }
     public double HistogramContrast { get; set; } = 1;
     public bool HistogramEnabledEqualization { get; set; } = true;
     public bool HistogramInputUseSmooth { get; set; } = true;

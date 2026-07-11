@@ -44,7 +44,7 @@ public partial class MandelbrotWindow : Window
     private int _stablePixelHeight;
     private RenderSession? _activeSession;
 
-    public MandelbrotWindow(MandelbrotVariant variant)
+    public MandelbrotWindow(MandelbrotVariant variant, decimal? juliaReal = null, decimal? juliaImaginary = null)
     {
         _definition = MandelbrotVariantDefinition.For(variant);
         _saveStore = new MandelbrotSaveStore(variant);
@@ -54,6 +54,13 @@ public partial class MandelbrotWindow : Window
         _renderTimer.Tick += RenderTimer_OnTick;
         _visualizationTimer.Tick += VisualizationTimer_OnTick;
         InitializeControls();
+        if (_definition.HasJuliaConstant && juliaReal.HasValue && juliaImaginary.HasValue)
+        {
+            _updatingControls = true;
+            JuliaRealBox.Text = juliaReal.Value.ToString(CultureInfo.InvariantCulture);
+            JuliaImaginaryBox.Text = juliaImaginary.Value.ToString(CultureInfo.InvariantCulture);
+            _updatingControls = false;
+        }
         ResetView(false);
         Loaded += (_, _) => ScheduleRender();
     }
@@ -66,6 +73,9 @@ public partial class MandelbrotWindow : Window
         PowerBox.Text = _definition.DefaultPower.ToString(CultureInfo.InvariantCulture);
         PowerPanel.Visibility = _definition.HasPower ? Visibility.Visible : Visibility.Collapsed;
         InversionBox.Visibility = _definition.HasInversion ? Visibility.Visible : Visibility.Collapsed;
+        JuliaConstantPanel.Visibility = _definition.HasJuliaConstant ? Visibility.Visible : Visibility.Collapsed;
+        JuliaRealBox.Text = _definition.DefaultJuliaReal.ToString(CultureInfo.InvariantCulture);
+        JuliaImaginaryBox.Text = _definition.DefaultJuliaImaginary.ToString(CultureInfo.InvariantCulture);
 
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto");
@@ -120,6 +130,12 @@ public partial class MandelbrotWindow : Window
             Palette = palette,
             Power = power,
             UseInversion = InversionBox.IsChecked == true,
+            JuliaCReal = _definition.HasJuliaConstant
+                ? ReadDecimal(JuliaRealBox.Text, "действительная часть C", -10m, 10m)
+                : 0m,
+            JuliaCImaginary = _definition.HasJuliaConstant
+                ? ReadDecimal(JuliaImaginaryBox.Text, "мнимая часть C", -10m, 10m)
+                : 0m,
             HistogramContrast = ReadDouble(HistogramContrastBox.Text, "контраст", 0.1, 4),
             HistogramEnabledEqualization = HistogramEqualizationBox.IsChecked == true,
             HistogramInputUseSmooth = HistogramSmoothInputBox.IsChecked == true,
@@ -161,6 +177,8 @@ public partial class MandelbrotWindow : Window
         ZoomBox.Text = _zoom.ToString("G8", CultureInfo.InvariantCulture);
         PowerBox.Text = state.Power.ToString(CultureInfo.InvariantCulture);
         InversionBox.IsChecked = state.UseInversion;
+        JuliaRealBox.Text = state.JuliaCReal.ToString(CultureInfo.InvariantCulture);
+        JuliaImaginaryBox.Text = state.JuliaCImaginary.ToString(CultureInfo.InvariantCulture);
         ColoringModeBox.SelectedIndex = (int)state.ColoringMode;
         HistogramContrastBox.Text = state.HistogramContrast.ToString(CultureInfo.InvariantCulture);
         HistogramEqualizationBox.IsChecked = state.HistogramEnabledEqualization;
@@ -228,6 +246,33 @@ public partial class MandelbrotWindow : Window
         var dialog = new MandelbrotPaletteWindow(_paletteManager) { Owner = this };
         dialog.PaletteApplied += (_, _) => ScheduleRender();
         dialog.ShowDialog();
+    }
+
+    private void JuliaConstantButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        decimal real;
+        decimal imaginary;
+        try
+        {
+            real = ReadDecimal(JuliaRealBox.Text, "действительная часть C", -10m, 10m);
+            imaginary = ReadDecimal(JuliaImaginaryBox.Text, "мнимая часть C", -10m, 10m);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Параметры", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        MandelbrotVariant sourceVariant = _definition.Variant == MandelbrotVariant.JuliaBurningShip
+            ? MandelbrotVariant.BurningShip
+            : MandelbrotVariant.Mandelbrot;
+        var dialog = new JuliaConstantPickerWindow(sourceVariant, real, imaginary) { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        _updatingControls = true;
+        JuliaRealBox.Text = dialog.SelectedReal.ToString(CultureInfo.InvariantCulture);
+        JuliaImaginaryBox.Text = dialog.SelectedImaginary.ToString(CultureInfo.InvariantCulture);
+        _updatingControls = false;
+        ScheduleRender();
     }
 
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
@@ -809,6 +854,7 @@ public partial class MandelbrotWindow : Window
         ColoringMode = source.ColoringMode, PaletteName = source.PaletteName,
         Palette = source.Palette.Clone(source.Palette.Name), Power = source.Power,
         UseInversion = source.UseInversion, HistogramContrast = source.HistogramContrast,
+        JuliaCReal = source.JuliaCReal, JuliaCImaginary = source.JuliaCImaginary,
         HistogramEnabledEqualization = source.HistogramEnabledEqualization,
         HistogramInputUseSmooth = source.HistogramInputUseSmooth,
         SmoothBlendPower = source.SmoothBlendPower, SmoothIterationOffset = source.SmoothIterationOffset,

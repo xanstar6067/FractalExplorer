@@ -178,10 +178,12 @@ public static class MandelbrotFamilyRenderer
     {
         if (state.Variant == MandelbrotVariant.Mandelbrot && IsInsideMandelbrot(re, im))
             return new PixelMetrics(state.Iterations, state.Iterations, 0, 0);
-        double cr = state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -re : re;
-        double ci = im;
-        double zr = 0;
-        double zi = 0;
+        bool isJulia = state.Variant is MandelbrotVariant.Julia or MandelbrotVariant.JuliaBurningShip;
+        double cr = isJulia ? (double)state.JuliaCReal
+            : state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -re : re;
+        double ci = isJulia ? (double)state.JuliaCImaginary : im;
+        double zr = isJulia ? re : 0;
+        double zi = isJulia ? im : 0;
         double thresholdSquared = (double)(state.Threshold * state.Threshold);
         double minTrap = double.MaxValue;
         double stripe = 0;
@@ -217,10 +219,12 @@ public static class MandelbrotFamilyRenderer
     {
         if (state.Variant == MandelbrotVariant.Mandelbrot && IsInsideMandelbrot(re, im))
             return new PixelMetrics(state.Iterations, state.Iterations, 0, 0);
-        decimal cr = state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -re : re;
-        decimal ci = im;
-        decimal zr = 0;
-        decimal zi = 0;
+        bool isJulia = state.Variant is MandelbrotVariant.Julia or MandelbrotVariant.JuliaBurningShip;
+        decimal cr = isJulia ? state.JuliaCReal
+            : state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -re : re;
+        decimal ci = isJulia ? state.JuliaCImaginary : im;
+        decimal zr = isJulia ? re : 0;
+        decimal zi = isJulia ? im : 0;
         decimal thresholdSquared = state.Threshold * state.Threshold;
         decimal minTrap = decimal.MaxValue;
         double stripe = 0;
@@ -265,9 +269,11 @@ public static class MandelbrotFamilyRenderer
         switch (state.Variant)
         {
             case MandelbrotVariant.Mandelbrot:
+            case MandelbrotVariant.Julia:
                 SquareAddDecimal(ref zr, ref zi, cr, ci);
                 break;
             case MandelbrotVariant.BurningShip:
+            case MandelbrotVariant.JuliaBurningShip:
                 zr = Math.Abs(zr);
                 zi = -Math.Abs(zi);
                 SquareAddDecimal(ref zr, ref zi, cr, ci);
@@ -329,9 +335,11 @@ public static class MandelbrotFamilyRenderer
         switch (state.Variant)
         {
             case MandelbrotVariant.Mandelbrot:
+            case MandelbrotVariant.Julia:
                 SquareAdd(ref zr, ref zi, cr, ci);
                 break;
             case MandelbrotVariant.BurningShip:
+            case MandelbrotVariant.JuliaBurningShip:
                 zr = Math.Abs(zr);
                 zi = -Math.Abs(zi);
                 SquareAdd(ref zr, ref zi, cr, ci);

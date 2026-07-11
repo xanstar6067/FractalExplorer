@@ -79,6 +79,8 @@ public partial class MandelbrotSavesWindow : Window
         SaveNameBox.Text = state.SaveName;
         DetailsText.Text = $"{state.Timestamp:g}\nИтерации: {state.Iterations}\nМасштаб: {state.Zoom:G6}\n" +
                            $"Центр: {state.CenterX:G8}; {state.CenterY:G8}\nПалитра: {state.PaletteName}\nОкрашивание: {state.ColoringMode}";
+        if (state.Variant is MandelbrotVariant.Julia or MandelbrotVariant.JuliaBurningShip)
+            DetailsText.Text += $"\nКонстанта C: {state.JuliaCReal:G10}; {state.JuliaCImaginary:G10}i";
         _previewCts = new CancellationTokenSource();
         try { PreviewImage.Source = await _fractalWindow.RenderStatePreviewAsync(state, 480, 320, _previewCts.Token); }
         catch (OperationCanceledException) { }

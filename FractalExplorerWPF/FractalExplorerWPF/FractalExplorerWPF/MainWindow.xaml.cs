@@ -131,6 +131,18 @@ public partial class MainWindow : Window
 
     private void LaunchSelected()
     {
+        if (_selectedItem?.LaunchKey == "JuliaGallery")
+        {
+            new JuliaGalleryWindow(MandelbrotVariant.Julia) { Owner = this }.Show();
+            return;
+        }
+
+        if (_selectedItem?.LaunchKey == "JuliaBurningShipGallery")
+        {
+            new JuliaGalleryWindow(MandelbrotVariant.JuliaBurningShip) { Owner = this }.Show();
+            return;
+        }
+
         if (_selectedItem?.LaunchKey == "Serpinsky")
         {
             new SerpinskyWindow { Owner = this }.Show();

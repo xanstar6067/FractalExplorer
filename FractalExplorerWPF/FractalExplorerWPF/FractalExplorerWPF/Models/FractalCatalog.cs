@@ -13,8 +13,8 @@ public static class FractalCatalog
         Item("Множество Мандельброта", "Обобщенный Мандельброт", "Мультиброт Z = Zᵖ + C с настраиваемой степенью.", "general_mandelbrot_preview_sq512.png"),
         Item("Множество Жюлиа", "Классическое Жюлиа", "Семейство Жюлиа с фиксированной комплексной константой C.", "julia_preview_sq512.png"),
         Item("Множество Жюлиа", "Горящий Корабль (Жюлиа)", "Julia-вариант алгоритма «Горящий корабль».", "julia_burningship_preview_sq512.png"),
-        Item("Множество Жюлиа", "Галерея констант C (Жюлиа)", "Пакетный просмотр множества Жюлиа для сетки значений C.", "julia_preview_sq512.png"),
-        Item("Множество Жюлиа", "Галерея констант C (Жюлиа горящий корабль)", "Сетка вариантов Julia Burning Ship.", "julia_burningship_preview_sq512.png"),
+        Item("Множество Жюлиа", "Галерея констант C (Жюлиа)", "Пакетный просмотр множества Жюлиа для сетки значений C.", "julia_preview_sq512.png", "JuliaGallery"),
+        Item("Множество Жюлиа", "Галерея констант C (Жюлиа горящий корабль)", "Сетка вариантов Julia Burning Ship.", "julia_burningship_preview_sq512.png", "JuliaBurningShipGallery"),
         Item("Итерируемые функции", "Бассейны Ньютона+", "Бассейны притяжения корней для методов Newton, Halley и Householder.", "newton_preview_sq512.png"),
         Item("Итерируемые функции", "Фрактал Феникс", "Итерационная система, учитывающая текущее и предыдущее значения Z.", "phoenix_preview_sq512.png"),
         Item("Итерируемые функции", "Фрактал Коллатца", "Комплексное обобщение отображения Коллатца.", "collatz_preview_sq512.png"),
@@ -50,6 +50,8 @@ public static class FractalCatalog
         "celtic_mandelbrot_preview_sq512.png" => "Celtic",
         "simonobrot_preview_sq512.png" => "Simonobrot",
         "general_mandelbrot_preview_sq512.png" => "Generalized",
+        "julia_preview_sq512.png" => "Julia",
+        "julia_burningship_preview_sq512.png" => "JuliaBurningShip",
         _ => null
     };
 }
