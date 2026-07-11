@@ -1,0 +1,116 @@
+<Window x:Class="FractalExplorerWPF.Views.NewtonPoolsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        Title="Бассейны Ньютона+" Width="1120" Height="700"
+        MinWidth="900" MinHeight="560" WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/NewtonPool.ico" KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Margin" Value="0,4"/>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="Margin" Value="0,3,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="ControlsColumn" Width="290"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border x:Name="ControlsHost" Grid.Column="0" Margin="10" Padding="14"
+                Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="Параметры бассейнов"/>
+
+                    <TextBlock Margin="0,14,0,0" Text="Готовая формула"/>
+                    <ComboBox x:Name="FormulaPresetBox" SelectionChanged="FormulaPresetBox_OnSelectionChanged"/>
+
+                    <TextBlock Text="Полином / функция f(z)"/>
+                    <TextBox x:Name="FormulaBox" Height="64" AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalContentAlignment="Top" ToolTip="Поддерживаются z, i, числа, +, −, *, /, ^ и скобки."/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="44"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Применить формулу" Click="ApplyFormulaButton_OnClick"/>
+                        <Button Grid.Column="1" Margin="6,4,0,4" Content="⚂" ToolTip="Случайная корректная формула"
+                                Click="RandomFormulaButton_OnClick"/>
+                    </Grid>
+
+                    <TextBlock Margin="0,8,0,0" Text="Метод итерации"/>
+                    <ComboBox x:Name="MethodBox" SelectionChanged="MethodBox_OnSelectionChanged">
+                        <ComboBoxItem Content="Newton"/>
+                        <ComboBoxItem Content="Halley"/>
+                        <ComboBoxItem Content="Householder"/>
+                    </ComboBox>
+
+                    <Grid x:Name="HouseholderOrderPanel">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Порядок Householder"/>
+                        <TextBox x:Name="HouseholderOrderBox" Grid.Column="1" Text="3" TextChanged="Parameter_OnChanged"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Итерации"/>
+                        <TextBox x:Name="IterationsBox" Grid.Column="1" Text="500" TextChanged="Parameter_OnChanged"/>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Приближение"/>
+                        <TextBox x:Name="ZoomBox" Grid.Column="1" Text="1" TextChanged="ZoomBox_OnTextChanged"/>
+                    </Grid>
+
+                    <TextBlock Text="Потоки ЦП"/>
+                    <ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
+
+                    <TextBlock x:Name="RootCountText" Margin="0,3,0,8"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Найдено корней: 0"/>
+
+                    <Button Content="Запустить рендер" Click="RenderButton_OnClick"/>
+                    <Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
+                    <Button Content="Настроить палитру" Click="PaletteButton_OnClick"/>
+                    <Button Content="Менеджер сохранений" Click="SavesButton_OnClick"/>
+                    <Button Content="Сохранить изображение" Click="ExportButton_OnClick"/>
+
+                    <TextBlock Margin="0,12,0,4" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Прогресс"/>
+                    <ProgressBar x:Name="RenderProgress" Height="20" Minimum="0" Maximum="100"/>
+                    <TextBlock x:Name="StatusText" Margin="0,8,0,0"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap" Text="Готово"/>
+
+                    <Expander Margin="0,12,0,0" Header="Производные и диагностика">
+                        <TextBox x:Name="DebugOutput" Margin="0,6,0,0" MinHeight="110" IsReadOnly="True"
+                                 AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                    </Expander>
+                    <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource Theme.DisabledTextBrush}"
+                               TextWrapping="Wrap" Text="Колесо мыши: масштаб. Левая кнопка: перемещение. F11: полноэкранный режим."/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="Black"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7"
+                theme:ThemeContract.IgnoreAudit="True" SizeChanged="CanvasHost_OnSizeChanged"
+                MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
+                MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+            <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+        </Border>
+
+        <Button x:Name="ToggleControlsButton" Grid.Column="1" Width="38" Height="38" Padding="0" Margin="12"
+                HorizontalAlignment="Left" VerticalAlignment="Top" Panel.ZIndex="10" Content="✕"
+                ToolTip="Скрыть или показать панель параметров" Click="ToggleControlsButton_OnClick"/>
+    </Grid>
+</Window>

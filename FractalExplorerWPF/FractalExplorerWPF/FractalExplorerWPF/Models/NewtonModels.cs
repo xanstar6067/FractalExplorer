@@ -1,0 +1,64 @@
+using System.Numerics;
+using System.Windows.Media;
+using Color = System.Windows.Media.Color;
+
+namespace FractalExplorerWPF.Models;
+
+public enum NewtonIterationMethod
+{
+    Newton,
+    Halley,
+    Householder
+}
+
+public sealed class NewtonColorPalette
+{
+    public string Name { get; set; } = "Новая палитра";
+    public List<Color> RootColors { get; set; } = [];
+    public Color BackgroundColor { get; set; } = Colors.Black;
+    public bool IsGradient { get; set; }
+    public bool IsBuiltIn { get; set; }
+
+    public NewtonColorPalette Clone(string name) => new()
+    {
+        Name = name,
+        RootColors = [.. RootColors],
+        BackgroundColor = BackgroundColor,
+        IsGradient = IsGradient
+    };
+
+    public override string ToString() => Name;
+}
+
+public sealed class NewtonState
+{
+    public string SaveName { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+    public string FractalType { get; set; } = "NewtonPools";
+    public string Formula { get; set; } = "z^3-1";
+    public int MaxIterations { get; set; } = 500;
+    public double Zoom { get; set; } = 1;
+    public double CenterX { get; set; }
+    public double CenterY { get; set; }
+    public NewtonIterationMethod IterationMethod { get; set; }
+    public int HouseholderOrder { get; set; } = 3;
+    public NewtonColorPalette Palette { get; set; } = new();
+}
+
+public sealed record NewtonRootColorItem(int Index, Complex Root, Color Color)
+{
+    public SolidColorBrush Brush
+    {
+        get
+        {
+            var brush = new SolidColorBrush(Color);
+            brush.Freeze();
+            return brush;
+        }
+    }
+
+    public string Label => $"Корень {Index + 1}: {Format(Root.Real)} {(Root.Imaginary < 0 ? '−' : '+')} {Format(Math.Abs(Root.Imaginary))}i";
+    public string Hex => $"#{Color.A:X2}{Color.R:X2}{Color.G:X2}{Color.B:X2}";
+
+    private static string Format(double value) => value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+}

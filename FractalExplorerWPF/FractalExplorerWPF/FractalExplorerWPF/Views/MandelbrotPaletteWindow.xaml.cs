@@ -133,6 +133,16 @@ public partial class MandelbrotPaletteWindow : Window
         if (CanEdit && ColorList.SelectedIndex >= 0) EditSelectedColor();
     }
 
+    private void ColorSwatch_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!CanEdit || sender is not DependencyObject source) return;
+        int index = ItemIndexAt(source);
+        if (index < 0) return;
+        ColorList.SelectedIndex = index;
+        EditSelectedColor();
+        e.Handled = true;
+    }
+
     private void EditSelectedColor()
     {
         int index = ColorList.SelectedIndex;

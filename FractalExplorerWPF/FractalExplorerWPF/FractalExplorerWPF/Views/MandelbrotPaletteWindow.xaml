@@ -103,7 +103,12 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Border Width="26" Height="20" BorderBrush="#707070" BorderThickness="1"
-                                                    Background="{Binding}" CornerRadius="2"/>
+                                                    CornerRadius="2" ToolTip="Изменить цвет"
+                                                    MouseLeftButtonUp="ColorSwatch_OnMouseLeftButtonUp">
+                                                <Border.Background>
+                                                    <SolidColorBrush Color="{Binding}"/>
+                                                </Border.Background>
+                                            </Border>
                                             <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{Binding}"/>
                                         </Grid>
                                     </DataTemplate>

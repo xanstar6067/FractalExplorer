@@ -1,0 +1,106 @@
+<Window x:Class="FractalExplorerWPF.Views.NewtonPaletteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Палитры бассейнов Ньютона" Width="900" Height="640" MinWidth="760" MinHeight="520"
+        WindowStartupLocation="CenterOwner" Icon="../Assets/Icons/Color.ico">
+    <Grid Margin="12">
+        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+        <GroupBox Header="Список палитр">
+            <Grid Margin="6">
+                <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <ListBox x:Name="PaletteList" SelectionChanged="PaletteList_OnSelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}"/>
+                                <TextBlock Margin="5,0,0,0" Opacity="0.65" Text="[Встроенная]">
+                                    <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsBuiltIn}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                                    </Style></TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <UniformGrid Grid.Row="1" Columns="3" Margin="0,8,0,0">
+                    <Button Margin="2" Content="Новая" Click="New_OnClick"/>
+                    <Button Margin="2" Content="Копия" Click="Copy_OnClick"/>
+                    <Button x:Name="DeleteButton" Margin="2" Content="Удалить" Click="Delete_OnClick"/>
+                </UniformGrid>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Grid.Column="2" Header="Редактор палитры Ньютона">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Название палитры"/>
+                        <TextBox x:Name="NameBox" Margin="0,3,0,0" Padding="7"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                        <TextBlock Text="Превью: цвета корней и область без сходимости"/>
+                        <Grid x:Name="PalettePreview" Height="48" Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="5*"/><ColumnDefinition Width="1*"/></Grid.ColumnDefinitions>
+                            <ItemsControl x:Name="PreviewRootColors" MouseLeftButtonUp="PreviewRootColors_OnMouseLeftButtonUp">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate>
+                                    <Border Background="{Binding Brush}" BorderBrush="#707070" BorderThickness="0.5" ToolTip="{Binding Label}"/>
+                                </DataTemplate></ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border x:Name="BackgroundPreview" Grid.Column="1" BorderBrush="#707070" BorderThickness="1"
+                                    MouseLeftButtonUp="BackgroundPreview_OnMouseLeftButtonUp" ToolTip="Цвет области без сходимости"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <TextBlock x:Name="RootCountText" Grid.Row="2" Margin="0,12,0,5" FontWeight="SemiBold"/>
+
+                    <Grid Grid.Row="3">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                        <ListBox x:Name="RootColorsList" MinHeight="210" SelectionChanged="RootColorsList_OnSelectionChanged"
+                                 MouseDoubleClick="RootColorsList_OnMouseDoubleClick">
+                            <ListBox.ItemTemplate><DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="38"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Width="28" Height="24" Background="{Binding Brush}" BorderBrush="#707070" BorderThickness="1" CornerRadius="3"/>
+                                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                        <TextBlock Text="{Binding Label}"/>
+                                        <TextBlock Opacity="0.65" Text="{Binding Hex}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                            <Button x:Name="EditRootButton" Content="Изменить…" Click="EditRoot_OnClick"/>
+                            <Button x:Name="AutoAdjustButton" Content="Подстроить цвета" ToolTip="Согласовать число цветов с найденными корнями"
+                                    Click="AutoAdjust_OnClick"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="4" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+                        <CheckBox x:Name="GradientBox" VerticalAlignment="Center" Content="Градиент по числу итераций"/>
+                        <Button x:Name="BackgroundButton" Grid.Column="1" Content="Цвет фона…" Click="BackgroundButton_OnClick"/>
+                    </Grid>
+                    <TextBlock x:Name="EditHint" Grid.Row="5" Margin="0,10,0,0"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                </Grid>
+            </ScrollViewer>
+        </GroupBox>
+
+        <Grid Grid.Row="1" Grid.ColumnSpan="3" Margin="0,12,0,0">
+            <Button HorizontalAlignment="Left" MinWidth="150" Content="Сохранить изменения" Click="Save_OnClick"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Width="110" Margin="0,0,8,0" Content="Применить" Click="Apply_OnClick"/>
+                <Button Width="110" Content="Закрыть" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
