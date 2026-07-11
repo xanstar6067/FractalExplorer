@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
@@ -12,9 +14,16 @@ namespace FractalExplorerWPF.Views;
 
 public partial class MandelbrotPaletteWindow : Window
 {
+    private const string ColorDragFormat = "FractalExplorerWPF.MandelbrotPaletteColorIndex";
+
     private readonly MandelbrotPaletteManager _manager;
+    private readonly List<Color> _editingColors = [];
     private MandelbrotPalette? _selected;
+    private Point _dragStartPoint;
+    private int _dragSourceIndex = -1;
     private bool _updating;
+
+    public event EventHandler? PaletteApplied;
 
     public MandelbrotPaletteWindow(MandelbrotPaletteManager manager)
     {
@@ -35,18 +44,26 @@ public partial class MandelbrotPaletteWindow : Window
     private void PaletteList_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (PaletteList.SelectedItem is not MandelbrotPalette palette) return;
+
         _selected = palette;
         _updating = true;
         NameBox.Text = palette.Name;
-        ColorsBox.Text = string.Join("; ", palette.Colors.Select(ToHex));
+        _editingColors.Clear();
+        _editingColors.AddRange(palette.Colors);
+        ColorList.ItemsSource = null;
+        ColorList.ItemsSource = _editingColors;
+        ColorList.SelectedIndex = _editingColors.Count > 0 ? 0 : -1;
         InteriorColorBox.Text = ToHex(palette.InteriorColor);
         GradientBox.IsChecked = palette.IsGradient;
         AlignIterationsBox.IsChecked = palette.AlignWithRenderIterations;
         GammaBox.Text = palette.Gamma.ToString(CultureInfo.InvariantCulture);
         PeriodBox.Text = palette.ColorPeriod.ToString(CultureInfo.InvariantCulture);
         _updating = false;
+
         UpdateEditState();
+        UpdateColorButtons();
         UpdatePreview();
+        UpdateInteriorColorPreview();
     }
 
     private void New_OnClick(object sender, RoutedEventArgs e)
@@ -69,6 +86,7 @@ public partial class MandelbrotPaletteWindow : Window
         if (_selected is null || _selected.IsBuiltIn) return;
         if (MessageBox.Show(this, $"Удалить «{_selected.Name}»?", "Палитра",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+
         bool active = ReferenceEquals(_selected, _manager.ActivePalette);
         _manager.Palettes.Remove(_selected);
         if (active) _manager.ActivePalette = _manager.Palettes[0];
@@ -93,32 +111,161 @@ public partial class MandelbrotPaletteWindow : Window
     {
         if (_selected is null) return;
         if (!_selected.IsBuiltIn && !ApplyEdits()) return;
+
         _manager.ActivePalette = _selected;
         _manager.SaveCustomPalettes();
-        DialogResult = true;
+        PaletteList.Items.Refresh();
+        PaletteApplied?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void AddColor_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!CanEdit || !TryChooseColor(Colors.White, out Color color)) return;
+        _editingColors.Add(color);
+        RefreshColorList(_editingColors.Count - 1);
+    }
+
+    private void EditColor_OnClick(object sender, RoutedEventArgs e) => EditSelectedColor();
+
+    private void ColorList_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (CanEdit && ColorList.SelectedIndex >= 0) EditSelectedColor();
+    }
+
+    private void EditSelectedColor()
+    {
+        int index = ColorList.SelectedIndex;
+        if (!CanEdit || index < 0 || !TryChooseColor(_editingColors[index], out Color color)) return;
+        _editingColors[index] = color;
+        RefreshColorList(index);
+    }
+
+    private void RemoveColor_OnClick(object sender, RoutedEventArgs e)
+    {
+        int index = ColorList.SelectedIndex;
+        if (!CanEdit || index < 0 || _editingColors.Count <= 1) return;
+        _editingColors.RemoveAt(index);
+        RefreshColorList(Math.Min(index, _editingColors.Count - 1));
+    }
+
+    private void MoveColorUp_OnClick(object sender, RoutedEventArgs e) => MoveSelectedColor(-1);
+
+    private void MoveColorDown_OnClick(object sender, RoutedEventArgs e) => MoveSelectedColor(1);
+
+    private void MoveSelectedColor(int offset)
+    {
+        int sourceIndex = ColorList.SelectedIndex;
+        int destinationIndex = sourceIndex + offset;
+        if (!CanEdit || sourceIndex < 0 || destinationIndex < 0 || destinationIndex >= _editingColors.Count) return;
+
+        Color color = _editingColors[sourceIndex];
+        _editingColors.RemoveAt(sourceIndex);
+        _editingColors.Insert(destinationIndex, color);
+        RefreshColorList(destinationIndex);
+    }
+
+    private void ColorList_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartPoint = e.GetPosition(ColorList);
+        _dragSourceIndex = ItemIndexAt(e.OriginalSource as DependencyObject);
+    }
+
+    private void ColorList_OnPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!CanEdit || e.LeftButton != MouseButtonState.Pressed || _dragSourceIndex < 0) return;
+        Point current = e.GetPosition(ColorList);
+        if (Math.Abs(current.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(current.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+        int sourceIndex = _dragSourceIndex;
+        _dragSourceIndex = -1;
+        DragDrop.DoDragDrop(ColorList, new DataObject(ColorDragFormat, sourceIndex), DragDropEffects.Move);
+    }
+
+    private void ColorList_OnDragOver(object sender, DragEventArgs e)
+    {
+        if (!CanEdit || !e.Data.GetDataPresent(ColorDragFormat))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        e.Effects = DragDropEffects.Move;
+        int insertionIndex = GetInsertionIndex(e.GetPosition(ColorList));
+        ColorList.SelectedIndex = Math.Clamp(insertionIndex, 0, Math.Max(0, _editingColors.Count - 1));
+        e.Handled = true;
+    }
+
+    private void ColorList_OnDrop(object sender, DragEventArgs e)
+    {
+        if (!CanEdit || e.Data.GetData(ColorDragFormat) is not int sourceIndex ||
+            sourceIndex < 0 || sourceIndex >= _editingColors.Count) return;
+
+        int insertionIndex = GetInsertionIndex(e.GetPosition(ColorList));
+        Color color = _editingColors[sourceIndex];
+        _editingColors.RemoveAt(sourceIndex);
+        if (insertionIndex > sourceIndex) insertionIndex--;
+        insertionIndex = Math.Clamp(insertionIndex, 0, _editingColors.Count);
+        _editingColors.Insert(insertionIndex, color);
+        RefreshColorList(insertionIndex);
+        e.Handled = true;
+    }
+
+    private int GetInsertionIndex(Point position)
+    {
+        for (int index = 0; index < ColorList.Items.Count; index++)
+        {
+            if (ColorList.ItemContainerGenerator.ContainerFromIndex(index) is not ListBoxItem item) continue;
+            Point point = ColorList.TranslatePoint(position, item);
+            if (point.Y < item.ActualHeight / 2) return index;
+            if (point.Y <= item.ActualHeight) return index + 1;
+        }
+        return ColorList.Items.Count;
+    }
+
+    private int ItemIndexAt(DependencyObject? source)
+    {
+        DependencyObject? current = source;
+        while (current is not null && current is not ListBoxItem)
+            current = VisualTreeHelper.GetParent(current);
+        return current is ListBoxItem item ? ColorList.ItemContainerGenerator.IndexFromContainer(item) : -1;
+    }
+
+    private void ColorList_OnSelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateColorButtons();
+
+    private void InteriorColor_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!CanEdit) return;
+        Color initial = TryParseColor(InteriorColorBox.Text.Trim(), out Color parsed) ? parsed : Colors.Black;
+        if (TryChooseColor(initial, out Color color)) InteriorColorBox.Text = ToHex(color);
+    }
+
+    private void InteriorColorBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_updating) UpdateInteriorColorPreview();
     }
 
     private void Randomize_OnClick(object sender, RoutedEventArgs e)
     {
-        if (_selected is not { IsBuiltIn: false }) return;
-        int colorCount = Math.Max(3, ParseColors(ColorsBox.Text).Count);
+        if (!CanEdit) return;
+        int colorCount = Random.Shared.Next(3, 13);
         double baseHue = Random.Shared.NextDouble() * 360;
-        var colors = new List<Color>(colorCount);
+        _editingColors.Clear();
         for (int index = 0; index < colorCount; index++)
         {
             double hue = (baseHue + index * 360.0 / colorCount + Random.Shared.NextDouble() * 36 - 18 + 360) % 360;
             double saturation = 0.65 + Random.Shared.NextDouble() * 0.35;
             double value = 0.62 + Random.Shared.NextDouble() * 0.38;
-            colors.Add(FromHsv(hue, saturation, value));
+            _editingColors.Add(FromHsv(hue, saturation, value));
         }
-        ColorsBox.Text = string.Join("; ", colors.Select(ToHex));
+        RefreshColorList(0);
     }
 
     private bool ApplyEdits()
     {
         if (_selected is null || _selected.IsBuiltIn) return _selected is not null;
-        List<Color> colors = ParseColors(ColorsBox.Text);
-        if (string.IsNullOrWhiteSpace(NameBox.Text) || colors.Count == 0 ||
+        if (string.IsNullOrWhiteSpace(NameBox.Text) || _editingColors.Count == 0 ||
             !TryParseColor(InteriorColorBox.Text.Trim(), out Color interior) ||
             !double.TryParse(GammaBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gamma) || gamma is < 0.1 or > 5 ||
             !int.TryParse(PeriodBox.Text, out int period) || period is < 2 or > 100_000)
@@ -127,8 +274,9 @@ public partial class MandelbrotPaletteWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
+
         _selected.Name = NameBox.Text.Trim();
-        _selected.Colors = colors;
+        _selected.Colors = [.. _editingColors];
         _selected.InteriorColor = interior;
         _selected.IsGradient = GradientBox.IsChecked == true;
         _selected.AlignWithRenderIterations = AlignIterationsBox.IsChecked == true;
@@ -137,40 +285,97 @@ public partial class MandelbrotPaletteWindow : Window
         return true;
     }
 
-    private void ColorsBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    private void RefreshColorList(int selectedIndex)
     {
-        if (!_updating) UpdatePreview();
+        ColorList.Items.Refresh();
+        ColorList.SelectedIndex = selectedIndex;
+        ColorList.ScrollIntoView(ColorList.SelectedItem);
+        UpdateColorButtons();
+        UpdatePreview();
     }
 
     private void UpdatePreview()
     {
-        List<Color> colors = ParseColors(ColorsBox.Text);
-        if (colors.Count == 0) { GradientPreview.Background = MediaBrushes.Transparent; return; }
-        if (colors.Count == 1) { GradientPreview.Background = new SolidColorBrush(colors[0]); return; }
+        if (_editingColors.Count == 0)
+        {
+            GradientPreview.Background = MediaBrushes.Transparent;
+            return;
+        }
+        if (_editingColors.Count == 1)
+        {
+            GradientPreview.Background = new SolidColorBrush(_editingColors[0]);
+            return;
+        }
+
         var gradient = new LinearGradientBrush { StartPoint = new Point(0, 0.5), EndPoint = new Point(1, 0.5) };
-        for (int i = 0; i < colors.Count; i++) gradient.GradientStops.Add(new GradientStop(colors[i], (double)i / (colors.Count - 1)));
+        for (int index = 0; index < _editingColors.Count; index++)
+            gradient.GradientStops.Add(new GradientStop(_editingColors[index], (double)index / (_editingColors.Count - 1)));
         GradientPreview.Background = gradient;
+    }
+
+    private void UpdateInteriorColorPreview()
+    {
+        InteriorColorPreview.Background = TryParseColor(InteriorColorBox.Text.Trim(), out Color color)
+            ? new SolidColorBrush(color)
+            : MediaBrushes.Transparent;
     }
 
     private void UpdateEditState()
     {
-        bool editable = _selected is { IsBuiltIn: false };
-        NameBox.IsEnabled = editable; ColorsBox.IsEnabled = editable; InteriorColorBox.IsEnabled = editable;
-        GradientBox.IsEnabled = editable; GammaBox.IsEnabled = editable; PeriodBox.IsEnabled = editable;
+        bool editable = CanEdit;
+        NameBox.IsEnabled = editable;
+        ColorList.AllowDrop = editable;
+        InteriorColorBox.IsEnabled = editable;
+        InteriorColorButton.IsEnabled = editable;
+        GradientBox.IsEnabled = editable;
+        GammaBox.IsEnabled = editable;
+        PeriodBox.IsEnabled = editable;
         AlignIterationsBox.IsEnabled = editable;
         RandomizeButton.IsEnabled = editable;
-        EditHint.Text = editable ? "Пользовательскую палитру можно редактировать."
-            : "Встроенную палитру можно применить или скопировать.";
+        DeletePaletteButton.IsEnabled = editable;
+        EditHint.Text = editable
+            ? "Пользовательскую палитру можно редактировать, сохранять и применять."
+            : "Встроенную палитру можно применить или скопировать для редактирования.";
     }
 
-    private List<Color> ParseColors(string text) => text.Split([';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-        .Select(value => value.Trim()).Select(value => TryParseColor(value, out Color color) ? color : (Color?)null)
-        .Where(color => color.HasValue).Select(color => color!.Value).ToList();
+    private void UpdateColorButtons()
+    {
+        bool selected = CanEdit && ColorList.SelectedIndex >= 0;
+        AddColorButton.IsEnabled = CanEdit;
+        EditColorButton.IsEnabled = selected;
+        RemoveColorButton.IsEnabled = selected && _editingColors.Count > 1;
+        MoveColorUpButton.IsEnabled = selected && ColorList.SelectedIndex > 0;
+        MoveColorDownButton.IsEnabled = selected && ColorList.SelectedIndex < _editingColors.Count - 1;
+    }
+
+    private bool CanEdit => _selected is { IsBuiltIn: false };
+
+    private bool TryChooseColor(Color initial, out Color selected)
+    {
+        using var dialog = new System.Windows.Forms.ColorDialog
+        {
+            AllowFullOpen = true,
+            AnyColor = true,
+            FullOpen = true,
+            Color = System.Drawing.Color.FromArgb(initial.A, initial.R, initial.G, initial.B)
+        };
+        var owner = new Win32Window(new WindowInteropHelper(this).Handle);
+        if (dialog.ShowDialog(owner) != System.Windows.Forms.DialogResult.OK)
+        {
+            selected = initial;
+            return false;
+        }
+
+        selected = Color.FromArgb(initial.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
+        return true;
+    }
 
     private string UniqueName(string basis)
     {
-        string candidate = basis; int suffix = 1;
-        while (_manager.Palettes.Any(p => p.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase))) candidate = $"{basis} {suffix++}";
+        string candidate = basis;
+        int suffix = 1;
+        while (_manager.Palettes.Any(palette => palette.Name.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
+            candidate = $"{basis} {suffix++}";
         return candidate;
     }
 
@@ -209,5 +414,14 @@ public partial class MandelbrotPaletteWindow : Window
                Assign(out color, Color.FromArgb(a, r, g, b));
     }
 
-    private static bool Assign(out Color target, Color value) { target = value; return true; }
+    private static bool Assign(out Color target, Color value)
+    {
+        target = value;
+        return true;
+    }
+
+    private sealed class Win32Window(nint handle) : System.Windows.Forms.IWin32Window
+    {
+        public nint Handle { get; } = handle;
+    }
 }

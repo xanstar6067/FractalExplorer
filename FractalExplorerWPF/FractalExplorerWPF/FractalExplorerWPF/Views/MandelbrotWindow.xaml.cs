@@ -226,7 +226,8 @@ public partial class MandelbrotWindow : Window
     private void PaletteButton_OnClick(object sender, RoutedEventArgs e)
     {
         var dialog = new MandelbrotPaletteWindow(_paletteManager) { Owner = this };
-        if (dialog.ShowDialog() == true) ScheduleRender();
+        dialog.PaletteApplied += (_, _) => ScheduleRender();
+        dialog.ShowDialog();
     }
 
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
