@@ -41,6 +41,32 @@
                             <TextBox x:Name="JuliaImaginaryBox" Margin="3,2,0,7" TextChanged="Parameter_OnChanged"/>
                         </UniformGrid>
                         <Button Content="Выбрать C на карте" Click="JuliaConstantButton_OnClick"/>
+                        <TextBlock Margin="0,5,0,3" Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   Text="Щёлкните по миниатюре, чтобы открыть карту" TextWrapping="Wrap"/>
+                        <Border x:Name="JuliaMapPreviewHost" Height="118" Margin="0,0,0,7"
+                                Background="Black" BorderThickness="1" CornerRadius="4" ClipToBounds="True"
+                                Cursor="Hand" ToolTip="Открыть интерактивную карту выбора C"
+                                SizeChanged="JuliaMapPreviewHost_OnSizeChanged"
+                                MouseLeftButtonDown="JuliaMapPreviewHost_OnMouseLeftButtonDown">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Theme.InteractiveBorderBrush}"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Theme.InteractiveHoverBrush}"/>
+                                            <Setter Property="BorderThickness" Value="2"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Image x:Name="JuliaMapPreviewImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+                                <Canvas x:Name="JuliaMapMarkerLayer" IsHitTestVisible="False">
+                                    <Line x:Name="JuliaMapHorizontalMarker" Stroke="LimeGreen" StrokeThickness="1"/>
+                                    <Line x:Name="JuliaMapVerticalMarker" Stroke="LimeGreen" StrokeThickness="1"/>
+                                </Canvas>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
                     <StackPanel x:Name="PowerPanel">

@@ -25,6 +25,7 @@ public partial class MandelbrotWindow : Window
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(320) };
     private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
     private CancellationTokenSource? _renderCts;
+    private CancellationTokenSource? _juliaMapPreviewCts;
     private bool _isRendering;
     private bool _isPanning;
     private bool _isFullscreen;
@@ -62,7 +63,11 @@ public partial class MandelbrotWindow : Window
             _updatingControls = false;
         }
         ResetView(false);
-        Loaded += (_, _) => ScheduleRender();
+        Loaded += (_, _) =>
+        {
+            ScheduleRender();
+            if (_definition.HasJuliaConstant) _ = RenderJuliaMapPreviewAsync();
+        };
     }
 
     private void InitializeControls()
@@ -211,6 +216,7 @@ public partial class MandelbrotWindow : Window
         _paletteManager.ActivePalette = loadedPalette.Clone(
             string.IsNullOrWhiteSpace(state.PaletteName) ? loadedPalette.Name : state.PaletteName);
         _updatingControls = false;
+        UpdateJuliaMapMarker();
         ScheduleRender();
     }
 
@@ -227,7 +233,11 @@ public partial class MandelbrotWindow : Window
 
     private void Parameter_OnChanged(object sender, EventArgs e)
     {
-        if (!_updatingControls && IsLoaded) ScheduleRender();
+        if (!_updatingControls && IsLoaded)
+        {
+            UpdateJuliaMapMarker();
+            ScheduleRender();
+        }
     }
 
     private void ColoringMode_OnChanged(object sender, EventArgs e) => Parameter_OnChanged(sender, e);
@@ -272,7 +282,105 @@ public partial class MandelbrotWindow : Window
         JuliaRealBox.Text = dialog.SelectedReal.ToString(CultureInfo.InvariantCulture);
         JuliaImaginaryBox.Text = dialog.SelectedImaginary.ToString(CultureInfo.InvariantCulture);
         _updatingControls = false;
+        UpdateJuliaMapMarker();
         ScheduleRender();
+    }
+
+    private void JuliaMapPreviewHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        JuliaConstantButton_OnClick(sender, e);
+        e.Handled = true;
+    }
+
+    private void JuliaMapPreviewHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateJuliaMapMarker();
+        if (IsLoaded && _definition.HasJuliaConstant) _ = RenderJuliaMapPreviewAsync();
+    }
+
+    private async Task RenderJuliaMapPreviewAsync()
+    {
+        if (!_definition.HasJuliaConstant || JuliaMapPreviewHost.ActualWidth < 1 ||
+            JuliaMapPreviewHost.ActualHeight < 1) return;
+
+        _juliaMapPreviewCts?.Cancel();
+        _juliaMapPreviewCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _juliaMapPreviewCts = cts;
+        DpiScale dpi = VisualTreeHelper.GetDpi(JuliaMapPreviewHost);
+        int width = Math.Max(1, (int)Math.Ceiling(JuliaMapPreviewHost.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(JuliaMapPreviewHost.ActualHeight * dpi.DpiScaleY));
+        (MandelbrotVariant variant, decimal centerX, decimal centerY, decimal zoom) = GetJuliaMapView();
+        var state = new MandelbrotState
+        {
+            Variant = variant,
+            CenterX = centerX,
+            CenterY = centerY,
+            Zoom = zoom,
+            Iterations = 110,
+            Threshold = 2,
+            Threads = 0,
+            ColoringMode = MandelbrotColoringMode.Smooth,
+            Palette = new MandelbrotPalette
+            {
+                Name = "Карта выбора C",
+                Colors =
+                [
+                    Colors.Black,
+                    MediaColor.FromRgb(200, 50, 30),
+                    Colors.White
+                ],
+                InteriorColor = Colors.Black,
+                IsGradient = true,
+                ColorPeriod = 110,
+                AlignWithRenderIterations = true
+            }
+        };
+
+        try
+        {
+            BitmapSource bitmap = await RenderBitmapAsync(state, width, height, 1, cts.Token, null);
+            if (!ReferenceEquals(_juliaMapPreviewCts, cts)) return;
+            JuliaMapPreviewImage.Source = bitmap;
+            UpdateJuliaMapMarker();
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            if (ReferenceEquals(_juliaMapPreviewCts, cts)) _juliaMapPreviewCts = null;
+            cts.Dispose();
+        }
+    }
+
+    private (MandelbrotVariant Variant, decimal CenterX, decimal CenterY, decimal Zoom) GetJuliaMapView() =>
+        _definition.Variant == MandelbrotVariant.JuliaBurningShip
+            ? (MandelbrotVariant.BurningShip, -0.25m, 0.25m, 3m / 3.5m)
+            : (MandelbrotVariant.Mandelbrot, -0.5m, 0m, 1m);
+
+    private void UpdateJuliaMapMarker()
+    {
+        if (!_definition.HasJuliaConstant || !IsInitialized ||
+            !TryReadDecimal(JuliaRealBox.Text, out decimal real) ||
+            !TryReadDecimal(JuliaImaginaryBox.Text, out decimal imaginary)) return;
+
+        double width = Math.Max(1, JuliaMapPreviewHost.ActualWidth);
+        double height = Math.Max(1, JuliaMapPreviewHost.ActualHeight);
+        (_, decimal centerX, decimal centerY, decimal zoom) = GetJuliaMapView();
+        decimal viewWidth = 3m / zoom;
+        decimal viewHeight = viewWidth * (decimal)height / (decimal)width;
+        double x = (double)((real - (centerX - viewWidth / 2m)) / viewWidth) * width;
+        double y = (double)(((centerY + viewHeight / 2m) - imaginary) / viewHeight) * height;
+        bool visible = x >= 0 && x <= width && y >= 0 && y <= height;
+        JuliaMapMarkerLayer.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (!visible) return;
+        JuliaMapHorizontalMarker.X1 = 0;
+        JuliaMapHorizontalMarker.X2 = width;
+        JuliaMapHorizontalMarker.Y1 = y;
+        JuliaMapHorizontalMarker.Y2 = y;
+        JuliaMapVerticalMarker.X1 = x;
+        JuliaMapVerticalMarker.X2 = x;
+        JuliaMapVerticalMarker.Y1 = 0;
+        JuliaMapVerticalMarker.Y2 = height;
     }
 
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
@@ -813,6 +921,8 @@ public partial class MandelbrotWindow : Window
         _visualizationTimer.Stop();
         _renderCts?.Cancel();
         _renderCts?.Dispose();
+        _juliaMapPreviewCts?.Cancel();
+        _juliaMapPreviewCts?.Dispose();
         _activeSession = null;
     }
 

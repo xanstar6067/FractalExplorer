@@ -80,8 +80,9 @@ public partial class JuliaConstantPickerWindow : Window
         _renderCts?.Dispose();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
-        int width = Math.Max(1, (int)MapHost.ActualWidth);
-        int height = Math.Max(1, (int)MapHost.ActualHeight);
+        DpiScale dpi = VisualTreeHelper.GetDpi(MapHost);
+        int width = Math.Max(1, (int)Math.Ceiling(MapHost.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(MapHost.ActualHeight * dpi.DpiScaleY));
         StatusText.Text = "Рендер карты...";
         try
         {
@@ -124,10 +125,8 @@ public partial class JuliaConstantPickerWindow : Window
             Name = "Карта выбора C",
             Colors =
             [
-                MediaColor.FromRgb(10, 7, 28),
-                MediaColor.FromRgb(55, 28, 120),
-                MediaColor.FromRgb(21, 120, 180),
-                MediaColor.FromRgb(240, 190, 72),
+                MediaColors.Black,
+                MediaColor.FromRgb(200, 50, 30),
                 MediaColors.White
             ],
             InteriorColor = MediaColors.Black,
@@ -171,12 +170,13 @@ public partial class JuliaConstantPickerWindow : Window
             _lastPoint = e.GetPosition(MapHost);
             MapHost.CaptureMouse();
             Mouse.OverrideCursor = Cursors.SizeAll;
+            e.Handled = true;
         }
     }
 
     private void MapHost_OnMouseMove(object sender, MouseEventArgs e)
     {
-        if (!_panning) return;
+        if (!_panning || e.MiddleButton != MouseButtonState.Pressed) return;
         Point current = e.GetPosition(MapHost);
         (decimal X, decimal Y) before = ScreenToWorld(_lastPoint);
         (decimal X, decimal Y) after = ScreenToWorld(current);
@@ -193,6 +193,7 @@ public partial class JuliaConstantPickerWindow : Window
         MapHost.ReleaseMouseCapture();
         Mouse.OverrideCursor = null;
         ScheduleRender();
+        e.Handled = true;
     }
 
     private (decimal X, decimal Y) ScreenToWorld(Point point)
