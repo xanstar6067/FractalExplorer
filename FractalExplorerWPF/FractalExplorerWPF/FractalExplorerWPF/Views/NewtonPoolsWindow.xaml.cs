@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -19,6 +20,7 @@ public partial class NewtonPoolsWindow : Window
 {
     private const double BaseScale = 3.0;
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
+    private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
     private readonly NewtonPoolsEngine _formulaEngine = new();
     private readonly NewtonPaletteManager _paletteManager = new();
     private readonly NewtonSaveStore _saveStore = new();
@@ -34,7 +36,15 @@ public partial class NewtonPoolsWindow : Window
     private double _centerX;
     private double _centerY;
     private double _zoom = 1;
+    private double _renderedCenterX;
+    private double _renderedCenterY;
+    private double _renderedZoom = 1;
+    private bool _hasRenderedFrame;
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly TranslateTransform _previewTranslation = new();
     private string _appliedFormula = "z^3-1";
+    private RenderSession? _activeSession;
 
     private readonly string[] _presetFormulas =
     [
@@ -55,6 +65,14 @@ public partial class NewtonPoolsWindow : Window
     public NewtonPoolsWindow()
     {
         InitializeComponent();
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewTranslation);
+        StablePreviewImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        StablePreviewImage.RenderTransform = _previewTransform;
+        _visualizationTimer.Tick += (_, _) =>
+        {
+            if (_activeSession is not null) FlushVisualizationEvents(_activeSession, false);
+        };
         _renderTimer.Tick += RenderTimer_OnTick;
         FormulaPresetBox.ItemsSource = _presetFormulas;
         FormulaPresetBox.SelectedIndex = 0;
@@ -102,6 +120,7 @@ public partial class NewtonPoolsWindow : Window
         MethodBox.SelectedIndex = (int)state.IterationMethod;
         HouseholderOrderBox.Text = Math.Clamp(state.HouseholderOrder, 2, 12).ToString(CultureInfo.InvariantCulture);
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
+        UpdatePreviewTransform();
         if (ApplyFormula(showMessage: true)) ScheduleRender();
     }
 
@@ -234,6 +253,7 @@ public partial class NewtonPoolsWindow : Window
         if (TryReadDouble(ZoomBox.Text, out double zoom))
         {
             _zoom = Math.Clamp(zoom, 0.001, 1_000_000_000_000);
+            UpdatePreviewTransform();
             ScheduleRender();
         }
     }
@@ -258,11 +278,12 @@ public partial class NewtonPoolsWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
+        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
         var options = new NewtonExportWindow
         {
             Owner = this,
-            ExportWidth = Math.Max(1, (int)CanvasHost.ActualWidth),
-            ExportHeight = Math.Max(1, (int)CanvasHost.ActualHeight)
+            ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)),
+            ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY))
         };
         if (options.ShowDialog() != true) return;
         var saveDialog = new SaveFileDialog { Filter = "PNG image|*.png", FileName = $"newton_pools_{DateTime.Now:yyyyMMdd_HHmmss}.png" };
@@ -310,6 +331,7 @@ public partial class NewtonPoolsWindow : Window
             ScheduleRender();
             return;
         }
+
         NewtonState state;
         try { state = CaptureState("preview"); }
         catch (Exception ex) { StatusText.Text = ex.Message; return; }
@@ -321,15 +343,93 @@ public partial class NewtonPoolsWindow : Window
         SetRenderingState(true, $"Рендеринг методом {state.IterationMethod}...");
         try
         {
-            BitmapSource bitmap = await RenderBitmapAsync(state, Math.Max(1, (int)CanvasHost.ActualWidth), Math.Max(1, (int)CanvasHost.ActualHeight),
-                1, token, new Progress<int>(value => RenderProgress.Value = value));
-            token.ThrowIfCancellationRequested();
+            DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+            int renderWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
+            int renderHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+            TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
+            IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(renderWidth, renderHeight, 16, strategy);
+            var bitmap = new WriteableBitmap(renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY,
+                PixelFormats.Bgra32, null);
+            NewtonPoolsEngine engine = CreateEngine(state);
+            var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight);
+            _activeSession = session;
             CanvasImage.Source = bitmap;
-            StatusText.Text = $"Готово за {stopwatch.Elapsed.TotalSeconds:F3} сек. Корней: {_formulaEngine.Roots.Count}";
+            RenderOverlay.BeginSession(renderWidth, renderHeight);
+            _visualizationTimer.Start();
+
+            await RenderTilesAsync(engine, tiles, session, GetThreadCount(), token);
+            token.ThrowIfCancellationRequested();
+            FlushVisualizationEvents(session, true);
+
+            BitmapSource completed = session.Bitmap.Clone();
+            completed.Freeze();
+            StablePreviewImage.Source = completed;
+            CanvasImage.Source = null;
+            _renderedCenterX = state.CenterX;
+            _renderedCenterY = state.CenterY;
+            _renderedZoom = state.Zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+            RenderOverlay.EndSession();
+            _activeSession = null;
+            StatusText.Text = $"Готово за {stopwatch.Elapsed.TotalSeconds:F3} сек. Корней: {_formulaEngine.Roots.Count}. Стратегия: {strategy}";
         }
-        catch (OperationCanceledException) { StatusText.Text = "Рендер отменён"; }
-        catch (Exception ex) { StatusText.Text = "Ошибка рендера"; MessageBox.Show(this, ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { SetRenderingState(false); }
+        catch (OperationCanceledException)
+        {
+            CanvasImage.Source = null;
+            StatusText.Text = "Рендер отменён";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Ошибка рендера";
+            MessageBox.Show(this, ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _visualizationTimer.Stop();
+            RenderOverlay.EndSession();
+            _activeSession = null;
+            SetRenderingState(false);
+        }
+    }
+
+    private static async Task RenderTilesAsync(NewtonPoolsEngine engine, IReadOnlyList<MandelbrotRenderTile> tiles,
+        RenderSession session, int threadCount, CancellationToken token)
+    {
+        var queue = new ConcurrentQueue<MandelbrotRenderTile>(tiles);
+        Task[] workers = Enumerable.Range(0, Math.Clamp(threadCount, 1, Environment.ProcessorCount)).Select(_ => Task.Run(() =>
+        {
+            while (queue.TryDequeue(out MandelbrotRenderTile tile))
+            {
+                token.ThrowIfCancellationRequested();
+                session.Events.Enqueue(new TileRenderEvent(true, tile, null));
+                byte[] pixels = engine.RenderTile(tile, session.RenderWidth, session.RenderHeight, token);
+                session.Events.Enqueue(new TileRenderEvent(false, tile, pixels));
+            }
+        }, token)).ToArray();
+        await Task.WhenAll(workers);
+    }
+
+    private void FlushVisualizationEvents(RenderSession session, bool drainAll)
+    {
+        int processed = 0;
+        bool changed = false;
+        while ((drainAll || processed < 512) && session.Events.TryDequeue(out TileRenderEvent entry))
+        {
+            if (entry.IsStart) RenderOverlay.StartTile(entry.Tile);
+            else if (entry.Pixels is not null)
+            {
+                session.Bitmap.WritePixels(new Int32Rect(entry.Tile.X, entry.Tile.Y, entry.Tile.Width, entry.Tile.Height),
+                    entry.Pixels, entry.Tile.Width * 4, 0);
+                RenderOverlay.CompleteTile(entry.Tile);
+                session.CompletedTiles++;
+            }
+            processed++;
+            changed = true;
+        }
+        if (!changed) return;
+        RenderOverlay.Refresh();
+        RenderProgress.Value = session.TileCount == 0 ? 0 : session.CompletedTiles * 100.0 / session.TileCount;
     }
 
     private async Task<BitmapSource> RenderBitmapAsync(NewtonState state, int width, int height, int ssaaFactor,
@@ -381,7 +481,11 @@ public partial class NewtonPoolsWindow : Window
         if (status is not null) StatusText.Text = status;
     }
 
-    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRender();
+    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePreviewTransform();
+        ScheduleRender();
+    }
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -391,6 +495,7 @@ public partial class NewtonPoolsWindow : Window
         Point after = ScreenToWorld(mouse);
         _centerX += before.X - after.X;
         _centerY += before.Y - after.Y;
+        UpdatePreviewTransform();
         ZoomBox.Text = _zoom.ToString("0.####", CultureInfo.InvariantCulture);
         ScheduleRender();
     }
@@ -412,6 +517,7 @@ public partial class NewtonPoolsWindow : Window
         _centerX += before.X - after.X;
         _centerY += before.Y - after.Y;
         _lastPanPoint = current;
+        UpdatePreviewTransform();
     }
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -429,6 +535,18 @@ public partial class NewtonPoolsWindow : Window
         double scale = BaseScale / _zoom;
         return new Point(_centerX + (point.X - width / 2) * scale / width,
             _centerY + (point.Y - Math.Max(1, CanvasHost.ActualHeight) / 2) * scale / width);
+    }
+
+    private void UpdatePreviewTransform()
+    {
+        if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 || CanvasHost.ActualWidth <= 0) return;
+        double scale = _zoom / _renderedZoom;
+        double currentScale = BaseScale / _zoom;
+        double width = CanvasHost.ActualWidth;
+        _previewScale.ScaleX = scale;
+        _previewScale.ScaleY = scale;
+        _previewTranslation.X = (_renderedCenterX - _centerX) / currentScale * width;
+        _previewTranslation.Y = (_centerY - _renderedCenterY) / currentScale * width;
     }
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e)
@@ -466,6 +584,7 @@ public partial class NewtonPoolsWindow : Window
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _renderTimer.Stop();
+        _visualizationTimer.Stop();
         _renderCts?.Cancel();
         _renderCts?.Dispose();
     }
@@ -473,4 +592,16 @@ public partial class NewtonPoolsWindow : Window
     private static bool TryReadDouble(string text, out double value) =>
         double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
         double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
+
+    private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight)
+    {
+        public WriteableBitmap Bitmap { get; } = bitmap;
+        public int TileCount { get; } = tileCount;
+        public int RenderWidth { get; } = renderWidth;
+        public int RenderHeight { get; } = renderHeight;
+        public int CompletedTiles { get; set; }
+        public ConcurrentQueue<TileRenderEvent> Events { get; } = new();
+    }
+
+    private readonly record struct TileRenderEvent(bool IsStart, MandelbrotRenderTile Tile, byte[]? Pixels);
 }

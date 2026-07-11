@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -19,18 +20,30 @@ public partial class PhoenixWindow : Window
 {
     private const decimal BaseScale = 4m;
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
+    private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
     private readonly MandelbrotPaletteManager _paletteManager = new();
     private readonly PhoenixSaveStore _saveStore = new();
     private CancellationTokenSource? _renderCts;
     private bool _isRendering, _panning, _isFullscreen, _controlsVisible = true;
     private Point _lastPanPoint;
     private decimal _centerX, _centerY, _zoom = 1;
+    private decimal _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
+    private bool _hasRenderedFrame;
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly TranslateTransform _previewTranslation = new();
+    private RenderSession? _activeSession;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
 
     public PhoenixWindow()
     {
         InitializeComponent();
+        _visualizationTimer.Tick += (_, _) => { if (_activeSession is not null) FlushVisualizationEvents(_activeSession, false); };
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewTranslation);
+        StablePreviewImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        StablePreviewImage.RenderTransform = _previewTransform;
         _renderTimer.Tick += RenderTimer_OnTick;
         C1RealBox.Text = "0.566666666666667"; C1ImaginaryBox.Text = "-0.5"; C2RealBox.Text = "0"; C2ImaginaryBox.Text = "0";
         IterationsBox.Text = "100"; ThresholdBox.Text = "4"; ZoomBox.Text = "1";
@@ -60,7 +73,8 @@ public partial class PhoenixWindow : Window
         _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Max(0.000001m, state.Zoom);
         C1RealBox.Text = Format(state.C1Real); C1ImaginaryBox.Text = Format(state.C1Imaginary); C2RealBox.Text = Format(state.C2Real); C2ImaginaryBox.Text = Format(state.C2Imaginary);
         IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = Format(_zoom);
-        ColoringBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0; _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}"); ScheduleRender();
+        ColoringBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0; _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
+        UpdatePreviewTransform(); ScheduleRender();
     }
 
     public Task<BitmapSource> RenderStatePreviewAsync(PhoenixState state, int width, int height, CancellationToken token) => RenderBitmapAsync(state, width, height, 1, token, null);
@@ -76,7 +90,15 @@ public partial class PhoenixWindow : Window
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
-    private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e) { if (TryRead(ZoomBox.Text, out decimal zoom)) { _zoom = Math.Clamp(zoom, 0.000001m, decimal.MaxValue); ScheduleRender(); } }
+    private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e)
+    {
+        if (TryRead(ZoomBox.Text, out decimal zoom))
+        {
+            _zoom = Math.Clamp(zoom, 0.000001m, decimal.MaxValue);
+            UpdatePreviewTransform();
+            ScheduleRender();
+        }
+    }
     private void RenderButton_OnClick(object sender, RoutedEventArgs e) => _ = RenderPreviewAsync();
     private void CancelButton_OnClick(object sender, RoutedEventArgs e) => _renderCts?.Cancel();
 
@@ -90,7 +112,13 @@ public partial class PhoenixWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
-        var options = new MandelbrotExportWindow { Owner = this, ExportWidth = Math.Max(1, (int)CanvasHost.ActualWidth), ExportHeight = Math.Max(1, (int)CanvasHost.ActualHeight) };
+        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+        var options = new MandelbrotExportWindow
+        {
+            Owner = this,
+            ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)),
+            ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY))
+        };
         if (options.ShowDialog() != true) return;
         string extension = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "jpg", MandelbrotExportFormat.Bmp => "bmp", _ => "png" };
         var dialog = new SaveFileDialog { Filter = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "JPEG image|*.jpg", MandelbrotExportFormat.Bmp => "Bitmap image|*.bmp", _ => "PNG image|*.png" }, FileName = $"phoenix_{DateTime.Now:yyyyMMdd_HHmmss}.{extension}" };
@@ -137,12 +165,73 @@ public partial class PhoenixWindow : Window
         try
         {
             int factor = SsaaBox.SelectedItem is ComboBoxItem item ? Convert.ToInt32(item.Tag, CultureInfo.InvariantCulture) : 1;
-            BitmapSource bitmap = await RenderBitmapAsync(state, Math.Max(1, (int)CanvasHost.ActualWidth), Math.Max(1, (int)CanvasHost.ActualHeight), factor, token, new Progress<int>(v => RenderProgress.Value = v));
-            token.ThrowIfCancellationRequested(); CanvasImage.Source = bitmap; StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек.";
+            DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+            int pixelWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
+            int pixelHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+            int renderWidth = checked(pixelWidth * factor);
+            int renderHeight = checked(pixelHeight * factor);
+            TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
+            IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(renderWidth, renderHeight, 16 * factor, strategy);
+            var bitmap = new WriteableBitmap(renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Bgra32, null);
+            var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight);
+            _activeSession = session;
+            CanvasImage.Source = bitmap;
+            RenderOverlay.BeginSession(renderWidth, renderHeight);
+            _visualizationTimer.Start();
+            await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
+            token.ThrowIfCancellationRequested();
+            FlushVisualizationEvents(session, true);
+            BitmapSource completed = session.Bitmap.Clone();
+            completed.Freeze();
+            StablePreviewImage.Source = completed;
+            CanvasImage.Source = null;
+            _renderedCenterX = state.CenterX;
+            _renderedCenterY = state.CenterY;
+            _renderedZoom = state.Zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+            RenderOverlay.EndSession();
+            _activeSession = null;
+            StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек. Стратегия: {strategy}.";
         }
-        catch (OperationCanceledException) { StatusText.Text = "Рендер отменён"; }
+        catch (OperationCanceledException) { CanvasImage.Source = null; StatusText.Text = "Рендер отменён"; }
         catch (Exception ex) { StatusText.Text = "Ошибка рендера"; MessageBox.Show(this, ex.Message, "Phoenix", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { SetRendering(false); }
+        finally { _visualizationTimer.Stop(); RenderOverlay.EndSession(); _activeSession = null; SetRendering(false); }
+    }
+
+    private static async Task RenderTilesAsync(PhoenixState state, IReadOnlyList<MandelbrotRenderTile> tiles,
+        RenderSession session, int threadCount, CancellationToken token)
+    {
+        var queue = new ConcurrentQueue<MandelbrotRenderTile>(tiles);
+        Task[] workers = Enumerable.Range(0, Math.Clamp(threadCount, 1, Environment.ProcessorCount)).Select(_ => Task.Run(() =>
+        {
+            while (queue.TryDequeue(out MandelbrotRenderTile tile))
+            {
+                token.ThrowIfCancellationRequested();
+                session.Events.Enqueue(new TileRenderEvent(true, tile, null));
+                byte[] pixels = PhoenixRenderer.RenderTile(state, session.RenderWidth, session.RenderHeight, tile, token);
+                session.Events.Enqueue(new TileRenderEvent(false, tile, pixels));
+            }
+        }, token)).ToArray();
+        await Task.WhenAll(workers);
+    }
+
+    private void FlushVisualizationEvents(RenderSession session, bool drainAll)
+    {
+        int processed = 0; bool changed = false;
+        while ((drainAll || processed < 512) && session.Events.TryDequeue(out TileRenderEvent entry))
+        {
+            if (entry.IsStart) RenderOverlay.StartTile(entry.Tile);
+            else if (entry.Pixels is not null)
+            {
+                session.Bitmap.WritePixels(new Int32Rect(entry.Tile.X, entry.Tile.Y, entry.Tile.Width, entry.Tile.Height), entry.Pixels, entry.Tile.Width * 4, 0);
+                RenderOverlay.CompleteTile(entry.Tile); session.CompletedTiles++;
+            }
+            processed++; changed = true;
+        }
+        if (!changed) return;
+        RenderOverlay.Refresh();
+        RenderProgress.Value = session.TileCount == 0 ? 0 : session.CompletedTiles * 100.0 / session.TileCount;
     }
 
     private async Task<BitmapSource> RenderBitmapAsync(PhoenixState state, int width, int height, int ssaa, CancellationToken token, IProgress<int>? progress)
@@ -159,19 +248,20 @@ public partial class PhoenixWindow : Window
 
     private int GetThreadCount() => ThreadsBox.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Math.Max(1, Convert.ToInt32(ThreadsBox.SelectedItem, CultureInfo.InvariantCulture));
     private void SetRendering(bool value, string? status = null) { _isRendering = value; CancelButton.IsEnabled = value; if (!value) RenderProgress.Value = 0; if (status is not null) StatusText.Text = status; }
-    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRender();
+    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) { UpdatePreviewTransform(); ScheduleRender(); }
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
         Point mouse = e.GetPosition(CanvasHost); (decimal X, decimal Y) before = ScreenToWorld(mouse);
         _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), 0.000001m, decimal.MaxValue);
-        (decimal X, decimal Y) after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y; ZoomBox.Text = Format(_zoom); ScheduleRender();
+        (decimal X, decimal Y) after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y;
+        UpdatePreviewTransform(); ZoomBox.Text = Format(_zoom); ScheduleRender();
     }
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) { _panning = true; _lastPanPoint = e.GetPosition(CanvasHost); CanvasHost.CaptureMouse(); Mouse.OverrideCursor = Cursors.SizeAll; }
     private void CanvasHost_OnMouseMove(object sender, MouseEventArgs e)
     {
         if (!_panning) return; Point current = e.GetPosition(CanvasHost); (decimal X, decimal Y) before = ScreenToWorld(_lastPanPoint); (decimal X, decimal Y) after = ScreenToWorld(current);
-        _centerX += before.X - after.X; _centerY += before.Y - after.Y; _lastPanPoint = current;
+        _centerX += before.X - after.X; _centerY += before.Y - after.Y; _lastPanPoint = current; UpdatePreviewTransform();
     }
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) { if (!_panning) return; _panning = false; CanvasHost.ReleaseMouseCapture(); Mouse.OverrideCursor = null; ScheduleRender(); }
     private (decimal X, decimal Y) ScreenToWorld(Point point)
@@ -179,10 +269,34 @@ public partial class PhoenixWindow : Window
         decimal width = (decimal)Math.Max(1, CanvasHost.ActualWidth); decimal scale = BaseScale / _zoom;
         return (_centerX + ((decimal)point.X - width / 2) * scale / width, _centerY + ((decimal)Math.Max(1, CanvasHost.ActualHeight) / 2 - (decimal)point.Y) * scale / width);
     }
+    private void UpdatePreviewTransform()
+    {
+        if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 || CanvasHost.ActualWidth <= 0) return;
+        double scale = (double)(_zoom / _renderedZoom);
+        decimal currentScale = BaseScale / _zoom;
+        double width = CanvasHost.ActualWidth;
+        double dx = (double)((_renderedCenterX - _centerX) / currentScale) * width;
+        double dy = (double)((_centerY - _renderedCenterY) / currentScale) * width;
+        _previewScale.ScaleX = scale;
+        _previewScale.ScaleY = scale;
+        _previewTranslation.X = dx;
+        _previewTranslation.Y = dy;
+    }
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) { _controlsVisible = !_controlsVisible; ControlsColumn.Width = _controlsVisible ? new GridLength(280) : new GridLength(0); ControlsHost.Visibility = _controlsVisible ? Visibility.Visible : Visibility.Collapsed; ToggleControlsButton.Content = _controlsVisible ? "✕" : "☰"; ScheduleRender(); }
     private void Window_OnKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.F11 || e.Key == Key.Escape && _isFullscreen) ToggleFullscreen(); }
     private void ToggleFullscreen() { if (!_isFullscreen) { _previousWindowStyle = WindowStyle; _previousWindowState = WindowState; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; } else { WindowStyle = _previousWindowStyle; WindowState = _previousWindowState; } _isFullscreen = !_isFullscreen; }
-    private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _renderCts?.Cancel(); _renderCts?.Dispose(); }
+    private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _renderCts?.Dispose(); }
     private static bool TryRead(string text, out decimal value) => decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
+
+    private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight)
+    {
+        public WriteableBitmap Bitmap { get; } = bitmap;
+        public int TileCount { get; } = tileCount;
+        public int RenderWidth { get; } = renderWidth;
+        public int RenderHeight { get; } = renderHeight;
+        public int CompletedTiles { get; set; }
+        public ConcurrentQueue<TileRenderEvent> Events { get; } = new();
+    }
+    private readonly record struct TileRenderEvent(bool IsStart, MandelbrotRenderTile Tile, byte[]? Pixels);
 }

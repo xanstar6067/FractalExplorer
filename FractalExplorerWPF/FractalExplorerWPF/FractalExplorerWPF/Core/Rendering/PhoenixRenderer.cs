@@ -37,6 +37,34 @@ public static class PhoenixRenderer
         });
     }
 
+    public static byte[] RenderTile(PhoenixState state, int canvasWidth, int canvasHeight,
+        MandelbrotRenderTile tile, CancellationToken token)
+    {
+        byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
+        double centerX = (double)state.CenterX;
+        double centerY = (double)state.CenterY;
+        double scale = (double)(BaseScale / Math.Max(0.000000000001m, state.Zoom));
+        double thresholdSquared = (double)(state.Threshold * state.Threshold);
+        double p = (double)state.C1Real;
+        double q = (double)state.C1Imaginary;
+        for (int localY = 0; localY < tile.Height; localY++)
+        {
+            int canvasY = tile.Y + localY;
+            double imaginary = centerY + (canvasHeight / 2.0 - canvasY) * scale / canvasWidth;
+            for (int localX = 0; localX < tile.Width; localX++)
+            {
+                if ((localX & 31) == 0) token.ThrowIfCancellationRequested();
+                int canvasX = tile.X + localX;
+                double real = centerX + (canvasX - canvasWidth / 2.0) * scale / canvasWidth;
+                int iterations = Iterate(real, imaginary, p, q, state.Iterations, thresholdSquared, out double magnitudeSquared);
+                Color color = ResolveColor(state, iterations, Smooth(iterations, state.Iterations, magnitudeSquared));
+                int offset = (localY * tile.Width + localX) * 4;
+                pixels[offset] = color.B; pixels[offset + 1] = color.G; pixels[offset + 2] = color.R; pixels[offset + 3] = color.A;
+            }
+        }
+        return pixels;
+    }
+
     public static void RenderSlice(byte[] pixels, int width, int height, int stride, PhoenixSliceRange range,
         bool pSlice, decimal fixedParameter, int iterations, decimal threshold, int threadCount,
         CancellationToken token, Action<int>? progress = null)

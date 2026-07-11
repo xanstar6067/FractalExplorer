@@ -1,6 +1,7 @@
 <Window x:Class="FractalExplorerWPF.Views.PhoenixWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming" Title="Фрактал Феникс"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls" Title="Фрактал Феникс"
         Width="1120" Height="700" MinWidth="900" MinHeight="560" WindowStartupLocation="CenterOwner"
         Icon="../Assets/Icons/Phoenix.ico" KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
     <Window.Resources>
@@ -43,9 +44,15 @@
             </StackPanel></ScrollViewer>
         </Border>
         <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="Black" BorderBrush="{DynamicResource Theme.BorderBrush}"
-                BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True" SizeChanged="CanvasHost_OnSizeChanged"
+                BorderThickness="1" CornerRadius="7" ClipToBounds="True" theme:ThemeContract.IgnoreAudit="True" SizeChanged="CanvasHost_OnSizeChanged"
                 MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown" MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
-            <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+            <Grid>
+                <Grid x:Name="ImageLayer" ClipToBounds="True">
+                    <Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+                </Grid>
+                <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/>
+            </Grid>
         </Border>
         <Button x:Name="ToggleControlsButton" Grid.Column="1" Width="38" Height="38" Padding="0" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top"
                 Panel.ZIndex="10" Content="✕" Click="ToggleControlsButton_OnClick"/>

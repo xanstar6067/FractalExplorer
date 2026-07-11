@@ -19,6 +19,10 @@ public partial class PhoenixParameterSelectorWindow : Window
     private readonly DispatcherTimer _qTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private readonly PhoenixSliceRange _pRange = new();
     private readonly PhoenixSliceRange _qRange = new();
+    private readonly PhoenixSliceRange _renderedPRange = new();
+    private readonly PhoenixSliceRange _renderedQRange = new();
+    private bool _hasRenderedP;
+    private bool _hasRenderedQ;
     private CancellationTokenSource? _pCts;
     private CancellationTokenSource? _qCts;
     private bool _updating;
@@ -118,7 +122,19 @@ public partial class PhoenixParameterSelectorWindow : Window
                 SliceIterations, 4, Environment.ProcessorCount, cts.Token, value => Dispatcher.Invoke(() => progress.Value = value)), cts.Token);
             BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, pixels, width * 4);
             bitmap.Freeze();
-            if (pSlice) PSliceImage.Source = bitmap; else QSliceImage.Source = bitmap;
+            if (pSlice)
+            {
+                PSliceImage.Source = bitmap;
+                CopyRange(range, _renderedPRange);
+                _hasRenderedP = true;
+            }
+            else
+            {
+                QSliceImage.Source = bitmap;
+                CopyRange(range, _renderedQRange);
+                _hasRenderedQ = true;
+            }
+            UpdateSliceTransform(pSlice);
             UpdateMarkers();
         }
         catch (OperationCanceledException) { }
@@ -152,7 +168,7 @@ public partial class PhoenixParameterSelectorWindow : Window
         if (width is < 1e-12 or > 1e4 || height is < 1e-12 or > 1e4) return;
         range.MinX = mouseX - fx * width; range.MaxX = range.MinX + width;
         range.MinY = mouseY - (1 - fy) * height; range.MaxY = range.MinY + height;
-        UpdateMarkers(); ScheduleSlice(pSlice); e.Handled = true;
+        UpdateMarkers(); UpdateSliceTransform(pSlice); ScheduleSlice(pSlice); e.Handled = true;
     }
 
     private void SliceHost_OnMouseDown(object sender, MouseButtonEventArgs e)
@@ -168,7 +184,8 @@ public partial class PhoenixParameterSelectorWindow : Window
         Border host = (Border)sender; Point current = e.GetPosition(host); PhoenixSliceRange range = _panPSlice ? _pRange : _qRange;
         double dx = (current.X - _panStart.X) * (range.MaxX - range.MinX) / Math.Max(1, host.ActualWidth);
         double dy = (current.Y - _panStart.Y) * (range.MaxY - range.MinY) / Math.Max(1, host.ActualHeight);
-        range.MinX -= dx; range.MaxX -= dx; range.MinY += dy; range.MaxY += dy; _panStart = current; UpdateMarkers(); e.Handled = true;
+        range.MinX -= dx; range.MaxX -= dx; range.MinY += dy; range.MaxY += dy; _panStart = current;
+        UpdateMarkers(); UpdateSliceTransform(_panPSlice); e.Handled = true;
     }
 
     private void SliceHost_OnMouseUp(object sender, MouseButtonEventArgs e)
@@ -177,7 +194,7 @@ public partial class PhoenixParameterSelectorWindow : Window
         _panning = false; ((Border)sender).ReleaseMouseCapture(); Mouse.OverrideCursor = null; ScheduleSlice(IsPSlice(sender)); e.Handled = true;
     }
 
-    private void SliceHost_OnSizeChanged(object sender, SizeChangedEventArgs e) { UpdateMarkers(); ScheduleSlice(IsPSlice(sender)); }
+    private void SliceHost_OnSizeChanged(object sender, SizeChangedEventArgs e) { bool pSlice = IsPSlice(sender); UpdateMarkers(); UpdateSliceTransform(pSlice); ScheduleSlice(pSlice); }
 
     private void UpdateMarkers()
     {
@@ -198,7 +215,35 @@ public partial class PhoenixParameterSelectorWindow : Window
         vertical.X1 = x; vertical.X2 = x; vertical.Y1 = 0; vertical.Y2 = height;
     }
 
-    private void Reset_OnClick(object sender, RoutedEventArgs e) { _pRange.Reset(); _qRange.Reset(); UpdateMarkers(); ScheduleSlice(true); ScheduleSlice(false); }
+    private void Reset_OnClick(object sender, RoutedEventArgs e)
+    {
+        _pRange.Reset(); _qRange.Reset(); UpdateMarkers();
+        UpdateSliceTransform(true); UpdateSliceTransform(false);
+        ScheduleSlice(true); ScheduleSlice(false);
+    }
+    private void UpdateSliceTransform(bool pSlice)
+    {
+        bool hasFrame = pSlice ? _hasRenderedP : _hasRenderedQ;
+        if (!hasFrame) return;
+        System.Windows.Controls.Image image = pSlice ? PSliceImage : QSliceImage;
+        Border host = pSlice ? PSliceHost : QSliceHost;
+        PhoenixSliceRange rendered = pSlice ? _renderedPRange : _renderedQRange;
+        PhoenixSliceRange current = pSlice ? _pRange : _qRange;
+        double currentWidth = current.MaxX - current.MinX;
+        double currentHeight = current.MaxY - current.MinY;
+        if (currentWidth <= 0 || currentHeight <= 0 || host.ActualWidth <= 0 || host.ActualHeight <= 0) return;
+        double scaleX = (rendered.MaxX - rendered.MinX) / currentWidth;
+        double scaleY = (rendered.MaxY - rendered.MinY) / currentHeight;
+        double offsetX = (rendered.MinX - current.MinX) / currentWidth * host.ActualWidth;
+        double offsetY = (current.MaxY - rendered.MaxY) / currentHeight * host.ActualHeight;
+        image.RenderTransformOrigin = new Point(0, 0);
+        image.RenderTransform = new MatrixTransform(scaleX, 0, 0, scaleY, offsetX, offsetY);
+    }
+    private static void CopyRange(PhoenixSliceRange source, PhoenixSliceRange target)
+    {
+        target.MinX = source.MinX; target.MaxX = source.MaxX;
+        target.MinY = source.MinY; target.MaxY = source.MaxY;
+    }
     private void Apply_OnClick(object sender, RoutedEventArgs e)
     {
         if (!TryRead(PBox.Text, out decimal p) || !TryRead(QBox.Text, out decimal q) || p is < -2 or > 2 || q is < -2 or > 2)

@@ -121,6 +121,35 @@ public sealed class NewtonPoolsEngine
         });
     }
 
+    public byte[] RenderTile(MandelbrotRenderTile tile, int canvasWidth, int canvasHeight, CancellationToken token)
+    {
+        byte[] buffer = new byte[checked(tile.Width * tile.Height * 4)];
+        if (_formula is null || _firstDerivative is null || Roots.Count == 0)
+        {
+            Fill(buffer, tile.Width, tile.Height, tile.Width * 4, BackgroundColor);
+            return buffer;
+        }
+        double unitsPerPixel = Scale / canvasWidth;
+        var variables = new Dictionary<string, Complex>(1);
+        for (int localY = 0; localY < tile.Height; localY++)
+        {
+            int canvasY = tile.Y + localY;
+            for (int localX = 0; localX < tile.Width; localX++)
+            {
+                if ((localX & 31) == 0) token.ThrowIfCancellationRequested();
+                int canvasX = tile.X + localX;
+                Complex z = new(
+                    CenterX + (canvasX - canvasWidth / 2.0) * unitsPerPixel,
+                    CenterY + (canvasY - canvasHeight / 2.0) * unitsPerPixel);
+                int iteration = Iterate(ref z, variables);
+                Color color = GetPixelColor(z, iteration);
+                int offset = (localY * tile.Width + localX) * 4;
+                buffer[offset] = color.B; buffer[offset + 1] = color.G; buffer[offset + 2] = color.R; buffer[offset + 3] = color.A;
+            }
+        }
+        return buffer;
+    }
+
     private int Iterate(ref Complex z, Dictionary<string, Complex> variables)
     {
         int iteration = 0;
