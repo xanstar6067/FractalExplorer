@@ -20,6 +20,9 @@ public partial class JuliaConstantPickerWindow : Window
     private bool _updatingText;
     private bool _panning;
     private Point _lastPoint;
+    private decimal _panSelectedReal;
+    private decimal _panSelectedImaginary;
+    private readonly TranslateTransform _panTransform = new();
     private decimal _centerX;
     private decimal _centerY;
     private decimal _zoom;
@@ -49,6 +52,7 @@ public partial class JuliaConstantPickerWindow : Window
         }
 
         InitializeComponent();
+        PreviewImage.RenderTransform = _panTransform;
         HeaderText.Text = sourceVariant == MandelbrotVariant.BurningShip
             ? "Карта «Горящего корабля»"
             : "Карта множества Мандельброта";
@@ -95,6 +99,8 @@ public partial class JuliaConstantPickerWindow : Window
                 PixelFormats.Bgra32, null, pixels, width * 4);
             bitmap.Freeze();
             PreviewImage.Source = bitmap;
+            _panTransform.X = 0;
+            _panTransform.Y = 0;
             StatusText.Text = $"C = {SelectedReal:G10} {(SelectedImaginary < 0 ? "−" : "+")} {Math.Abs(SelectedImaginary):G10}i";
             UpdateMarker();
         }
@@ -149,25 +155,29 @@ public partial class JuliaConstantPickerWindow : Window
         e.Handled = true;
     }
 
+    private void MapHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_panning || e.ChangedButton != MouseButton.Left) return;
+        (decimal x, decimal y) = ScreenToWorld(e.GetPosition(MapHost));
+        if (x >= _minReal && x <= _maxReal && y >= _minImaginary && y <= _maxImaginary)
+        {
+            SelectedReal = x;
+            SelectedImaginary = y;
+            SetConstantText();
+            UpdateMarker();
+        }
+        e.Handled = true;
+    }
+
     private void MapHost_OnMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left)
-        {
-            (decimal x, decimal y) = ScreenToWorld(e.GetPosition(MapHost));
-            if (x >= _minReal && x <= _maxReal && y >= _minImaginary && y <= _maxImaginary)
-            {
-                SelectedReal = x;
-                SelectedImaginary = y;
-                SetConstantText();
-                UpdateMarker();
-            }
-            return;
-        }
-
         if (e.ChangedButton == MouseButton.Middle)
         {
             _panning = true;
             _lastPoint = e.GetPosition(MapHost);
+            _panSelectedReal = SelectedReal;
+            _panSelectedImaginary = SelectedImaginary;
+            _renderCts?.Cancel();
             MapHost.CaptureMouse();
             Mouse.OverrideCursor = Cursors.SizeAll;
             e.Handled = true;
@@ -178,18 +188,26 @@ public partial class JuliaConstantPickerWindow : Window
     {
         if (!_panning || e.MiddleButton != MouseButtonState.Pressed) return;
         Point current = e.GetPosition(MapHost);
+        Vector screenDelta = current - _lastPoint;
         (decimal X, decimal Y) before = ScreenToWorld(_lastPoint);
         (decimal X, decimal Y) after = ScreenToWorld(current);
         _centerX += before.X - after.X;
         _centerY += before.Y - after.Y;
+        _panTransform.X += screenDelta.X;
+        _panTransform.Y += screenDelta.Y;
         _lastPoint = current;
+        SelectedReal = _panSelectedReal;
+        SelectedImaginary = _panSelectedImaginary;
         UpdateMarker();
+        e.Handled = true;
     }
 
     private void MapHost_OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Middle || !_panning) return;
         _panning = false;
+        SelectedReal = _panSelectedReal;
+        SelectedImaginary = _panSelectedImaginary;
         MapHost.ReleaseMouseCapture();
         Mouse.OverrideCursor = null;
         ScheduleRender();

@@ -37,6 +37,7 @@
                 BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7"
                 theme:ThemeContract.IgnoreAudit="True" ClipToBounds="True"
                 SizeChanged="MapHost_OnSizeChanged" MouseWheel="MapHost_OnMouseWheel"
+                MouseLeftButtonUp="MapHost_OnMouseLeftButtonUp"
                 MouseDown="MapHost_OnMouseDown" MouseMove="MapHost_OnMouseMove" MouseUp="MapHost_OnMouseUp">
             <Grid>
                 <Image x:Name="PreviewImage" Stretch="Fill" SnapsToDevicePixels="True"/>
