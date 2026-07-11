@@ -87,8 +87,13 @@
                         <TextBlock Margin="0,18,0,5"
                                    Foreground="{DynamicResource Theme.SecondaryTextBrush}"
                                    Text="Тема оформления приложения:"/>
-                        <ComboBox x:Name="ThemeSelector" DisplayMemberPath="DisplayName"
-                                  SelectionChanged="ThemeSelector_OnSelectionChanged"/>
+                        <ComboBox x:Name="ThemeSelector" SelectionChanged="ThemeSelector_OnSelectionChanged">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding DisplayName}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                         <Button Margin="0,7,0,0" Content="Настроить темы…" Click="ThemeEditor_OnClick"/>
 
                         <Button x:Name="LaunchButton"

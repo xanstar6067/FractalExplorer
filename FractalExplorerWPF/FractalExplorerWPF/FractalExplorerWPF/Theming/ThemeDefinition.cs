@@ -45,4 +45,6 @@ public sealed class ThemeDefinition
         HighVisibilityInteractiveHover = HighVisibilityInteractiveHover,
         HighVisibilityInteractiveStates = HighVisibilityInteractiveStates
     };
+
+    public override string ToString() => DisplayName;
 }

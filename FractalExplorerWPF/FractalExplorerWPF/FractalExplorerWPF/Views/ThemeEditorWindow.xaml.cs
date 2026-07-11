@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using FractalExplorerWPF.Infrastructure.ColorPicking;
 using FractalExplorerWPF.Theming;
 using Color = System.Windows.Media.Color;
 using MediaBrush = System.Windows.Media.Brush;
@@ -32,6 +33,7 @@ public partial class ThemeEditorWindow : Window
     private readonly Dictionary<string, Color> _colors = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Border> _swatches = new(StringComparer.Ordinal);
     private readonly List<ThemeDefinition> _themes = [];
+    private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
     private readonly WindowsThemeImporter _windowsImporter = new();
     private ThemeDefinition? _selectedTheme;
     private bool _updating;
@@ -116,7 +118,7 @@ public partial class ThemeEditorWindow : Window
     private void EditColor_OnClick(object sender, RoutedEventArgs e)
     {
         if (_selectedTheme is not { IsBuiltIn: false } || sender is not Button { Tag: string property } || !_colors.TryGetValue(property, out Color color)) return;
-        if (!ThemeColorPickerWindow.TryPick(this, color, out Color selected)) return;
+        if (!_colorSelectionService.TrySelectColor(this, color, out Color selected)) return;
         _colors[property] = selected;
         RefreshSwatches();
         RefreshPreview();
