@@ -102,7 +102,8 @@ public partial class NovaWindow : Window
     private void RenderButton_OnClick(object sender, RoutedEventArgs e) => _ = RenderPreviewAsync();
     private void CancelButton_OnClick(object sender, RoutedEventArgs e) => _renderCts?.Cancel();
     private void PaletteButton_OnClick(object sender, RoutedEventArgs e) { var dialog = new MandelbrotPaletteWindow(_paletteManager) { Owner = this }; dialog.PaletteApplied += (_, _) => ScheduleRender(); dialog.ShowDialog(); }
-    private void SavesButton_OnClick(object sender, RoutedEventArgs e) => new NovaSavesWindow(this, _saveStore, _variant) { Owner = this }.ShowDialog();
+    private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
+        SaveManagerWindow.Open(this, SaveManagerConfigurations.ForNova(this, _saveStore, _variant));
 
     private void ScheduleRender() { if (!IsLoaded) return; _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
     private void ScheduleMapRender() { if (!IsLoaded || _variant != NovaVariant.Julia) return; _mapCts?.Cancel(); _mapTimer.Stop(); _mapTimer.Start(); }
@@ -126,7 +127,7 @@ public partial class NovaWindow : Window
             int height = checked(Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY)) * factor);
             TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 16 * factor, strategy);
-            var bitmap = new WriteableBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Bgra32, null);
+            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
             var session = new RenderSession(bitmap, tiles.Count, width, height); _activeSession = session; CanvasImage.Source = bitmap;
             RenderOverlay.BeginSession(width, height); _visualizationTimer.Start();
             await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
@@ -163,8 +164,10 @@ public partial class NovaWindow : Window
             if (entry.Start) RenderOverlay.StartTile(entry.Tile);
             else if (entry.Pixels is not null)
             {
-                session.Bitmap.WritePixels(new Int32Rect(entry.Tile.X, entry.Tile.Y, entry.Tile.Width, entry.Tile.Height), entry.Pixels, entry.Tile.Width * 4, 0);
-                RenderOverlay.CompleteTile(entry.Tile); session.Completed++;
+                if (ProgressiveRenderBitmap.WriteTile(session.Bitmap, entry.Tile, entry.Pixels))
+                {
+                    RenderOverlay.CompleteTile(entry.Tile); session.Completed++;
+                }
             }
             processed++; changed = true;
         }

@@ -47,6 +47,7 @@ public partial class MandelbrotWindow : Window
 
     internal string SaveManagerDisplayName => _definition.DisplayName;
     internal string SaveManagerIdentifier => _definition.Identifier;
+    internal MandelbrotVariant SaveManagerVariant => _definition.Variant;
 
     public MandelbrotWindow(MandelbrotVariant variant, decimal? juliaReal = null, decimal? juliaImaginary = null)
     {
@@ -118,8 +119,10 @@ public partial class MandelbrotWindow : Window
         int iterations = ReadInt(IterationsBox.Text, "итерации", 50, 100_000);
         decimal threshold = ReadDecimal(ThresholdBox.Text, "порог выхода", 0.1m, 1_000m);
         decimal power = _definition.HasPower
-            ? ReadDecimal(PowerBox.Text, "степень", 0.1m, 12m)
+            ? ReadDecimal(PowerBox.Text, "степень", _definition.Variant == MandelbrotVariant.Simonobrot ? -12m : 0.1m, 12m)
             : 2m;
+        if (_definition.Variant == MandelbrotVariant.Simonobrot && Math.Abs(power) < 0.1m)
+            throw new InvalidOperationException("Для Симоноброта модуль степени должен быть не меньше 0.1.");
         MandelbrotPalette palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name);
 
         return new MandelbrotState
@@ -387,7 +390,7 @@ public partial class MandelbrotWindow : Window
     }
 
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
-        new MandelbrotSavesWindow(this, _saveStore) { Owner = this }.ShowDialog();
+        SaveManagerWindow.Open(this, SaveManagerConfigurations.ForMandelbrot(this, _saveStore));
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -530,7 +533,7 @@ public partial class MandelbrotWindow : Window
             int renderHeight = checked(pixelHeight * factor);
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(
                 renderWidth, renderHeight, 16 * factor, strategy);
-            var bitmap = new WriteableBitmap(renderWidth, renderHeight, 96, 96, PixelFormats.Bgra32, null);
+            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(renderWidth, renderHeight, 96, 96);
             var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight, cts);
             _activeSession = session;
             CanvasImage.Source = bitmap;
@@ -621,13 +624,11 @@ public partial class MandelbrotWindow : Window
             else if (visualEvent.Pixels is not null)
             {
                 MandelbrotRenderTile tile = visualEvent.Tile;
-                session.Bitmap.WritePixels(
-                    new Int32Rect(tile.X, tile.Y, tile.Width, tile.Height),
-                    visualEvent.Pixels,
-                    tile.Width * 4,
-                    0);
-                RenderOverlay.CompleteTile(tile);
-                session.CompletedTiles++;
+                if (ProgressiveRenderBitmap.WriteTile(session.Bitmap, tile, visualEvent.Pixels))
+                {
+                    RenderOverlay.CompleteTile(tile);
+                    session.CompletedTiles++;
+                }
             }
             processed++;
             changed = true;

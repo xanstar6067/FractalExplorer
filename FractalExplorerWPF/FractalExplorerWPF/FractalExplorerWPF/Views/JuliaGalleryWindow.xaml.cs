@@ -107,15 +107,20 @@ public partial class JuliaGalleryWindow : Window
             byte[] output = new byte[checked((int)bytesRequired)];
             MandelbrotPalette palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name);
             int completed = 0;
-            var liveBitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+            WriteableBitmap liveBitmap = ProgressiveRenderBitmap.CreateSeededOrOpaque(
+                width, height, 96, 96, GalleryImage.Source as BitmapSource);
             GalleryImage.Source = liveBitmap;
             EmptyHint.Visibility = Visibility.Collapsed;
             IProgress<GalleryTileResult> progress = new Progress<GalleryTileResult>(result =>
             {
-                liveBitmap.WritePixels(
-                    new Int32Rect(result.Cell.Column * parameters.TileSize, result.Cell.Row * parameters.TileSize,
-                        parameters.TileSize, parameters.TileSize),
-                    result.Pixels, parameters.TileSize * 4, 0);
+                var tile = new MandelbrotRenderTile(
+                    result.Cell.Column * parameters.TileSize,
+                    result.Cell.Row * parameters.TileSize,
+                    parameters.TileSize,
+                    parameters.TileSize,
+                    result.Cell.Column,
+                    result.Cell.Row);
+                ProgressiveRenderBitmap.WriteTile(liveBitmap, tile, result.Pixels);
                 RenderProgress.Value = result.Completed * 100.0 / cells.Count;
                 StatusText.Text = $"Отрисовано {result.Completed}/{cells.Count} ячеек";
             });

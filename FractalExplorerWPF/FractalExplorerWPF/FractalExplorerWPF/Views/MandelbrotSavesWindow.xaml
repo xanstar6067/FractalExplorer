@@ -1,9 +1,0 @@
-<Window x:Class="FractalExplorerWPF.Views.MandelbrotSavesWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls"
-        Title="Менеджер сохранений" Width="800" Height="520"
-        MinWidth="680" MinHeight="440" ResizeMode="CanResize"
-        WindowStartupLocation="CenterOwner" Icon="../Assets/Icons/Save.ico">
-    <controls:SaveManagerControl x:Name="Manager"/>
-</Window>

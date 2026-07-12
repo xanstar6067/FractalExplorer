@@ -71,7 +71,7 @@ public partial class FlameWindow : Window
     }
     private void Transforms_OnClick(object sender,RoutedEventArgs e){var editor=new FlameTransformEditorWindow(_transforms){Owner=this};editor.TransformsApplied+=ApplyTransforms;editor.ShowDialog();}
     private void ApplyTransforms(IReadOnlyList<FlameTransform> transforms){_transforms.Clear();_transforms.AddRange(transforms.Select(t=>t.Clone()));Schedule();}
-    private void Saves_OnClick(object sender,RoutedEventArgs e)=>new FlameSavesWindow(this,_saves){Owner=this}.ShowDialog();
+    private void Saves_OnClick(object sender,RoutedEventArgs e)=>SaveManagerWindow.Open(this,SaveManagerConfigurations.ForFlame(this,_saves));
     private async void Export_OnClick(object sender,RoutedEventArgs e)
     {
         DpiScale dpi=VisualTreeHelper.GetDpi(CanvasHost);int sourceW=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualWidth*dpi.DpiScaleX)),sourceH=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualHeight*dpi.DpiScaleY));var options=new MandelbrotExportWindow{Owner=this,ExportWidth=sourceW,ExportHeight=sourceH};if(options.ShowDialog()!=true)return;

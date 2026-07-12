@@ -70,7 +70,7 @@
                 BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True"
                 SizeChanged="CanvasHost_OnSizeChanged" MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
                 MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
-            <Grid><Grid ClipToBounds="True"><Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True"/><Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/></Grid>
+            <Grid><Grid ClipToBounds="True"><Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/><Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/></Grid>
                 <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/></Grid>
         </Border>
         <Button x:Name="ToggleControlsButton" Grid.Column="1" Width="38" Height="38" Padding="0" Margin="12" HorizontalAlignment="Left"

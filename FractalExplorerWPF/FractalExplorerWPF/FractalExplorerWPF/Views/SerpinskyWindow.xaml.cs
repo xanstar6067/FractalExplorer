@@ -138,8 +138,7 @@ public partial class SerpinskyWindow : Window
 
     private void SavesButton_OnClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new SerpinskySavesWindow(this, _saveStore) { Owner = this };
-        dialog.ShowDialog();
+        SaveManagerWindow.Open(this, SaveManagerConfigurations.ForSerpinsky(this, _saveStore));
     }
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)

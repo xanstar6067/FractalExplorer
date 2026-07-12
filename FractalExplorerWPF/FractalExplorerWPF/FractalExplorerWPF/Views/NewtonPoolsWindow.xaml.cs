@@ -274,7 +274,7 @@ public partial class NewtonPoolsWindow : Window
     }
 
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
-        new NewtonSavesWindow(this, _saveStore) { Owner = this }.ShowDialog();
+        SaveManagerWindow.Open(this, SaveManagerConfigurations.ForNewton(this, _saveStore));
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -348,8 +348,8 @@ public partial class NewtonPoolsWindow : Window
             int renderHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
             TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(renderWidth, renderHeight, 16, strategy);
-            var bitmap = new WriteableBitmap(renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY,
-                PixelFormats.Bgra32, null);
+            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(
+                renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
             NewtonPoolsEngine engine = CreateEngine(state);
             var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight);
             _activeSession = session;
@@ -419,10 +419,11 @@ public partial class NewtonPoolsWindow : Window
             if (entry.IsStart) RenderOverlay.StartTile(entry.Tile);
             else if (entry.Pixels is not null)
             {
-                session.Bitmap.WritePixels(new Int32Rect(entry.Tile.X, entry.Tile.Y, entry.Tile.Width, entry.Tile.Height),
-                    entry.Pixels, entry.Tile.Width * 4, 0);
-                RenderOverlay.CompleteTile(entry.Tile);
-                session.CompletedTiles++;
+                if (ProgressiveRenderBitmap.WriteTile(session.Bitmap, entry.Tile, entry.Pixels))
+                {
+                    RenderOverlay.CompleteTile(entry.Tile);
+                    session.CompletedTiles++;
+                }
             }
             processed++;
             changed = true;

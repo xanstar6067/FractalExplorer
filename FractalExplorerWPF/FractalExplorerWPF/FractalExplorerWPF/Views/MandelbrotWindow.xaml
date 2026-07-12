@@ -154,9 +154,9 @@
                 MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
             <Grid>
                 <Grid x:Name="ImageLayer" ClipToBounds="True">
-                    <Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True"
+                    <Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"
                            RenderTransformOrigin="0,0"/>
-                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
                 </Grid>
                 <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/>
             </Grid>

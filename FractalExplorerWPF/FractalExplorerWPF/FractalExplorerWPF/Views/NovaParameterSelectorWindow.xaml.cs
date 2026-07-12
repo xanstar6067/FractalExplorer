@@ -62,7 +62,7 @@ public partial class NovaParameterSelectorWindow : Window
             int width = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
             int height = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 16, RenderPatternSettings.SelectedPattern);
-            var bitmap = new WriteableBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Bgra32, null);
+            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
             var session = new Session(bitmap, tiles.Count, width, height); _session = session; CurrentImage.Source = bitmap;
             RenderOverlay.BeginSession(width, height); _visualTimer.Start();
             var queue = new ConcurrentQueue<MandelbrotRenderTile>(tiles);
@@ -92,8 +92,8 @@ public partial class NovaParameterSelectorWindow : Window
             if (entry.Start) RenderOverlay.StartTile(entry.Tile);
             else if (entry.Pixels is not null)
             {
-                session.Bitmap.WritePixels(new Int32Rect(entry.Tile.X, entry.Tile.Y, entry.Tile.Width, entry.Tile.Height), entry.Pixels, entry.Tile.Width * 4, 0);
-                RenderOverlay.CompleteTile(entry.Tile);
+                if (ProgressiveRenderBitmap.WriteTile(session.Bitmap, entry.Tile, entry.Pixels))
+                    RenderOverlay.CompleteTile(entry.Tile);
             }
             count++; changed = true;
         }
