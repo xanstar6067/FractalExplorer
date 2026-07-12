@@ -1,0 +1,31 @@
+<Window x:Class="FractalExplorerWPF.Views.BuddhabrotWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming" Title="Фрактал Буддаброт" Width="1120" Height="720" MinWidth="900" MinHeight="580" WindowStartupLocation="CenterOwner" KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}"><Grid.ColumnDefinitions><ColumnDefinition x:Name="ControlsColumn" Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border x:Name="ControlsHost" Margin="10" Padding="14" Background="{DynamicResource Theme.PanelBackgroundBrush}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+                <TextBlock FontSize="18" FontWeight="SemiBold" Text="Параметры Буддаброта"/><TextBlock Margin="0,10,0,0" Text="Режим"/>
+                <ComboBox x:Name="ModeBox" SelectionChanged="Parameter_OnChanged"><ComboBoxItem Content="Buddhabrot"/><ComboBoxItem Content="Anti-Buddhabrot"/><ComboBoxItem Content="Симметричный Buddhabrot"/></ComboBox>
+                <Grid Margin="0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions><TextBlock VerticalAlignment="Center" Text="Сэмплы"/><TextBox x:Name="SamplesBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                <Grid Margin="0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions><TextBlock VerticalAlignment="Center" Text="Макс. итераций"/><TextBox x:Name="IterationsBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                <Grid Margin="0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions><TextBlock VerticalAlignment="Center" Text="Масштаб"/><TextBox x:Name="ZoomBox" Grid.Column="1" TextChanged="ZoomBox_OnChanged"/></Grid>
+                <TextBlock Text="Потоки ЦП"/><ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
+                <TextBlock Margin="0,8,0,4" Text="Область случайной выборки C"/>
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,4,0"><TextBlock Text="Min Re"/><TextBox x:Name="MinReBox" TextChanged="Parameter_OnChanged"/><TextBlock Text="Min Im"/><TextBox x:Name="MinImBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                    <StackPanel Grid.Column="1" Margin="4,0,0,0"><TextBlock Text="Max Re"/><TextBox x:Name="MaxReBox" TextChanged="Parameter_OnChanged"/><TextBlock Text="Max Im"/><TextBox x:Name="MaxImBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                </Grid>
+                <Button Content="Запустить рендер" Click="Render_OnClick"/><Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="Cancel_OnClick"/>
+                <Button Content="Настроить палитру Буддаброта" Click="Palette_OnClick"/><Button Content="Менеджер сохранений" Click="Saves_OnClick"/><Button Content="Сохранить изображение" Click="Export_OnClick"/>
+                <TextBlock x:Name="ProgressText" Margin="0,12,0,4" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Ожидание"/><ProgressBar x:Name="ProgressBar" Height="20" Maximum="100"/>
+                <TextBlock x:Name="StatusText" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Готово"/>
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Theme.DisabledTextBrush}" Text="Изображение проявляется по мере накопления орбит. Колесо: масштаб, ЛКМ: перемещение."/>
+            </StackPanel></ScrollViewer>
+        </Border>
+        <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="Black" ClipToBounds="True" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True"
+                SizeChanged="CanvasHost_OnSizeChanged" MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown" MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+            <Grid><Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="Linear"/><Image x:Name="CurrentImage" Stretch="Fill"/>
+                <Border x:Name="AccumulationBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000" Visibility="Collapsed"><TextBlock x:Name="AccumulationText" Foreground="White"/></Border></Grid>
+        </Border>
+        <Button x:Name="ToggleButton" Grid.Column="1" Width="38" Height="38" Margin="12" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Panel.ZIndex="10" Content="✕" Click="Toggle_OnClick"/>
+    </Grid>
+</Window>

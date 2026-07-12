@@ -179,6 +179,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_selectedItem?.LaunchKey == "Buddhabrot")
+        {
+            new BuddhabrotWindow { Owner = this }.Show();
+            return;
+        }
+
         if (Enum.TryParse(_selectedItem?.LaunchKey, out MandelbrotVariant variant))
         {
             new MandelbrotWindow(variant) { Owner = this }.Show();

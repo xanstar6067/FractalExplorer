@@ -57,6 +57,7 @@ public static class FractalCatalog
         "collatz_preview_sq512.png" => "Collatz",
         "NovaMandelbrot_preview_sq512.png" => "NovaMandelbrot",
         "NovaJulia_preview_sq512.png" => "NovaJulia",
+        "buddhabrot_f_preview_sq512.png" => "Buddhabrot",
         _ => null
     };
 }
