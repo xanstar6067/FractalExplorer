@@ -1,0 +1,94 @@
+<UserControl x:Class="FractalExplorerWPF.Controls.SaveManagerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:theme="clr-namespace:FractalExplorerWPF.Theming">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280"/>
+            <ColumnDefinition Width="15"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center" Text="Список сохранений:"/>
+            <CheckBox x:Name="PointsOfInterestCheckBox" Grid.Column="1" Margin="8,0,0,0"
+                      VerticalAlignment="Center" Content="Точки интереса"
+                      Visibility="Collapsed" Checked="PointsOfInterestCheckBox_OnChanged"
+                      Unchecked="PointsOfInterestCheckBox_OnChanged"/>
+        </Grid>
+        <TextBlock Grid.Column="2" Text="Предпросмотр:"/>
+
+        <ListBox x:Name="SavesList" Grid.Row="1" Grid.RowSpan="3" Margin="0,7,0,8"
+                 DisplayMemberPath="DisplayName" SelectionChanged="SavesList_OnSelectionChanged"
+                 MouseDoubleClick="SavesList_OnMouseDoubleClick"/>
+
+        <Border Grid.Row="1" Grid.Column="2" Margin="0,7,0,0" Background="Black"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1"
+                CornerRadius="4" ClipToBounds="True" theme:ThemeContract.IgnoreAudit="True">
+            <Grid>
+                <Image x:Name="PreviewImage" Stretch="Uniform"/>
+                <TextBlock x:Name="EmptyPreviewText" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Выберите сохранение"
+                           IsHitTestVisible="False"/>
+            </Grid>
+        </Border>
+
+        <TextBlock x:Name="DetailsText" Grid.Row="2" Grid.Column="2" Margin="0,8,0,0"
+                   MaxHeight="66" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+
+        <Grid Grid.Row="3" Grid.Column="2" Margin="0,8,0,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Margin="0,0,0,3" Text="Имя сохранения:"/>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="SaveNameBox" VerticalContentAlignment="Center"/>
+                <Button x:Name="SaveButton" Grid.Column="1" Width="110" Margin="7,0,0,0"
+                        Content="Сохранить" Click="SaveButton_OnClick"/>
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="4" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="DeleteButton" Width="90" Content="Удалить" Click="DeleteButton_OnClick"/>
+            <TextBlock x:Name="StatusText" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+        </Grid>
+
+        <Grid Grid.Row="4" Grid.Column="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="RenderPreviewButton" Width="135" Content="Рендер превью"
+                    Click="RenderPreviewButton_OnClick"/>
+            <ProgressBar x:Name="PreviewProgress" Grid.Column="1" Width="90" Height="5" Margin="10,0"
+                         VerticalAlignment="Center" IsIndeterminate="True" Visibility="Collapsed"/>
+            <Button x:Name="LoadButton" Grid.Column="2" Width="105" Margin="0,0,7,0"
+                    Content="Загрузить" IsDefault="True" Click="LoadButton_OnClick"/>
+            <Button Grid.Column="3" Width="90" Content="Закрыть" IsCancel="True" Click="CloseButton_OnClick"/>
+        </Grid>
+    </Grid>
+</UserControl>

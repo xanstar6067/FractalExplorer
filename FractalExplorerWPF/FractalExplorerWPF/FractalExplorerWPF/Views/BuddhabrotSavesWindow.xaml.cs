@@ -1,7 +1,30 @@
-using System.Windows;using System.Windows.Controls;using FractalExplorerWPF.Infrastructure;using FractalExplorerWPF.Models;
-namespace FractalExplorerWPF.Views;public partial class BuddhabrotSavesWindow:Window
-{private readonly BuddhabrotWindow _window;private readonly BuddhabrotSaveStore _store;private List<BuddhabrotState> _states=[];private CancellationTokenSource? _cts;
-public BuddhabrotSavesWindow(BuddhabrotWindow w,BuddhabrotSaveStore s){InitializeComponent();_window=w;_store=s;Refresh();Closed+=(_,_)=>_cts?.Cancel();}private void Refresh(BuddhabrotState? selected=null){_states=_store.Load().OrderByDescending(x=>x.Timestamp).ToList();List.ItemsSource=null;List.ItemsSource=_states;List.SelectedItem=selected is null?_states.FirstOrDefault():_states.FirstOrDefault(x=>x.SaveName==selected.SaveName);}
-private void Save_OnClick(object s,RoutedEventArgs e){string name=NameBox.Text.Trim();if(name.Length==0)return;int i=_states.FindIndex(x=>x.SaveName.Equals(name,StringComparison.OrdinalIgnoreCase));BuddhabrotState state=_window.CaptureState(name);if(i>=0)_states[i]=state;else _states.Add(state);_store.Save(_states);Refresh(state);}private void Delete_OnClick(object s,RoutedEventArgs e){if(List.SelectedItem is not BuddhabrotState state)return;_states.Remove(state);_store.Save(_states);Refresh();}private void Load_OnClick(object s,RoutedEventArgs e){if(List.SelectedItem is BuddhabrotState state){_window.LoadState(state);DialogResult=true;}}
-private async void List_OnSelectionChanged(object s,SelectionChangedEventArgs e){_cts?.Cancel();if(List.SelectedItem is not BuddhabrotState state){Preview.Source=null;return;}NameBox.Text=state.SaveName;Details.Text=$"{state.Timestamp:g}\n{state.RenderMode}, {state.SampleCount:N0} сэмплов, {state.MaxIterations} итераций\nПалитра: {state.Palette.Name}";_cts=new CancellationTokenSource();try{Preview.Source=await _window.RenderStatePreviewAsync(state,430,300,_cts.Token);}catch(OperationCanceledException){}}
+using System.Windows;
+using FractalExplorerWPF.Infrastructure;
+using FractalExplorerWPF.Models;
+
+namespace FractalExplorerWPF.Views;
+
+public partial class BuddhabrotSavesWindow : Window
+{
+    private readonly SaveManagerController<BuddhabrotState> _controller;
+
+    public BuddhabrotSavesWindow(BuddhabrotWindow window, BuddhabrotSaveStore store)
+    {
+        InitializeComponent();
+        _controller = new SaveManagerController<BuddhabrotState>(this, Manager, new SaveManagerConfiguration<BuddhabrotState>
+        {
+            WindowTitle = "Сохранение/Загрузка: Буддаброт",
+            FractalIdentifier = "Buddhabrot",
+            LoadStates = store.Load,
+            SaveStates = store.Save,
+            CaptureState = window.CaptureState,
+            LoadState = window.LoadState,
+            RenderPreviewAsync = window.RenderStatePreviewAsync,
+            GetName = state => state.SaveName,
+            GetTimestamp = state => state.Timestamp,
+            GetDetails = state => $"{state.Timestamp:g} · {state.RenderMode} · {state.SampleCount:N0} сэмплов\n" +
+                                        $"Итерации: {state.MaxIterations} · Палитра: {state.Palette.Name}"
+        });
+        Closed += (_, _) => _controller.Dispose();
+    }
 }

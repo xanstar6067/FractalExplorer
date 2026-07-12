@@ -1,3 +1,48 @@
-using System.Windows;using System.Windows.Controls;using FractalExplorerWPF.Infrastructure;using FractalExplorerWPF.Models;
-namespace FractalExplorerWPF.Views;public partial class IfsSavesWindow:Window
-{private readonly IfsWindow _window;private readonly IfsSaveStore _store;private List<IfsState> _states=[];private CancellationTokenSource? _cts;public IfsSavesWindow(IfsWindow window,IfsSaveStore store){InitializeComponent();_window=window;_store=store;Refresh();Closed+=(_,_)=>_cts?.Cancel();}private void Refresh(IfsState? selected=null){_states=_store.Load().OrderByDescending(x=>x.Timestamp).ToList();SaveList.ItemsSource=null;SaveList.ItemsSource=_states;SaveList.SelectedItem=selected is null?_states.FirstOrDefault():_states.FirstOrDefault(x=>x.SaveName==selected.SaveName);}private void Save_OnClick(object sender,RoutedEventArgs e){string name=NameBox.Text.Trim();if(name.Length==0)return;IfsState state=_window.CaptureState(name);int i=_states.FindIndex(x=>x.SaveName.Equals(name,StringComparison.OrdinalIgnoreCase));if(i>=0)_states[i]=state;else _states.Add(state);_store.Save(_states);Refresh(state);}private void Delete_OnClick(object sender,RoutedEventArgs e){if(SaveList.SelectedItem is not IfsState state)return;_states.Remove(state);_store.Save(_states);Refresh();}private void Load_OnClick(object sender,RoutedEventArgs e){if(SaveList.SelectedItem is IfsState state){_window.LoadState(state.Clone());DialogResult=true;}}private async void SaveList_OnSelectionChanged(object sender,SelectionChangedEventArgs e){_cts?.Cancel();if(SaveList.SelectedItem is not IfsState state){Preview.Source=null;return;}NameBox.Text=state.SaveName;Details.Text=$"{state.Timestamp:g}\n{state.Iterations:N0} итераций, масштаб {state.Scale:F4}\nПреобразований: {state.Transforms.Count}";_cts=new();try{Preview.Source=await _window.RenderStatePreviewAsync(state.Clone(),450,310,_cts.Token);}catch(OperationCanceledException){}}}
+using System.Windows;
+using FractalExplorerWPF.Infrastructure;
+using FractalExplorerWPF.Models;
+
+namespace FractalExplorerWPF.Views;
+
+public partial class IfsSavesWindow : Window
+{
+    private readonly SaveManagerController<IfsState> _controller;
+
+    public IfsSavesWindow(IfsWindow window, IfsSaveStore store)
+    {
+        InitializeComponent();
+        _controller = new SaveManagerController<IfsState>(this, Manager, new SaveManagerConfiguration<IfsState>
+        {
+            WindowTitle = "Сохранение/Загрузка: IFS",
+            FractalIdentifier = "IFS",
+            LoadStates = store.Load,
+            SaveStates = store.Save,
+            CaptureState = window.CaptureState,
+            LoadState = state => window.LoadState(state.Clone()),
+            RenderPreviewAsync = (state, width, height, token) => window.RenderStatePreviewAsync(state.Clone(), width, height, token),
+            GetName = state => state.SaveName,
+            GetTimestamp = state => state.Timestamp,
+            GetDetails = Describe,
+            PointsOfInterest = CreatePointsOfInterest()
+        });
+        Closed += (_, _) => _controller.Dispose();
+    }
+
+    private static IReadOnlyList<IfsState> CreatePointsOfInterest() => IfsPresets.All.Select(preset => new IfsState
+    {
+        SaveName = preset.Name,
+        PointOfInterestId = preset.Id,
+        Iterations = preset.Iterations,
+        CenterX = preset.CenterX,
+        CenterY = preset.CenterY,
+        Scale = preset.Scale,
+        Transforms = preset.Transforms.Select(transform => transform.Clone()).ToList()
+    }).ToList();
+
+    private static string Describe(IfsState state)
+    {
+        string prefix = state.Timestamp == default ? "Точка интереса" : state.Timestamp.ToString("g");
+        return $"{prefix} · {state.Iterations:N0} итераций · Масштаб: {state.Scale:F4}\n" +
+               $"Преобразований: {state.Transforms.Count}";
+    }
+}

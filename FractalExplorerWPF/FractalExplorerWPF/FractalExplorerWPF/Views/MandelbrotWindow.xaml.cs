@@ -45,6 +45,9 @@ public partial class MandelbrotWindow : Window
     private int _stablePixelHeight;
     private RenderSession? _activeSession;
 
+    internal string SaveManagerDisplayName => _definition.DisplayName;
+    internal string SaveManagerIdentifier => _definition.Identifier;
+
     public MandelbrotWindow(MandelbrotVariant variant, decimal? juliaReal = null, decimal? juliaImaginary = null)
     {
         _definition = MandelbrotVariantDefinition.For(variant);
