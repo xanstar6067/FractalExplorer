@@ -102,7 +102,9 @@ public partial class PhoenixParameterSelectorWindow : Window
     private async Task RenderSliceAsync(bool pSlice)
     {
         Border host = pSlice ? PSliceHost : QSliceHost;
-        int width = Math.Max(1, (int)host.ActualWidth), height = Math.Max(1, (int)host.ActualHeight);
+        DpiScale dpi = VisualTreeHelper.GetDpi(host);
+        int width = Math.Max(1, (int)Math.Ceiling(host.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(host.ActualHeight * dpi.DpiScaleY));
         var cts = new CancellationTokenSource();
         if (pSlice) { _pCts?.Dispose(); _pCts = cts; } else { _qCts?.Dispose(); _qCts = cts; }
         ProgressBar progress = pSlice ? PProgress : QProgress;
@@ -120,7 +122,8 @@ public partial class PhoenixParameterSelectorWindow : Window
             decimal fixedValue = pSlice ? SelectedC1Imaginary : SelectedC1Real;
             await Task.Run(() => PhoenixRenderer.RenderSlice(pixels, width, height, width * 4, range, pSlice, fixedValue,
                 SliceIterations, 4, Environment.ProcessorCount, cts.Token, value => Dispatcher.Invoke(() => progress.Value = value)), cts.Token);
-            BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, pixels, width * 4);
+            BitmapSource bitmap = BitmapSource.Create(width, height, dpi.PixelsPerInchX,
+                dpi.PixelsPerInchY, PixelFormats.Bgra32, null, pixels, width * 4);
             bitmap.Freeze();
             if (pSlice)
             {

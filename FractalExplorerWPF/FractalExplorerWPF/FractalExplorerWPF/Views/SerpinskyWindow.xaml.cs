@@ -144,11 +144,12 @@ public partial class SerpinskyWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
+        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
         var options = new SerpinskyExportWindow
         {
             Owner = this,
-            ExportWidth = Math.Max(1, (int)CanvasHost.ActualWidth),
-            ExportHeight = Math.Max(1, (int)CanvasHost.ActualHeight)
+            ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)),
+            ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY))
         };
         if (options.ShowDialog() != true)
         {
@@ -227,8 +228,9 @@ public partial class SerpinskyWindow : Window
             return;
         }
 
-        int width = Math.Max(1, (int)CanvasHost.ActualWidth);
-        int height = Math.Max(1, (int)CanvasHost.ActualHeight);
+        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+        int width = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
         SerpinskySaveState state;
         try
         {
