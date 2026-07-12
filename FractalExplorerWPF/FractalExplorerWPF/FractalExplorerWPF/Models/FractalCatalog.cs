@@ -59,6 +59,7 @@ public static class FractalCatalog
         "NovaJulia_preview_sq512.png" => "NovaJulia",
         "buddhabrot_f_preview_sq512.png" => "Buddhabrot",
         "flame_fractal_preview_sq512.png" => "Flame",
+        "ifs_fractal_preview_sq512.png" => "IFS",
         _ => null
     };
 }
