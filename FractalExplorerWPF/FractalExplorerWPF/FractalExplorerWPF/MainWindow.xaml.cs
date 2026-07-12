@@ -197,6 +197,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (Enum.TryParse(_selectedItem?.LaunchKey, out DynamicSystemKind dynamicSystem))
+        {
+            new DynamicSystemWindow(dynamicSystem) { Owner = this }.Show();
+            return;
+        }
+
         if (Enum.TryParse(_selectedItem?.LaunchKey, out MandelbrotVariant variant))
         {
             new MandelbrotWindow(variant) { Owner = this }.Show();

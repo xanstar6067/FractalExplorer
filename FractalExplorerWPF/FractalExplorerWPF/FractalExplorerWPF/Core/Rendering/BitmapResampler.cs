@@ -27,9 +27,11 @@ public static class BitmapResampler
     {
         if (source.PixelWidth == width && source.PixelHeight == height) return source;
 
-        BitmapSource bgraSource = source.Format == PixelFormats.Bgra32
+        // Filtering premultiplied channels prevents dark/colored halos at
+        // partially transparent edges and keeps PNG alpha intact.
+        BitmapSource bgraSource = source.Format == PixelFormats.Pbgra32
             ? source
-            : new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+            : new FormatConvertedBitmap(source, PixelFormats.Pbgra32, null, 0);
         int sourceWidth = bgraSource.PixelWidth;
         int sourceHeight = bgraSource.PixelHeight;
         int sourceStride = checked(sourceWidth * 4);
@@ -81,7 +83,7 @@ public static class BitmapResampler
         }
 
         BitmapSource result = BitmapSource.Create(width, height, 96, 96,
-            PixelFormats.Bgra32, null, output, width * 4);
+            PixelFormats.Pbgra32, null, output, width * 4);
         result.Freeze();
         return result;
     }
