@@ -106,6 +106,11 @@ public partial class NovaWindow : Window
 
     private void ScheduleRender() { if (!IsLoaded) return; _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
     private void ScheduleMapRender() { if (!IsLoaded || _variant != NovaVariant.Julia) return; _mapCts?.Cancel(); _mapTimer.Stop(); _mapTimer.Start(); }
+    private void JuliaMapHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        DrawMapMarker();
+        if (e.NewSize.Width > 1 && e.NewSize.Height > 1) ScheduleMapRender();
+    }
 
     private async Task RenderPreviewAsync()
     {
@@ -168,12 +173,13 @@ public partial class NovaWindow : Window
 
     private async Task RenderJuliaMapAsync()
     {
-        if (_variant != NovaVariant.Julia || JuliaMapPreviewImage.ActualWidth <= 0) return;
+        if (_variant != NovaVariant.Julia || JuliaMapHost.ActualWidth <= 2 || JuliaMapHost.ActualHeight <= 2) return;
         NovaState state; try { state = CaptureState("map"); } catch { return; }
         state.Variant = NovaVariant.Mandelbrot; state.CenterX = 0; state.CenterY = 0; state.Zoom = 1; state.Iterations = 100;
         _mapCts?.Dispose(); _mapCts = new CancellationTokenSource(); CancellationToken token = _mapCts.Token;
-        int width = Math.Max(160, (int)Math.Ceiling(JuliaMapPreviewImage.ActualWidth));
-        int height = Math.Max(100, (int)Math.Ceiling(JuliaMapPreviewImage.ActualHeight));
+        DpiScale dpi = VisualTreeHelper.GetDpi(JuliaMapHost);
+        int width = Math.Max(160, (int)Math.Ceiling((JuliaMapHost.ActualWidth - 2) * dpi.DpiScaleX));
+        int height = Math.Max(100, (int)Math.Ceiling((JuliaMapHost.ActualHeight - 2) * dpi.DpiScaleY));
         int stride = width * 4; byte[] pixels = new byte[stride * height];
         try
         {

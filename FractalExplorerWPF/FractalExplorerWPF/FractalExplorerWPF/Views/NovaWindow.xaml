@@ -58,8 +58,9 @@
                 <TextBlock x:Name="StatusText" Margin="0,7,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap" Text="Готово"/>
                 <StackPanel x:Name="JuliaMapPanel" Margin="0,12,0,0">
                     <TextBlock Margin="0,0,0,5" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Кликните по карте для выбора C"/>
-                    <Border Height="150" Background="Black" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="5"
-                            theme:ThemeContract.IgnoreAudit="True" MouseLeftButtonUp="JuliaMapPreview_OnMouseLeftButtonUp">
+                    <Border x:Name="JuliaMapHost" Height="150" Background="Black" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="5"
+                            theme:ThemeContract.IgnoreAudit="True" MouseLeftButtonUp="JuliaMapPreview_OnMouseLeftButtonUp"
+                            SizeChanged="JuliaMapHost_OnSizeChanged">
                         <Grid ClipToBounds="True"><Image x:Name="JuliaMapPreviewImage" Stretch="Fill"/><Canvas x:Name="JuliaMapMarker" IsHitTestVisible="False"/></Grid>
                     </Border>
                 </StackPanel>
