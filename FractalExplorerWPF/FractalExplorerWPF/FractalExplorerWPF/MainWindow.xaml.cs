@@ -167,6 +167,18 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_selectedItem?.LaunchKey == "NovaMandelbrot")
+        {
+            new NovaWindow(NovaVariant.Mandelbrot) { Owner = this }.Show();
+            return;
+        }
+
+        if (_selectedItem?.LaunchKey == "NovaJulia")
+        {
+            new NovaWindow(NovaVariant.Julia) { Owner = this }.Show();
+            return;
+        }
+
         if (Enum.TryParse(_selectedItem?.LaunchKey, out MandelbrotVariant variant))
         {
             new MandelbrotWindow(variant) { Owner = this }.Show();

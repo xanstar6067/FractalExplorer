@@ -55,6 +55,8 @@ public static class FractalCatalog
         "newton_preview_sq512.png" => "NewtonPools",
         "phoenix_preview_sq512.png" => "Phoenix",
         "collatz_preview_sq512.png" => "Collatz",
+        "NovaMandelbrot_preview_sq512.png" => "NovaMandelbrot",
+        "NovaJulia_preview_sq512.png" => "NovaJulia",
         _ => null
     };
 }
