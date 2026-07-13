@@ -35,6 +35,9 @@
                 <TreeView x:Name="FractalTree"
                           Background="Transparent"
                           BorderThickness="0"
+                          ScrollViewer.CanContentScroll="False"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                           SelectedItemChanged="FractalTree_OnSelectedItemChanged"
                           PreviewMouseLeftButtonDown="FractalTree_OnPreviewMouseLeftButtonDown"
                           MouseDoubleClick="FractalTree_OnMouseDoubleClick"/>
