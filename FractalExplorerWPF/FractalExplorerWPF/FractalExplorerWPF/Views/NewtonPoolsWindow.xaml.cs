@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -553,10 +554,8 @@ public partial class NewtonPoolsWindow : Window
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e)
     {
-        _controlsVisible = !_controlsVisible;
-        ControlsColumn.Width = _controlsVisible ? new GridLength(290) : new GridLength(0);
-        ControlsHost.Visibility = _controlsVisible ? Visibility.Visible : Visibility.Collapsed;
-        ToggleControlsButton.Content = _controlsVisible ? "✕" : "☰";
+        FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost,
+            ToggleControlsButton, 290);
         ScheduleRender();
     }
 

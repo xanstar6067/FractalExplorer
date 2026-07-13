@@ -10,9 +10,9 @@
         <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="MinHeight" Value="29"/><Setter Property="Padding" Value="6,3"/><Setter Property="Margin" Value="0,2,0,7"/></Style>
     </Window.Resources>
     <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
-        <Grid.ColumnDefinitions><ColumnDefinition Width="290"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition x:Name="ControlsColumn" Width="290"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Margin="10" Padding="14" Background="{DynamicResource Theme.PanelBackgroundBrush}"
+        <Border x:Name="ControlsHost" Grid.Column="0" Margin="10" Padding="14" Background="{DynamicResource Theme.PanelBackgroundBrush}"
                 BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
@@ -62,5 +62,10 @@
                            Foreground="White" FontSize="16" Text="Подготовка галереи..."/>
             </Grid>
         </Border>
+
+        <Button x:Name="ToggleControlsButton" Grid.Column="1"
+                Style="{StaticResource FractalPanelToggleButtonStyle}"
+                Content="✕" ToolTip="Скрыть панель параметров"
+                Click="ToggleControlsButton_OnClick"/>
     </Grid>
 </Window>

@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -89,7 +90,7 @@ public partial class FlameWindow : Window
     private void SyncViewportBoxes(){_syncing=true;CenterXBox.Text=F(_centerX);CenterYBox.Text=F(_centerY);ScaleBox.Text=F(_worldScale);_syncing=false;}
     private void UpdateTransform(){if(CanvasHost.ActualWidth<=0)return;if(_hasFrame)ApplyViewportTransform(_imageScale,_translation,_renderedCenterX,_renderedCenterY,_renderedScale);ApplyViewportTransform(_coverageScale,_coverageTranslation,_activeCenterX,_activeCenterY,_activeScale);}
     private void ApplyViewportTransform(ScaleTransform scale,TranslateTransform translation,double sourceX,double sourceY,double sourceScale){double w=CanvasHost.ActualWidth,h=CanvasHost.ActualHeight,worldH=_worldScale*h/w;scale.ScaleX=scale.ScaleY=sourceScale/_worldScale;translation.X=(sourceX-_centerX)/_worldScale*w;translation.Y=(_centerY-sourceY)/worldH*h;}
-    private void Toggle_OnClick(object sender,RoutedEventArgs e){_controls=!_controls;ControlsColumn.Width=_controls?new GridLength(300):new GridLength(0);ControlsHost.Visibility=_controls?Visibility.Visible:Visibility.Collapsed;ToggleButton.Content=_controls?"✕":"☰";Schedule();}
+    private void Toggle_OnClick(object sender,RoutedEventArgs e)=>FractalControlPanel.Toggle(ref _controls,ControlsColumn,ControlsHost,ToggleButton,300,Schedule);
     private void Window_OnKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.F11||e.Key==Key.Escape&&_fullscreen)ToggleFull();}
     private void ToggleFull(){if(!_fullscreen){_oldStyle=WindowStyle;_oldState=WindowState;WindowStyle=WindowStyle.None;WindowState=WindowState.Maximized;}else{WindowStyle=_oldStyle;WindowState=_oldState;}_fullscreen=!_fullscreen;}
     private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();_cts?.Cancel();_cts?.Dispose();}

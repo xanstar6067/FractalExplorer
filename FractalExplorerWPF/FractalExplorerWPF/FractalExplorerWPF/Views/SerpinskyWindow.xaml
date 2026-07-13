@@ -27,11 +27,11 @@
 
     <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
+            <ColumnDefinition x:Name="ControlsColumn" Width="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Margin="10" Padding="14"
+        <Border x:Name="ControlsHost" Grid.Column="0" Margin="10" Padding="14"
                 Background="{DynamicResource Theme.PanelBackgroundBrush}"
                 BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7">
@@ -106,5 +106,10 @@
                    Stretch="Fill"
                    SnapsToDevicePixels="True"/>
         </Border>
+
+        <Button x:Name="ToggleControlsButton" Grid.Column="1"
+                Style="{StaticResource FractalPanelToggleButtonStyle}"
+                Content="✕" ToolTip="Скрыть панель параметров"
+                Click="ToggleControlsButton_OnClick"/>
     </Grid>
 </Window>

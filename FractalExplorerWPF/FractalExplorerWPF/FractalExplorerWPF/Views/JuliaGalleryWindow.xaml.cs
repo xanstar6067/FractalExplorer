@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -24,6 +25,7 @@ public partial class JuliaGalleryWindow : Window
     private int _canvasWidth;
     private int _canvasHeight;
     private bool _initializing = true;
+    private bool _controlsVisible = true;
 
     public JuliaGalleryWindow(MandelbrotVariant variant)
     {
@@ -295,6 +297,10 @@ public partial class JuliaGalleryWindow : Window
         _ = RenderGalleryAsync();
     }
     private void Cancel_OnClick(object sender, RoutedEventArgs e) => _renderCts?.Cancel();
+
+    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) =>
+        FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost,
+            ToggleControlsButton, 290, ScheduleRender);
 
     private static int ReadInt(string text, string name, int minimum, int maximum)
     {

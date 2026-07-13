@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorer.Engines;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
@@ -26,6 +27,7 @@ public partial class SerpinskyWindow : Window
     private bool _isRendering;
     private bool _isPanning;
     private bool _isFullscreen;
+    private bool _controlsVisible = true;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
     private Point _lastPanPoint;
@@ -383,6 +385,10 @@ public partial class SerpinskyWindow : Window
     }
 
     private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRender();
+
+    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) =>
+        FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost,
+            ToggleControlsButton, 250, ScheduleRender);
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {

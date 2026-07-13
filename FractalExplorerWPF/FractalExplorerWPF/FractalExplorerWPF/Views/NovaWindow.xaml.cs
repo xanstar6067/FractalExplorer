@@ -10,6 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -263,7 +264,7 @@ public partial class NovaWindow : Window
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) { if (!_panning) return; _panning = false; CanvasHost.ReleaseMouseCapture(); Mouse.OverrideCursor = null; ScheduleRender(); }
     private (decimal X, decimal Y) ScreenToWorld(Point p) { decimal width = (decimal)Math.Max(1, CanvasHost.ActualWidth), scale = BaseScale / _zoom; return (_centerX + ((decimal)p.X - width / 2) * scale / width, _centerY + ((decimal)Math.Max(1, CanvasHost.ActualHeight) / 2 - (decimal)p.Y) * scale / width); }
     private void UpdatePreviewTransform() { if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 || CanvasHost.ActualWidth <= 0) return; double scale = (double)(_zoom / _renderedZoom), width = CanvasHost.ActualWidth; decimal currentScale = BaseScale / _zoom; _previewScale.ScaleX = _previewScale.ScaleY = scale; _previewTranslation.X = (double)((_renderedCenterX - _centerX) / currentScale) * width; _previewTranslation.Y = (double)((_centerY - _renderedCenterY) / currentScale) * width; }
-    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) { _controlsVisible = !_controlsVisible; ControlsColumn.Width = _controlsVisible ? new GridLength(300) : new GridLength(0); ControlsHost.Visibility = _controlsVisible ? Visibility.Visible : Visibility.Collapsed; ToggleControlsButton.Content = _controlsVisible ? "✕" : "☰"; ScheduleRender(); }
+    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) => FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost, ToggleControlsButton, 300, ScheduleRender);
     private void Window_OnKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.F11 || e.Key == Key.Escape && _isFullscreen) ToggleFullscreen(); }
     private void ToggleFullscreen() { if (!_isFullscreen) { _previousWindowStyle = WindowStyle; _previousWindowState = WindowState; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; } else { WindowStyle = _previousWindowStyle; WindowState = _previousWindowState; } _isFullscreen = !_isFullscreen; }
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _mapTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _mapCts?.Cancel(); _renderCts?.Dispose(); _mapCts?.Dispose(); }

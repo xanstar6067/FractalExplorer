@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Infrastructure.ColorPicking;
 using FractalExplorerWPF.Models;
@@ -276,7 +277,7 @@ public partial class DynamicSystemWindow : Window
         _previewTranslation.X=(_renderedCenterX-_state.CenterX)/currentSpan*width;
         _previewTranslation.Y=(_state.CenterY-_renderedCenterY)/currentSpan*height;
     }
-    private void Toggle_OnClick(object sender,RoutedEventArgs e){_controls=!_controls;ControlsColumn.Width=_controls?new GridLength(250):new GridLength(0);ControlsHost.Visibility=_controls?Visibility.Visible:Visibility.Collapsed;ToggleButton.Content=_controls?"✕":"☰";ToggleButton.ToolTip=_controls?"Скрыть панель параметров":"Показать панель параметров";Schedule();}
+    private void Toggle_OnClick(object sender,RoutedEventArgs e)=>FractalControlPanel.Toggle(ref _controls,ControlsColumn,ControlsHost,ToggleButton,250,Schedule);
     private void Window_OnKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.F11||e.Key==Key.Escape&&_fullscreen){if(!_fullscreen){_oldStyle=WindowStyle;_oldState=WindowState;WindowStyle=WindowStyle.None;WindowState=WindowState.Maximized;}else{WindowStyle=_oldStyle;WindowState=_oldState;}_fullscreen=!_fullscreen;}}
     private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();EndVisualization();_cts?.Cancel();_cts?.Dispose();}
 

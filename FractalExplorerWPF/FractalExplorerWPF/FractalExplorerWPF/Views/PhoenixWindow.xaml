@@ -54,7 +54,7 @@
                 <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/>
             </Grid>
         </Border>
-        <Button x:Name="ToggleControlsButton" Grid.Column="1" Width="38" Height="38" Padding="0" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top"
-                Panel.ZIndex="10" Content="✕" Click="ToggleControlsButton_OnClick"/>
+        <Button x:Name="ToggleControlsButton" Grid.Column="1" Style="{StaticResource FractalPanelToggleButtonStyle}"
+                Content="✕" ToolTip="Скрыть панель параметров" Click="ToggleControlsButton_OnClick"/>
     </Grid>
 </Window>

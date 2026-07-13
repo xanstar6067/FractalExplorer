@@ -484,6 +484,24 @@
         <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="{TemplateBinding Background}"/></ControlTemplate></Setter.Value></Setter>
     </Style>
+
+    <Style x:Key="FractalPanelToggleButtonStyle" TargetType="Button"
+           BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Margin" Value="8,18,0,0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FontFamily" Value="Segoe UI Symbol"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Panel.ZIndex" Value="10"/>
+    </Style>
     <Style x:Key="ThemeScrollThumbStyle" TargetType="Thumb">
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="Template">

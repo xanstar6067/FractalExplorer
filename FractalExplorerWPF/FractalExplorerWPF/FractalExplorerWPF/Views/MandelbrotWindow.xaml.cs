@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -475,11 +476,8 @@ public partial class MandelbrotWindow : Window
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e)
     {
-        _controlsVisible = !_controlsVisible;
-        ParametersBorder.Visibility = _controlsVisible ? Visibility.Visible : Visibility.Collapsed;
-        ParametersColumn.Width = _controlsVisible ? new GridLength(278) : new GridLength(0);
-        ToggleControlsButton.Content = _controlsVisible ? "✕" : "☰";
-        ToggleControlsButton.ToolTip = _controlsVisible ? "Скрыть панель параметров" : "Показать панель параметров";
+        FractalControlPanel.Toggle(ref _controlsVisible, ParametersColumn, ParametersBorder,
+            ToggleControlsButton, 278);
         UpdateCoarsePreviewTransform();
         ScheduleRender();
     }

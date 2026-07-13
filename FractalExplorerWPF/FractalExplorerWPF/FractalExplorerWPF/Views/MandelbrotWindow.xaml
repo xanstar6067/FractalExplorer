@@ -140,9 +140,8 @@
             </ScrollViewer>
         </Border>
 
-        <Button x:Name="ToggleControlsButton" Grid.Column="1" Panel.ZIndex="10"
-                Width="34" Height="34" Margin="8,18,0,0"
-                HorizontalAlignment="Left" VerticalAlignment="Top"
+        <Button x:Name="ToggleControlsButton" Grid.Column="1"
+                Style="{StaticResource FractalPanelToggleButtonStyle}"
                 Content="✕" ToolTip="Скрыть панель параметров"
                 Click="ToggleControlsButton_OnClick"/>
 

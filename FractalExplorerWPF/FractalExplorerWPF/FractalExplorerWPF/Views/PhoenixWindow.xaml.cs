@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Core.Rendering;
+using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -286,7 +287,7 @@ public partial class PhoenixWindow : Window
         _previewTranslation.X = dx;
         _previewTranslation.Y = dy;
     }
-    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) { _controlsVisible = !_controlsVisible; ControlsColumn.Width = _controlsVisible ? new GridLength(280) : new GridLength(0); ControlsHost.Visibility = _controlsVisible ? Visibility.Visible : Visibility.Collapsed; ToggleControlsButton.Content = _controlsVisible ? "✕" : "☰"; ScheduleRender(); }
+    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) => FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost, ToggleControlsButton, 280, ScheduleRender);
     private void Window_OnKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.F11 || e.Key == Key.Escape && _isFullscreen) ToggleFullscreen(); }
     private void ToggleFullscreen() { if (!_isFullscreen) { _previousWindowStyle = WindowStyle; _previousWindowState = WindowState; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; } else { WindowStyle = _previousWindowStyle; WindowState = _previousWindowState; } _isFullscreen = !_isFullscreen; }
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _renderCts?.Dispose(); }
