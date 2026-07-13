@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -26,11 +27,19 @@ public partial class DynamicSystemWindow : Window
     private readonly Dictionary<string, TextBox> _boxes = [];
     private readonly Dictionary<string, ComboBox> _choices = [];
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(400) };
+    private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
+    private readonly ConcurrentQueue<DynamicTileRenderEvent> _visualizationEvents = new();
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly TranslateTransform _previewTranslation = new();
     private DynamicSystemState _state;
     private List<DynamicPalette> _palettes = [];
     private CancellationTokenSource? _cts;
-    private bool _rendering, _syncing, _panning, _controls = true, _fullscreen;
+    private WriteableBitmap? _progressiveBitmap;
+    private bool _rendering, _syncing, _panning, _controls = true, _fullscreen, _hasRenderedFrame;
     private Point _panStart;
+    private double _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
+    private double _renderedAMin, _renderedAMax, _renderedBMin, _renderedBMax;
     private WindowStyle _oldStyle;
     private WindowState _oldState;
 
@@ -39,9 +48,14 @@ public partial class DynamicSystemWindow : Window
         _kind = kind; _state = DynamicSystemState.CreateDefault(kind); _saves = new(kind);
         if (kind is DynamicSystemKind.Lyapunov or DynamicSystemKind.LogisticMap) _paletteStore = new(kind);
         InitializeComponent();
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewTranslation);
+        StableImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        StableImage.RenderTransform = _previewTransform;
         Title = Heading.Text = DisplayName(kind);
         BuildParameterPanel(); LoadPalettes(); SyncControls(); UpdateSwatches();
         _timer.Tick += (_, _) => { _timer.Stop(); _ = RenderAsync(); };
+        _visualizationTimer.Tick += (_, _) => FlushVisualizationEvents(false);
         Loaded += (_, _) => Schedule();
     }
 
@@ -113,7 +127,7 @@ public partial class DynamicSystemWindow : Window
         DynamicSystemState result = _state.Clone(name); result.Timestamp = DateTime.Now; result.PaletteName = ActivePalette?.Name ?? string.Empty; return result;
     }
 
-    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); _state = state.Clone(); _state.Kind = _kind; SyncControls(); UpdateSwatches(); Schedule(); }
+    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; _state = state.Clone(); _state.Kind = _kind; SyncControls(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
     private void SyncControls()
     {
         _syncing=true;
@@ -132,17 +146,25 @@ public partial class DynamicSystemWindow : Window
         {
             DpiScale dpi=VisualTreeHelper.GetDpi(CanvasHost); int width=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualWidth*dpi.DpiScaleX)), height=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualHeight*dpi.DpiScaleY));
             WriteableBitmap? overlay=null;
+            Action<MandelbrotRenderTile,byte[]>? tileReady=null;
+            Action<MandelbrotRenderTile>? tileStarted=null;
             if (_kind==DynamicSystemKind.Lyapunov)
             {
-                overlay=ProgressiveRenderBitmap.CreateOverlay(width*state.SsaaFactor,height*state.SsaaFactor,dpi.PixelsPerInchX,dpi.PixelsPerInchY); CurrentImage.Source=overlay;
+                int factor=Math.Clamp(state.SsaaFactor,1,4);
+                int renderWidth=width*factor,renderHeight=height*factor;
+                overlay=ProgressiveRenderBitmap.CreateOverlay(renderWidth,renderHeight,dpi.PixelsPerInchX,dpi.PixelsPerInchY); CurrentImage.Source=overlay;
+                BeginVisualization(overlay,renderWidth,renderHeight);
+                tileStarted=tile=>_visualizationEvents.Enqueue(new(true,tile,null));
+                tileReady=(tile,data)=>_visualizationEvents.Enqueue(new(false,tile,data));
             }
             var progress=new Progress<int>(p=>{ProgressBar.Value=p;ProgressText.Text=$"Рендер: {p}%";RenderBadgeText.Text=$"{p}%";});
-            BitmapSource image=await DynamicSystemRenderer.RenderAsync(state,width,height,ActivePalette,token,progress,overlay is null?null:(tile,data)=>Dispatcher.BeginInvoke(()=>ProgressiveRenderBitmap.WriteTile(overlay,tile,data)));
-            token.ThrowIfCancellationRequested(); StableImage.Source=image; CurrentImage.Source=null; ProgressBar.Value=100; ProgressText.Text="Готово"; StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F2} сек.";
+            BitmapSource image=await DynamicSystemRenderer.RenderAsync(state,width,height,ActivePalette,token,progress,tileReady,tileStarted:tileStarted);
+            FlushVisualizationEvents(true);
+            token.ThrowIfCancellationRequested(); StableImage.Source=image; CurrentImage.Source=null; RememberRenderedViewport(state); UpdatePreviewTransform(); ProgressBar.Value=100; ProgressText.Text="Готово"; StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F2} сек.";
         }
         catch(OperationCanceledException){CurrentImage.Source=null;StatusText.Text="Рендер отменён";}
         catch(Exception ex){CurrentImage.Source=null;MessageBox.Show(this,ex.Message,DisplayName(_kind),MessageBoxButton.OK,MessageBoxImage.Error);}
-        finally{_rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;}
+        finally{EndVisualization();_rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;}
     }
 
     public async Task<BitmapSource> RenderStatePreviewAsync(DynamicSystemState state,int width,int height,CancellationToken token)
@@ -152,7 +174,7 @@ public partial class DynamicSystemWindow : Window
     private void Schedule(){if(!IsLoaded)return;_timer.Stop();_timer.Start();}
     private void Render_OnClick(object sender,RoutedEventArgs e){_timer.Stop();_cts?.Cancel();_=RenderAsync();}
     private void Cancel_OnClick(object sender,RoutedEventArgs e)=>_cts?.Cancel();
-    private void Reset_OnClick(object sender,RoutedEventArgs e){DynamicSystemState defaults=DynamicSystemState.CreateDefault(_kind);_state.CenterX=defaults.CenterX;_state.CenterY=defaults.CenterY;_state.Zoom=1;if(_kind==DynamicSystemKind.Lyapunov){_state.AMin=defaults.AMin;_state.AMax=defaults.AMax;_state.BMin=defaults.BMin;_state.BMax=defaults.BMax;}SyncControls();Schedule();}
+    private void Reset_OnClick(object sender,RoutedEventArgs e){DynamicSystemState defaults=DynamicSystemState.CreateDefault(_kind);_state.CenterX=defaults.CenterX;_state.CenterY=defaults.CenterY;_state.Zoom=1;if(_kind==DynamicSystemKind.Lyapunov){_state.AMin=defaults.AMin;_state.AMax=defaults.AMax;_state.BMin=defaults.BMin;_state.BMax=defaults.BMax;}SyncControls();UpdatePreviewTransform();Schedule();}
     private void PaletteBox_OnSelectionChanged(object sender,SelectionChangedEventArgs e){if(_syncing||PaletteBox.SelectedItem is not DynamicPalette p)return;_state.PaletteName=p.Name;Schedule();}
     private void Palette_OnClick(object sender,RoutedEventArgs e){if(_paletteStore is null)return;var dialog=new DynamicPaletteWindow(_paletteStore,_palettes,ActivePalette){Owner=this};if(dialog.ShowDialog()==true){_state.PaletteName=dialog.SelectedPalette?.Name??_state.PaletteName;LoadPalettes();Schedule();}}
     private void FractalColor_OnClick(object sender,RoutedEventArgs e){if(ColorSelectionService.Default.TrySelectColor(this,_state.FractalColor,out Color c)){_state.FractalColor=c;UpdateSwatches();Schedule();}}
@@ -173,14 +195,73 @@ public partial class DynamicSystemWindow : Window
         _cts?.Cancel();_cts?.Dispose();_cts=new();try{DynamicSystemState state=CaptureState("export");state.SsaaFactor=options.SsaaFactor;BitmapSource image=await DynamicSystemRenderer.RenderAsync(state,options.RenderWidth,options.RenderHeight,ActivePalette,_cts.Token,new Progress<int>(p=>{ProgressBar.Value=p;ProgressText.Text=$"Экспорт: {p}%";}),null,false);if(image.PixelWidth!=options.ExportWidth||image.PixelHeight!=options.ExportHeight)image=options.ProcessingMode==MandelbrotExportProcessingMode.Lanczos?await Task.Run(()=>BitmapResampler.ResizeLanczos3(image,options.ExportWidth,options.ExportHeight,_cts.Token),_cts.Token):BitmapResampler.ResizeBicubic(image,options.ExportWidth,options.ExportHeight);BitmapEncoder encoder=options.ExportFormat switch{MandelbrotExportFormat.Jpeg=>new JpegBitmapEncoder{QualityLevel=options.JpegQuality},MandelbrotExportFormat.Bmp=>new BmpBitmapEncoder(),_=>new PngBitmapEncoder()};encoder.Frames.Add(BitmapFrame.Create(image));await using FileStream stream=File.Create(dialog.FileName);encoder.Save(stream);StatusText.Text=$"Сохранено: {dialog.FileName}";}catch(OperationCanceledException){StatusText.Text="Экспорт отменён";}
     }
 
-    private void CanvasHost_OnSizeChanged(object sender,SizeChangedEventArgs e)=>Schedule();
-    private void CanvasHost_OnMouseWheel(object sender,MouseWheelEventArgs e){double k=e.Delta>0?.82:1.22;Point p=e.GetPosition(CanvasHost);if(_kind==DynamicSystemKind.Lyapunov){double ax=_state.AMin+p.X/Math.Max(1,CanvasHost.ActualWidth)*(_state.AMax-_state.AMin),by=_state.BMax-p.Y/Math.Max(1,CanvasHost.ActualHeight)*(_state.BMax-_state.BMin);_state.AMin=ax+(_state.AMin-ax)*k;_state.AMax=ax+(_state.AMax-ax)*k;_state.BMin=by+(_state.BMin-by)*k;_state.BMax=by+(_state.BMax-by)*k;}else{_state.Zoom=Math.Clamp(_state.Zoom/k,.01,1_000_000);}SyncControls();Schedule();}
-    private void CanvasHost_OnMouseLeftButtonDown(object sender,MouseButtonEventArgs e){_cts?.Cancel();_panning=true;_panStart=e.GetPosition(CanvasHost);CanvasHost.CaptureMouse();}
-    private void CanvasHost_OnMouseMove(object sender,MouseEventArgs e){if(!_panning)return;Point p=e.GetPosition(CanvasHost);double dx=(p.X-_panStart.X)/Math.Max(1,CanvasHost.ActualWidth),dy=(p.Y-_panStart.Y)/Math.Max(1,CanvasHost.ActualHeight);if(_kind==DynamicSystemKind.Lyapunov){double aw=_state.AMax-_state.AMin,bh=_state.BMax-_state.BMin;_state.AMin-=dx*aw;_state.AMax-=dx*aw;_state.BMin+=dy*bh;_state.BMax+=dy*bh;}else{double span=BaseSpan(_state)/_state.Zoom;_state.CenterX-=dx*span;_state.CenterY+=dy*span;}_panStart=p;SyncControls();}
-    private void CanvasHost_OnMouseLeftButtonUp(object sender,MouseButtonEventArgs e){if(!_panning)return;_panning=false;CanvasHost.ReleaseMouseCapture();Schedule();}
+    private void CanvasHost_OnSizeChanged(object sender,SizeChangedEventArgs e){UpdatePreviewTransform();Schedule();}
+    private void CanvasHost_OnMouseWheel(object sender,MouseWheelEventArgs e){_cts?.Cancel();EndVisualization();CurrentImage.Source=null;double k=e.Delta>0?.82:1.22;Point p=e.GetPosition(CanvasHost);if(_kind==DynamicSystemKind.Lyapunov){double ax=_state.AMin+p.X/Math.Max(1,CanvasHost.ActualWidth)*(_state.AMax-_state.AMin),by=_state.BMax-p.Y/Math.Max(1,CanvasHost.ActualHeight)*(_state.BMax-_state.BMin);_state.AMin=ax+(_state.AMin-ax)*k;_state.AMax=ax+(_state.AMax-ax)*k;_state.BMin=by+(_state.BMin-by)*k;_state.BMax=by+(_state.BMax-by)*k;}else{_state.Zoom=Math.Clamp(_state.Zoom/k,.01,1_000_000);}SyncControls();UpdatePreviewTransform();Schedule();e.Handled=true;}
+    private void CanvasHost_OnMouseLeftButtonDown(object sender,MouseButtonEventArgs e){_cts?.Cancel();EndVisualization();CurrentImage.Source=null;_panning=true;_panStart=e.GetPosition(CanvasHost);CanvasHost.CaptureMouse();Mouse.OverrideCursor=Cursors.SizeAll;}
+    private void CanvasHost_OnMouseMove(object sender,MouseEventArgs e){if(!_panning)return;Point p=e.GetPosition(CanvasHost);double dx=(p.X-_panStart.X)/Math.Max(1,CanvasHost.ActualWidth),dy=(p.Y-_panStart.Y)/Math.Max(1,CanvasHost.ActualHeight);if(_kind==DynamicSystemKind.Lyapunov){double aw=_state.AMax-_state.AMin,bh=_state.BMax-_state.BMin;_state.AMin-=dx*aw;_state.AMax-=dx*aw;_state.BMin+=dy*bh;_state.BMax+=dy*bh;}else{double span=BaseSpan(_state)/_state.Zoom;_state.CenterX-=dx*span;_state.CenterY+=dy*span;}_panStart=p;SyncControls();UpdatePreviewTransform();}
+    private void CanvasHost_OnMouseLeftButtonUp(object sender,MouseButtonEventArgs e){if(!_panning)return;_panning=false;CanvasHost.ReleaseMouseCapture();Mouse.OverrideCursor=null;Schedule();}
+
+    private void BeginVisualization(WriteableBitmap bitmap,int renderWidth,int renderHeight)
+    {
+        while(_visualizationEvents.TryDequeue(out _)){}
+        _progressiveBitmap=bitmap;
+        RenderOverlay.BeginSession(renderWidth,renderHeight);
+        _visualizationTimer.Start();
+    }
+
+    private void FlushVisualizationEvents(bool drainAll)
+    {
+        if(_progressiveBitmap is not{}bitmap)return;
+        int processed=0;bool changed=false;
+        while((drainAll||processed<512)&&_visualizationEvents.TryDequeue(out DynamicTileRenderEvent visualEvent))
+        {
+            if(visualEvent.IsStart)RenderOverlay.StartTile(visualEvent.Tile);
+            else if(visualEvent.Pixels is not null&&ProgressiveRenderBitmap.WriteTile(bitmap,visualEvent.Tile,visualEvent.Pixels))RenderOverlay.CompleteTile(visualEvent.Tile);
+            processed++;changed=true;
+        }
+        if(changed)RenderOverlay.Refresh();
+    }
+
+    private void EndVisualization()
+    {
+        _visualizationTimer.Stop();
+        _progressiveBitmap=null;
+        while(_visualizationEvents.TryDequeue(out _)){}
+        RenderOverlay.EndSession();
+    }
+
+    private void RememberRenderedViewport(DynamicSystemState state)
+    {
+        _renderedCenterX=state.CenterX;_renderedCenterY=state.CenterY;_renderedZoom=state.Zoom;
+        _renderedAMin=state.AMin;_renderedAMax=state.AMax;_renderedBMin=state.BMin;_renderedBMax=state.BMax;
+        _hasRenderedFrame=true;
+    }
+
+    private void UpdatePreviewTransform()
+    {
+        if(!_hasRenderedFrame||CanvasHost.ActualWidth<=0||CanvasHost.ActualHeight<=0)return;
+        double width=CanvasHost.ActualWidth,height=CanvasHost.ActualHeight;
+        if(_kind==DynamicSystemKind.Lyapunov)
+        {
+            double currentWidth=_state.AMax-_state.AMin,currentHeight=_state.BMax-_state.BMin;
+            double renderedWidth=_renderedAMax-_renderedAMin,renderedHeight=_renderedBMax-_renderedBMin;
+            if(currentWidth<=0||currentHeight<=0||renderedWidth<=0||renderedHeight<=0)return;
+            double currentCenterX=(_state.AMin+_state.AMax)/2,currentCenterY=(_state.BMin+_state.BMax)/2;
+            double renderedCenterX=(_renderedAMin+_renderedAMax)/2,renderedCenterY=(_renderedBMin+_renderedBMax)/2;
+            _previewScale.ScaleX=renderedWidth/currentWidth;_previewScale.ScaleY=renderedHeight/currentHeight;
+            _previewTranslation.X=(renderedCenterX-currentCenterX)/currentWidth*width;
+            _previewTranslation.Y=(currentCenterY-renderedCenterY)/currentHeight*height;
+            return;
+        }
+        if(_state.Zoom<=0||_renderedZoom<=0)return;
+        double currentSpan=BaseSpan(_state)/_state.Zoom;
+        _previewScale.ScaleX=_previewScale.ScaleY=_state.Zoom/_renderedZoom;
+        _previewTranslation.X=(_renderedCenterX-_state.CenterX)/currentSpan*width;
+        _previewTranslation.Y=(_state.CenterY-_renderedCenterY)/currentSpan*height;
+    }
     private void Toggle_OnClick(object sender,RoutedEventArgs e){_controls=!_controls;ControlsColumn.Width=_controls?new GridLength(330):new GridLength(0);ControlsHost.Visibility=_controls?Visibility.Visible:Visibility.Collapsed;ToggleButton.Content=_controls?"✕":"☰";Schedule();}
     private void Window_OnKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.F11||e.Key==Key.Escape&&_fullscreen){if(!_fullscreen){_oldStyle=WindowStyle;_oldState=WindowState;WindowStyle=WindowStyle.None;WindowState=WindowState.Maximized;}else{WindowStyle=_oldStyle;WindowState=_oldState;}_fullscreen=!_fullscreen;}}
-    private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();_cts?.Cancel();_cts?.Dispose();}
+    private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();EndVisualization();_cts?.Cancel();_cts?.Dispose();}
 
     private static string DisplayName(DynamicSystemKind k)=>k switch{DynamicSystemKind.Lyapunov=>"Экспонента Ляпунова",DynamicSystemKind.Lorenz=>"Аттрактор Лоренца",DynamicSystemKind.Rossler=>"Аттрактор Рёсслера",DynamicSystemKind.LogisticMap=>"Логистическое отображение",DynamicSystemKind.Bifurcation=>"Диаграмма бифуркации",DynamicSystemKind.Henon=>"Карта Хенона",_=>"Отображение Икэды"};
     private static string Details(DynamicSystemState s)=>s.Kind==DynamicSystemKind.Lyapunov?$"{s.Pattern} · {s.Iterations} итераций · {s.PaletteName}":$"Масштаб {s.Zoom:G5} · {Math.Max(s.Iterations,s.Steps):N0} итераций";
@@ -188,4 +269,5 @@ public partial class DynamicSystemWindow : Window
     private static string Format(object? value)=>value switch{double d=>d.ToString("G15",CultureInfo.InvariantCulture),float f=>f.ToString("G9",CultureInfo.InvariantCulture),null=>string.Empty,_=>Convert.ToString(value,CultureInfo.InvariantCulture)??string.Empty};
     private static bool TryDouble(string text,out double value)=>double.TryParse(text,NumberStyles.Float,CultureInfo.InvariantCulture,out value)||double.TryParse(text,NumberStyles.Float,CultureInfo.CurrentCulture,out value);
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T:DependencyObject{for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){DependencyObject child=VisualTreeHelper.GetChild(root,i);if(child is T match)yield return match;foreach(T nested in FindVisualChildren<T>(child))yield return nested;}}
+    private readonly record struct DynamicTileRenderEvent(bool IsStart,MandelbrotRenderTile Tile,byte[]? Pixels);
 }

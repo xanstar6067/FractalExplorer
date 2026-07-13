@@ -15,12 +15,13 @@ public static class DynamicSystemRenderer
     public static async Task<BitmapSource> RenderAsync(
         DynamicSystemState state, int width, int height, DynamicPalette? palette,
         CancellationToken token, IProgress<int>? progress = null,
-        Action<MandelbrotRenderTile, byte[]>? tileReady = null, bool drawAxes = true)
+        Action<MandelbrotRenderTile, byte[]>? tileReady = null, bool drawAxes = true,
+        Action<MandelbrotRenderTile>? tileStarted = null)
     {
         int factor = Math.Clamp(state.SsaaFactor, 1, 4);
         int rw = checked(width * factor), rh = checked(height * factor);
         byte[] pixels = state.Kind == DynamicSystemKind.Lyapunov
-            ? await RenderLyapunovAsync(state, rw, rh, palette, token, progress, tileReady)
+            ? await RenderLyapunovAsync(state, rw, rh, palette, token, progress, tileReady, tileStarted)
             : await Task.Run(() => RenderOther(state, rw, rh, palette, token, progress, drawAxes), token);
         token.ThrowIfCancellationRequested();
         BitmapSource raw = BitmapSource.Create(rw, rh, 96, 96, PixelFormats.Bgra32, null, pixels, rw * 4);
@@ -29,7 +30,8 @@ public static class DynamicSystemRenderer
     }
 
     private static async Task<byte[]> RenderLyapunovAsync(DynamicSystemState s, int width, int height, DynamicPalette? source,
-        CancellationToken token, IProgress<int>? progress, Action<MandelbrotRenderTile, byte[]>? tileReady)
+        CancellationToken token, IProgress<int>? progress, Action<MandelbrotRenderTile, byte[]>? tileReady,
+        Action<MandelbrotRenderTile>? tileStarted)
     {
         var engine = new FractalLyapunovEngine
         {
@@ -39,10 +41,11 @@ public static class DynamicSystemRenderer
             Pattern = s.Pattern, ColorPalette = ToLyapunovPalette(source)
         };
         LyapunovColoringContext? context = await Task.Run(() => engine.PrepareColoringContext(width, height, token), token);
-        IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 64 * Math.Clamp(s.SsaaFactor, 1, 4), TileSchedulingStrategy.Classic);
+        IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 16 * Math.Clamp(s.SsaaFactor, 1, 4), TileSchedulingStrategy.Classic);
         byte[] output = new byte[checked(width * height * 4)]; int done = 0;
         await Parallel.ForEachAsync(tiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, s.Threads), CancellationToken = token }, (tile, cancellationToken) =>
         {
+            tileStarted?.Invoke(tile);
             byte[] data = engine.RenderSingleTile(new TileInfo(tile.X, tile.Y, tile.Width, tile.Height), width, height, out _, context);
             for (int y = 0; y < tile.Height; y++) Buffer.BlockCopy(data, y * tile.Width * 4, output, ((tile.Y + y) * width + tile.X) * 4, tile.Width * 4);
             tileReady?.Invoke(tile, data);

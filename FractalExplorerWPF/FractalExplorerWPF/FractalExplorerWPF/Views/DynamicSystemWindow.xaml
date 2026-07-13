@@ -1,5 +1,6 @@
 <Window x:Class="FractalExplorerWPF.Views.DynamicSystemWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls"
         xmlns:theme="clr-namespace:FractalExplorerWPF.Theming" Width="1180" Height="760" MinWidth="900" MinHeight="580"
         WindowStartupLocation="CenterOwner" KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
     <Window.Resources>
@@ -24,7 +25,7 @@
         </Border>
         <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="{StaticResource TransparencyBrush}" ClipToBounds="True" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True"
                 SizeChanged="CanvasHost_OnSizeChanged" MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown" MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
-            <Grid><Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><Image x:Name="CurrentImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><Border x:Name="RenderBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000" Visibility="Collapsed"><TextBlock x:Name="RenderBadgeText" Foreground="White"/></Border></Grid>
+            <Grid><Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><Image x:Name="CurrentImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/><Border x:Name="RenderBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000" Visibility="Collapsed"><TextBlock x:Name="RenderBadgeText" Foreground="White"/></Border></Grid>
         </Border>
         <Button x:Name="ToggleButton" Grid.Column="1" Width="38" Height="38" Margin="12" Padding="0" HorizontalAlignment="Left" VerticalAlignment="Top" Panel.ZIndex="10" Content="✕" Click="Toggle_OnClick"/>
     </Grid>
