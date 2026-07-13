@@ -16,16 +16,6 @@
     <None Include="MigrationSource\**\*" />
     <Resource Include="Assets\Previews\**\*" />
     <Resource Include="Assets\Icons\**\*" />
-    <!-- Pure rendering engines retained from the original implementation.
-         Their UI, persistence and palette management remain WPF-native. -->
-    <Compile Include="MigrationSource\Engines\FractalLyapunovEngine.cs" />
-    <Compile Include="MigrationSource\Engines\FractalLorenzEngine.cs" />
-    <Compile Include="MigrationSource\Engines\FractalRosslerEngine.cs" />
-    <Compile Include="MigrationSource\Engines\FractalLogisticMapEngine.cs" />
-    <Compile Include="MigrationSource\Engines\FractalBifurcationEngine.cs" />
-    <Compile Include="MigrationSource\Engines\FractalHenonEngine.cs" />
-    <Compile Include="MigrationSource\Engines\FractalIkedaEngine.cs" />
-    <Compile Include="MigrationSource\Utilities\RenderUtilities\TileInfo.cs" />
   </ItemGroup>
 
 </Project>
