@@ -122,9 +122,10 @@ public partial class NovaWindow : Window
         try
         {
             int factor = SsaaBox.SelectedItem is ComboBoxItem item ? Convert.ToInt32(item.Tag, CultureInfo.InvariantCulture) : 1;
-            DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-            int width = checked(Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)) * factor);
-            int height = checked(Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY)) * factor);
+            RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+            DpiScale dpi = surface.Dpi;
+            int width = checked(surface.PixelWidth * factor);
+            int height = checked(surface.PixelHeight * factor);
             TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 16 * factor, strategy);
             WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
@@ -180,9 +181,9 @@ public partial class NovaWindow : Window
         NovaState state; try { state = CaptureState("map"); } catch { return; }
         state.Variant = NovaVariant.Mandelbrot; state.CenterX = 0; state.CenterY = 0; state.Zoom = 1; state.Iterations = 100;
         _mapCts?.Dispose(); _mapCts = new CancellationTokenSource(); CancellationToken token = _mapCts.Token;
-        DpiScale dpi = VisualTreeHelper.GetDpi(JuliaMapHost);
-        int width = Math.Max(160, (int)Math.Ceiling((JuliaMapHost.ActualWidth - 2) * dpi.DpiScaleX));
-        int height = Math.Max(100, (int)Math.Ceiling((JuliaMapHost.ActualHeight - 2) * dpi.DpiScaleY));
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(JuliaMapHost);
+        int width = Math.Max(160, surface.PixelWidth);
+        int height = Math.Max(100, surface.PixelHeight);
         int stride = width * 4; byte[] pixels = new byte[stride * height];
         try
         {
@@ -192,7 +193,8 @@ public partial class NovaWindow : Window
                 byte[] rendered = NovaRenderer.RenderTile(state, width, height, tile, token, true);
                 Buffer.BlockCopy(rendered, 0, pixels, 0, pixels.Length);
             }, token);
-            BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, pixels, stride); bitmap.Freeze();
+            BitmapSource bitmap = BitmapSource.Create(width, height, surface.Dpi.PixelsPerInchX,
+                surface.Dpi.PixelsPerInchY, PixelFormats.Bgra32, null, pixels, stride); bitmap.Freeze();
             JuliaMapPreviewImage.Source = bitmap; DrawMapMarker();
         }
         catch (OperationCanceledException) { }
@@ -218,8 +220,8 @@ public partial class NovaWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
-        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-        var options = new MandelbrotExportWindow { Owner = this, ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)), ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY)) };
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+        var options = new MandelbrotExportWindow { Owner = this, ExportWidth = surface.PixelWidth, ExportHeight = surface.PixelHeight };
         if (options.ShowDialog() != true) return;
         string extension = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "jpg", MandelbrotExportFormat.Bmp => "bmp", _ => "png" };
         var save = new SaveFileDialog { Filter = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "JPEG image|*.jpg", MandelbrotExportFormat.Bmp => "Bitmap image|*.bmp", _ => "PNG image|*.png" }, FileName = $"{(_variant == NovaVariant.Julia ? "nova_julia" : "nova_mandelbrot")}_{DateTime.Now:yyyyMMdd_HHmmss}.{extension}" };

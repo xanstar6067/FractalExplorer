@@ -113,12 +113,12 @@ public partial class PhoenixWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
-        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
         var options = new MandelbrotExportWindow
         {
             Owner = this,
-            ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)),
-            ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY))
+            ExportWidth = surface.PixelWidth,
+            ExportHeight = surface.PixelHeight
         };
         if (options.ShowDialog() != true) return;
         string extension = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "jpg", MandelbrotExportFormat.Bmp => "bmp", _ => "png" };
@@ -166,9 +166,10 @@ public partial class PhoenixWindow : Window
         try
         {
             int factor = SsaaBox.SelectedItem is ComboBoxItem item ? Convert.ToInt32(item.Tag, CultureInfo.InvariantCulture) : 1;
-            DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-            int pixelWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
-            int pixelHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+            RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+            DpiScale dpi = surface.Dpi;
+            int pixelWidth = surface.PixelWidth;
+            int pixelHeight = surface.PixelHeight;
             int renderWidth = checked(pixelWidth * factor);
             int renderHeight = checked(pixelHeight * factor);
             TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;

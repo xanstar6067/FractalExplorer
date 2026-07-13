@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorer.Engines;
+using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
@@ -143,12 +144,12 @@ public partial class SerpinskyWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
-        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
         var options = new SerpinskyExportWindow
         {
             Owner = this,
-            ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)),
-            ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY))
+            ExportWidth = surface.PixelWidth,
+            ExportHeight = surface.PixelHeight
         };
         if (options.ShowDialog() != true)
         {
@@ -227,9 +228,9 @@ public partial class SerpinskyWindow : Window
             return;
         }
 
-        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-        int width = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+        int width = surface.PixelWidth;
+        int height = surface.PixelHeight;
         SerpinskySaveState state;
         try
         {
@@ -256,7 +257,9 @@ public partial class SerpinskyWindow : Window
                 state.Iterations,
                 1,
                 token,
-                new Progress<int>(value => RenderProgress.Value = value));
+                new Progress<int>(value => RenderProgress.Value = value),
+                surface.Dpi.PixelsPerInchX,
+                surface.Dpi.PixelsPerInchY);
             token.ThrowIfCancellationRequested();
             CanvasImage.Source = bitmap;
             stopwatch.Stop();
@@ -284,7 +287,9 @@ public partial class SerpinskyWindow : Window
         int iterations,
         int ssaaFactor,
         CancellationToken token,
-        IProgress<int>? progress)
+        IProgress<int>? progress,
+        double dpiX = 96,
+        double dpiY = 96)
     {
         int factor = state.RenderMode == SerpinskyRenderMode.Geometric
             ? Math.Clamp(ssaaFactor, 1, 4)
@@ -312,8 +317,8 @@ public partial class SerpinskyWindow : Window
         BitmapSource source = BitmapSource.Create(
             renderWidth,
             renderHeight,
-            96,
-            96,
+            dpiX,
+            dpiY,
             PixelFormats.Bgra32,
             null,
             buffer,

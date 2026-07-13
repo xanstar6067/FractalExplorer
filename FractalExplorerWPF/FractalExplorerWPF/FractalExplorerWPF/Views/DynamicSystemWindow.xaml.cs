@@ -143,7 +143,7 @@ public partial class DynamicSystemWindow : Window
         _cts?.Cancel(); _cts?.Dispose(); _cts=new(); CancellationToken token=_cts.Token; _rendering=true; CancelButton.IsEnabled=true; RenderBadge.Visibility=Visibility.Visible; var watch=Stopwatch.StartNew();
         try
         {
-            DpiScale dpi=VisualTreeHelper.GetDpi(CanvasSurface); int width=Math.Max(1,(int)Math.Round(CanvasSurface.ActualWidth*dpi.DpiScaleX)), height=Math.Max(1,(int)Math.Round(CanvasSurface.ActualHeight*dpi.DpiScaleY));
+            RenderSurfaceMetrics surface=RenderSurfaceMetrics.Measure(CanvasSurface);DpiScale dpi=surface.Dpi;int width=surface.PixelWidth,height=surface.PixelHeight;
             WriteableBitmap? overlay=null;
             Action<MandelbrotRenderTile,byte[]>? tileReady=null;
             Action<MandelbrotRenderTile>? tileStarted=null;

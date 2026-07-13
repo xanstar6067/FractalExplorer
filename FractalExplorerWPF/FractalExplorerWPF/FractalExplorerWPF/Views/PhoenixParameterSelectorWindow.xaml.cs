@@ -102,9 +102,10 @@ public partial class PhoenixParameterSelectorWindow : Window
     private async Task RenderSliceAsync(bool pSlice)
     {
         Border host = pSlice ? PSliceHost : QSliceHost;
-        DpiScale dpi = VisualTreeHelper.GetDpi(host);
-        int width = Math.Max(1, (int)Math.Ceiling(host.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(1, (int)Math.Ceiling(host.ActualHeight * dpi.DpiScaleY));
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(host);
+        DpiScale dpi = surface.Dpi;
+        int width = surface.PixelWidth;
+        int height = surface.PixelHeight;
         var cts = new CancellationTokenSource();
         if (pSlice) { _pCts?.Dispose(); _pCts = cts; } else { _qCts?.Dispose(); _qCts = cts; }
         ProgressBar progress = pSlice ? PProgress : QProgress;

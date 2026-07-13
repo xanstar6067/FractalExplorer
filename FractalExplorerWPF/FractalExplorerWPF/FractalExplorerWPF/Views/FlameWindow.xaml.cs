@@ -57,7 +57,7 @@ public partial class FlameWindow : Window
         _cts?.Dispose();_cts=new CancellationTokenSource();CancellationToken token=_cts.Token;_rendering=true;CancelButton.IsEnabled=true;RenderBadge.Visibility=Visibility.Visible;var watch=Stopwatch.StartNew();
         try
         {
-            DpiScale dpi=VisualTreeHelper.GetDpi(CanvasHost);int width=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualWidth*dpi.DpiScaleX)),height=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualHeight*dpi.DpiScaleY));
+            RenderSurfaceMetrics surface=RenderSurfaceMetrics.Measure(CanvasHost);DpiScale dpi=surface.Dpi;int width=surface.PixelWidth,height=surface.PixelHeight;
             _activeCenterX=state.CenterX;_activeCenterY=state.CenterY;_activeScale=state.Scale;UpdateTransform();var coverage=new WriteableBitmap(width,height,dpi.PixelsPerInchX,dpi.PixelsPerInchY,PixelFormats.Bgra32,null);CoverageImage.Source=CoverageCheck.IsChecked==true?coverage:null;
             var renderer=new FlameRenderer(state,width,height,Threads());int batch=Math.Clamp(state.Samples/24,1000,100000);
             while(renderer.ProcessedSamples<state.Samples)
@@ -74,7 +74,7 @@ public partial class FlameWindow : Window
     private void Saves_OnClick(object sender,RoutedEventArgs e)=>SaveManagerWindow.Open(this,SaveManagerConfigurations.ForFlame(this,_saves));
     private async void Export_OnClick(object sender,RoutedEventArgs e)
     {
-        DpiScale dpi=VisualTreeHelper.GetDpi(CanvasHost);int sourceW=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualWidth*dpi.DpiScaleX)),sourceH=Math.Max(1,(int)Math.Ceiling(CanvasHost.ActualHeight*dpi.DpiScaleY));var options=new MandelbrotExportWindow{Owner=this,ExportWidth=sourceW,ExportHeight=sourceH};if(options.ShowDialog()!=true)return;
+        RenderSurfaceMetrics surface=RenderSurfaceMetrics.Measure(CanvasHost);int sourceW=surface.PixelWidth,sourceH=surface.PixelHeight;var options=new MandelbrotExportWindow{Owner=this,ExportWidth=sourceW,ExportHeight=sourceH};if(options.ShowDialog()!=true)return;
         string ext=options.ExportFormat switch{MandelbrotExportFormat.Jpeg=>"jpg",MandelbrotExportFormat.Bmp=>"bmp",_=>"png"};var file=new SaveFileDialog{FileName=$"flame_{DateTime.Now:yyyyMMdd_HHmmss}.{ext}",Filter=options.ExportFormat switch{MandelbrotExportFormat.Jpeg=>"JPEG|*.jpg",MandelbrotExportFormat.Bmp=>"Bitmap|*.bmp",_=>"PNG|*.png"}};if(file.ShowDialog(this)!=true)return;
         _cts?.Cancel();_cts?.Dispose();_cts=new CancellationTokenSource();try{FlameState state=CaptureState("export");double factor=Math.Max(1,options.ExportWidth*(double)options.ExportHeight/(sourceW*(double)sourceH));state.Samples=(int)Math.Min(int.MaxValue,Math.Ceiling(state.Samples*factor));BitmapSource image=await RenderBitmapAsync(state,options.ExportWidth,options.ExportHeight,_cts.Token,new Progress<int>(p=>{ProgressBar.Value=p;ProgressText.Text=$"Экспорт: {p}%";}));BitmapEncoder encoder=options.ExportFormat switch{MandelbrotExportFormat.Jpeg=>new JpegBitmapEncoder{QualityLevel=options.JpegQuality},MandelbrotExportFormat.Bmp=>new BmpBitmapEncoder(),_=>new PngBitmapEncoder()};encoder.Frames.Add(BitmapFrame.Create(image));await using FileStream stream=File.Create(file.FileName);encoder.Save(stream);StatusText.Text=$"Сохранено: {file.FileName}";}catch(OperationCanceledException){StatusText.Text="Экспорт отменён";}
     }

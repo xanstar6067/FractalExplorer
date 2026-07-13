@@ -278,12 +278,12 @@ public partial class NewtonPoolsWindow : Window
 
     private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
-        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
         var options = new NewtonExportWindow
         {
             Owner = this,
-            ExportWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX)),
-            ExportHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY))
+            ExportWidth = surface.PixelWidth,
+            ExportHeight = surface.PixelHeight
         };
         if (options.ShowDialog() != true) return;
         var saveDialog = new SaveFileDialog { Filter = "PNG image|*.png", FileName = $"newton_pools_{DateTime.Now:yyyyMMdd_HHmmss}.png" };
@@ -343,9 +343,10 @@ public partial class NewtonPoolsWindow : Window
         SetRenderingState(true, $"Рендеринг методом {state.IterationMethod}...");
         try
         {
-            DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-            int renderWidth = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
-            int renderHeight = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+            RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+            DpiScale dpi = surface.Dpi;
+            int renderWidth = surface.PixelWidth;
+            int renderHeight = surface.PixelHeight;
             TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(renderWidth, renderHeight, 16, strategy);
             WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(

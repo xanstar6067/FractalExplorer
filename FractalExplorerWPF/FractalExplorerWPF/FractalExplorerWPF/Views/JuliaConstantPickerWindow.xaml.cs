@@ -84,9 +84,9 @@ public partial class JuliaConstantPickerWindow : Window
         _renderCts?.Dispose();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
-        DpiScale dpi = VisualTreeHelper.GetDpi(MapHost);
-        int width = Math.Max(1, (int)Math.Ceiling(MapHost.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(1, (int)Math.Ceiling(MapHost.ActualHeight * dpi.DpiScaleY));
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(MapHost);
+        int width = surface.PixelWidth;
+        int height = surface.PixelHeight;
         StatusText.Text = "Рендер карты...";
         try
         {
@@ -95,7 +95,8 @@ public partial class JuliaConstantPickerWindow : Window
             await Task.Run(() => MandelbrotFamilyRenderer.Render(
                 state, pixels, width, height, width * 4, cts.Token), cts.Token);
             cts.Token.ThrowIfCancellationRequested();
-            BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96,
+            BitmapSource bitmap = BitmapSource.Create(width, height,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY,
                 PixelFormats.Bgra32, null, pixels, width * 4);
             bitmap.Freeze();
             PreviewImage.Source = bitmap;

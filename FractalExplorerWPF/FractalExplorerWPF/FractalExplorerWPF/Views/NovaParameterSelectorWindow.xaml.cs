@@ -58,9 +58,10 @@ public partial class NovaParameterSelectorWindow : Window
         _mapState.CenterX = _centerX; _mapState.CenterY = _centerY; _mapState.Zoom = _zoom;
         try
         {
-            DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-            int width = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
-            int height = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
+            RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+            DpiScale dpi = surface.Dpi;
+            int width = surface.PixelWidth;
+            int height = surface.PixelHeight;
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 16, RenderPatternSettings.SelectedPattern);
             WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
             var session = new Session(bitmap, tiles.Count, width, height); _session = session; CurrentImage.Source = bitmap;

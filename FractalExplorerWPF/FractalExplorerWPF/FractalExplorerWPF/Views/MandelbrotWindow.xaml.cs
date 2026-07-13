@@ -313,9 +313,9 @@ public partial class MandelbrotWindow : Window
         _juliaMapPreviewCts?.Dispose();
         var cts = new CancellationTokenSource();
         _juliaMapPreviewCts = cts;
-        DpiScale dpi = VisualTreeHelper.GetDpi(JuliaMapPreviewHost);
-        int width = Math.Max(1, (int)Math.Ceiling(JuliaMapPreviewHost.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(1, (int)Math.Ceiling(JuliaMapPreviewHost.ActualHeight * dpi.DpiScaleY));
+        RenderSurfaceMetrics mapSurface = RenderSurfaceMetrics.Measure(JuliaMapPreviewHost);
+        int width = mapSurface.PixelWidth;
+        int height = mapSurface.PixelHeight;
         (MandelbrotVariant variant, decimal centerX, decimal centerY, decimal zoom) = GetJuliaMapView();
         var state = new MandelbrotState
         {
@@ -345,7 +345,8 @@ public partial class MandelbrotWindow : Window
 
         try
         {
-            BitmapSource bitmap = await RenderBitmapAsync(state, width, height, 1, cts.Token, null);
+            BitmapSource bitmap = await RenderBitmapAsync(state, width, height, 1, cts.Token, null,
+                mapSurface.Dpi.PixelsPerInchX, mapSurface.Dpi.PixelsPerInchY);
             if (!ReferenceEquals(_juliaMapPreviewCts, cts)) return;
             JuliaMapPreviewImage.Source = bitmap;
             UpdateJuliaMapMarker();
@@ -516,9 +517,11 @@ public partial class MandelbrotWindow : Window
         try { state = CaptureState("preview"); }
         catch (Exception ex) { StatusText.Text = ex.Message; return; }
 
-        int logicalWidth = Math.Max(1, (int)Math.Round(CanvasHost.ActualWidth));
-        int logicalHeight = Math.Max(1, (int)Math.Round(CanvasHost.ActualHeight));
-        (int pixelWidth, int pixelHeight, _, _) = GetCanvasPixelSize();
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+        int logicalWidth = Math.Max(1, (int)Math.Round(surface.LogicalWidth));
+        int logicalHeight = Math.Max(1, (int)Math.Round(surface.LogicalHeight));
+        int pixelWidth = surface.PixelWidth;
+        int pixelHeight = surface.PixelHeight;
         _renderCts?.Dispose();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
@@ -533,7 +536,8 @@ public partial class MandelbrotWindow : Window
             int renderHeight = checked(pixelHeight * factor);
             IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(
                 renderWidth, renderHeight, 16 * factor, strategy);
-            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(renderWidth, renderHeight, 96, 96);
+            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(renderWidth, renderHeight,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY);
             var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight, cts);
             _activeSession = session;
             CanvasImage.Source = bitmap;
@@ -668,11 +672,12 @@ public partial class MandelbrotWindow : Window
 
         session.Cancellation.Cancel();
         FlushVisualizationEvents(session, true);
-        int logicalWidth = Math.Max(1, (int)Math.Round(ImageLayer.ActualWidth));
-        int logicalHeight = Math.Max(1, (int)Math.Round(ImageLayer.ActualHeight));
-        DpiScale dpi = VisualTreeHelper.GetDpi(ImageLayer);
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(ImageLayer.ActualWidth * dpi.DpiScaleX));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(ImageLayer.ActualHeight * dpi.DpiScaleY));
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(ImageLayer);
+        int logicalWidth = Math.Max(1, (int)Math.Round(surface.LogicalWidth));
+        int logicalHeight = Math.Max(1, (int)Math.Round(surface.LogicalHeight));
+        DpiScale dpi = surface.Dpi;
+        int pixelWidth = surface.PixelWidth;
+        int pixelHeight = surface.PixelHeight;
         try
         {
             var baked = new RenderTargetBitmap(pixelWidth, pixelHeight, dpi.PixelsPerInchX,
@@ -734,14 +739,13 @@ public partial class MandelbrotWindow : Window
 
     private (int PixelWidth, int PixelHeight, double DpiScaleX, double DpiScaleY) GetCanvasPixelSize()
     {
-        DpiScale dpi = VisualTreeHelper.GetDpi(CanvasHost);
-        int width = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualWidth * dpi.DpiScaleX));
-        int height = Math.Max(1, (int)Math.Ceiling(CanvasHost.ActualHeight * dpi.DpiScaleY));
-        return (width, height, dpi.DpiScaleX, dpi.DpiScaleY);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
+        return (surface.PixelWidth, surface.PixelHeight, surface.Dpi.DpiScaleX, surface.Dpi.DpiScaleY);
     }
 
     private static async Task<BitmapSource> RenderBitmapAsync(MandelbrotState state, int width, int height,
-        int ssaaFactor, CancellationToken token, IProgress<int>? progress)
+        int ssaaFactor, CancellationToken token, IProgress<int>? progress,
+        double dpiX = 96, double dpiY = 96)
     {
         int factor = Math.Clamp(ssaaFactor, 1, 10);
         int renderWidth = checked(width * factor);
@@ -754,7 +758,7 @@ public partial class MandelbrotWindow : Window
 
         if (factor == 1)
         {
-            BitmapSource source = BitmapSource.Create(renderWidth, renderHeight, 96, 96,
+            BitmapSource source = BitmapSource.Create(renderWidth, renderHeight, dpiX, dpiY,
                 PixelFormats.Bgra32, null, buffer, stride);
             source.Freeze();
             return source;
@@ -762,7 +766,7 @@ public partial class MandelbrotWindow : Window
 
         byte[] downsampled = await Task.Run(() => DownsampleBox(
             buffer, renderWidth, width, height, factor, token), token);
-        BitmapSource result = BitmapSource.Create(width, height, 96, 96,
+        BitmapSource result = BitmapSource.Create(width, height, dpiX, dpiY,
             PixelFormats.Bgra32, null, downsampled, width * 4);
         result.Freeze();
         return result;
