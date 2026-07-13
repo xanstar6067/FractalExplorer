@@ -16,7 +16,7 @@ public static class DynamicSystemRenderer
         DynamicSystemState state, int width, int height, DynamicPalette? palette,
         CancellationToken token, IProgress<int>? progress = null,
         Action<MandelbrotRenderTile, byte[]>? tileReady = null, bool drawAxes = true,
-        Action<MandelbrotRenderTile>? tileStarted = null)
+        Action<MandelbrotRenderTile>? tileStarted = null, double dpiX = 96, double dpiY = 96)
     {
         int factor = Math.Clamp(state.SsaaFactor, 1, 4);
         int rw = checked(width * factor), rh = checked(height * factor);
@@ -24,9 +24,11 @@ public static class DynamicSystemRenderer
             ? await RenderLyapunovAsync(state, rw, rh, palette, token, progress, tileReady, tileStarted)
             : await Task.Run(() => RenderOther(state, rw, rh, palette, token, progress, drawAxes), token);
         token.ThrowIfCancellationRequested();
-        BitmapSource raw = BitmapSource.Create(rw, rh, 96, 96, PixelFormats.Bgra32, null, pixels, rw * 4);
+        BitmapSource raw = BitmapSource.Create(rw, rh, dpiX, dpiY, PixelFormats.Bgra32, null, pixels, rw * 4);
         raw.Freeze();
-        return factor == 1 ? raw : await Task.Run(() => BitmapResampler.ResizeLanczos3(raw, width, height, token), token);
+        if (factor == 1) return raw;
+        BitmapSource resized = await Task.Run(() => BitmapResampler.ResizeLanczos3(raw, width, height, token), token);
+        return WithDpi(resized, dpiX, dpiY);
     }
 
     private static async Task<byte[]> RenderLyapunovAsync(DynamicSystemState s, int width, int height, DynamicPalette? source,
@@ -95,4 +97,15 @@ public static class DynamicSystemRenderer
     }
     private static T EnumValue<T>(string value) where T : struct, Enum => Enum.TryParse(value, true, out T result) ? result : default;
     private static DrawingColor ToDrawing(System.Windows.Media.Color c) => DrawingColor.FromArgb(c.A,c.R,c.G,c.B);
+
+    private static BitmapSource WithDpi(BitmapSource source, double dpiX, double dpiY)
+    {
+        int stride = checked((source.PixelWidth * source.Format.BitsPerPixel + 7) / 8);
+        byte[] pixels = new byte[checked(stride * source.PixelHeight)];
+        source.CopyPixels(pixels, stride, 0);
+        BitmapSource result = BitmapSource.Create(source.PixelWidth, source.PixelHeight, dpiX, dpiY,
+            source.Format, source.Palette, pixels, stride);
+        result.Freeze();
+        return result;
+    }
 }
