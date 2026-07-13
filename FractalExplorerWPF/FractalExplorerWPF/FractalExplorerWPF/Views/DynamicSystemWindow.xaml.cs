@@ -52,7 +52,7 @@ public partial class DynamicSystemWindow : Window
         _previewTransform.Children.Add(_previewTranslation);
         StableImage.RenderTransformOrigin = new Point(0.5, 0.5);
         StableImage.RenderTransform = _previewTransform;
-        Title = Heading.Text = DisplayName(kind);
+        Title = DisplayName(kind);
         BuildParameterPanel(); LoadPalettes(); SyncControls(); UpdateSwatches();
         _timer.Tick += (_, _) => { _timer.Stop(); _ = RenderAsync(); };
         _visualizationTimer.Tick += (_, _) => FlushVisualizationEvents(false);
@@ -84,19 +84,19 @@ public partial class DynamicSystemWindow : Window
 
     private void AddField(string label, string key)
     {
-        var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition()); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(125) });
-        grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
-        var box = new TextBox { Tag = key }; Grid.SetColumn(box, 1); grid.Children.Add(box); _boxes[key] = box;
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = label });
+        var box = new TextBox { Tag = key }; panel.Children.Add(box); _boxes[key] = box;
         box.TextChanged += (_, _) => { if (!_syncing) Schedule(); };
-        ParameterPanel.Children.Add(grid);
+        ParameterPanel.Children.Add(panel);
     }
 
     private void AddChoice(string label, string key, string[] values)
     {
-        var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) }; grid.ColumnDefinitions.Add(new()); grid.ColumnDefinitions.Add(new() { Width = new GridLength(125) });
-        grid.Children.Add(new TextBlock { Text=label, VerticalAlignment=VerticalAlignment.Center });
-        var combo = new ComboBox { Name = key + "Box", ItemsSource=values, Tag=key }; _choices[key]=combo; combo.SelectionChanged += Choice_OnChanged; Grid.SetColumn(combo,1); grid.Children.Add(combo); ParameterPanel.Children.Add(grid);
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = label });
+        var combo = new ComboBox { Name = key + "Box", ItemsSource=values, Tag=key };
+        _choices[key]=combo; combo.SelectionChanged += Choice_OnChanged; panel.Children.Add(combo); ParameterPanel.Children.Add(panel);
     }
 
     private void Choice_OnChanged(object sender, SelectionChangedEventArgs e)
@@ -109,7 +109,7 @@ public partial class DynamicSystemWindow : Window
     private void LoadPalettes()
     {
         if (_paletteStore is null) return; _palettes = _paletteStore.Load(); PaletteBox.ItemsSource = _palettes;
-        PaletteBox.DisplayMemberPath = nameof(DynamicPalette.Name); PaletteBox.SelectedItem = ActivePalette ?? _palettes.FirstOrDefault();
+        PaletteBox.SelectedItem = ActivePalette ?? _palettes.FirstOrDefault();
     }
     private DynamicPalette? ActivePalette => _palettes.FirstOrDefault(p => p.Name == _state.PaletteName) ?? _palettes.FirstOrDefault();
 
@@ -176,7 +176,26 @@ public partial class DynamicSystemWindow : Window
     private void Cancel_OnClick(object sender,RoutedEventArgs e)=>_cts?.Cancel();
     private void Reset_OnClick(object sender,RoutedEventArgs e){DynamicSystemState defaults=DynamicSystemState.CreateDefault(_kind);_state.CenterX=defaults.CenterX;_state.CenterY=defaults.CenterY;_state.Zoom=1;if(_kind==DynamicSystemKind.Lyapunov){_state.AMin=defaults.AMin;_state.AMax=defaults.AMax;_state.BMin=defaults.BMin;_state.BMax=defaults.BMax;}SyncControls();UpdatePreviewTransform();Schedule();}
     private void PaletteBox_OnSelectionChanged(object sender,SelectionChangedEventArgs e){if(_syncing||PaletteBox.SelectedItem is not DynamicPalette p)return;_state.PaletteName=p.Name;Schedule();}
-    private void Palette_OnClick(object sender,RoutedEventArgs e){if(_paletteStore is null)return;var dialog=new DynamicPaletteWindow(_paletteStore,_palettes,ActivePalette){Owner=this};if(dialog.ShowDialog()==true){_state.PaletteName=dialog.SelectedPalette?.Name??_state.PaletteName;LoadPalettes();Schedule();}}
+    private void Palette_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_paletteStore is null) return;
+        if (_kind == DynamicSystemKind.Lyapunov)
+        {
+            var dialog = new LyapunovPaletteWindow(_paletteStore, _palettes, ActivePalette) { Owner = this };
+            dialog.PaletteApplied += (_, _) => ApplyPalette(dialog.SelectedPalette?.Name);
+            dialog.ShowDialog();
+            return;
+        }
+        var genericDialog = new DynamicPaletteWindow(_paletteStore, _palettes, ActivePalette) { Owner = this };
+        if (genericDialog.ShowDialog() == true) ApplyPalette(genericDialog.SelectedPalette?.Name);
+    }
+
+    private void ApplyPalette(string? paletteName)
+    {
+        if (!string.IsNullOrWhiteSpace(paletteName)) _state.PaletteName = paletteName;
+        LoadPalettes();
+        Schedule();
+    }
     private void FractalColor_OnClick(object sender,RoutedEventArgs e){if(ColorSelectionService.Default.TrySelectColor(this,_state.FractalColor,out Color c)){_state.FractalColor=c;UpdateSwatches();Schedule();}}
     private void BackgroundColor_OnClick(object sender,RoutedEventArgs e){if(ColorSelectionService.Default.TrySelectColor(this,_state.BackgroundColor,out Color c)){_state.BackgroundColor=c;UpdateSwatches();Schedule();}}
     private void UpdateSwatches(){FractalColorSwatch.Background=new SolidColorBrush(_state.FractalColor);BackgroundColorSwatch.Background=new SolidColorBrush(_state.BackgroundColor);}
@@ -259,7 +278,7 @@ public partial class DynamicSystemWindow : Window
         _previewTranslation.X=(_renderedCenterX-_state.CenterX)/currentSpan*width;
         _previewTranslation.Y=(_state.CenterY-_renderedCenterY)/currentSpan*height;
     }
-    private void Toggle_OnClick(object sender,RoutedEventArgs e){_controls=!_controls;ControlsColumn.Width=_controls?new GridLength(330):new GridLength(0);ControlsHost.Visibility=_controls?Visibility.Visible:Visibility.Collapsed;ToggleButton.Content=_controls?"✕":"☰";Schedule();}
+    private void Toggle_OnClick(object sender,RoutedEventArgs e){_controls=!_controls;ControlsColumn.Width=_controls?new GridLength(250):new GridLength(0);ControlsHost.Visibility=_controls?Visibility.Visible:Visibility.Collapsed;ToggleButton.Content=_controls?"✕":"☰";ToggleButton.ToolTip=_controls?"Скрыть панель параметров":"Показать панель параметров";Schedule();}
     private void Window_OnKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.F11||e.Key==Key.Escape&&_fullscreen){if(!_fullscreen){_oldStyle=WindowStyle;_oldState=WindowState;WindowStyle=WindowStyle.None;WindowState=WindowState.Maximized;}else{WindowStyle=_oldStyle;WindowState=_oldState;}_fullscreen=!_fullscreen;}}
     private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();EndVisualization();_cts?.Cancel();_cts?.Dispose();}
 
