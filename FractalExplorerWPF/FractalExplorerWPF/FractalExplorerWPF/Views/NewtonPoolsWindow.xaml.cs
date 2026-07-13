@@ -31,6 +31,7 @@ public partial class NewtonPoolsWindow : Window
     private bool _isPanning;
     private bool _isFullscreen;
     private bool _controlsVisible = true;
+    private bool _updatingZoomText;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
     private Point _lastPanPoint;
@@ -117,7 +118,7 @@ public partial class NewtonPoolsWindow : Window
         _zoom = Math.Clamp(state.Zoom, 0.001, 1_000_000_000_000);
         _centerX = state.CenterX;
         _centerY = state.CenterY;
-        ZoomBox.Text = _zoom.ToString("0.####", CultureInfo.InvariantCulture);
+        SetZoomText();
         MethodBox.SelectedIndex = (int)state.IterationMethod;
         HouseholderOrderBox.Text = Math.Clamp(state.HouseholderOrder, 2, 12).ToString(CultureInfo.InvariantCulture);
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
@@ -251,6 +252,7 @@ public partial class NewtonPoolsWindow : Window
 
     private void ZoomBox_OnTextChanged(object sender, TextChangedEventArgs e)
     {
+        if (_updatingZoomText) return;
         if (TryReadDouble(ZoomBox.Text, out double zoom))
         {
             _zoom = Math.Clamp(zoom, 0.001, 1_000_000_000_000);
@@ -480,6 +482,10 @@ public partial class NewtonPoolsWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        // Не оставляем незавершённый bitmap поверх масштабируемого стабильного кадра.
+        _renderCts?.Cancel();
+        CanvasImage.Source = null;
+
         Point mouse = e.GetPosition(CanvasHost);
         Point before = ScreenToWorld(mouse);
         _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2 : 1 / 1.2), 0.001, 1_000_000_000_000);
@@ -487,8 +493,22 @@ public partial class NewtonPoolsWindow : Window
         _centerX += before.X - after.X;
         _centerY += before.Y - after.Y;
         UpdatePreviewTransform();
-        ZoomBox.Text = _zoom.ToString("0.####", CultureInfo.InvariantCulture);
+        SetZoomText();
         ScheduleRender();
+        e.Handled = true;
+    }
+
+    private void SetZoomText()
+    {
+        _updatingZoomText = true;
+        try
+        {
+            ZoomBox.Text = _zoom.ToString("0.####", CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            _updatingZoomText = false;
+        }
     }
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -525,7 +545,7 @@ public partial class NewtonPoolsWindow : Window
         double width = Math.Max(1, CanvasHost.ActualWidth);
         double scale = BaseScale / _zoom;
         return new Point(_centerX + (point.X - width / 2) * scale / width,
-            _centerY + (point.Y - Math.Max(1, CanvasHost.ActualHeight) / 2) * scale / width);
+            _centerY - (point.Y - Math.Max(1, CanvasHost.ActualHeight) / 2) * scale / width);
     }
 
     private void UpdatePreviewTransform()

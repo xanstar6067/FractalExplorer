@@ -105,7 +105,7 @@ public sealed class NewtonPoolsEngine
                 if ((x & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
                 Complex z = new(
                     CenterX + (x - width / 2.0) * unitsPerPixel,
-                    CenterY + (y - height / 2.0) * unitsPerPixel);
+                    CenterY - (y - height / 2.0) * unitsPerPixel);
                 int iteration = Iterate(ref z, variables);
                 Color color = GetPixelColor(z, iteration);
                 int offset = row + x * 4;
@@ -140,7 +140,7 @@ public sealed class NewtonPoolsEngine
                 int canvasX = tile.X + localX;
                 Complex z = new(
                     CenterX + (canvasX - canvasWidth / 2.0) * unitsPerPixel,
-                    CenterY + (canvasY - canvasHeight / 2.0) * unitsPerPixel);
+                    CenterY - (canvasY - canvasHeight / 2.0) * unitsPerPixel);
                 int iteration = Iterate(ref z, variables);
                 Color color = GetPixelColor(z, iteration);
                 int offset = (localY * tile.Width + localX) * 4;
