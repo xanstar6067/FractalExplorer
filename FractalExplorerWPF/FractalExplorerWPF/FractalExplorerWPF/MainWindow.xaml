@@ -36,6 +36,7 @@
                           Background="Transparent"
                           BorderThickness="0"
                           SelectedItemChanged="FractalTree_OnSelectedItemChanged"
+                          PreviewMouseLeftButtonDown="FractalTree_OnPreviewMouseLeftButtonDown"
                           MouseDoubleClick="FractalTree_OnMouseDoubleClick"/>
             </DockPanel>
         </Border>

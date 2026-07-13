@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using FractalExplorerWPF.Models;
 using FractalExplorerWPF.Views;
@@ -105,6 +107,23 @@ public partial class MainWindow : Window
             : "Запуск будет перенесён позже";
         FractalPreview.Source = new BitmapImage(
             new Uri($"pack://application:,,,/{item.PreviewResourcePath}", UriKind.Absolute));
+    }
+
+    private void FractalTree_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        DependencyObject? element = e.OriginalSource as DependencyObject;
+
+        while (element is not null)
+        {
+            if (element is Border { Name: "HeaderBorder", TemplatedParent: TreeViewItem item } && item.HasItems)
+            {
+                item.IsExpanded = !item.IsExpanded;
+                e.Handled = true;
+                return;
+            }
+
+            element = VisualTreeHelper.GetParent(element);
+        }
     }
 
     private void LaunchButton_OnClick(object sender, RoutedEventArgs e) => LaunchSelected();
