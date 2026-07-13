@@ -144,64 +144,26 @@ public partial class SerpinskyWindow : Window
         SaveManagerWindow.Open(this, SaveManagerConfigurations.ForSerpinsky(this, _saveStore));
     }
 
-    private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
+    private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
-        var options = new SerpinskyExportWindow
-        {
-            Owner = this,
-            ExportWidth = surface.PixelWidth,
-            ExportHeight = surface.PixelHeight
-        };
-        if (options.ShowDialog() != true)
-        {
-            return;
-        }
-
-        var saveDialog = new SaveFileDialog
-        {
-            Filter = "PNG image|*.png",
-            FileName = $"serpinski_{DateTime.Now:yyyyMMdd_HHmmss}.png"
-        };
-        if (saveDialog.ShowDialog(this) != true)
-        {
-            return;
-        }
-
         _renderCts?.Cancel();
-        using var exportCts = new CancellationTokenSource();
-        _renderCts = exportCts;
-        SetRenderingState(true, "Экспорт изображения...");
-        try
-        {
-            SerpinskySaveState state = CaptureState("export");
-            BitmapSource bitmap = await RenderBitmapAsync(
-                state,
-                options.ExportWidth,
-                options.ExportHeight,
-                state.Iterations,
-                options.SsaaFactor,
-                exportCts.Token,
-                new Progress<int>(value => RenderProgress.Value = value));
-
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            await using FileStream stream = File.Create(saveDialog.FileName);
-            encoder.Save(stream);
-            StatusText.Text = $"Сохранено: {saveDialog.FileName}";
-        }
-        catch (OperationCanceledException)
-        {
-            StatusText.Text = "Экспорт отменён";
-        }
+        SerpinskySaveState state;
+        try { state = CaptureState("export"); }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, ex.Message, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
-        finally
+        ImageExportManagerWindow.Open(this, new ImageExportConfiguration
         {
-            SetRenderingState(false);
-        }
+            FileNamePrefix = "serpinski",
+            InitialWidth = surface.PixelWidth,
+            InitialHeight = surface.PixelHeight,
+            MaxSsaaFactor = state.RenderMode == SerpinskyRenderMode.Geometric ? 4 : 1,
+            RenderAsync = (request, token, progress) => RenderBitmapAsync(state, request.Width,
+                request.Height, state.Iterations, request.SsaaFactor, token, progress)
+        });
     }
 
     private void ScheduleRender()

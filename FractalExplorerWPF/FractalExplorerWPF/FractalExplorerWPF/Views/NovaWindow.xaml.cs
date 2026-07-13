@@ -219,32 +219,26 @@ public partial class NovaWindow : Window
         JuliaMapMarker.Children.Add(new Line { X1 = x, X2 = x, Y1 = y - 7, Y2 = y + 7, Stroke = brush, StrokeThickness = 2 });
     }
 
-    private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
+    private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
-        var options = new MandelbrotExportWindow { Owner = this, ExportWidth = surface.PixelWidth, ExportHeight = surface.PixelHeight };
-        if (options.ShowDialog() != true) return;
-        string extension = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "jpg", MandelbrotExportFormat.Bmp => "bmp", _ => "png" };
-        var save = new SaveFileDialog { Filter = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "JPEG image|*.jpg", MandelbrotExportFormat.Bmp => "Bitmap image|*.bmp", _ => "PNG image|*.png" }, FileName = $"{(_variant == NovaVariant.Julia ? "nova_julia" : "nova_mandelbrot")}_{DateTime.Now:yyyyMMdd_HHmmss}.{extension}" };
-        if (save.ShowDialog(this) != true) return;
-        _renderCts?.Cancel(); _renderCts?.Dispose(); _renderCts = new CancellationTokenSource(); CancellationToken token = _renderCts.Token; SetRendering(true, "Экспорт...");
-        try
+        _renderCts?.Cancel();
+        NovaState state;
+        try { state = CaptureState("export"); }
+        catch (Exception ex)
         {
-            NovaState state = CaptureState("export"); BitmapSource bitmap;
-            if (options.ProcessingMode == MandelbrotExportProcessingMode.Ssaa) bitmap = await RenderBitmapAsync(state, options.ExportWidth, options.ExportHeight, options.SsaaFactor, token, new Progress<int>(v => RenderProgress.Value = v));
-            else
-            {
-                BitmapSource raw = await RenderBitmapAsync(state, options.RenderWidth, options.RenderHeight, 1, token, null);
-                bitmap = options.ProcessingMode == MandelbrotExportProcessingMode.Lanczos
-                    ? await Task.Run(() => BitmapResampler.ResizeLanczos3(raw, options.ExportWidth, options.ExportHeight, token), token)
-                    : BitmapResampler.ResizeBicubic(raw, options.ExportWidth, options.ExportHeight);
-            }
-            BitmapEncoder encoder = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => new JpegBitmapEncoder { QualityLevel = options.JpegQuality }, MandelbrotExportFormat.Bmp => new BmpBitmapEncoder(), _ => new PngBitmapEncoder() };
-            encoder.Frames.Add(BitmapFrame.Create(bitmap)); await using FileStream stream = File.Create(save.FileName); encoder.Save(stream); StatusText.Text = $"Сохранено: {save.FileName}";
+            MessageBox.Show(this, ex.Message, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
-        catch (OperationCanceledException) { StatusText.Text = "Экспорт отменён"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { SetRendering(false); }
+        ImageExportManagerWindow.Open(this, new ImageExportConfiguration
+        {
+            FileNamePrefix = _variant == NovaVariant.Julia ? "nova_julia" : "nova_mandelbrot",
+            InitialWidth = surface.PixelWidth,
+            InitialHeight = surface.PixelHeight,
+            MaxSsaaFactor = 4,
+            RenderAsync = (request, token, progress) => RenderBitmapAsync(state, request.Width,
+                request.Height, request.SsaaFactor, token, progress)
+        });
     }
 
     private async Task<BitmapSource> RenderBitmapAsync(NovaState state, int width, int height, int ssaa, CancellationToken token, IProgress<int>? progress)

@@ -1,17 +1,18 @@
-<Window x:Class="FractalExplorerWPF.Views.MandelbrotExportWindow"
+<Window x:Class="FractalExplorerWPF.Views.ImageExportManagerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Менеджер сохранения изображений" Width="520" Height="650"
-        MinWidth="480" MinHeight="570" WindowStartupLocation="CenterOwner"
-        Icon="../Assets/Icons/Save.ico">
+        Title="Менеджер сохранения изображений" Width="540" Height="730"
+        MinWidth="500" MinHeight="650" WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/Save.ico" Closing="Window_OnClosing">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="0,0,8,0">
+            <StackPanel x:Name="OptionsPanel" Margin="0,0,8,0">
                 <TextBlock FontSize="20" FontWeight="SemiBold" Text="Параметры изображения"/>
 
                 <GroupBox Margin="0,14,0,0" Padding="10" Header="Параметры вывода">
@@ -24,11 +25,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="WidthBox" Grid.Column="0" Padding="7"/>
+                            <TextBox x:Name="WidthBox" Grid.Column="0" Padding="7" TextChanged="ExportOption_OnChanged"/>
                             <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Text="×"/>
-                            <TextBox x:Name="HeightBox" Grid.Column="2" Padding="7"/>
-                            <Button Grid.Column="3" Margin="8,0,0,0" Padding="13,5" Content="Повернуть"
-                                    Click="Rotate_OnClick"/>
+                            <TextBox x:Name="HeightBox" Grid.Column="2" Padding="7" TextChanged="ExportOption_OnChanged"/>
+                            <Button Grid.Column="3" Margin="8,0,0,0" Padding="13,5" Content="Повернуть" Click="Rotate_OnClick"/>
                         </Grid>
 
                         <UniformGrid Columns="3">
@@ -40,7 +40,7 @@
                         </UniformGrid>
 
                         <TextBlock Margin="0,10,0,3" Text="Формат файла"/>
-                        <ComboBox x:Name="FormatBox" SelectedIndex="0" SelectionChanged="FormatBox_OnSelectionChanged">
+                        <ComboBox x:Name="FormatBox" SelectionChanged="FormatBox_OnSelectionChanged">
                             <ComboBoxItem Content="PNG"/>
                             <ComboBoxItem Content="JPG"/>
                             <ComboBoxItem Content="BMP"/>
@@ -60,27 +60,36 @@
                 <GroupBox Margin="0,12,0,0" Padding="10" Header="Эффекты и качество">
                     <StackPanel>
                         <TextBlock Text="Режим обработки"/>
-                        <ComboBox x:Name="ProcessingModeBox" SelectedIndex="0"
-                                  SelectionChanged="ProcessingModeBox_OnSelectionChanged">
+                        <ComboBox x:Name="ProcessingModeBox" SelectionChanged="ProcessingModeBox_OnSelectionChanged">
                             <ComboBoxItem Content="SSAA"/>
                             <ComboBoxItem Content="Бикубический апскейл"/>
                             <ComboBoxItem Content="Ланцош 3"/>
                         </ComboBox>
                         <TextBlock x:Name="QualityFactorLabel" Margin="0,8,0,3" Text="Сглаживание (SSAA)"/>
-                        <ComboBox x:Name="QualityFactorBox"/>
-                        <TextBlock x:Name="QualityHint" Margin="0,8,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                        <ComboBox x:Name="QualityFactorBox" SelectionChanged="ExportOption_OnChanged"/>
+                        <TextBlock x:Name="QualityHint" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
         </ScrollViewer>
 
-        <Grid Grid.Row="1" Margin="0,14,0,0">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock x:Name="MemoryHint" VerticalAlignment="Center" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Width="105" Margin="4" Content="Экспорт" IsDefault="True" Click="Accept_OnClick"/>
-                <Button Width="105" Margin="4" Content="Отмена" IsCancel="True"/>
+        <Border Grid.Row="1" Margin="0,14,0,0" Padding="10" BorderThickness="1"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" CornerRadius="4">
+            <StackPanel>
+                <DockPanel>
+                    <TextBlock x:Name="StatusText" Text="Готово" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="ElapsedText" DockPanel.Dock="Right" Margin="12,0,0,0" Text="00:00.0"/>
+                </DockPanel>
+                <ProgressBar x:Name="ProgressBar" Margin="0,8,0,0" Height="14" Minimum="0" Maximum="100"/>
+                <TextBlock x:Name="MemoryHint" Margin="0,7,0,0"
+                           Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
             </StackPanel>
-        </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="2" Margin="0,14,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="SaveButton" Width="115" Margin="4" Content="Сохранить" IsDefault="True" Click="SaveButton_OnClick"/>
+            <Button x:Name="CancelButton" Width="115" Margin="4" Content="Закрыть" IsCancel="True" Click="CancelButton_OnClick"/>
+        </StackPanel>
     </Grid>
 </Window>

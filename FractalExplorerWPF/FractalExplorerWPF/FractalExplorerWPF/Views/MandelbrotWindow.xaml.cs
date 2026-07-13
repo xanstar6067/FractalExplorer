@@ -394,80 +394,28 @@ public partial class MandelbrotWindow : Window
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
         SaveManagerWindow.Open(this, SaveManagerConfigurations.ForMandelbrot(this, _saveStore));
 
-    private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
+    private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         (int canvasPixelWidth, int canvasPixelHeight, _, _) = GetCanvasPixelSize();
-        var options = new MandelbrotExportWindow
-        {
-            Owner = this,
-            ExportWidth = canvasPixelWidth,
-            ExportHeight = canvasPixelHeight
-        };
-        if (options.ShowDialog() != true) return;
-
-        string extension = options.ExportFormat switch
-        {
-            MandelbrotExportFormat.Jpeg => ".jpg",
-            MandelbrotExportFormat.Bmp => ".bmp",
-            _ => ".png"
-        };
-        var saveDialog = new SaveFileDialog
-        {
-            Filter = options.ExportFormat switch
-            {
-                MandelbrotExportFormat.Jpeg => "JPEG image|*.jpg;*.jpeg",
-                MandelbrotExportFormat.Bmp => "Bitmap image|*.bmp",
-                _ => "PNG image|*.png"
-            },
-            DefaultExt = extension,
-            AddExtension = true,
-            FileName = $"{_definition.Identifier}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}"
-        };
-        if (saveDialog.ShowDialog(this) != true) return;
-
         if (_activeSession is not null) CommitAndBakePreview();
         else _renderCts?.Cancel();
-        using var cts = new CancellationTokenSource();
-        _renderCts = cts;
-        SetRenderingState(true, "Экспорт изображения...");
-        try
+        MandelbrotState state;
+        try { state = CaptureState("export"); }
+        catch (Exception ex)
         {
-            BitmapSource bitmap = await RenderBitmapAsync(CaptureState("export"), options.RenderWidth,
-                options.RenderHeight, options.SsaaFactor, cts.Token,
-                new Progress<int>(value => RenderProgress.Value = value));
-            if (bitmap.PixelWidth != options.ExportWidth || bitmap.PixelHeight != options.ExportHeight)
-            {
-                StatusText.Text = options.ProcessingMode == MandelbrotExportProcessingMode.Lanczos
-                    ? "Масштабирование фильтром Ланцоша 3..."
-                    : "Бикубическое масштабирование...";
-                bitmap = options.ProcessingMode == MandelbrotExportProcessingMode.Lanczos
-                    ? await Task.Run(() => BitmapResampler.ResizeLanczos3(bitmap,
-                        options.ExportWidth, options.ExportHeight, cts.Token,
-                        value => Dispatcher.Invoke(() => RenderProgress.Value = value)), cts.Token)
-                    : BitmapResampler.ResizeBicubic(bitmap, options.ExportWidth, options.ExportHeight);
-            }
+            MessageBox.Show(this, ex.Message, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
 
-            BitmapEncoder encoder = options.ExportFormat switch
-            {
-                MandelbrotExportFormat.Jpeg => new JpegBitmapEncoder { QualityLevel = options.JpegQuality },
-                MandelbrotExportFormat.Bmp => new BmpBitmapEncoder(),
-                _ => new PngBitmapEncoder()
-            };
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            await using FileStream stream = File.Create(saveDialog.FileName);
-            encoder.Save(stream);
-            StatusText.Text = $"Сохранено: {saveDialog.FileName}";
-        }
-        catch (OperationCanceledException) { StatusText.Text = "Экспорт отменён"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally
+        ImageExportManagerWindow.Open(this, new ImageExportConfiguration
         {
-            if (ReferenceEquals(_renderCts, cts))
-            {
-                _renderCts = null;
-                SetRenderingState(false);
-            }
-        }
+            FileNamePrefix = _definition.Identifier,
+            InitialWidth = canvasPixelWidth,
+            InitialHeight = canvasPixelHeight,
+            MaxSsaaFactor = 10,
+            RenderAsync = (request, token, progress) => RenderBitmapAsync(state, request.Width,
+                request.Height, request.SsaaFactor, token, progress)
+        });
     }
 
     private void RenderButton_OnClick(object sender, RoutedEventArgs e) => _ = RenderPreviewAsync();

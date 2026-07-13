@@ -277,38 +277,26 @@ public partial class NewtonPoolsWindow : Window
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
         SaveManagerWindow.Open(this, SaveManagerConfigurations.ForNewton(this, _saveStore));
 
-    private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
+    private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
-        var options = new NewtonExportWindow
-        {
-            Owner = this,
-            ExportWidth = surface.PixelWidth,
-            ExportHeight = surface.PixelHeight
-        };
-        if (options.ShowDialog() != true) return;
-        var saveDialog = new SaveFileDialog { Filter = "PNG image|*.png", FileName = $"newton_pools_{DateTime.Now:yyyyMMdd_HHmmss}.png" };
-        if (saveDialog.ShowDialog(this) != true) return;
-
         _renderCts?.Cancel();
-        _renderCts?.Dispose();
-        _renderCts = new CancellationTokenSource();
-        CancellationToken token = _renderCts.Token;
-        SetRenderingState(true, "Экспорт изображения...");
-        try
+        NewtonState state;
+        try { state = CaptureState("export"); }
+        catch (Exception ex)
         {
-            NewtonState state = CaptureState("export");
-            BitmapSource bitmap = await RenderBitmapAsync(state, options.ExportWidth, options.ExportHeight, options.SsaaFactor, token,
-                new Progress<int>(value => RenderProgress.Value = value));
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            await using FileStream stream = File.Create(saveDialog.FileName);
-            encoder.Save(stream);
-            StatusText.Text = $"Сохранено: {saveDialog.FileName}";
+            MessageBox.Show(this, ex.Message, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
-        catch (OperationCanceledException) { StatusText.Text = "Экспорт отменён"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { SetRenderingState(false); }
+        ImageExportManagerWindow.Open(this, new ImageExportConfiguration
+        {
+            FileNamePrefix = "newton_pools",
+            InitialWidth = surface.PixelWidth,
+            InitialHeight = surface.PixelHeight,
+            MaxSsaaFactor = 4,
+            RenderAsync = (request, token, progress) => RenderBitmapAsync(state, request.Width,
+                request.Height, request.SsaaFactor, token, progress)
+        });
     }
 
     private void ScheduleRender()

@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -9,7 +8,6 @@ using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
-using Microsoft.Win32;
 using Point = System.Windows.Point;
 
 namespace FractalExplorerWPF.Views;
@@ -266,29 +264,31 @@ public partial class JuliaGalleryWindow : Window
 
     private void Export_OnClick(object sender, RoutedEventArgs e)
     {
-        if (_galleryBitmap is null)
+        if (_galleryBitmap is not { } galleryBitmap)
         {
             MessageBox.Show(this, "Сначала постройте галерею.", "Экспорт", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var dialog = new SaveFileDialog
+        ImageExportManagerWindow.Open(this, new ImageExportConfiguration
         {
-            Filter = "PNG image|*.png|JPEG image|*.jpg;*.jpeg|Bitmap image|*.bmp",
-            DefaultExt = ".png",
-            AddExtension = true,
-            FileName = $"{(_variant == MandelbrotVariant.JuliaBurningShip ? "julia_burningship" : "julia")}_gallery_{DateTime.Now:yyyyMMdd_HHmmss}.png"
-        };
-        if (dialog.ShowDialog(this) != true) return;
-        BitmapEncoder encoder = Path.GetExtension(dialog.FileName).ToLowerInvariant() switch
-        {
-            ".jpg" or ".jpeg" => new JpegBitmapEncoder { QualityLevel = 95 },
-            ".bmp" => new BmpBitmapEncoder(),
-            _ => new PngBitmapEncoder()
-        };
-        encoder.Frames.Add(BitmapFrame.Create(_galleryBitmap));
-        using FileStream stream = File.Create(dialog.FileName);
-        encoder.Save(stream);
-        StatusText.Text = $"Экспортировано: {dialog.FileName}";
+            FileNamePrefix = _variant == MandelbrotVariant.JuliaBurningShip
+                ? "julia_burningship_gallery"
+                : "julia_gallery",
+            InitialWidth = galleryBitmap.PixelWidth,
+            InitialHeight = galleryBitmap.PixelHeight,
+            MaxSsaaFactor = 1,
+            RenderAsync = async (request, token, progress) =>
+            {
+                progress.Report(5);
+                if (galleryBitmap.PixelWidth == request.Width && galleryBitmap.PixelHeight == request.Height)
+                {
+                    progress.Report(100);
+                    return galleryBitmap;
+                }
+                return await Task.Run(() => BitmapResampler.ResizeLanczos3(galleryBitmap,
+                    request.Width, request.Height, token, progress.Report), token);
+            }
+        });
     }
 
     private void Render_OnClick(object sender, RoutedEventArgs e)

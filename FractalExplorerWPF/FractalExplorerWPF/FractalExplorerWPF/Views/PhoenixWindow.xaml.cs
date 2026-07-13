@@ -112,47 +112,26 @@ public partial class PhoenixWindow : Window
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
         SaveManagerWindow.Open(this, SaveManagerConfigurations.ForPhoenix(this, _saveStore));
 
-    private async void ExportButton_OnClick(object sender, RoutedEventArgs e)
+    private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
-        var options = new MandelbrotExportWindow
+        _renderCts?.Cancel();
+        PhoenixState state;
+        try { state = CaptureState("export"); }
+        catch (Exception ex)
         {
-            Owner = this,
-            ExportWidth = surface.PixelWidth,
-            ExportHeight = surface.PixelHeight
-        };
-        if (options.ShowDialog() != true) return;
-        string extension = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "jpg", MandelbrotExportFormat.Bmp => "bmp", _ => "png" };
-        var dialog = new SaveFileDialog { Filter = options.ExportFormat switch { MandelbrotExportFormat.Jpeg => "JPEG image|*.jpg", MandelbrotExportFormat.Bmp => "Bitmap image|*.bmp", _ => "PNG image|*.png" }, FileName = $"phoenix_{DateTime.Now:yyyyMMdd_HHmmss}.{extension}" };
-        if (dialog.ShowDialog(this) != true) return;
-        _renderCts?.Cancel(); _renderCts?.Dispose(); _renderCts = new CancellationTokenSource(); CancellationToken token = _renderCts.Token;
-        SetRendering(true, "Экспорт изображения...");
-        try
-        {
-            PhoenixState state = CaptureState("export");
-            BitmapSource bitmap;
-            if (options.ProcessingMode == MandelbrotExportProcessingMode.Ssaa)
-                bitmap = await RenderBitmapAsync(state, options.ExportWidth, options.ExportHeight, options.SsaaFactor, token, new Progress<int>(v => RenderProgress.Value = v));
-            else
-            {
-                BitmapSource raw = await RenderBitmapAsync(state, options.RenderWidth, options.RenderHeight, 1, token, new Progress<int>(v => RenderProgress.Value = v * 90 / 100));
-                int exportWidth = options.ExportWidth;
-                int exportHeight = options.ExportHeight;
-                MandelbrotExportProcessingMode processingMode = options.ProcessingMode;
-                bitmap = processingMode == MandelbrotExportProcessingMode.Lanczos
-                    ? await Task.Run(() => BitmapResampler.ResizeLanczos3(raw, exportWidth, exportHeight, token), token)
-                    : BitmapResampler.ResizeBicubic(raw, exportWidth, exportHeight);
-            }
-            BitmapEncoder encoder = options.ExportFormat switch
-            {
-                MandelbrotExportFormat.Jpeg => new JpegBitmapEncoder { QualityLevel = options.JpegQuality },
-                MandelbrotExportFormat.Bmp => new BmpBitmapEncoder(), _ => new PngBitmapEncoder()
-            };
-            encoder.Frames.Add(BitmapFrame.Create(bitmap)); await using FileStream stream = File.Create(dialog.FileName); encoder.Save(stream); StatusText.Text = $"Сохранено: {dialog.FileName}";
+            MessageBox.Show(this, ex.Message, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
-        catch (OperationCanceledException) { StatusText.Text = "Экспорт отменён"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { SetRendering(false); }
+        ImageExportManagerWindow.Open(this, new ImageExportConfiguration
+        {
+            FileNamePrefix = "phoenix",
+            InitialWidth = surface.PixelWidth,
+            InitialHeight = surface.PixelHeight,
+            MaxSsaaFactor = 4,
+            RenderAsync = (request, token, progress) => RenderBitmapAsync(state, request.Width,
+                request.Height, request.SsaaFactor, token, progress)
+        });
     }
 
     private void ScheduleRender() { if (!IsLoaded) return; _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
