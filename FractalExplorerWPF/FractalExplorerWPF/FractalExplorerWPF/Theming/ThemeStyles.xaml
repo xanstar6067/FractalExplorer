@@ -483,7 +483,7 @@
         <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="{TemplateBinding Background}"/></ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style x:Key="ThemeScrollThumbStyle" TargetType="Thumb">
-        <Setter Property="Focusable" Value="False"/><Setter Property="MinHeight" Value="28"/><Setter Property="MinWidth" Value="28"/>
+        <Setter Property="Focusable" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
@@ -496,10 +496,18 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Orientation, RelativeSource={RelativeSource AncestorType={x:Type ScrollBar}}}" Value="Vertical">
+                <Setter Property="MinHeight" Value="28"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Orientation, RelativeSource={RelativeSource AncestorType={x:Type ScrollBar}}}" Value="Horizontal">
+                <Setter Property="MinWidth" Value="28"/>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
     <Style TargetType="ScrollBar">
         <Setter Property="Background" Value="{DynamicResource Theme.ScrollTrackBrush}"/>
-        <Setter Property="Width" Value="11"/><Setter Property="Height" Value="11"/><Setter Property="Margin" Value="3,0,0,0"/>
+        <Setter Property="Width" Value="11"/><Setter Property="Height" Value="Auto"/><Setter Property="Margin" Value="3,0,0,0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollBar">
