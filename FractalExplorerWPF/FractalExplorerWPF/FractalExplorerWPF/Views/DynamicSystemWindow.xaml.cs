@@ -142,10 +142,10 @@ public partial class DynamicSystemWindow : Window
         if (_rendering) { Schedule(); return; }
         DynamicSystemState state; try { state = CaptureState("preview"); } catch (Exception ex) { StatusText.Text=ex.Message; return; }
         _cts?.Cancel(); _cts?.Dispose(); _cts=new(); CancellationToken token=_cts.Token; _rendering=true; CancelButton.IsEnabled=true; RenderBadge.Visibility=Visibility.Visible; var watch=Stopwatch.StartNew();
+        WriteableBitmap? overlay=null;BitmapSource? image=null;
         try
         {
             RenderSurfaceMetrics surface=RenderSurfaceMetrics.Measure(CanvasSurface);DpiScale dpi=surface.Dpi;int width=surface.PixelWidth,height=surface.PixelHeight;
-            WriteableBitmap? overlay=null;
             Action<MandelbrotRenderTile,byte[]>? tileReady=null;
             Action<MandelbrotRenderTile>? tileStarted=null;
             if (_kind==DynamicSystemKind.Lyapunov)
@@ -158,13 +158,22 @@ public partial class DynamicSystemWindow : Window
                 tileReady=(tile,data)=>_visualizationEvents.Enqueue(new(false,tile,data));
             }
             var progress=new Progress<int>(p=>{ProgressBar.Value=p;ProgressText.Text=$"Рендер: {p}%";RenderBadgeText.Text=$"{p}%";});
-            BitmapSource image=await DynamicSystemRenderer.RenderAsync(state,width,height,ActivePalette,token,progress,tileReady,tileStarted:tileStarted,dpiX:dpi.PixelsPerInchX,dpiY:dpi.PixelsPerInchY);
+            image=await DynamicSystemRenderer.RenderAsync(state,width,height,ActivePalette,token,progress,tileReady,tileStarted:tileStarted,dpiX:dpi.PixelsPerInchX,dpiY:dpi.PixelsPerInchY);
             FlushVisualizationEvents(true);
             token.ThrowIfCancellationRequested(); StableImage.Source=image; CurrentImage.Source=null; RememberRenderedViewport(state); UpdatePreviewTransform(); ProgressBar.Value=100; ProgressText.Text="Готово"; StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F2} сек.";
         }
         catch(OperationCanceledException){CurrentImage.Source=null;StatusText.Text="Рендер отменён";}
         catch(Exception ex){CurrentImage.Source=null;MessageBox.Show(this,ex.Message,DisplayName(_kind),MessageBoxButton.OK,MessageBoxImage.Error);}
-        finally{EndVisualization();_rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;}
+        finally
+        {
+            CurrentImage.Source=null;EndVisualization();overlay=null;image=null;
+            if(_kind==DynamicSystemKind.Lyapunov)
+            {
+                await Dispatcher.Yield(DispatcherPriority.Background);
+                await MemoryPressureRelief.ReleaseAsync();
+            }
+            _rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;
+        }
     }
 
     public async Task<BitmapSource> RenderStatePreviewAsync(DynamicSystemState state,int width,int height,CancellationToken token)
@@ -209,7 +218,7 @@ public partial class DynamicSystemWindow : Window
     private void Export_OnClick(object sender,RoutedEventArgs e)
     {
         int w=Math.Max(1,(int)CanvasSurface.ActualWidth),h=Math.Max(1,(int)CanvasSurface.ActualHeight);_cts?.Cancel();try{_=CaptureState("export");}catch(Exception ex){MessageBox.Show(this,ex.Message,"Параметры экспорта",MessageBoxButton.OK,MessageBoxImage.Warning);return;}
-        ImageExportManagerWindow.Open(this,new ImageExportConfiguration{FileNamePrefix=_kind.ToString(),InitialWidth=w,InitialHeight=h,MaxSsaaFactor=4,RenderAsync=(request,token,progress)=>{DynamicSystemState state=CaptureState("export");state.SsaaFactor=request.SsaaFactor;return DynamicSystemRenderer.RenderAsync(state,request.Width,request.Height,ActivePalette,token,progress,null,false);}});
+        ImageExportManagerWindow.Open(this,new ImageExportConfiguration{FileNamePrefix=_kind.ToString(),InitialWidth=w,InitialHeight=h,MaxSsaaFactor=4,ReleaseMemoryAfterExport=_kind==DynamicSystemKind.Lyapunov,RenderAsync=(request,token,progress)=>{DynamicSystemState state=CaptureState("export");state.SsaaFactor=request.SsaaFactor;return DynamicSystemRenderer.RenderAsync(state,request.Width,request.Height,ActivePalette,token,progress,null,false);}});
     }
 
     private void CanvasHost_OnSizeChanged(object sender,SizeChangedEventArgs e){UpdatePreviewTransform();Schedule();}

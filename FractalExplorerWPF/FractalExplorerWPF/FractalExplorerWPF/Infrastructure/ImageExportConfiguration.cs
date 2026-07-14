@@ -26,5 +26,6 @@ public sealed class ImageExportConfiguration
     public int InitialHeight { get; init; } = 1080;
     public int MaxSsaaFactor { get; init; } = 4;
     public bool HasNativeSsaa { get; init; } = true;
+    public bool ReleaseMemoryAfterExport { get; init; }
     public required Func<ImageExportRenderRequest, CancellationToken, IProgress<int>, Task<BitmapSource>> RenderAsync { get; init; }
 }

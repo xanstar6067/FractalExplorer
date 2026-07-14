@@ -56,19 +56,27 @@ public partial class FlameWindow : Window
     {
         if(_rendering){Schedule();return;}FlameState state;try{state=CaptureState("preview");}catch(Exception ex){StatusText.Text=ex.Message;return;}
         _cts?.Dispose();_cts=new CancellationTokenSource();CancellationToken token=_cts.Token;_rendering=true;CancelButton.IsEnabled=true;RenderBadge.Visibility=Visibility.Visible;var watch=Stopwatch.StartNew();
+        FlameRenderer? renderer=null;WriteableBitmap? coverage=null;byte[]? coveragePixels=null;byte[]? pixels=null;BitmapSource? done=null;
         try
         {
             RenderSurfaceMetrics surface=RenderSurfaceMetrics.Measure(CanvasHost);DpiScale dpi=surface.Dpi;int width=surface.PixelWidth,height=surface.PixelHeight;
-            _activeCenterX=state.CenterX;_activeCenterY=state.CenterY;_activeScale=state.Scale;UpdateTransform();var coverage=new WriteableBitmap(width,height,dpi.PixelsPerInchX,dpi.PixelsPerInchY,PixelFormats.Bgra32,null);CoverageImage.Source=CoverageCheck.IsChecked==true?coverage:null;
-            var renderer=new FlameRenderer(state,width,height,Threads());int batch=Math.Clamp(state.Samples/24,1000,100000);
+            _activeCenterX=state.CenterX;_activeCenterY=state.CenterY;_activeScale=state.Scale;UpdateTransform();coverage=new WriteableBitmap(width,height,dpi.PixelsPerInchX,dpi.PixelsPerInchY,PixelFormats.Bgra32,null);CoverageImage.Source=CoverageCheck.IsChecked==true?coverage:null;
+            renderer=new FlameRenderer(state,width,height,Threads());int batch=Math.Clamp(state.Samples/24,1000,100000);
             while(renderer.ProcessedSamples<state.Samples)
             {
                 token.ThrowIfCancellationRequested();await Task.Run(()=>renderer.Accumulate(Math.Min(batch,state.Samples-renderer.ProcessedSamples),token),token);int percent=(int)(renderer.ProcessedSamples*100d/state.Samples);ProgressBar.Value=percent;ProgressText.Text=$"Накопление HDR: {percent}%";RenderBadgeText.Text=$"{renderer.ProcessedSamples:N0} / {state.Samples:N0} сэмплов";
-                if(CoverageCheck.IsChecked==true){byte[] map=await Task.Run(renderer.CreateCoverageFrame,token);coverage.WritePixels(new Int32Rect(0,0,width,height),map,width*4,0);}
+                if(CoverageCheck.IsChecked==true){coveragePixels=await Task.Run(renderer.CreateCoverageFrame,token);coverage.WritePixels(new Int32Rect(0,0,width,height),coveragePixels,width*4,0);coveragePixels=null;}
             }
-            byte[] pixels=await Task.Run(renderer.CreateFinalFrame,token);BitmapSource done=BitmapSource.Create(width,height,dpi.PixelsPerInchX,dpi.PixelsPerInchY,PixelFormats.Bgra32,null,pixels,width*4);done.Freeze();StableImage.Source=done;CoverageImage.Source=null;_renderedCenterX=state.CenterX;_renderedCenterY=state.CenterY;_renderedScale=state.Scale;_hasFrame=true;UpdateTransform();ProgressBar.Value=100;ProgressText.Text="HDR-рендер завершён";StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F3} сек.";
+            pixels=await Task.Run(renderer.CreateFinalFrame,token);done=BitmapSource.Create(width,height,dpi.PixelsPerInchX,dpi.PixelsPerInchY,PixelFormats.Bgra32,null,pixels,width*4);done.Freeze();StableImage.Source=done;CoverageImage.Source=null;_renderedCenterX=state.CenterX;_renderedCenterY=state.CenterY;_renderedScale=state.Scale;_hasFrame=true;UpdateTransform();ProgressBar.Value=100;ProgressText.Text="HDR-рендер завершён";StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F3} сек.";
         }
-        catch(OperationCanceledException){CoverageImage.Source=null;StatusText.Text="Рендер отменён";}catch(Exception ex){CoverageImage.Source=null;MessageBox.Show(this,ex.Message,"Flame",MessageBoxButton.OK,MessageBoxImage.Error);}finally{_rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;}
+        catch(OperationCanceledException){CoverageImage.Source=null;StatusText.Text="Рендер отменён";}catch(Exception ex){CoverageImage.Source=null;MessageBox.Show(this,ex.Message,"Flame",MessageBoxButton.OK,MessageBoxImage.Error);}
+        finally
+        {
+            CoverageImage.Source=null;renderer?.Dispose();renderer=null;coverage=null;coveragePixels=null;pixels=null;done=null;
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            await MemoryPressureRelief.ReleaseAsync();
+            _rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;
+        }
     }
     private void Transforms_OnClick(object sender,RoutedEventArgs e){var editor=new FlameTransformEditorWindow(_transforms){Owner=this};editor.TransformsApplied+=ApplyTransforms;editor.ShowDialog();}
     private void ApplyTransforms(IReadOnlyList<FlameTransform> transforms){_transforms.Clear();_transforms.AddRange(transforms.Select(t=>t.Clone()));Schedule();}
@@ -76,9 +84,14 @@ public partial class FlameWindow : Window
     private void Export_OnClick(object sender,RoutedEventArgs e)
     {
         RenderSurfaceMetrics surface=RenderSurfaceMetrics.Measure(CanvasHost);int sourceW=surface.PixelWidth,sourceH=surface.PixelHeight;_cts?.Cancel();try{_=CaptureState("export");}catch(Exception ex){MessageBox.Show(this,ex.Message,"Параметры экспорта",MessageBoxButton.OK,MessageBoxImage.Warning);return;}
-        ImageExportManagerWindow.Open(this,new ImageExportConfiguration{FileNamePrefix="flame",InitialWidth=sourceW,InitialHeight=sourceH,MaxSsaaFactor=4,HasNativeSsaa=false,RenderAsync=(request,token,progress)=>{FlameState state=CaptureState("export");double factor=Math.Max(1,request.Width*(double)request.Height/(sourceW*(double)sourceH));state.Samples=(int)Math.Min(int.MaxValue,Math.Ceiling(state.Samples*factor));return RenderBitmapAsync(state,request.Width,request.Height,token,progress);}});
+        ImageExportManagerWindow.Open(this,new ImageExportConfiguration{FileNamePrefix="flame",InitialWidth=sourceW,InitialHeight=sourceH,MaxSsaaFactor=4,HasNativeSsaa=false,ReleaseMemoryAfterExport=true,RenderAsync=(request,token,progress)=>{FlameState state=CaptureState("export");double factor=Math.Max(1,request.Width*(double)request.Height/(sourceW*(double)sourceH));state.Samples=(int)Math.Min(int.MaxValue,Math.Ceiling(state.Samples*factor));return RenderBitmapAsync(state,request.Width,request.Height,token,progress);}});
     }
-    private async Task<BitmapSource> RenderBitmapAsync(FlameState state,int width,int height,CancellationToken token,IProgress<int>? progress){var renderer=new FlameRenderer(state,width,height,Threads());while(renderer.ProcessedSamples<state.Samples){await Task.Run(()=>renderer.Accumulate(Math.Min(100000,state.Samples-renderer.ProcessedSamples),token),token);progress?.Report((int)(renderer.ProcessedSamples*100d/state.Samples));}byte[] pixels=await Task.Run(renderer.CreateFinalFrame,token);BitmapSource bitmap=BitmapSource.Create(width,height,96,96,PixelFormats.Bgra32,null,pixels,width*4);bitmap.Freeze();return bitmap;}
+    private async Task<BitmapSource> RenderBitmapAsync(FlameState state,int width,int height,CancellationToken token,IProgress<int>? progress)
+    {
+        using var renderer=new FlameRenderer(state,width,height,Threads());
+        while(renderer.ProcessedSamples<state.Samples){await Task.Run(()=>renderer.Accumulate(Math.Min(100000,state.Samples-renderer.ProcessedSamples),token),token);progress?.Report((int)(renderer.ProcessedSamples*100d/state.Samples));}
+        byte[] pixels=await Task.Run(renderer.CreateFinalFrame,token);BitmapSource bitmap=BitmapSource.Create(width,height,96,96,PixelFormats.Bgra32,null,pixels,width*4);bitmap.Freeze();return bitmap;
+    }
     private int Threads()=>ThreadsBox.SelectedItem?.ToString()=="Auto"?Environment.ProcessorCount:Convert.ToInt32(ThreadsBox.SelectedItem);
     private void CanvasHost_OnSizeChanged(object sender,SizeChangedEventArgs e){UpdateTransform();Schedule();}
     private void CanvasHost_OnMouseWheel(object sender,MouseWheelEventArgs e){Point p=e.GetPosition(CanvasHost);var before=ScreenToWorld(p);_worldScale=Math.Clamp(_worldScale*(e.Delta>0?.85:1.18),1e-9,200000);var after=ScreenToWorld(p);_centerX+=before.X-after.X;_centerY+=before.Y-after.Y;SyncViewportBoxes();UpdateTransform();Schedule();}

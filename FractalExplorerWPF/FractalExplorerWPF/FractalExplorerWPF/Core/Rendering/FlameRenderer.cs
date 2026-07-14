@@ -5,13 +5,13 @@ using Color = System.Windows.Media.Color;
 
 namespace FractalExplorerWPF.Core.Rendering;
 
-public sealed class FlameRenderer
+public sealed class FlameRenderer : IDisposable
 {
     private readonly FlameState _state;
     private readonly int _width, _height, _threads;
-    private readonly double[] _hit, _red, _green, _blue;
+    private double[] _hit, _red, _green, _blue;
     private readonly List<FlameTransform> _transforms;
-    private readonly double[] _weights;
+    private double[] _weights;
     public int ProcessedSamples { get; private set; }
 
     public FlameRenderer(FlameState state, int width, int height, int threads)
@@ -84,6 +84,16 @@ public sealed class FlameRenderer
             pixels[p] = Channel(_blue[i] / _hit[i], mapped, exposure, invGamma);
         }
         return pixels;
+    }
+
+    public void Dispose()
+    {
+        _hit = [];
+        _red = [];
+        _green = [];
+        _blue = [];
+        _weights = [];
+        _transforms.Clear();
     }
 
     private FlameTransform Select(double value) { int i = Array.BinarySearch(_weights, value); if (i < 0) i = ~i; return _transforms[Math.Min(i, _transforms.Count - 1)]; }

@@ -216,6 +216,7 @@ public partial class ImageExportManagerWindow : Window
         CancellationToken token = _cts.Token;
         _stopwatch.Restart();
         _elapsedTimer.Start();
+        BitmapSource? bitmap = null;
         try
         {
             bool needsResize = plan.RenderWidth != plan.OutputWidth || plan.RenderHeight != plan.OutputHeight ||
@@ -224,7 +225,7 @@ public partial class ImageExportManagerWindow : Window
             StatusText.Text = "Рендеринг изображения...";
             var renderProgress = new Progress<int>(value =>
                 ProgressBar.Value = Math.Clamp(value, 0, 100) * renderProgressLimit / 100.0);
-            BitmapSource bitmap = await _configuration.RenderAsync(
+            bitmap = await _configuration.RenderAsync(
                 new ImageExportRenderRequest(plan.RenderWidth, plan.RenderHeight, plan.RenderSsaaFactor),
                 token, renderProgress);
             token.ThrowIfCancellationRequested();
@@ -270,6 +271,9 @@ public partial class ImageExportManagerWindow : Window
             _elapsedTimer.Stop();
             _cts.Dispose();
             _cts = null;
+            bitmap = null;
+            if (_configuration.ReleaseMemoryAfterExport)
+                await MemoryPressureRelief.ReleaseAsync();
             SetRenderingState(false);
             if (_closeWhenIdle)
                 _ = Dispatcher.BeginInvoke(Close);
