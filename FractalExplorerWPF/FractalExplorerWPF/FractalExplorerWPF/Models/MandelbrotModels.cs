@@ -58,7 +58,7 @@ public sealed record MandelbrotVariantDefinition(
         MandelbrotVariant.Simonobrot => new(variant, "Симоноброт", "Simonobrot", 0, 0, 0.75m, true, true, 2),
         MandelbrotVariant.Generalized => new(variant, "Обобщённый Мандельброт", "GeneralizedMandelbrot", 0, 0, 0.75m, true, false, 3),
         MandelbrotVariant.Julia => new(variant, "Классическое множество Жюлиа", "Julia", 0, 0, 0.75m,
-            HasJuliaConstant: true, DefaultJuliaReal: -0.745m, DefaultJuliaImaginary: 0.113m),
+            HasJuliaConstant: true, DefaultJuliaReal: -0.800m, DefaultJuliaImaginary: 0.156m),
         MandelbrotVariant.JuliaBurningShip => new(variant, "Горящий Корабль (Жюлиа)", "JuliaBurningShip", 0, 0, 0.75m,
             HasJuliaConstant: true, DefaultJuliaReal: -1.7551867961883m, DefaultJuliaImaginary: 0.01068m),
         _ => throw new ArgumentOutOfRangeException(nameof(variant))
