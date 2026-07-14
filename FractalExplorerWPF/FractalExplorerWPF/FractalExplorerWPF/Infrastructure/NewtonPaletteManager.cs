@@ -28,7 +28,7 @@ public sealed class NewtonPaletteManager
     public NewtonPaletteManager()
     {
         try { LoadCustomPalettes(); } catch { }
-        ActivePalette = Palettes[1];
+        ActivePalette = Palettes[0];
     }
 
     public void SaveCustomPalettes()
