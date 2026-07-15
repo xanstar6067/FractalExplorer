@@ -75,7 +75,7 @@ public static class CollatzRenderer
         {
             var z = new ComplexDecimal(real, imaginary);
             iteration = IterateDecimal(ref z, state.Variation, state.PParameter, state.Iterations,
-                state.Threshold * state.Threshold);
+                state.Threshold);
             smooth = Smooth(iteration, state.Iterations, z);
         }
         else
@@ -108,10 +108,10 @@ public static class CollatzRenderer
     }
 
     private static int IterateDecimal(ref ComplexDecimal z, CollatzVariation variation, decimal p, int maximum,
-        decimal thresholdSquared)
+        decimal threshold)
     {
         int iteration = 0;
-        while (iteration < maximum && z.MagnitudeSquared <= thresholdSquared)
+        while (iteration < maximum && IsWithinEscapeRadius(z, threshold))
         {
             if (Math.Abs(z.Imaginary * (decimal)Math.PI) > 60m) break;
             try
@@ -134,6 +134,17 @@ public static class CollatzRenderer
             }
         }
         return iteration;
+    }
+
+    private static bool IsWithinEscapeRadius(ComplexDecimal z, decimal threshold)
+    {
+        // Check the components first. An escaped value can still fit in decimal while
+        // squaring it for MagnitudeSquared cannot (the source of the deep-zoom crash).
+        if (z.Real < -threshold || z.Real > threshold ||
+            z.Imaginary < -threshold || z.Imaginary > threshold)
+            return false;
+
+        return z.Real * z.Real + z.Imaginary * z.Imaginary <= threshold * threshold;
     }
 
     private static ComplexDecimal ComplexCos(ComplexDecimal z)
@@ -166,7 +177,9 @@ public static class CollatzRenderer
     private static double Smooth(int iteration, int maximum, ComplexDecimal z)
     {
         if (iteration >= maximum) return iteration;
-        double magnitudeSquared = (double)z.MagnitudeSquared;
+        double real = (double)z.Real;
+        double imaginary = (double)z.Imaginary;
+        double magnitudeSquared = real * real + imaginary * imaginary;
         if (!double.IsFinite(magnitudeSquared) || magnitudeSquared <= 1) return iteration;
         double log = Math.Log(magnitudeSquared);
         if (!double.IsFinite(log) || log <= 0) return iteration;
