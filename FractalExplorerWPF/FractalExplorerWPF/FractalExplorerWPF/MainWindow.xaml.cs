@@ -57,6 +57,11 @@ public partial class MainWindow : Window
         ReloadThemeSelector();
     }
 
+    private void AboutButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        new AboutWindow { Owner = this }.ShowDialog();
+    }
+
     private void ThemeManager_OnThemeChanged(object? sender, EventArgs e) => ReloadThemeSelector();
     private void ThemeManager_OnThemesChanged(object? sender, EventArgs e) => ReloadThemeSelector();
 
