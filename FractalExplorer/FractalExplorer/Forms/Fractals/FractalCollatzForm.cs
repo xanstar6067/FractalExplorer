@@ -142,6 +142,7 @@ namespace FractalExplorer.Forms.Fractals
         /// Базовый масштаб для вычислений.
         /// </summary>
         private const decimal BASE_SCALE = 4.0m;
+        private const decimal MAX_ZOOM = 1_000_000_000_000_000m;
         #endregion
 
         #region Constructor
@@ -182,9 +183,7 @@ namespace FractalExplorer.Forms.Fractals
             nudZoom.DecimalPlaces = 15;
             nudZoom.Increment = 0.1m;
             nudZoom.Minimum = 0.000000000000001m;
-
-            //nudZoom.Maximum = decimal.MaxValue;
-            nudZoom.Maximum = 1434648375m;
+            nudZoom.Maximum = MAX_ZOOM;
             _zoom = BASE_SCALE / 4.0m;
             nudZoom.Value = _zoom;
 
@@ -1546,8 +1545,8 @@ namespace FractalExplorer.Forms.Fractals
 
                 _centerX = state.CenterX;
                 _centerY = state.CenterY;
-                _zoom = state.Zoom;
-                if (nudZoom.Value != state.Zoom) nudZoom.Value = state.Zoom;
+                _zoom = Math.Max(nudZoom.Minimum, Math.Min(nudZoom.Maximum, state.Zoom));
+                if (nudZoom.Value != _zoom) nudZoom.Value = _zoom;
                 if (nudThreshold.Value != state.Threshold) nudThreshold.Value = state.Threshold;
                 if (nudIterations.Value != state.Iterations) nudIterations.Value = state.Iterations;
 

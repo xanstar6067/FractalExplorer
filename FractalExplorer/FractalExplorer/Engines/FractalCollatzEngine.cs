@@ -40,7 +40,18 @@ namespace FractalExplorer.Engines
 
         #region Properties
         public int MaxIterations { get; set; }
-        public decimal ThresholdSquared { get; set; }
+        private decimal _thresholdSquared;
+        private decimal _escapeThreshold;
+
+        public decimal ThresholdSquared
+        {
+            get => _thresholdSquared;
+            set
+            {
+                _thresholdSquared = value;
+                _escapeThreshold = value > 0 ? DecimalMath.Sqrt(value) : 0;
+            }
+        }
         public decimal CenterX { get; set; }
         public decimal CenterY { get; set; }
         public decimal Scale { get; set; }
@@ -99,7 +110,7 @@ namespace FractalExplorer.Engines
         private int CalculateIterations(ref ComplexDecimal z)
         {
             int iter = 0;
-            while (iter < MaxIterations && z.MagnitudeSquared <= ThresholdSquared)
+            while (iter < MaxIterations && IsWithinEscapeRadius(z))
             {
                 // === ГЛАВНОЕ ИЗМЕНЕНИЕ: УПРЕЖДАЮЩАЯ ПРОВЕРКА ===
                 // Аргумент для Cos/Sin - это z * PI. Проверяем его мнимую часть.
@@ -152,6 +163,24 @@ namespace FractalExplorer.Engines
             return iter;
         }
 
+        private bool IsWithinEscapeRadius(ComplexDecimal z)
+        {
+            // Сначала проверяем компоненты: значение может помещаться в decimal,
+            // но его квадрат уже способен вызвать OverflowException.
+            if (_thresholdSquared < 0 ||
+                z.Real < -_escapeThreshold || z.Real > _escapeThreshold ||
+                z.Imaginary < -_escapeThreshold || z.Imaginary > _escapeThreshold)
+            {
+                return false;
+            }
+
+            decimal realSquared = z.Real * z.Real;
+            if (realSquared > _thresholdSquared) return false;
+
+            // Вычитание до второго квадрата исключает переполнение суммы квадратов.
+            return z.Imaginary * z.Imaginary <= _thresholdSquared - realSquared;
+        }
+
         /// <summary>
         /// Вычисляет количество итераций для точки с использованием стандартной точности (<see cref="ComplexDouble"/>).
         /// </summary>
@@ -199,9 +228,16 @@ namespace FractalExplorer.Engines
         private double CalculateSmoothValue(int iter, ComplexDecimal finalZ)
         {
             if (iter >= MaxIterations) return iter;
-            double log_zn_sq = Math.Log((double)finalZ.MagnitudeSquared);
+            double real = (double)finalZ.Real;
+            double imaginary = (double)finalZ.Imaginary;
+            double magnitudeSquared = real * real + imaginary * imaginary;
+            if (!double.IsFinite(magnitudeSquared) || magnitudeSquared <= 1) return iter;
+
+            double log_zn_sq = Math.Log(magnitudeSquared);
+            if (!double.IsFinite(log_zn_sq) || log_zn_sq <= 0) return iter;
+
             double nu = Math.Log(log_zn_sq / (2 * Math.Log(2))) / Math.Log(2);
-            return iter + 1 - nu;
+            return double.IsFinite(nu) ? Math.Max(0, iter + 1 - nu) : iter;
         }
 
         private double CalculateSmoothValueDouble(int iter, ComplexDouble finalZ)
