@@ -4,24 +4,175 @@ namespace FractalExplorerWPF.Core.Rendering;
 
 public sealed class IfsRenderer
 {
-    private readonly IfsState _state; private readonly int _width,_height; private readonly float[] _x,_y; private readonly byte[] _pixels; private readonly Random _random=new(12345);
-    private double _currentX,_currentY; private bool _burnedIn,_boundsReady; private float _minX,_maxX,_minY,_maxY;
-    public int GeneratedPoints{get;private set;} public int PlottedPoints{get;private set;}
-    public IfsRenderer(IfsState state,int width,int height){_state=state.Clone();_width=width;_height=height;int count=Math.Max(1000,state.Iterations);_x=new float[count];_y=new float[count];_pixels=new byte[checked(width*height*4)];FillBackground();}
-    public void Generate(int count,CancellationToken token)
+    private readonly IfsState _state;
+    private readonly int _width;
+    private readonly int _height;
+    private readonly float[] _x;
+    private readonly float[] _y;
+    private readonly byte[] _pixels;
+    private readonly Random _random = new(12345);
+
+    private double _currentX;
+    private double _currentY;
+    private bool _burnedIn;
+    private bool _boundsReady;
+    private float _minX;
+    private float _maxX;
+    private float _minY;
+    private float _maxY;
+
+    public int GeneratedPoints { get; private set; }
+    public int PlottedPoints { get; private set; }
+
+    public IfsRenderer(IfsState state, int width, int height)
     {
-        if(_state.Transforms.Count==0){GeneratedPoints=_x.Length;return;}if(!_burnedIn){int burn=Math.Min(100,_x.Length/10);for(int i=0;i<burn;i++)Step();_burnedIn=true;}
-        int end=Math.Min(_x.Length,GeneratedPoints+Math.Max(1,count));for(;GeneratedPoints<end;GeneratedPoints++){if((GeneratedPoints&4095)==0)token.ThrowIfCancellationRequested();Step();(_x[GeneratedPoints],_y[GeneratedPoints])=((float)_currentX,(float)_currentY);}
-        if(GeneratedPoints==_x.Length&&!_boundsReady)PrepareBounds();
+        _state = state.Clone();
+        _width = width;
+        _height = height;
+        int count = Math.Max(1000, state.Iterations);
+        _x = new float[count];
+        _y = new float[count];
+        _pixels = new byte[checked(width * height * 4)];
+        FillBackground();
     }
-    public void Plot(int count,CancellationToken token)
+
+    public void Generate(int count, CancellationToken token)
     {
-        if(!_boundsReady)throw new InvalidOperationException("Сначала необходимо построить орбиту IFS.");double viewportWidth=Math.Clamp(Math.Abs(_state.Scale),.05,40),viewportHeight=viewportWidth*_height/(double)_width,left=_state.CenterX-viewportWidth/2,top=_state.CenterY+viewportHeight/2;float dx=Math.Max(1e-6f,_maxX-_minX),dy=Math.Max(1e-6f,_maxY-_minY);int end=Math.Min(_x.Length,PlottedPoints+Math.Max(1,count));
-        for(;PlottedPoints<end;PlottedPoints++){if((PlottedPoints&4095)==0)token.ThrowIfCancellationRequested();double nx=(_x[PlottedPoints]-_minX)/dx,ny=(_y[PlottedPoints]-_minY)/dy,worldX=(nx-.5)*2,worldY=(ny-.5)*2;int px=(int)((worldX-left)/viewportWidth*_width),py=(int)((top-worldY)/viewportHeight*_height);if((uint)px>=(uint)_width||(uint)py>=(uint)_height)continue;int p=(py*_width+px)*4;_pixels[p]=_state.FractalColor.B;_pixels[p+1]=_state.FractalColor.G;_pixels[p+2]=_state.FractalColor.R;_pixels[p+3]=255;}
+        if (_state.Transforms.Count == 0)
+        {
+            GeneratedPoints = _x.Length;
+            return;
+        }
+
+        // Every point depends on the previous one, so this orbit itself must stay sequential.
+        if (!_burnedIn)
+        {
+            int burn = Math.Min(100, _x.Length / 10);
+            for (int index = 0; index < burn; index++) Step();
+            _burnedIn = true;
+        }
+
+        int end = Math.Min(_x.Length, GeneratedPoints + Math.Max(1, count));
+        for (; GeneratedPoints < end; GeneratedPoints++)
+        {
+            if ((GeneratedPoints & 4095) == 0) token.ThrowIfCancellationRequested();
+            Step();
+            (_x[GeneratedPoints], _y[GeneratedPoints]) = ((float)_currentX, (float)_currentY);
+        }
+
+        if (GeneratedPoints == _x.Length && !_boundsReady) PrepareBounds(token);
     }
-    public byte[] CreateFrame()=>(byte[])_pixels.Clone();
-    private void Step(){IfsAffineTransform t=Pick(_random.NextDouble());double nx=t.A*_currentX+t.B*_currentY+t.E,ny=t.C*_currentX+t.D*_currentY+t.F;_currentX=(float)nx;_currentY=(float)ny;}
-    private IfsAffineTransform Pick(double value){double total=_state.Transforms.Sum(t=>Math.Max(0,t.Probability));if(total<=0)return _state.Transforms[^1];double sum=0;foreach(IfsAffineTransform t in _state.Transforms){sum+=Math.Max(0,t.Probability)/total;if(value<=sum)return t;}return _state.Transforms[^1];}
-    private void PrepareBounds(){_minX=_x.Min();_maxX=_x.Max();_minY=_y.Min();_maxY=_y.Max();_boundsReady=true;}
-    private void FillBackground(){for(int i=0;i<_width*_height;i++){int p=i*4;_pixels[p]=_state.BackgroundColor.B;_pixels[p+1]=_state.BackgroundColor.G;_pixels[p+2]=_state.BackgroundColor.R;_pixels[p+3]=_state.BackgroundColor.A;}}
+
+    public void Plot(int count, CancellationToken token)
+    {
+        if (!_boundsReady)
+            throw new InvalidOperationException("Сначала необходимо построить орбиту IFS.");
+
+        double viewportWidth = Math.Clamp(Math.Abs(_state.Scale), .05, 40);
+        double viewportHeight = viewportWidth * _height / _width;
+        double left = _state.CenterX - viewportWidth / 2;
+        double top = _state.CenterY + viewportHeight / 2;
+        float dx = Math.Max(1e-6f, _maxX - _minX);
+        float dy = Math.Max(1e-6f, _maxY - _minY);
+        int start = PlottedPoints;
+        int end = Math.Min(_x.Length, start + Math.Max(1, count));
+
+        Parallel.For(start, end, ParallelOptions(token), pointIndex =>
+        {
+            double nx = (_x[pointIndex] - _minX) / dx;
+            double ny = (_y[pointIndex] - _minY) / dy;
+            double worldX = (nx - .5) * 2;
+            double worldY = (ny - .5) * 2;
+            int px = (int)((worldX - left) / viewportWidth * _width);
+            int py = (int)((top - worldY) / viewportHeight * _height);
+            if ((uint)px >= (uint)_width || (uint)py >= (uint)_height) return;
+
+            int pixel = (py * _width + px) * 4;
+            // Collisions are benign because every point writes exactly the same color.
+            _pixels[pixel] = _state.FractalColor.B;
+            _pixels[pixel + 1] = _state.FractalColor.G;
+            _pixels[pixel + 2] = _state.FractalColor.R;
+            _pixels[pixel + 3] = 255;
+        });
+
+        PlottedPoints = end;
+    }
+
+    public byte[] CreateFrame() => (byte[])_pixels.Clone();
+
+    private void Step()
+    {
+        IfsAffineTransform transform = Pick(_random.NextDouble());
+        double nextX = transform.A * _currentX + transform.B * _currentY + transform.E;
+        double nextY = transform.C * _currentX + transform.D * _currentY + transform.F;
+        _currentX = (float)nextX;
+        _currentY = (float)nextY;
+    }
+
+    private IfsAffineTransform Pick(double value)
+    {
+        double total = _state.Transforms.Sum(transform => Math.Max(0, transform.Probability));
+        if (total <= 0) return _state.Transforms[^1];
+
+        double sum = 0;
+        foreach (IfsAffineTransform transform in _state.Transforms)
+        {
+            sum += Math.Max(0, transform.Probability) / total;
+            if (value <= sum) return transform;
+        }
+        return _state.Transforms[^1];
+    }
+
+    private void PrepareBounds(CancellationToken token)
+    {
+        _minX = float.PositiveInfinity;
+        _maxX = float.NegativeInfinity;
+        _minY = float.PositiveInfinity;
+        _maxY = float.NegativeInfinity;
+        object extremaLock = new();
+
+        Parallel.For(0, _x.Length, ParallelOptions(token),
+            () => (MinX: float.PositiveInfinity, MaxX: float.NegativeInfinity,
+                MinY: float.PositiveInfinity, MaxY: float.NegativeInfinity),
+            (index, _, local) =>
+            {
+                float x = _x[index];
+                float y = _y[index];
+                return (Math.Min(local.MinX, x), Math.Max(local.MaxX, x),
+                    Math.Min(local.MinY, y), Math.Max(local.MaxY, y));
+            },
+            local =>
+            {
+                lock (extremaLock)
+                {
+                    _minX = Math.Min(_minX, local.MinX);
+                    _maxX = Math.Max(_maxX, local.MaxX);
+                    _minY = Math.Min(_minY, local.MinY);
+                    _maxY = Math.Max(_maxY, local.MaxY);
+                }
+            });
+
+        _boundsReady = true;
+    }
+
+    private void FillBackground()
+    {
+        Parallel.For(0, _height, ParallelOptions(), y =>
+        {
+            int end = (y + 1) * _width * 4;
+            for (int pixel = y * _width * 4; pixel < end; pixel += 4)
+            {
+                _pixels[pixel] = _state.BackgroundColor.B;
+                _pixels[pixel + 1] = _state.BackgroundColor.G;
+                _pixels[pixel + 2] = _state.BackgroundColor.R;
+                _pixels[pixel + 3] = _state.BackgroundColor.A;
+            }
+        });
+    }
+
+    private static ParallelOptions ParallelOptions(CancellationToken token = default) => new()
+    {
+        CancellationToken = token,
+        MaxDegreeOfParallelism = Environment.ProcessorCount
+    };
 }

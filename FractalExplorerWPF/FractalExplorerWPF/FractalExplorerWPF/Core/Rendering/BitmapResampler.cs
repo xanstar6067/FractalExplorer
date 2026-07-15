@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Collections.Concurrent;
 
 namespace FractalExplorerWPF.Core.Rendering;
 
@@ -41,46 +42,75 @@ public static class BitmapResampler
         Contribution[][] horizontal = BuildContributions(sourceWidth, width);
         Contribution[][] vertical = BuildContributions(sourceHeight, height);
         byte[] output = new byte[checked(width * height * 4)];
-        var rowCache = new Dictionary<int, byte[]>();
-
-        for (int targetY = 0; targetY < height; targetY++)
+        var options = new ParallelOptions
         {
-            token.ThrowIfCancellationRequested();
-            Contribution[] yContributions = vertical[targetY];
-            foreach (Contribution contribution in yContributions)
-            {
-                if (!rowCache.ContainsKey(contribution.Index))
-                    rowCache[contribution.Index] = ResizeRow(
-                        sourcePixels, sourceStride, contribution.Index, width, horizontal);
-            }
+            CancellationToken = token,
+            MaxDegreeOfParallelism = Environment.ProcessorCount
+        };
 
-            int outputOffset = targetY * width * 4;
-            for (int targetX = 0; targetX < width; targetX++)
+        int completedRows = 0;
+        int lastReportedProgress = 95;
+        int rangesPerProcessor = 4;
+        int rangeSize = Math.Max(1,
+            (height + Environment.ProcessorCount * rangesPerProcessor - 1) /
+            (Environment.ProcessorCount * rangesPerProcessor));
+
+        // Lanczos is separable. Each worker processes a contiguous output range
+        // and keeps only the horizontally resized source rows needed by that
+        // range. This uses all processors without retaining a full intermediate
+        // image in memory during large/SSAA exports.
+        Parallel.ForEach(Partitioner.Create(0, height, rangeSize), options, range =>
+        {
+            var rowCache = new Dictionary<int, byte[]>();
+            for (int targetY = range.Item1; targetY < range.Item2; targetY++)
             {
-                double b = 0, g = 0, r = 0, a = 0;
-                int pixelOffset = targetX * 4;
+                token.ThrowIfCancellationRequested();
+                Contribution[] yContributions = vertical[targetY];
                 foreach (Contribution contribution in yContributions)
                 {
-                    byte[] row = rowCache[contribution.Index];
-                    double weight = contribution.Weight;
-                    b += row[pixelOffset] * weight;
-                    g += row[pixelOffset + 1] * weight;
-                    r += row[pixelOffset + 2] * weight;
-                    a += row[pixelOffset + 3] * weight;
+                    if (!rowCache.ContainsKey(contribution.Index))
+                    {
+                        rowCache[contribution.Index] = ResizeRow(
+                            sourcePixels, sourceStride, contribution.Index, width, horizontal);
+                    }
                 }
-                output[outputOffset + pixelOffset] = ToByte(b);
-                output[outputOffset + pixelOffset + 1] = ToByte(g);
-                output[outputOffset + pixelOffset + 2] = ToByte(r);
-                output[outputOffset + pixelOffset + 3] = ToByte(a);
-            }
 
-            int nextMinimum = targetY + 1 < height
-                ? vertical[targetY + 1].Min(item => item.Index)
-                : sourceHeight;
-            foreach (int staleRow in rowCache.Keys.Where(index => index < nextMinimum).ToArray())
-                rowCache.Remove(staleRow);
-            reportProgress?.Invoke(95 + Math.Min(4, (targetY + 1) * 5 / height));
-        }
+                int outputOffset = targetY * width * 4;
+                for (int targetX = 0; targetX < width; targetX++)
+                {
+                    double b = 0, g = 0, r = 0, a = 0;
+                    int pixelOffset = targetX * 4;
+                    foreach (Contribution contribution in yContributions)
+                    {
+                        byte[] row = rowCache[contribution.Index];
+                        double weight = contribution.Weight;
+                        b += row[pixelOffset] * weight;
+                        g += row[pixelOffset + 1] * weight;
+                        r += row[pixelOffset + 2] * weight;
+                        a += row[pixelOffset + 3] * weight;
+                    }
+                    output[outputOffset + pixelOffset] = ToByte(b);
+                    output[outputOffset + pixelOffset + 1] = ToByte(g);
+                    output[outputOffset + pixelOffset + 2] = ToByte(r);
+                    output[outputOffset + pixelOffset + 3] = ToByte(a);
+                }
+
+                int nextMinimum = targetY + 1 < range.Item2
+                    ? vertical[targetY + 1].Min(item => item.Index)
+                    : sourceHeight;
+                foreach (int staleRow in rowCache.Keys.Where(index => index < nextMinimum).ToArray())
+                    rowCache.Remove(staleRow);
+
+                int done = Interlocked.Increment(ref completedRows);
+                int value = 95 + Math.Min(4, done * 5 / height);
+                int previous = Volatile.Read(ref lastReportedProgress);
+                if (value > previous &&
+                    Interlocked.CompareExchange(ref lastReportedProgress, value, previous) == previous)
+                {
+                    reportProgress?.Invoke(value);
+                }
+            }
+        });
 
         BitmapSource result = BitmapSource.Create(width, height, 96, 96,
             PixelFormats.Pbgra32, null, output, width * 4);
