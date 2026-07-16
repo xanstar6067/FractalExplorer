@@ -209,7 +209,7 @@
             PointF p3World = new PointF((float)(side / 2.0), (float)(-triangleHeight / 3.0));
 
             // Делегат для рекурсивной отрисовки треугольников
-            Action<int, PointF, PointF, PointF> drawTriangleBranch = null;
+            Action<int, PointF, PointF, PointF> drawTriangleBranch = null!;
             drawTriangleBranch = (depth, pA, pB, pC) =>
             {
                 if (token.IsCancellationRequested)
@@ -243,7 +243,7 @@
             // Ограничиваем глубину параллелизации, чтобы избежать слишком большого количества мелких задач
             int parallelDepth = Math.Min(Iterations, 5);
 
-            Action<int, PointF, PointF, PointF> generateTopLevelTasks = null;
+            Action<int, PointF, PointF, PointF> generateTopLevelTasks = null!;
             generateTopLevelTasks = (depth, pA, pB, pC) =>
             {
                 if (token.IsCancellationRequested)

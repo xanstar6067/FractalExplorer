@@ -37,7 +37,7 @@ namespace FractalExplorer.Utilities.JsonConverters
 
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string propertyName = reader.GetString();
+                    string propertyName = reader.GetString()!;
                     reader.Read(); // Переходим к значению свойства
 
                     if (propertyName.Equals("Real", StringComparison.OrdinalIgnoreCase))

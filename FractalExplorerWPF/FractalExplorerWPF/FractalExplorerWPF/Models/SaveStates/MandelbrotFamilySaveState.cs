@@ -36,14 +36,14 @@
         /// <summary>
         /// Получает или задает имя цветовой палитры, примененной к фракталу.
         /// </summary>
-        public string PaletteName { get; set; }
+        public string PaletteName { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает тип движка рендеринга, использованный для создания предварительного просмотра
         /// (например, "Mandelbrot", "Julia" или "BurningShipMandelbrot"),
         /// что позволяет загрузчику выбрать правильный движок для отрисовки миниатюры.
         /// </summary>
-        public string PreviewEngineType { get; set; }
+        public string PreviewEngineType { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает активный режим окрашивания.
