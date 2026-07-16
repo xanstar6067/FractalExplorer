@@ -78,6 +78,14 @@
                     <TextBlock Text="Потоки ЦП"/>
                     <ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
 
+                    <TextBlock Text="Сглаживание предпросмотра"/>
+                    <ComboBox x:Name="PreviewSsaaBox" SelectedIndex="0" SelectionChanged="Parameter_OnChanged">
+                        <ComboBoxItem Content="1×" Tag="1"/>
+                        <ComboBoxItem Content="2×" Tag="2"/>
+                        <ComboBoxItem Content="3×" Tag="3"/>
+                        <ComboBoxItem Content="4×" Tag="4"/>
+                    </ComboBox>
+
                     <TextBlock x:Name="RootCountText" Margin="0,3,0,8"
                                Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Найдено корней: 0"/>
 

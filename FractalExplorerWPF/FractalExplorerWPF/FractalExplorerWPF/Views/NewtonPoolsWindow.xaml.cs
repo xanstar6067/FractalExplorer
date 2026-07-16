@@ -336,10 +336,12 @@ public partial class NewtonPoolsWindow : Window
         {
             RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
             DpiScale dpi = surface.Dpi;
-            int renderWidth = surface.PixelWidth;
-            int renderHeight = surface.PixelHeight;
+            int factor = SelectedPreviewSsaaFactor;
+            int renderWidth = checked(surface.PixelWidth * factor);
+            int renderHeight = checked(surface.PixelHeight * factor);
             TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
-            IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(renderWidth, renderHeight, 16, strategy);
+            IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(
+                renderWidth, renderHeight, 16 * factor, strategy);
             WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(
                 renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
             NewtonPoolsEngine engine = CreateEngine(state);
@@ -465,6 +467,10 @@ public partial class NewtonPoolsWindow : Window
 
     private int ReadHouseholderOrder() => int.TryParse(HouseholderOrderBox.Text, out int order) ? Math.Clamp(order, 2, 12) : 3;
     private int GetThreadCount() => ThreadsBox.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Math.Max(1, Convert.ToInt32(ThreadsBox.SelectedItem, CultureInfo.InvariantCulture));
+    private int SelectedPreviewSsaaFactor => PreviewSsaaBox.SelectedItem is ComboBoxItem item &&
+                                             int.TryParse(item.Tag?.ToString(), out int factor)
+        ? factor
+        : 1;
 
     private void SetRenderingState(bool rendering, string? status = null)
     {
