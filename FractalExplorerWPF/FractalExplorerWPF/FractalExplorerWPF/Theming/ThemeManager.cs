@@ -189,37 +189,47 @@ public static class ThemeManager
         ThemeContract.ScheduleAudit(window);
     }
 
-    private static void ApplyResources(Application application, ThemeDefinition theme)
+    internal static void ApplyPreviewResources(ResourceDictionary resources, ThemeDefinition theme)
     {
-        (Color interactive, Color interactiveHover) = GetInteractiveStateColors(theme, theme.ControlBackground);
-        SetBrush(application, "Theme.BaseBackgroundBrush", theme.BaseBackground);
-        SetBrush(application, "Theme.PanelBackgroundBrush", theme.PanelBackground);
-        SetBrush(application, "Theme.ControlBackgroundBrush", theme.ControlBackground);
-        SetBrush(application, "Theme.ControlBackgroundAltBrush", Blend(theme.ControlBackground, theme.PanelBackground, .45));
-        SetBrush(application, "Theme.PrimaryTextBrush", theme.PrimaryText);
-        SetBrush(application, "Theme.SecondaryTextBrush", theme.SecondaryText);
-        SetBrush(application, "Theme.DisabledTextBrush", Blend(theme.SecondaryText, theme.BaseBackground, .50));
-        SetBrush(application, "Theme.AccentPrimaryBrush", theme.AccentPrimary);
-        SetBrush(application, "Theme.AccentSecondaryBrush", theme.AccentSecondary);
-        SetBrush(application, "Theme.AccentForegroundBrush", ResolveTextOn(theme.AccentPrimary, theme.PrimaryText));
-        SetBrush(application, "Theme.HoverBackgroundBrush", theme.HoverBackground);
-        SetBrush(application, "Theme.PressedBackgroundBrush", theme.PressedBackground);
-        SetBrush(application, "Theme.BorderBrush", theme.BorderColor);
-        SetBrush(application, "Theme.InputBorderBrush", theme.InputBorderColor);
-        SetBrush(application, "Theme.InteractiveBorderBrush", interactive);
-        SetBrush(application, "Theme.InteractiveHoverBrush", interactiveHover);
-        SetBrush(application, "Theme.FocusBrush", interactiveHover);
-        SetBrush(application, "Theme.ScrollTrackBrush", Blend(theme.PanelBackground, theme.BaseBackground, .40));
-        SetBrush(application, "Theme.ScrollThumbBrush", Blend(theme.BorderColor, theme.SecondaryText, .42));
-        SetBrush(application, "Theme.ScrollThumbHoverBrush", EnsureContrast(theme.AccentPrimary, theme.PanelBackground, NonTextUiContrastRatio));
-        SetBrush(application, "Theme.ScrollThumbPressedBrush", EnsureContrast(theme.AccentSecondary, theme.PanelBackground, NonTextUiContrastRatio));
+        ArgumentNullException.ThrowIfNull(resources);
+        ArgumentNullException.ThrowIfNull(theme);
+        ApplyResources(resources, theme);
     }
 
-    private static void SetBrush(Application application, string key, Color color)
+    private static void ApplyResources(Application application, ThemeDefinition theme) =>
+        ApplyResources(application.Resources, theme);
+
+    private static void ApplyResources(ResourceDictionary resources, ThemeDefinition theme)
+    {
+        (Color interactive, Color interactiveHover) = GetInteractiveStateColors(theme, theme.ControlBackground);
+        SetBrush(resources, "Theme.BaseBackgroundBrush", theme.BaseBackground);
+        SetBrush(resources, "Theme.PanelBackgroundBrush", theme.PanelBackground);
+        SetBrush(resources, "Theme.ControlBackgroundBrush", theme.ControlBackground);
+        SetBrush(resources, "Theme.ControlBackgroundAltBrush", Blend(theme.ControlBackground, theme.PanelBackground, .45));
+        SetBrush(resources, "Theme.PrimaryTextBrush", theme.PrimaryText);
+        SetBrush(resources, "Theme.SecondaryTextBrush", theme.SecondaryText);
+        SetBrush(resources, "Theme.DisabledTextBrush", Blend(theme.SecondaryText, theme.BaseBackground, .50));
+        SetBrush(resources, "Theme.AccentPrimaryBrush", theme.AccentPrimary);
+        SetBrush(resources, "Theme.AccentSecondaryBrush", theme.AccentSecondary);
+        SetBrush(resources, "Theme.AccentForegroundBrush", ResolveTextOn(theme.AccentPrimary, theme.PrimaryText));
+        SetBrush(resources, "Theme.HoverBackgroundBrush", theme.HoverBackground);
+        SetBrush(resources, "Theme.PressedBackgroundBrush", theme.PressedBackground);
+        SetBrush(resources, "Theme.BorderBrush", theme.BorderColor);
+        SetBrush(resources, "Theme.InputBorderBrush", theme.InputBorderColor);
+        SetBrush(resources, "Theme.InteractiveBorderBrush", interactive);
+        SetBrush(resources, "Theme.InteractiveHoverBrush", interactiveHover);
+        SetBrush(resources, "Theme.FocusBrush", interactiveHover);
+        SetBrush(resources, "Theme.ScrollTrackBrush", Blend(theme.PanelBackground, theme.BaseBackground, .40));
+        SetBrush(resources, "Theme.ScrollThumbBrush", Blend(theme.BorderColor, theme.SecondaryText, .42));
+        SetBrush(resources, "Theme.ScrollThumbHoverBrush", EnsureContrast(theme.AccentPrimary, theme.PanelBackground, NonTextUiContrastRatio));
+        SetBrush(resources, "Theme.ScrollThumbPressedBrush", EnsureContrast(theme.AccentSecondary, theme.PanelBackground, NonTextUiContrastRatio));
+    }
+
+    private static void SetBrush(ResourceDictionary resources, string key, Color color)
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();
-        application.Resources[key] = brush;
+        resources[key] = brush;
     }
 
     private static void SaveCustomThemes() => ThemeStorage.SaveCustomThemes(CustomById.Values);

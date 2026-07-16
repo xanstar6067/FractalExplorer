@@ -38,16 +38,100 @@
                         <StackPanel x:Name="ColorPropertiesPanel"/>
 
                         <TextBlock Margin="0,18,0,8" FontSize="16" FontWeight="SemiBold" Text="Предпросмотр"/>
-                        <Border x:Name="PreviewPanel" Padding="14" CornerRadius="7" BorderThickness="1"
+                        <Border x:Name="PreviewRoot" Padding="12" CornerRadius="7" BorderThickness="1"
+                                Background="{DynamicResource Theme.BaseBackgroundBrush}"
+                                BorderBrush="{DynamicResource Theme.BorderBrush}"
                                 theme:ThemeContract.IgnoreAudit="True">
                             <StackPanel>
-                                <TextBlock x:Name="PreviewTitle" FontSize="17" FontWeight="SemiBold" Text="Заголовок и основной текст"/>
-                                <TextBlock x:Name="PreviewSecondary" Margin="0,4,0,10" Text="Вторичный текст и пояснения"/>
-                                <TextBox x:Name="PreviewInput" IsReadOnly="True" Text="Поле ввода"/>
-                                <Button x:Name="PreviewButton" Margin="0,10,0,0" HorizontalAlignment="Left" Content="Акцентное действие"/>
-                                <Border x:Name="InteractivePreview" Height="28" Margin="0,10,0,0" BorderThickness="2" CornerRadius="4"
-                                        MouseEnter="InteractivePreview_OnMouseEnter" MouseLeave="InteractivePreview_OnMouseLeave">
-                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="Интерактивная граница"/>
+                                <Border Padding="14" CornerRadius="6" BorderThickness="1"
+                                        Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                                        BorderBrush="{DynamicResource Theme.BorderBrush}">
+                                    <StackPanel>
+                                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="Заголовок и основной текст"/>
+                                        <TextBlock Margin="0,3,0,12" Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                                   Text="Все элементы ниже используют ресурсы редактируемой темы."/>
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="14"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel>
+                                                <TextBlock Margin="0,0,0,4" FontWeight="SemiBold" Text="Поля и действия"/>
+                                                <TextBox Margin="0,0,0,6" Text="Обычное поле"/>
+                                                <TextBox Margin="0,0,0,6" IsReadOnly="True" Text="Поле только для чтения"/>
+                                                <TextBox Margin="0,0,0,8" IsEnabled="False" Text="Отключённое поле"/>
+                                                <Button Margin="0,0,0,8" Content="Наведите и нажмите"/>
+                                                <CheckBox Margin="0,0,0,8" IsChecked="True" Content="Выбранный флажок"/>
+                                                <ComboBox Margin="0,0,0,8" SelectedIndex="0">
+                                                    <ComboBoxItem Content="Выбранный пункт"/>
+                                                    <ComboBoxItem Content="Второй пункт"/>
+                                                </ComboBox>
+                                                <Slider Margin="0,0,0,8" Minimum="0" Maximum="100" Value="62"/>
+                                                <ProgressBar Height="16" Minimum="0" Maximum="100" Value="68"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Margin="0,0,0,4" FontWeight="SemiBold" Text="Списки и контейнеры"/>
+                                                <ListBox Height="92" Margin="0,0,0,8" SelectedIndex="1">
+                                                    <ListBoxItem Content="Обычный пункт"/>
+                                                    <ListBoxItem Content="Выбранный пункт"/>
+                                                    <ListBoxItem IsEnabled="False" Content="Недоступный пункт"/>
+                                                </ListBox>
+                                                <TabControl Height="92" Margin="0,0,0,8" SelectedIndex="0">
+                                                    <TabItem Header="Первая"><TextBlock Margin="8" Text="Содержимое вкладки"/></TabItem>
+                                                    <TabItem Header="Вторая"><TextBlock Margin="8" Text="Вторая вкладка"/></TabItem>
+                                                </TabControl>
+                                                <GroupBox Margin="0,0,0,8" Header="Группа">
+                                                    <TextBlock Margin="6" Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                                               Text="Вторичный текст внутри группы"/>
+                                                </GroupBox>
+                                                <ScrollViewer Height="58" VerticalScrollBarVisibility="Visible">
+                                                    <TextBlock TextWrapping="Wrap"
+                                                               Text="Полоса прокрутки показывает вычисляемые цвета дорожки и бегунка. Наведите на неё и перетащите бегунок."/>
+                                                </ScrollViewer>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBlock Margin="0,14,0,6" FontWeight="SemiBold" Text="Цвета состояний"/>
+                                        <UniformGrid Columns="4">
+                                            <StackPanel Margin="2">
+                                                <Border Height="22" CornerRadius="3" Background="{DynamicResource Theme.AccentPrimaryBrush}"/>
+                                                <TextBlock Margin="0,2,0,0" HorizontalAlignment="Center" FontSize="11" Text="Акцент"/>
+                                            </StackPanel>
+                                            <StackPanel Margin="2">
+                                                <Border Height="22" CornerRadius="3" Background="{DynamicResource Theme.AccentSecondaryBrush}"/>
+                                                <TextBlock Margin="0,2,0,0" HorizontalAlignment="Center" FontSize="11" Text="Акцент 2"/>
+                                            </StackPanel>
+                                            <StackPanel Margin="2">
+                                                <Border Height="22" CornerRadius="3" Background="{DynamicResource Theme.HoverBackgroundBrush}"/>
+                                                <TextBlock Margin="0,2,0,0" HorizontalAlignment="Center" FontSize="11" Text="Наведение"/>
+                                            </StackPanel>
+                                            <StackPanel Margin="2">
+                                                <Border Height="22" CornerRadius="3" Background="{DynamicResource Theme.PressedBackgroundBrush}"/>
+                                                <TextBlock Margin="0,2,0,0" HorizontalAlignment="Center" FontSize="11" Text="Нажатие"/>
+                                            </StackPanel>
+                                        </UniformGrid>
+
+                                        <Border Height="32" Margin="2,10,2,0" Background="{DynamicResource Theme.ControlBackgroundBrush}"
+                                                BorderThickness="2" CornerRadius="4">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource Theme.InteractiveBorderBrush}"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource Theme.InteractiveHoverBrush}"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                                       Text="Наведите: интерактивная граница и фокус"/>
+                                        </Border>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </Border>

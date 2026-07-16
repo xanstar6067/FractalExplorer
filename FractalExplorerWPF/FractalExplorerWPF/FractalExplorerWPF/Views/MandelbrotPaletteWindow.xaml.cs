@@ -22,7 +22,6 @@ public partial class MandelbrotPaletteWindow : Window
     private MandelbrotPalette? _selected;
     private Point _dragStartPoint;
     private int _dragSourceIndex = -1;
-    private bool _updating;
 
     public event EventHandler? PaletteApplied;
 
@@ -47,24 +46,20 @@ public partial class MandelbrotPaletteWindow : Window
         if (PaletteList.SelectedItem is not MandelbrotPalette palette) return;
 
         _selected = palette;
-        _updating = true;
         NameBox.Text = palette.Name;
         _editingColors.Clear();
         _editingColors.AddRange(palette.Colors);
         ColorList.ItemsSource = null;
         ColorList.ItemsSource = _editingColors;
         ColorList.SelectedIndex = _editingColors.Count > 0 ? 0 : -1;
-        InteriorColorBox.Text = ToHex(palette.InteriorColor);
+        InteriorColorSelector.SelectedColor = palette.InteriorColor;
         GradientBox.IsChecked = palette.IsGradient;
         AlignIterationsBox.IsChecked = palette.AlignWithRenderIterations;
         GammaBox.Text = palette.Gamma.ToString(CultureInfo.InvariantCulture);
         PeriodBox.Text = palette.ColorPeriod.ToString(CultureInfo.InvariantCulture);
-        _updating = false;
-
         UpdateEditState();
         UpdateColorButtons();
         UpdatePreview();
-        UpdateInteriorColorPreview();
     }
 
     private void New_OnClick(object sender, RoutedEventArgs e)
@@ -245,18 +240,6 @@ public partial class MandelbrotPaletteWindow : Window
 
     private void ColorList_OnSelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateColorButtons();
 
-    private void InteriorColor_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (!CanEdit) return;
-        Color initial = TryParseColor(InteriorColorBox.Text.Trim(), out Color parsed) ? parsed : Colors.Black;
-        if (TryChooseColor(initial, out Color color)) InteriorColorBox.Text = ToHex(color);
-    }
-
-    private void InteriorColorBox_OnTextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (!_updating) UpdateInteriorColorPreview();
-    }
-
     private void Randomize_OnClick(object sender, RoutedEventArgs e)
     {
         if (!CanEdit) return;
@@ -277,7 +260,6 @@ public partial class MandelbrotPaletteWindow : Window
     {
         if (_selected is null || _selected.IsBuiltIn) return _selected is not null;
         if (string.IsNullOrWhiteSpace(NameBox.Text) || _editingColors.Count == 0 ||
-            !TryParseColor(InteriorColorBox.Text.Trim(), out Color interior) ||
             !double.TryParse(GammaBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gamma) || gamma is < 0.1 or > 5 ||
             !int.TryParse(PeriodBox.Text, out int period) || period is < 2 or > 100_000)
         {
@@ -288,7 +270,7 @@ public partial class MandelbrotPaletteWindow : Window
 
         _selected.Name = NameBox.Text.Trim();
         _selected.Colors = [.. _editingColors];
-        _selected.InteriorColor = interior;
+        _selected.InteriorColor = InteriorColorSelector.SelectedColor;
         _selected.IsGradient = GradientBox.IsChecked == true;
         _selected.AlignWithRenderIterations = AlignIterationsBox.IsChecked == true;
         _selected.Gamma = gamma;
@@ -324,20 +306,12 @@ public partial class MandelbrotPaletteWindow : Window
         GradientPreview.Background = gradient;
     }
 
-    private void UpdateInteriorColorPreview()
-    {
-        InteriorColorPreview.Background = TryParseColor(InteriorColorBox.Text.Trim(), out Color color)
-            ? new SolidColorBrush(color)
-            : MediaBrushes.Transparent;
-    }
-
     private void UpdateEditState()
     {
         bool editable = CanEdit;
         NameBox.IsEnabled = editable;
         ColorList.AllowDrop = editable;
-        InteriorColorBox.IsEnabled = editable;
-        InteriorColorButton.IsEnabled = editable;
+        InteriorColorSelector.IsEnabled = editable;
         GradientBox.IsEnabled = editable;
         GammaBox.IsEnabled = editable;
         PeriodBox.IsEnabled = editable;
@@ -373,8 +347,6 @@ public partial class MandelbrotPaletteWindow : Window
         return candidate;
     }
 
-    private static string ToHex(Color color) => $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
-
     private static Color FromHsv(double hue, double saturation, double value)
     {
         double chroma = value * saturation;
@@ -394,24 +366,6 @@ public partial class MandelbrotPaletteWindow : Window
             (byte)Math.Round((red + match) * 255),
             (byte)Math.Round((green + match) * 255),
             (byte)Math.Round((blue + match) * 255));
-    }
-
-    private static bool TryParseColor(string value, out Color color)
-    {
-        color = Colors.Transparent;
-        if (value.Length == 7) value = "#FF" + value[1..];
-        if (value.Length != 9 || value[0] != '#') return false;
-        return byte.TryParse(value.AsSpan(1, 2), NumberStyles.HexNumber, null, out byte a) &&
-               byte.TryParse(value.AsSpan(3, 2), NumberStyles.HexNumber, null, out byte r) &&
-               byte.TryParse(value.AsSpan(5, 2), NumberStyles.HexNumber, null, out byte g) &&
-               byte.TryParse(value.AsSpan(7, 2), NumberStyles.HexNumber, null, out byte b) &&
-               Assign(out color, Color.FromArgb(a, r, g, b));
-    }
-
-    private static bool Assign(out Color target, Color value)
-    {
-        target = value;
-        return true;
     }
 
 }

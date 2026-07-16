@@ -1,0 +1,37 @@
+<UserControl x:Class="FractalExplorerWPF.Controls.ColorSelectorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+             MinHeight="34">
+    <UserControl.Resources>
+        <DrawingBrush x:Key="ColorSelectorTransparencyBrush" TileMode="Tile"
+                      Viewport="0,0,8,8" ViewportUnits="Absolute" Stretch="None">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#FFF0F0F0" Geometry="M0,0 H8 V8 H0 Z"/>
+                    <GeometryDrawing Brush="#FFBDBDBD" Geometry="M0,0 H4 V4 H0 Z M4,4 H8 V8 H4 Z"/>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+    </UserControl.Resources>
+
+    <Button x:Name="PickerButton" Margin="0" Padding="5,4" HorizontalContentAlignment="Stretch"
+            ToolTip="Нажмите, чтобы выбрать цвет" Click="PickerButton_OnClick">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="42"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Border Height="24" Background="{StaticResource ColorSelectorTransparencyBrush}"
+                    BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="3"
+                    theme:ThemeContract.IgnoreAudit="True">
+                <Border x:Name="ColorSwatch" CornerRadius="2"/>
+            </Border>
+            <TextBlock x:Name="HexText" Grid.Column="1" Margin="9,0,4,0"
+                       VerticalAlignment="Center" FontFamily="Consolas"/>
+            <TextBlock Grid.Column="2" Margin="6,0,2,0" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Выбрать…"/>
+        </Grid>
+    </Button>
+</UserControl>

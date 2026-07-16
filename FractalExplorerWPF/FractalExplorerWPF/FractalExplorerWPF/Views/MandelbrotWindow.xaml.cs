@@ -111,7 +111,7 @@ public partial class MandelbrotWindow : Window
         PaletteScaleBox.Text = "1";
         PaletteWrapBox.SelectedIndex = 0;
         CustomInteriorBox.IsChecked = false;
-        InteriorColorBox.Text = "#FF000000";
+        InteriorColorSelector.SelectedColor = Colors.Black;
         _updatingControls = false;
     }
 
@@ -160,7 +160,7 @@ public partial class MandelbrotWindow : Window
                 : (MandelbrotPaletteWrapMode)PaletteWrapBox.SelectedIndex,
             UseCustomInteriorColor = CustomInteriorBox.IsChecked == true,
             InteriorColor = CustomInteriorBox.IsChecked == true
-                ? ParseColor(InteriorColorBox.Text, "цвет внутренней области")
+                ? InteriorColorSelector.SelectedColor
                 : palette.InteriorColor,
             OrbitTrapStrength = ReadDouble(OrbitStrengthBox.Text, "сила ловушки", 0, 5),
             OrbitTrapBias = ReadDouble(OrbitBiasBox.Text, "смещение ловушки", -1, 1),
@@ -201,7 +201,7 @@ public partial class MandelbrotWindow : Window
         PaletteScaleBox.Text = state.PaletteScale.ToString(CultureInfo.InvariantCulture);
         PaletteWrapBox.SelectedIndex = (int)state.PaletteWrapMode;
         CustomInteriorBox.IsChecked = state.UseCustomInteriorColor;
-        InteriorColorBox.Text = ToHex(state.InteriorColor);
+        InteriorColorSelector.SelectedColor = state.InteriorColor;
         OrbitStrengthBox.Text = state.OrbitTrapStrength.ToString(CultureInfo.InvariantCulture);
         OrbitBiasBox.Text = state.OrbitTrapBias.ToString(CultureInfo.InvariantCulture);
         StripeFrequencyBox.Text = state.StripeFrequency.ToString(CultureInfo.InvariantCulture);
@@ -908,21 +908,6 @@ public partial class MandelbrotWindow : Window
     private static bool TryReadDecimal(string text, out decimal value) =>
         decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
         decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
-
-    private static MediaColor ParseColor(string value, string name)
-    {
-        value = value.Trim();
-        if (value.Length == 7 && value[0] == '#') value = "#FF" + value[1..];
-        if (value.Length == 9 && value[0] == '#' &&
-            byte.TryParse(value.AsSpan(1, 2), NumberStyles.HexNumber, null, out byte a) &&
-            byte.TryParse(value.AsSpan(3, 2), NumberStyles.HexNumber, null, out byte r) &&
-            byte.TryParse(value.AsSpan(5, 2), NumberStyles.HexNumber, null, out byte g) &&
-            byte.TryParse(value.AsSpan(7, 2), NumberStyles.HexNumber, null, out byte b))
-            return MediaColor.FromArgb(a, r, g, b);
-        throw new InvalidOperationException($"Параметр «{name}» должен иметь формат #AARRGGBB.");
-    }
-
-    private static string ToHex(MediaColor color) => $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
 
     private static MandelbrotState CloneState(MandelbrotState source) => new()
     {

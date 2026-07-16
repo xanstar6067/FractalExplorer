@@ -118,7 +118,9 @@
                                 <ComboBoxItem Content="Повтор"/><ComboBoxItem Content="Ограничение"/><ComboBoxItem Content="Зеркало"/>
                             </ComboBox>
                             <CheckBox x:Name="CustomInteriorBox" Content="Свой цвет внутренней области" Checked="Parameter_OnChanged" Unchecked="Parameter_OnChanged"/>
-                            <TextBox x:Name="InteriorColorBox" ToolTip="#AARRGGBB" TextChanged="Parameter_OnChanged"/>
+                            <controls:ColorSelectorControl x:Name="InteriorColorSelector"
+                                                           IsEnabled="{Binding IsChecked, ElementName=CustomInteriorBox}"
+                                                           SelectedColorChanged="Parameter_OnChanged"/>
                         </StackPanel>
                     </Expander>
 

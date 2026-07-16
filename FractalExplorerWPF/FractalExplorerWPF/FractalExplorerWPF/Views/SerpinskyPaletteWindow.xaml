@@ -1,6 +1,7 @@
 <Window x:Class="FractalExplorerWPF.Views.SerpinskyPaletteWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls"
         xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
         Title="Палитры Серпинского"
         Width="720" Height="470"
@@ -33,21 +34,11 @@
             <TextBlock Margin="0,16,0,3" Text="Название"/>
             <TextBox x:Name="NameBox" Padding="7"/>
 
-            <TextBlock Margin="0,14,0,3" Text="Цвет фрактала (#AARRGGBB)"/>
-            <DockPanel>
-                <Border x:Name="FractalColorPreview" Width="48" Margin="0,0,8,0" CornerRadius="4"
-                        BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" theme:ThemeContract.IgnoreAudit="True"/>
-                <TextBox x:Name="FractalColorBox" Padding="7"
-                         TextChanged="ColorBox_OnTextChanged"/>
-            </DockPanel>
+            <TextBlock Margin="0,14,0,3" Text="Цвет фрактала"/>
+            <controls:ColorSelectorControl x:Name="FractalColorSelector"/>
 
-            <TextBlock Margin="0,14,0,3" Text="Цвет фона (#AARRGGBB)"/>
-            <DockPanel>
-                <Border x:Name="BackgroundColorPreview" Width="48" Margin="0,0,8,0" CornerRadius="4"
-                        BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" theme:ThemeContract.IgnoreAudit="True"/>
-                <TextBox x:Name="BackgroundColorBox" Padding="7"
-                         TextChanged="ColorBox_OnTextChanged"/>
-            </DockPanel>
+            <TextBlock Margin="0,14,0,3" Text="Цвет фона"/>
+            <controls:ColorSelectorControl x:Name="BackgroundColorSelector"/>
 
             <TextBlock x:Name="EditHint" Margin="0,14,0,0"
                        Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>

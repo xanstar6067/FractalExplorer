@@ -365,13 +365,27 @@
         </Setter>
     </Style>
 
+    <Style x:Key="ThemeSliderPageButtonStyle" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <ControlTemplate x:Key="ThemeHorizontalSliderTemplate" TargetType="Slider">
         <Grid Height="24">
             <Border Height="5" VerticalAlignment="Center" Background="{DynamicResource Theme.ScrollTrackBrush}" CornerRadius="3"/>
             <Track x:Name="PART_Track" IsDirectionReversed="{TemplateBinding IsDirectionReversed}" VerticalAlignment="Center">
-                <Track.DecreaseRepeatButton><RepeatButton Command="Slider.DecreaseLarge" Background="Transparent" BorderThickness="0"/></Track.DecreaseRepeatButton>
+                <Track.DecreaseRepeatButton><RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource ThemeSliderPageButtonStyle}"/></Track.DecreaseRepeatButton>
                 <Track.Thumb><Thumb Width="16" Height="16" Style="{StaticResource ThemeSliderThumbStyle}"/></Track.Thumb>
-                <Track.IncreaseRepeatButton><RepeatButton Command="Slider.IncreaseLarge" Background="Transparent" BorderThickness="0"/></Track.IncreaseRepeatButton>
+                <Track.IncreaseRepeatButton><RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource ThemeSliderPageButtonStyle}"/></Track.IncreaseRepeatButton>
             </Track>
         </Grid>
     </ControlTemplate>
@@ -379,9 +393,9 @@
         <Grid Width="24">
             <Border Width="5" HorizontalAlignment="Center" Background="{DynamicResource Theme.ScrollTrackBrush}" CornerRadius="3"/>
             <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="{TemplateBinding IsDirectionReversed}" HorizontalAlignment="Center">
-                <Track.DecreaseRepeatButton><RepeatButton Command="Slider.DecreaseLarge" Background="Transparent" BorderThickness="0"/></Track.DecreaseRepeatButton>
+                <Track.DecreaseRepeatButton><RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource ThemeSliderPageButtonStyle}"/></Track.DecreaseRepeatButton>
                 <Track.Thumb><Thumb Width="16" Height="16" Style="{StaticResource ThemeSliderThumbStyle}"/></Track.Thumb>
-                <Track.IncreaseRepeatButton><RepeatButton Command="Slider.IncreaseLarge" Background="Transparent" BorderThickness="0"/></Track.IncreaseRepeatButton>
+                <Track.IncreaseRepeatButton><RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource ThemeSliderPageButtonStyle}"/></Track.IncreaseRepeatButton>
             </Track>
         </Grid>
     </ControlTemplate>
@@ -467,12 +481,72 @@
         <Setter Property="Foreground" Value="{DynamicResource Theme.PrimaryTextBrush}"/>
         <Setter Property="Background" Value="{DynamicResource Theme.PanelBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Theme.BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid KeyboardNavigation.TabNavigation="Local">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TabPanel x:Name="HeaderPanel" IsItemsHost="True" Panel.ZIndex="1"
+                                  Background="Transparent"/>
+                        <Border x:Name="ContentPanel" Grid.Row="1" Margin="0,-1,0,0"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0,5,5,5">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              ContentSource="SelectedContent"/>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style TargetType="TabItem">
         <Setter Property="Foreground" Value="{DynamicResource Theme.SecondaryTextBrush}"/>
         <Setter Property="Background" Value="{DynamicResource Theme.ControlBackgroundAltBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Theme.BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Margin" Value="0,0,3,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="HeaderBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5,5,0,0"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          ContentSource="Header" RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource Theme.InteractiveHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Panel.ZIndex" Value="2"/>
+                            <Setter Property="Margin" Value="0,0,3,-1"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource Theme.FocusBrush}"/>
+                            <Setter TargetName="HeaderBorder" Property="BorderThickness" Value="2"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource Theme.DisabledTextBrush}"/>
+                            <Setter TargetName="HeaderBorder" Property="Opacity" Value="0.6"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Theme.HoverBackgroundBrush}"/></Trigger>
             <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource Theme.PrimaryTextBrush}"/><Setter Property="Background" Value="{DynamicResource Theme.PanelBackgroundBrush}"/></Trigger>

@@ -4,7 +4,6 @@ using System.Windows.Media;
 using FractalExplorerWPF.Infrastructure.ColorPicking;
 using FractalExplorerWPF.Theming;
 using Color = System.Windows.Media.Color;
-using MediaBrush = System.Windows.Media.Brush;
 
 namespace FractalExplorerWPF.Views;
 
@@ -37,7 +36,6 @@ public partial class ThemeEditorWindow : Window
     private readonly WindowsThemeImporter _windowsImporter = new();
     private ThemeDefinition? _selectedTheme;
     private bool _updating;
-    private bool _previewHovered;
 
     public ThemeEditorWindow()
     {
@@ -59,8 +57,9 @@ public partial class ThemeEditorWindow : Window
             var swatch = new Border
             {
                 Height = 27, Margin = new Thickness(6, 0, 8, 0), CornerRadius = new CornerRadius(4),
-                BorderBrush = (MediaBrush)FindResource("Theme.BorderBrush"), BorderThickness = new Thickness(1)
+                BorderThickness = new Thickness(1)
             };
+            swatch.SetResourceReference(Border.BorderBrushProperty, "Theme.BorderBrush");
             ThemeContract.SetIgnoreAudit(swatch, true);
             Grid.SetColumn(swatch, 1);
             row.Children.Add(swatch);
@@ -142,19 +141,7 @@ public partial class ThemeEditorWindow : Window
     private void RefreshPreview()
     {
         if (!TryBuildTheme(out ThemeDefinition? theme) || theme is null) return;
-        PreviewPanel.Background = Brush(theme.PanelBackground);
-        PreviewPanel.BorderBrush = Brush(theme.BorderColor);
-        PreviewTitle.Foreground = Brush(theme.PrimaryText);
-        PreviewSecondary.Foreground = Brush(theme.SecondaryText);
-        PreviewInput.Background = Brush(theme.ControlBackground);
-        PreviewInput.Foreground = Brush(theme.PrimaryText);
-        PreviewInput.BorderBrush = Brush(theme.InputBorderColor);
-        PreviewButton.Background = Brush(theme.AccentPrimary);
-        PreviewButton.Foreground = Brush(ThemeManager.ResolveTextOn(theme.AccentPrimary, theme.PrimaryText));
-        PreviewButton.BorderBrush = Brush(theme.BorderColor);
-        InteractivePreview.Background = Brush(theme.ControlBackground);
-        InteractivePreview.BorderBrush = Brush(ThemeManager.GetInteractiveBorderColor(theme, theme.ControlBackground, _previewHovered));
-        if (InteractivePreview.Child is TextBlock label) label.Foreground = Brush(theme.SecondaryText);
+        ThemeManager.ApplyPreviewResources(PreviewRoot.Resources, theme);
     }
 
     private void RefreshEnabledState()
@@ -284,9 +271,6 @@ public partial class ThemeEditorWindow : Window
         return candidate;
     }
 
-    private void InteractivePreview_OnMouseEnter(object sender, System.Windows.Input.MouseEventArgs e) { _previewHovered = true; RefreshPreview(); }
-    private void InteractivePreview_OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e) { _previewHovered = false; RefreshPreview(); }
     private Color Get(string property) => _colors[property];
-    private static SolidColorBrush Brush(Color color) => new(color);
     private static bool IsSpecified(Color color) => color.A != 0 || color.R != 0 || color.G != 0 || color.B != 0;
 }
