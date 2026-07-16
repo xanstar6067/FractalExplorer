@@ -22,23 +22,23 @@ namespace FractalExplorer
             /// <summary>
             /// Отображаемое имя фрактала.
             /// </summary>
-            public string DisplayName { get; set; }
+            public string DisplayName { get; set; } = string.Empty;
             /// <summary>
             /// Категория или семейство, к которому принадлежит фрактал.
             /// </summary>
-            public string Family { get; set; }
+            public string Family { get; set; } = string.Empty;
             /// <summary>
             /// Тип формы (<see cref="Form"/>), которую нужно запустить для этого фрактала.
             /// </summary>
-            public Type FormToLaunch { get; set; }
+            public Type FormToLaunch { get; set; } = null!;
             /// <summary>
             /// Подробное описание фрактала, его особенностей и математической основы.
             /// </summary>
-            public string Description { get; set; }
+            public string Description { get; set; } = string.Empty;
             /// <summary>
             /// Изображение для предпросмотра, загруженное из ресурсов проекта.
             /// </summary>
-            public Image PreviewImage { get; set; }
+            public Image PreviewImage { get; set; } = null!;
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace FractalExplorer
         /// <summary>
         /// Текущий фрактал, выбранный пользователем в дереве.
         /// </summary>
-        private FractalInfo _selectedFractal;
+        private FractalInfo _selectedFractal = null!;
 
         /// <summary>
         /// Пункты селектора тем (реальные темы и действия управления).
@@ -156,7 +156,7 @@ namespace FractalExplorer
         /// <summary>
         /// Применяет новый шаблон рендера из выпадающего списка.
         /// </summary>
-        private void cbRenderPattern_SelectedIndexChanged(object sender, EventArgs e)
+        private void cbRenderPattern_SelectedIndexChanged(object? sender, EventArgs e)
         {
             TileSchedulingStrategy selectedStrategy = GetRenderPatternStrategy(cbRenderPattern.SelectedIndex);
             RenderPatternSettings.SelectedPattern = selectedStrategy;
@@ -224,7 +224,7 @@ namespace FractalExplorer
         /// <summary>
         /// Применяет выбранную пользователем тему ко всем открытым формам и текущему окну.
         /// </summary>
-        private void cbTheme_SelectedIndexChanged(object sender, EventArgs e)
+        private void cbTheme_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (cbTheme.SelectedIndex < 0 || cbTheme.SelectedIndex >= _themeOptions.Count)
             {
@@ -631,12 +631,12 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void btnLaunchSelected_Click(object sender, EventArgs e)
+        private void btnLaunchSelected_Click(object? sender, EventArgs e)
         {
             LaunchFractal(_selectedFractal);
         }
 
-        private void btnAboutInfo_Click(object sender, EventArgs e)
+        private void btnAboutInfo_Click(object? sender, EventArgs e)
         {
             using AboutForm aboutForm = new();
             aboutForm.ShowDialog(this);
@@ -706,7 +706,7 @@ namespace FractalExplorer
             }
 
             // Самый крайний случай - версия сборки.
-            Version version = assembly.GetName().Version;
+            Version? version = assembly.GetName().Version;
             return version?.ToString() ?? "неизвестно";
         }
         #endregion

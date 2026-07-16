@@ -45,7 +45,7 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Окно выбора константы 'C' на основе множества "Пылающий корабль".
         /// </summary>
-        private BurningShipCSelectorForm _burningShipCSelectorWindow;
+        private BurningShipCSelectorForm? _burningShipCSelectorWindow;
         private bool _isPostInitialized;
         private bool _hasPendingJuliaConstant;
         private decimal _pendingJuliaReal;
@@ -227,7 +227,7 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Отрисовывает маркер на предпросмотре.
         /// </summary>
-        private void mandelbrotCanvas_Paint(object sender, PaintEventArgs e)
+        private void mandelbrotCanvas_Paint(object? sender, PaintEventArgs e)
         {
             var previewCanvas = sender as PictureBox;
             if (previewCanvas?.Image == null) return;
@@ -257,7 +257,7 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Открывает окно выбора константы 'C'.
         /// </summary>
-        private void mandelbrotCanvas_Click(object sender, EventArgs e)
+        private void mandelbrotCanvas_Click(object? sender, EventArgs e)
         {
             double initialReal = (double)nudRe.Value;
             double initialImaginary = (double)nudIm.Value;

@@ -64,7 +64,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
         /// Событие, которое возникает, когда компоненту требуется перерисовка UI.
         /// Главная форма должна подписаться на это событие, чтобы вызывать Invalidate().
         /// </summary>
-        public event Action NeedsRedraw;
+        public event Action? NeedsRedraw;
 
         #endregion
 
@@ -226,7 +226,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
         /// Метод, вызываемый таймером. Проверяет, было ли состояние изменено, и запрашивает перерисовку UI.
         /// </summary>
         /// <param name="state">Состояние объекта (не используется).</param>
-        private void OnRedrawTimerTick(object state)
+        private void OnRedrawTimerTick(object? state)
         {
             if (_isDirty)
             {

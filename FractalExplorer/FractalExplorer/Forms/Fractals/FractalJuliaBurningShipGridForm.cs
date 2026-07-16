@@ -34,7 +34,7 @@ namespace FractalExplorer.Forms.Fractals
             FormClosing += FractalJuliaBurningShipGridForm_FormClosing;
         }
 
-        private async void btnRender_Click(object sender, EventArgs e)
+        private async void btnRender_Click(object? sender, EventArgs e)
         {
             if (_isRendering)
             {
@@ -482,7 +482,7 @@ namespace FractalExplorer.Forms.Fractals
             }
         }
 
-        private void btnExportCanvas_Click(object sender, EventArgs e)
+        private void btnExportCanvas_Click(object? sender, EventArgs e)
         {
             if (_canvasBitmap == null)
             {
@@ -523,7 +523,7 @@ namespace FractalExplorer.Forms.Fractals
             }
         }
 
-        private void pictureBoxGrid_MouseClick(object sender, MouseEventArgs e)
+        private void pictureBoxGrid_MouseClick(object? sender, MouseEventArgs e)
         {
             if (!chkOpenOnClick.Checked || _canvasBitmap == null || _cells.Count == 0)
             {

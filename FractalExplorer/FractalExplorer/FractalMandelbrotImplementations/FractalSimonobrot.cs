@@ -20,17 +20,17 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Поле для ввода числового значения степени 'p'.
         /// </summary>
-        private NumericUpDown nudPower;
+        private NumericUpDown nudPower = null!;
 
         /// <summary>
         /// Метка для поля ввода степени 'p'.
         /// </summary>
-        private Label lblPower;
+        private Label lblPower = null!;
 
         /// <summary>
         /// Флажок для включения/отключения инверсии по горизонтали.
         /// </summary>
-        private CheckBox chkInversion;
+        private CheckBox chkInversion = null!;
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="FractalSimonobrot"/>.
@@ -209,7 +209,7 @@ namespace FractalExplorer.Projects
                 SimonobrotPreviewParams previewParams;
                 try
                 {
-                    previewParams = JsonSerializer.Deserialize<SimonobrotPreviewParams>(stateBase.PreviewParametersJson);
+                    previewParams = JsonSerializer.Deserialize<SimonobrotPreviewParams>(stateBase.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters.");
                 }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 

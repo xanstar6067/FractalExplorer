@@ -31,30 +31,30 @@ namespace FractalDraving
         /// <summary>
         /// Компонент для визуализации процесса рендеринга плиток.
         /// </summary>
-        private RenderVisualizerComponent _renderVisualizer;
+        private RenderVisualizerComponent _renderVisualizer = null!;
 
         /// <summary>
         /// Менеджер палитр, используемый этой формой для управления цветовыми схемами.
         /// </summary>
-        protected PaletteManager _paletteManager;
+        protected PaletteManager _paletteManager = null!;
 
         /// <summary>
         /// Кэш для цветов палитры с уже примененной гамма-коррекцией (для дискретного режима).
         /// Индекс массива соответствует номеру итерации.
         /// </summary>
-        private Color[] _gammaCorrectedPaletteCache;
+        private Color[] _gammaCorrectedPaletteCache = null!;
 
         /// <summary>
         /// "Подпись" палитры, для которой был сгенерирован кэш. 
         /// Используется для определения необходимости обновления кэша.
         /// </summary>
-        private string _paletteCacheSignature;
+        private string _paletteCacheSignature = null!;
 
         /// <summary>
         /// Форма конфигурации палитр, связанная с этой формой, для настройки цветов.
         /// </summary>
-        private ColorConfigurationForm _colorConfigForm;
-        private ColoringModeSettingsForm _coloringModeSettingsForm;
+        private ColorConfigurationForm? _colorConfigForm;
+        private ColoringModeSettingsForm? _coloringModeSettingsForm;
 
         /// <summary>
         /// Размер одной плитки (тайла) в пикселях для пошагового рендеринга.
@@ -69,17 +69,17 @@ namespace FractalDraving
         /// <summary>
         /// Битмап, содержащий отрисованное изображение для предпросмотра фрактала.
         /// </summary>
-        private Bitmap _previewBitmap;
+        private Bitmap? _previewBitmap;
 
         /// <summary>
         /// Битмап, в который в текущий момент происходит рендеринг плиток.
         /// </summary>
-        private Bitmap _currentRenderingBitmap;
+        private Bitmap? _currentRenderingBitmap;
 
         /// <summary>
         /// Токен отмены для операций рендеринга предпросмотра.
         /// </summary>
-        private CancellationTokenSource _previewRenderCts;
+        private CancellationTokenSource _previewRenderCts = null!;
 
         /// <summary>
         /// Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении.
@@ -94,7 +94,7 @@ namespace FractalDraving
         /// <summary>
         /// Экземпляр движка для рендеринга фрактала.
         /// </summary>
-        protected FractalMandelbrotFamilyEngine _fractalEngine;
+        protected FractalMandelbrotFamilyEngine _fractalEngine = null!;
 
         /// <summary>
         /// Текущий коэффициент масштабирования фрактала.
@@ -139,23 +139,23 @@ namespace FractalDraving
         /// <summary>
         /// Таймер для отложенного запуска рендеринга.
         /// </summary>
-        private DebounceTimer _renderDebounceTimer;
+        private DebounceTimer _renderDebounceTimer = null!;
 
         /// <summary>
         /// Базовый заголовок окна для восстановления после отображения времени рендера.
         /// </summary>
-        private string _baseTitle;
+        private string _baseTitle = null!;
 
         /// <summary>
         /// Подсказка для интерактивного предпросмотра множества.
         /// </summary>
-        private Label _previewInteractionHintLabel;
+        private Label _previewInteractionHintLabel = null!;
 
         /// <summary>
         /// Обертка-рамка вокруг канваса предпросмотра для акцентирования интерактивности.
         /// </summary>
-        private Panel _previewCanvasBorderPanel;
-        private Panel _previewCanvasHoverBorderPanel;
+        private Panel _previewCanvasBorderPanel = null!;
+        private Panel _previewCanvasHoverBorderPanel = null!;
 
         /// <summary>
         /// Флаг наведения курсора на канвас предпросмотра.
@@ -540,7 +540,7 @@ namespace FractalDraving
             }
         }
 
-        private void Form_KeyDown(object sender, KeyEventArgs e)
+        private void Form_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F11)
             {
@@ -556,7 +556,7 @@ namespace FractalDraving
             }
         }
 
-        private void Form_FormClosing(object sender, FormClosingEventArgs e)
+        private void Form_FormClosing(object? sender, FormClosingEventArgs e)
         {
             ExitFullscreenSafely();
         }
@@ -570,7 +570,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void color_configurations_Click(object sender, EventArgs e)
+        private void color_configurations_Click(object? sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
@@ -590,13 +590,13 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void OnPaletteApplied(object sender, EventArgs e)
+        private void OnPaletteApplied(object? sender, EventArgs e)
         {
             UpdateEngineParameters();
             ScheduleRender();
         }
 
-        private void btnSmoothSettings_Click(object sender, EventArgs e)
+        private void btnSmoothSettings_Click(object? sender, EventArgs e)
         {
             if (_coloringModeSettingsForm == null || _coloringModeSettingsForm.IsDisposed)
             {
@@ -715,7 +715,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        protected void ParamControl_Changed(object sender, EventArgs e)
+        protected void ParamControl_Changed(object? sender, EventArgs e)
         {
             if (_isHighResRendering) return;
             if (sender == nudZoom && nudZoom.Value != _zoom)
@@ -734,7 +734,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void Canvas_MouseWheel(object sender, MouseEventArgs e)
+        private void Canvas_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
             CommitAndBakePreview();
@@ -781,7 +781,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void Canvas_MouseDown(object sender, MouseEventArgs e)
+        private void Canvas_MouseDown(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left)
@@ -797,7 +797,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        private void Canvas_MouseMove(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning || canvas.Width <= 0) return;
             CommitAndBakePreview();
@@ -813,7 +813,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void Canvas_MouseUp(object sender, MouseEventArgs e)
+        private void Canvas_MouseUp(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left)
@@ -829,7 +829,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события отрисовки.</param>
-        private void Canvas_Paint(object sender, PaintEventArgs e)
+        private void Canvas_Paint(object? sender, PaintEventArgs e)
         {
             if (canvas.Width <= 0 || canvas.Height <= 0)
             {
@@ -1208,7 +1208,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
             if (_isHighResRendering || _isRenderingPreview)
@@ -1329,7 +1329,7 @@ namespace FractalDraving
             }
         }
 
-        private void Canvas_Resize(object sender, EventArgs e)
+        private void Canvas_Resize(object? sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized) return;
             canvas.Invalidate();
@@ -1347,17 +1347,17 @@ namespace FractalDraving
             ScheduleRender(cancelCurrentRender: false);
         }
 
-        private void btnToggleControls_Click(object sender, EventArgs e)
+        private void btnToggleControls_Click(object? sender, EventArgs e)
         {
             ToggleControlsPanel();
         }
 
-        private void CanvasHost_Resize(object sender, EventArgs e)
+        private void CanvasHost_Resize(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
 
-        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        private void ControlsHost_SizeChanged(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
@@ -1481,7 +1481,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnOpenSaveManager_Click(object sender, EventArgs e)
+        private void btnOpenSaveManager_Click(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -1601,7 +1601,9 @@ namespace FractalDraving
         public double LoupeZoom => 4.0;
 
         /// <inheritdoc/>
-        public event EventHandler LoupeZoomChanged;
+#pragma warning disable CS0067 // Член интерфейса; эта форма не публикует отдельные события лупы.
+        public event EventHandler? LoupeZoomChanged;
+#pragma warning restore CS0067
 
         #endregion
 
@@ -1860,7 +1862,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void FormBase_Load(object sender, EventArgs e)
+        private void FormBase_Load(object? sender, EventArgs e)
         {
             _baseTitle = this.Text;
             _paletteManager = new PaletteManager();
@@ -1900,7 +1902,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void FractalMandelbrotFamilyForm_FormClosed(object sender, FormClosedEventArgs e)
+        private void FractalMandelbrotFamilyForm_FormClosed(object? sender, FormClosedEventArgs e)
         {
             _renderDebounceTimer?.Stop();
             _renderDebounceTimer?.Dispose();
@@ -1967,7 +1969,7 @@ namespace FractalDraving
             /// <summary>
             /// Имя используемой палитры.
             /// </summary>
-            public string PaletteName { get; set; }
+            public string PaletteName { get; set; } = string.Empty;
             /// <summary>
             /// Пороговое значение (Bail-out).
             /// </summary>
@@ -2040,7 +2042,7 @@ namespace FractalDraving
             /// <summary>
             /// Тип движка для рендеринга превью.
             /// </summary>
-            public string PreviewEngineType { get; set; }
+            public string PreviewEngineType { get; set; } = string.Empty;
         }
 
         /// <summary>
@@ -2252,7 +2254,7 @@ namespace FractalDraving
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnStateManager_Click(object sender, EventArgs e)
+        private void btnStateManager_Click(object? sender, EventArgs e)
         {
             using (var dialog = new SaveLoadDialogForm(this))
             {
@@ -2460,7 +2462,7 @@ namespace FractalDraving
             {
                 if (string.IsNullOrEmpty(stateBase.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 PreviewParams previewParams;
-                try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson); }
+                try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters."); }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
                 FractalMandelbrotFamilyEngine previewEngine;
@@ -2474,6 +2476,11 @@ namespace FractalDraving
                     case "CelticMandelbrot": previewEngine = new CelticMandelbrotEngine(); break;
                     case "GeneralizedMandelbrot":
                         var genMandelbrotParams = JsonSerializer.Deserialize<FractalGeneralizedMandelbrot.GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
+                        if (genMandelbrotParams is null)
+                        {
+                            return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
+                        }
+
                         previewEngine = new GeneralizedMandelbrotEngine
                         {
                             Power = genMandelbrotParams.Power
@@ -2510,7 +2517,7 @@ namespace FractalDraving
                 return bmpError;
             }
             PreviewParams previewParams;
-            try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson, new JsonSerializerOptions()); }
+            try { previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson, new JsonSerializerOptions()) ?? throw new JsonException("Invalid preview parameters."); }
             catch (Exception)
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
@@ -2772,9 +2779,9 @@ namespace FractalDraving
             switch (state.EngineType)
             {
                 case "Mandelbrot": engine = new MandelbrotEngine(); break;
-                case "Julia": engine = new JuliaEngine { C = state.JuliaC.Value }; break;
+                case "Julia": engine = new JuliaEngine { C = state.JuliaC ?? throw new InvalidOperationException("Для Julia не задан параметр C.") }; break;
                 case "MandelbrotBurningShip": engine = new MandelbrotBurningShipEngine(); break;
-                case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC.Value }; break;
+                case "JuliaBurningShip": engine = new JuliaBurningShipEngine { C = state.JuliaC ?? throw new InvalidOperationException("Для Julia Burning Ship не задан параметр C.") }; break;
                 case "Tricorn": engine = new TricornEngine(); break;
                 case "GeneralizedMandelbrot":
                     engine = new GeneralizedMandelbrotEngine();

@@ -76,8 +76,8 @@ namespace FractalExplorer.Engines
         // --- Параметры окрашивания ---
 
         public bool UseSmoothColoring { get; set; } = false;
-        public Func<int, int, int, Color> Palette { get; set; }
-        public Func<double, Color> SmoothPalette { get; set; }
+        public Func<int, int, int, Color> Palette { get; set; } = null!;
+        public Func<double, Color> SmoothPalette { get; set; } = null!;
         public int MaxColorIterations { get; set; } = 1000;
 
         #endregion

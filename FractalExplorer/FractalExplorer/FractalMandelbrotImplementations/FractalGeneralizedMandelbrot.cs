@@ -17,12 +17,12 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Поле для ввода степени p.
         /// </summary>
-        private NumericUpDown nudPower;
+        private NumericUpDown nudPower = null!;
 
         /// <summary>
         /// Метка для поля ввода степени.
         /// </summary>
-        private Label lblPower;
+        private Label lblPower = null!;
 
         #region Constructor
 
@@ -233,7 +233,7 @@ namespace FractalExplorer.Projects
                 GeneralizedMandelbrotPreviewParams previewParams;
                 try
                 {
-                    previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson);
+                    previewParams = JsonSerializer.Deserialize<GeneralizedMandelbrotPreviewParams>(stateBase.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters.");
                 }
                 catch
                 {

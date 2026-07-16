@@ -18,11 +18,11 @@ namespace FractalExplorer.Engines
         /// <summary>
         /// Абстрактное синтаксическое дерево (AST) для функции f(z).
         /// </summary>
-        private ExpressionNode f_ast;
+        private ExpressionNode f_ast = null!;
         /// <summary>
         /// Абстрактное синтаксическое дерево (AST) для производной функции f'(z).
         /// </summary>
-        private ExpressionNode f_deriv_ast;
+        private ExpressionNode f_deriv_ast = null!;
 
         /// <summary>
         /// Максимальное количество итераций для метода Ньютона.
@@ -108,8 +108,8 @@ namespace FractalExplorer.Engines
             }
             catch (Exception ex)
             {
-                f_ast = null;
-                f_deriv_ast = null;
+                f_ast = null!;
+                f_deriv_ast = null!;
                 Roots.Clear(); // Убедись, что Roots доступен в этом контексте
                 debugInfo = $"ОШИБКА ПАРСИНГА:\n{ex.Message}";
                 return false;

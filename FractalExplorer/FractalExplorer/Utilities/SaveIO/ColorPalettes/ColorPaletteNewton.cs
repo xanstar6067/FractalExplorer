@@ -14,7 +14,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <summary>
         /// Получает или устанавливает имя палитры.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или устанавливает список цветов, используемых для отрисовки областей притяжения корней.

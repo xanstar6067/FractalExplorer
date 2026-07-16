@@ -137,7 +137,7 @@ namespace FractalExplorer.Forms.Fractals
             };
         }
 
-        private void FractalIFSForm_Load(object sender, EventArgs e)
+        private void FractalIFSForm_Load(object? sender, EventArgs e)
         {
             IfsPointOfInterest? defaultPreset = _pointsOfInterest.FirstOrDefault(p => p.Id == "barnsley_overview")
                                              ?? _pointsOfInterest.FirstOrDefault();
@@ -150,7 +150,7 @@ namespace FractalExplorer.Forms.Fractals
             ScheduleRender();
         }
 
-        private void FractalIFSForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void FractalIFSForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
             ExitFullscreenSafely();
             _renderCts?.Cancel();
@@ -504,7 +504,7 @@ namespace FractalExplorer.Forms.Fractals
             }));
         }
 
-        private void btnFractalColor_Click(object sender, EventArgs e)
+        private void btnFractalColor_Click(object? sender, EventArgs e)
         {
             using ColorPickerPanelForm dialog = new(_engine.FractalColor);
             if (dialog.ShowDialog(this) == DialogResult.OK)
@@ -514,7 +514,7 @@ namespace FractalExplorer.Forms.Fractals
             }
         }
 
-        private void btnBackgroundColor_Click(object sender, EventArgs e)
+        private void btnBackgroundColor_Click(object? sender, EventArgs e)
         {
             using ColorPickerPanelForm dialog = new(_engine.BackgroundColor);
             if (dialog.ShowDialog(this) == DialogResult.OK)

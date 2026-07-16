@@ -24,20 +24,20 @@ namespace FractalExplorer.Forms
     public partial class FractalNovaMandelbrotForm : Form, IHighResRenderable, ISaveLoadCapableFractal
     {
         #region Fields
-        private FractalNovaFamilyEngine _fractalEngine;
-        private RenderVisualizerComponent _renderVisualizer;
-        private PaletteManager _paletteManager;
-        private ColorConfigurationForm _colorConfigForm;
-        private DebounceTimer _renderDebounceTimer;
+        private FractalNovaFamilyEngine _fractalEngine = null!;
+        private RenderVisualizerComponent _renderVisualizer = null!;
+        private PaletteManager _paletteManager = null!;
+        private ColorConfigurationForm? _colorConfigForm;
+        private DebounceTimer _renderDebounceTimer = null!;
 
-        private Color[] _gammaCorrectedPaletteCache;
-        private string _paletteCacheSignature;
+        private Color[] _gammaCorrectedPaletteCache = null!;
+        private string _paletteCacheSignature = null!;
 
         private const int TILE_SIZE = 16;
         private readonly object _bitmapLock = new object();
-        private Bitmap _previewBitmap;
-        private Bitmap _currentRenderingBitmap;
-        private CancellationTokenSource _previewRenderCts;
+        private Bitmap? _previewBitmap;
+        private Bitmap? _currentRenderingBitmap;
+        private CancellationTokenSource _previewRenderCts = null!;
 
         private volatile bool _isHighResRendering = false;
         private volatile bool _isRenderingPreview = false;
@@ -53,7 +53,7 @@ namespace FractalExplorer.Forms
         private Point _panStart;
         private bool _panning = false;
 
-        private string _baseTitle;
+        private string _baseTitle = null!;
         private const int ToggleButtonMargin = 12;
         private bool _suppressResizeRender = false;
         private bool _isUserResizingWindow = false;
@@ -141,14 +141,14 @@ namespace FractalExplorer.Forms
             _renderVisualizer.NeedsRedraw += OnVisualizerNeedsRedraw;
         }
 
-        private void Form_ResizeBegin(object sender, EventArgs e)
+        private void Form_ResizeBegin(object? sender, EventArgs e)
         {
             _isUserResizingWindow = true;
             _hasPendingCanvasResizeRender = false;
             _renderDebounceTimer?.Stop();
         }
 
-        private void Form_ResizeEnd(object sender, EventArgs e)
+        private void Form_ResizeEnd(object? sender, EventArgs e)
         {
             if (!_isUserResizingWindow)
             {
@@ -198,7 +198,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Form_KeyDown(object sender, KeyEventArgs e)
+        private void Form_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F11)
             {
@@ -214,7 +214,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Form_FormClosing(object sender, FormClosingEventArgs e)
+        private void Form_FormClosing(object? sender, FormClosingEventArgs e)
         {
             ExitFullscreenSafely();
         }
@@ -222,7 +222,7 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region UI Event Handlers
-        private void ParamControl_Changed(object sender, EventArgs e)
+        private void ParamControl_Changed(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -237,7 +237,7 @@ namespace FractalExplorer.Forms
             ScheduleRender();
         }
 
-        private void btnSaveHighRes_Click(object sender, EventArgs e)
+        private void btnSaveHighRes_Click(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -251,7 +251,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void btnConfigurePalette_Click(object sender, EventArgs e)
+        private void btnConfigurePalette_Click(object? sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
@@ -266,7 +266,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void btnStateManager_Click(object sender, EventArgs e)
+        private void btnStateManager_Click(object? sender, EventArgs e)
         {
             using (var dialog = new SaveLoadDialogForm(this))
             {
@@ -276,7 +276,7 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Canvas Interaction
-        private void Canvas_MouseWheel(object sender, MouseEventArgs e)
+        private void Canvas_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0)
             {
@@ -304,7 +304,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Canvas_MouseDown(object sender, MouseEventArgs e)
+        private void Canvas_MouseDown(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -319,7 +319,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        private void Canvas_MouseMove(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning || canvas.Width <= 0)
             {
@@ -334,7 +334,7 @@ namespace FractalExplorer.Forms
             canvas.Invalidate();
         }
 
-        private void Canvas_MouseUp(object sender, MouseEventArgs e)
+        private void Canvas_MouseUp(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -349,7 +349,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Canvas_Paint(object sender, PaintEventArgs e)
+        private void Canvas_Paint(object? sender, PaintEventArgs e)
         {
             if (canvas.Width <= 0 || canvas.Height <= 0)
             {
@@ -363,7 +363,7 @@ namespace FractalExplorer.Forms
             lock (_bitmapLock)
             {
                 bool drewStablePreview = false;
-                DrawTransformedBitmap(e.Graphics, _previewBitmap, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
+                DrawTransformedBitmap(e.Graphics, _previewBitmap!, _renderedCenterX, _renderedCenterY, _renderedZoom, _centerX, _centerY, _zoom);
                 drewStablePreview = _previewBitmap != null;
 
                 if (_currentRenderingBitmap != null && (!_isUserResizingWindow || !drewStablePreview))
@@ -404,7 +404,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
             if (_isHighResRendering || _isRenderingPreview)
@@ -615,7 +615,7 @@ namespace FractalExplorer.Forms
         /// Безопасно завершает текущий рендеринг и "запекает" его результат в основной битмап предпросмотра.
         /// </summary>
 
-        private void Canvas_Resize(object sender, EventArgs e)
+        private void Canvas_Resize(object? sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized)
             {
@@ -638,17 +638,17 @@ namespace FractalExplorer.Forms
             ScheduleRender(cancelCurrentRender: false);
         }
 
-        private void btnToggleControls_Click(object sender, EventArgs e)
+        private void btnToggleControls_Click(object? sender, EventArgs e)
         {
             ToggleControlsPanel();
         }
 
-        private void CanvasHost_Resize(object sender, EventArgs e)
+        private void CanvasHost_Resize(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
 
-        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        private void ControlsHost_SizeChanged(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
@@ -1004,7 +1004,7 @@ namespace FractalExplorer.Forms
                 (int)(a.B + (b.B - a.B) * t));
         }
 
-        private void OnPaletteApplied(object sender, EventArgs e)
+        private void OnPaletteApplied(object? sender, EventArgs e)
         {
             UpdateEngineParameters();
             ScheduleRender();
@@ -1012,7 +1012,7 @@ namespace FractalExplorer.Forms
         #endregion
 
         #region Form Lifecycle
-        private void FractalNovaForm_Load(object sender, EventArgs e)
+        private void FractalNovaForm_Load(object? sender, EventArgs e)
         {
             _baseTitle = this.Text;
             _fractalEngine = new NovaMandelbrotEngine();
@@ -1033,7 +1033,7 @@ namespace FractalExplorer.Forms
             ScheduleRender();
         }
 
-        private void FractalNovaForm_FormClosed(object sender, FormClosedEventArgs e)
+        private void FractalNovaForm_FormClosed(object? sender, FormClosedEventArgs e)
         {
             _renderDebounceTimer?.Stop();
             _renderDebounceTimer?.Dispose();
@@ -1149,7 +1149,7 @@ namespace FractalExplorer.Forms
             public decimal CenterY { get; set; }
             public decimal Zoom { get; set; }
             public int Iterations { get; set; }
-            public string PaletteName { get; set; }
+            public string PaletteName { get; set; } = string.Empty;
             public decimal Threshold { get; set; }
             public decimal P_Re { get; set; }
             public decimal P_Im { get; set; }
@@ -1255,7 +1255,7 @@ namespace FractalExplorer.Forms
                 NovaPreviewParams previewParams;
                 try
                 {
-                    previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson);
+                    previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters.");
                 }
                 catch
                 {
@@ -1307,7 +1307,7 @@ namespace FractalExplorer.Forms
             NovaPreviewParams previewParams;
             try
             {
-                previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson);
+                previewParams = JsonSerializer.Deserialize<NovaPreviewParams>(state.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters.");
             }
             catch (Exception)
             {

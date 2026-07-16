@@ -960,23 +960,23 @@ namespace FractalExplorer.Forms.Fractals
             }
         }
 
-        private void btnRender_Click(object sender, EventArgs e)
+        private void btnRender_Click(object? sender, EventArgs e)
         {
             QueueRenderRestart(immediate: true);
         }
 
-        private void btnPresets_Click(object sender, EventArgs e)
+        private void btnPresets_Click(object? sender, EventArgs e)
         {
             ApplyPreset();
         }
 
-        private void btnState_Click(object sender, EventArgs e)
+        private void btnState_Click(object? sender, EventArgs e)
         {
             using var dialog = new SaveLoadDialogForm(this);
             dialog.ShowDialog(this);
         }
 
-        private void btnSaveImage_Click(object sender, EventArgs e)
+        private void btnSaveImage_Click(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -989,7 +989,7 @@ namespace FractalExplorer.Forms.Fractals
         }
 
 
-        private void btnPalette_Click(object sender, EventArgs e)
+        private void btnPalette_Click(object? sender, EventArgs e)
         {
             if (_lyapunovColorConfigForm == null || _lyapunovColorConfigForm.IsDisposed)
             {

@@ -62,13 +62,13 @@ namespace FractalExplorer.Engines
         /// Функция палитры для ДИСКРЕТНОГО окрашивания.
         /// Принимает (текущая итерация, макс. итераций, макс. итераций для цвета) и возвращает цвет.
         /// </summary>
-        public Func<int, int, int, Color> Palette { get; set; }
+        public Func<int, int, int, Color> Palette { get; set; } = null!;
 
         /// <summary>
         /// Функция палитры для НЕПРЕРЫВНОГО (сглаженного) окрашивания.
         /// Принимает (дробное значение итерации) и возвращает цвет.
         /// </summary>
-        public Func<double, Color> SmoothPalette { get; set; }
+        public Func<double, Color> SmoothPalette { get; set; } = null!;
 
         /// <summary>
         /// Максимальное количество итераций для нормализации цвета в палитре (для дискретного режима).

@@ -1,53 +1,55 @@
+#nullable enable annotations
+
 namespace FractalExplorer.Forms.Fractals
 {
     partial class IfsTransformEditorForm
     {
         private System.ComponentModel.IContainer? components = null;
 
-        private SplitContainer _split;
+        private SplitContainer _split = null!;
 
-        private Panel _leftPanel;
-        private Panel _listHeader;
-        private Label _lblListTitle;
-        private Button _btnAdd;
-        private Panel _listContainer;
-        private Panel _listFooter;
-        private Label _lblTotalProbability;
+        private Panel _leftPanel = null!;
+        private Panel _listHeader = null!;
+        private Label _lblListTitle = null!;
+        private Button _btnAdd = null!;
+        private Panel _listContainer = null!;
+        private Panel _listFooter = null!;
+        private Label _lblTotalProbability = null!;
 
-        private Panel _rightPanel;
-        private Panel _editorHeader;
-        private Label _lblEditorTitle;
-        private TableLayoutPanel _tblMain;
-        private Label _lblProbabilityCaption;
-        private TableLayoutPanel _tblProbabilityRow;
-        private TrackBar _trkProbability;
-        private Label _lblProbabilityValue;
-        private Label _lblProbabilityPercent;
-        private Panel _divider;
-        private Label _lblAffineCaption;
-        private Label _lblAffineFormula;
-        private TableLayoutPanel _tblAffineGrid;
+        private Panel _rightPanel = null!;
+        private Panel _editorHeader = null!;
+        private Label _lblEditorTitle = null!;
+        private TableLayoutPanel _tblMain = null!;
+        private Label _lblProbabilityCaption = null!;
+        private TableLayoutPanel _tblProbabilityRow = null!;
+        private TrackBar _trkProbability = null!;
+        private Label _lblProbabilityValue = null!;
+        private Label _lblProbabilityPercent = null!;
+        private Panel _divider = null!;
+        private Label _lblAffineCaption = null!;
+        private Label _lblAffineFormula = null!;
+        private TableLayoutPanel _tblAffineGrid = null!;
 
-        private Label _lblA;
-        private Label _lblB;
-        private Label _lblC;
-        private Label _lblD;
-        private Label _lblE;
-        private Label _lblF;
+        private Label _lblA = null!;
+        private Label _lblB = null!;
+        private Label _lblC = null!;
+        private Label _lblD = null!;
+        private Label _lblE = null!;
+        private Label _lblF = null!;
 
-        private NumericUpDown _nudA;
-        private NumericUpDown _nudB;
-        private NumericUpDown _nudC;
-        private NumericUpDown _nudD;
-        private NumericUpDown _nudE;
-        private NumericUpDown _nudF;
+        private NumericUpDown _nudA = null!;
+        private NumericUpDown _nudB = null!;
+        private NumericUpDown _nudC = null!;
+        private NumericUpDown _nudD = null!;
+        private NumericUpDown _nudE = null!;
+        private NumericUpDown _nudF = null!;
 
-        private Panel _footerPanel;
-        private Button _btnUndo;
-        private Button _btnNormalize;
-        private Button _btnRandomize;
-        private Button _btnCancel;
-        private Button _btnOk;
+        private Panel _footerPanel = null!;
+        private Button _btnUndo = null!;
+        private Button _btnNormalize = null!;
+        private Button _btnRandomize = null!;
+        private Button _btnCancel = null!;
+        private Button _btnOk = null!;
 
         protected override void Dispose(bool disposing)
         {

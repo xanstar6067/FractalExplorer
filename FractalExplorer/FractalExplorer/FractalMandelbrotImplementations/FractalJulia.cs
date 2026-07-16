@@ -46,7 +46,7 @@ namespace FractalExplorer.Projects
         /// <summary>
         /// Окно выбора константы 'C' на основе множества Мандельброта.
         /// </summary>
-        private JuliaMandelbrotSelectorForm _mandelbrotCSelectorWindow;
+        private JuliaMandelbrotSelectorForm? _mandelbrotCSelectorWindow;
         private bool _isPostInitialized;
         private bool _hasPendingJuliaConstant;
         private decimal _pendingJuliaReal;
@@ -248,7 +248,7 @@ namespace FractalExplorer.Projects
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события рисования.</param>
-        private void mandelbrotCanvas_Paint(object sender, PaintEventArgs e)
+        private void mandelbrotCanvas_Paint(object? sender, PaintEventArgs e)
         {
             var previewCanvas = sender as PictureBox;
             if (previewCanvas?.Image == null) return;
@@ -281,7 +281,7 @@ namespace FractalExplorer.Projects
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void mandelbrotCanvas_Click(object sender, EventArgs e)
+        private void mandelbrotCanvas_Click(object? sender, EventArgs e)
         {
             double initialReal = (double)nudRe.Value;
             double initialImaginary = (double)nudIm.Value;

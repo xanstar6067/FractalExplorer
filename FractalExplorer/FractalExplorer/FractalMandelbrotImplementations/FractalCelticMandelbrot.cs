@@ -98,7 +98,7 @@ namespace FractalExplorer.Projects
                 PreviewParams previewParams;
                 try
                 {
-                    previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson);
+                    previewParams = JsonSerializer.Deserialize<PreviewParams>(stateBase.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters.");
                 }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 

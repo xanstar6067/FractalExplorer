@@ -19,9 +19,9 @@ namespace FractalExplorer.Engines
     /// </summary>
     public class FractalNewtonIterativeEngine
     {
-        private ExpressionNode f_ast;
-        private ExpressionNode f_deriv_ast;
-        private ExpressionNode f_second_deriv_ast;
+        private ExpressionNode f_ast = null!;
+        private ExpressionNode f_deriv_ast = null!;
+        private ExpressionNode f_second_deriv_ast = null!;
         private readonly List<ExpressionNode> _inverseDerivatives = new();
 
         private const double epsilon = 1e-6;
@@ -78,9 +78,9 @@ namespace FractalExplorer.Engines
             }
             catch (Exception ex)
             {
-                f_ast = null;
-                f_deriv_ast = null;
-                f_second_deriv_ast = null;
+                f_ast = null!;
+                f_deriv_ast = null!;
+                f_second_deriv_ast = null!;
                 _inverseDerivatives.Clear();
                 Roots.Clear();
                 debugInfo = $"ОШИБКА ПАРСИНГА:\n{ex.Message}";

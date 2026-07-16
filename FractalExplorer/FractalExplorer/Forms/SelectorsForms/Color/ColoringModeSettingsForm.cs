@@ -590,7 +590,7 @@ namespace FractalExplorer.Utilities
             };
         }
 
-        private void _btnCancel_Click(object sender, EventArgs e)
+        private void _btnCancel_Click(object? sender, EventArgs e)
         {
             Close();
         }

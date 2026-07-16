@@ -36,7 +36,7 @@ namespace FractalExplorer
         /// <summary>
         /// Компонент для визуализации процесса рендеринга плиток.
         /// </summary>
-        private RenderVisualizerComponent _renderVisualizer;
+        private RenderVisualizerComponent _renderVisualizer = null!;
         private EventHandler? _themeChangedHandler;
         private bool _isFormulaInputHovered;
         private readonly Random _randomFormulaGenerator = new();
@@ -49,7 +49,7 @@ namespace FractalExplorer
         /// <summary>
         /// Форма для настройки цветовой палитры фрактала Ньютона.
         /// </summary>
-        private ColorConfigurationNewtonPoolsForm _colorSettingsForm;
+        private ColorConfigurationNewtonPoolsForm _colorSettingsForm = null!;
 
         /// <summary>
         /// Базовый масштаб для преобразования мировых координат в экранные.
@@ -69,17 +69,17 @@ namespace FractalExplorer
         /// <summary>
         /// Битмап, содержащий отрисованное изображение для предпросмотра.
         /// </summary>
-        private Bitmap _previewBitmap;
+        private Bitmap? _previewBitmap;
 
         /// <summary>
         /// Битмап, в который текущий момент происходит рендеринг плиток.
         /// </summary>
-        private Bitmap _currentRenderingBitmap;
+        private Bitmap? _currentRenderingBitmap;
 
         /// <summary>
         /// Токен отмены для операций рендеринга предпросмотра.
         /// </summary>
-        private CancellationTokenSource _previewRenderCts;
+        private CancellationTokenSource _previewRenderCts = null!;
 
         /// <summary>
         /// Флаг, указывающий, выполняется ли сейчас рендеринг в высоком разрешении.
@@ -137,7 +137,7 @@ namespace FractalExplorer
         /// <summary>
         /// Базовая часть заголовка окна.
         /// </summary>
-        private string _baseTitle;
+        private string _baseTitle = null!;
         private const int ToggleButtonMargin = 12;
         private bool _suppressResizeRender = false;
         private bool _isUserResizingWindow = false;
@@ -223,7 +223,7 @@ namespace FractalExplorer
 
             cbSelector.Items.AddRange(presetPolynomials);
             cbSelector.SelectedIndex = 0;
-            richTextInput.Text = cbSelector.SelectedItem.ToString();
+            richTextInput.Text = cbSelector.SelectedItem?.ToString() ?? string.Empty;
 
             int cores = Environment.ProcessorCount;
             for (int i = 1; i <= cores; i++) cbThreads.Items.Add(i);
@@ -300,14 +300,14 @@ namespace FractalExplorer
             ScheduleRender();
         }
 
-        private void Form_ResizeBegin(object sender, EventArgs e)
+        private void Form_ResizeBegin(object? sender, EventArgs e)
         {
             _isUserResizingWindow = true;
             _hasPendingCanvasResizeRender = false;
             _renderDebounceTimer?.Stop();
         }
 
-        private void Form_ResizeEnd(object sender, EventArgs e)
+        private void Form_ResizeEnd(object? sender, EventArgs e)
         {
             if (!_isUserResizingWindow)
             {
@@ -358,7 +358,7 @@ namespace FractalExplorer
             }
         }
 
-        private void Form_KeyDown(object sender, KeyEventArgs e)
+        private void Form_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F11)
             {
@@ -374,7 +374,7 @@ namespace FractalExplorer
             }
         }
 
-        private void Form_FormClosing(object sender, FormClosingEventArgs e)
+        private void Form_FormClosing(object? sender, FormClosingEventArgs e)
         {
             ExitFullscreenSafely();
         }
@@ -594,7 +594,7 @@ namespace FractalExplorer
         }
 
 
-        private void FractalBitmap_Resize(object sender, EventArgs e)
+        private void FractalBitmap_Resize(object? sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized)
             {
@@ -617,17 +617,17 @@ namespace FractalExplorer
             ScheduleRender(cancelCurrentRender: false);
         }
 
-        private void btnToggleControls_Click(object sender, EventArgs e)
+        private void btnToggleControls_Click(object? sender, EventArgs e)
         {
             ToggleControlsPanel();
         }
 
-        private void CanvasHost_Resize(object sender, EventArgs e)
+        private void CanvasHost_Resize(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
 
-        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        private void ControlsHost_SizeChanged(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
@@ -695,7 +695,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает нажатие на кнопку конфигурации палитры.
         /// </summary>
-        private void btnConfigurePalette_Click(object sender, EventArgs e)
+        private void btnConfigurePalette_Click(object? sender, EventArgs e)
         {
             if (!_engine.SetFormula(richTextInput.Text, out string _))
             {
@@ -776,7 +776,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает событие тика таймера для отложенного рендеринга.
         /// </summary>
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
             if (_isHighResRendering || _isRenderingPreview)
@@ -948,7 +948,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает событие перерисовки холста.
         /// </summary>
-        private void Canvas_Paint(object sender, PaintEventArgs e)
+        private void Canvas_Paint(object? sender, PaintEventArgs e)
         {
             e.Graphics.Clear(Color.Black);
             e.Graphics.InterpolationMode = InterpolationMode.Bilinear;
@@ -992,7 +992,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает прокрутку колеса мыши для масштабирования.
         /// </summary>
-        private void Canvas_MouseWheel(object sender, MouseEventArgs e)
+        private void Canvas_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
 
@@ -1019,7 +1019,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает нажатие кнопки мыши для начала панорамирования.
         /// </summary>
-        private void Canvas_MouseDown(object sender, MouseEventArgs e)
+        private void Canvas_MouseDown(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left)
@@ -1033,7 +1033,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает движение мыши для панорамирования.
         /// </summary>
-        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        private void Canvas_MouseMove(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning) return;
 
@@ -1050,7 +1050,7 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает отпускание кнопки мыши для завершения панорамирования.
         /// </summary>
-        private void Canvas_MouseUp(object sender, MouseEventArgs e)
+        private void Canvas_MouseUp(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left)
@@ -1064,11 +1064,11 @@ namespace FractalExplorer
         /// <summary>
         /// Обрабатывает изменение выбранного элемента в списке предустановленных формул.
         /// </summary>
-        private void cbSelector_SelectedIndexChanged(object sender, EventArgs e)
+        private void cbSelector_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (cbSelector.SelectedIndex >= 0)
             {
-                richTextInput.Text = cbSelector.SelectedItem.ToString();
+                richTextInput.Text = cbSelector.SelectedItem?.ToString() ?? string.Empty;
                 btnApplyFormula_Click(this, EventArgs.Empty);
             }
         }
@@ -1172,7 +1172,7 @@ namespace FractalExplorer
         /// </summary>
         /// <remarks>
         /// </remarks>
-        private void btnOpenSaveManager_Click(object sender, EventArgs e)
+        private void btnOpenSaveManager_Click(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -1239,7 +1239,7 @@ namespace FractalExplorer
             /// <summary>
             /// Формула фрактала.
             /// </summary>
-            public string Formula { get; set; }
+            public string Formula { get; set; } = string.Empty;
             /// <summary>
             /// Координата X центра.
             /// </summary>
@@ -1259,7 +1259,7 @@ namespace FractalExplorer
             /// <summary>
             /// Снимок палитры.
             /// </summary>
-            public NewtonColorPalette PaletteSnapshot { get; set; }
+            public NewtonColorPalette PaletteSnapshot { get; set; } = null!;
             public NewtonIterationMethod IterationMethod { get; set; } = NewtonIterationMethod.Newton;
             public int HouseholderOrder { get; set; } = 3;
         }
@@ -1363,7 +1363,7 @@ namespace FractalExplorer
                 {
                     var jsonOptions = new JsonSerializerOptions();
                     jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
-                    previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                    previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions) ?? throw new JsonException("Invalid preview parameters.");
                 }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
@@ -1401,7 +1401,7 @@ namespace FractalExplorer
             {
                 var jsonOptions = new JsonSerializerOptions();
                 jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
-                previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                previewParams = JsonSerializer.Deserialize<NewtonPreviewParams>(state.PreviewParametersJson, jsonOptions) ?? throw new JsonException("Invalid preview parameters.");
             }
             catch (Exception)
             {
@@ -1458,7 +1458,7 @@ namespace FractalExplorer
         /// <summary>
         /// Открывает диалоговое окно менеджера сохранений.
         /// </summary>
-        private void btnStateManager_Click(object sender, EventArgs e)
+        private void btnStateManager_Click(object? sender, EventArgs e)
         {
             using (var dialog = new Forms.SaveLoadDialogForm(this))
             {

@@ -16,7 +16,7 @@ namespace FractalExplorer.SelectorsForms
         #region Fields
         private readonly FractalExplorer.Forms.FractalPhoenixForm _ownerForm;
 
-        private Bitmap _slicePBitmap;
+        private Bitmap? _slicePBitmap;
         private double _slicePMinRe = -2.0;
         private double _slicePMaxRe = 2.0;
         private double _slicePMinIm = -2.0;
@@ -24,11 +24,11 @@ namespace FractalExplorer.SelectorsForms
         private double _renderedSlicePMinRe, _renderedSlicePMaxRe, _renderedSlicePMinIm, _renderedSlicePMaxIm;
         private Point _panStartSliceP;
         private bool _panningSliceP = false;
-        private CancellationTokenSource _ctsSliceP;
+        private CancellationTokenSource? _ctsSliceP;
         private volatile bool _isRenderingSliceP = false;
-        private System.Windows.Forms.Timer _renderDebounceTimerSliceP;
+        private System.Windows.Forms.Timer? _renderDebounceTimerSliceP;
 
-        private Bitmap _sliceQBitmap;
+        private Bitmap? _sliceQBitmap;
         private double _sliceQMinRe = -2.0;
         private double _sliceQMaxRe = 2.0;
         private double _sliceQMinIm = -2.0;
@@ -36,9 +36,9 @@ namespace FractalExplorer.SelectorsForms
         private double _renderedSliceQMinRe, _renderedSliceQMaxRe, _renderedSliceQMinIm, _renderedSliceQMaxIm;
         private Point _panStartSliceQ;
         private bool _panningSliceQ = false;
-        private CancellationTokenSource _ctsSliceQ;
+        private CancellationTokenSource? _ctsSliceQ;
         private volatile bool _isRenderingSliceQ = false;
-        private System.Windows.Forms.Timer _renderDebounceTimerSliceQ;
+        private System.Windows.Forms.Timer? _renderDebounceTimerSliceQ;
 
         private ComplexDecimal _fixedC2;
 
@@ -54,7 +54,7 @@ namespace FractalExplorer.SelectorsForms
         /// <summary>
         /// Происходит, когда пользователь выбирает новые параметры C1 и C2 (которые могут быть изменены только косвенно через C1).
         /// </summary>
-        public event Action<ComplexDecimal, ComplexDecimal> ParametersSelected;
+        public event Action<ComplexDecimal, ComplexDecimal>? ParametersSelected;
         #endregion
 
         #region Constructor
@@ -119,7 +119,7 @@ namespace FractalExplorer.SelectorsForms
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void SelectorForm_Load(object sender, EventArgs e)
+        private void SelectorForm_Load(object? sender, EventArgs e)
         {
             _renderedSlicePMinRe = _slicePMinRe;
             _renderedSlicePMaxRe = _slicePMaxRe;
@@ -131,8 +131,8 @@ namespace FractalExplorer.SelectorsForms
             _renderedSliceQMaxIm = _sliceQMaxIm;
 
             // Запускаем таймеры, чтобы инициировать начальный рендер срезов после полной загрузки формы.
-            _renderDebounceTimerSliceP.Start();
-            _renderDebounceTimerSliceQ.Start();
+            _renderDebounceTimerSliceP?.Start();
+            _renderDebounceTimerSliceQ?.Start();
         }
 
         /// <summary>
@@ -158,8 +158,8 @@ namespace FractalExplorer.SelectorsForms
                 if (canvas.Width > 0 && canvas.Height > 0)
                 {
                     var timer = isPSliceTarget ? _renderDebounceTimerSliceP : _renderDebounceTimerSliceQ;
-                    timer.Stop();
-                    timer.Start();
+                    timer?.Stop();
+                    timer?.Start();
                 }
             };
             var pb = isPSliceTarget ? progressBarSliceP : progressBarSliceQ;
@@ -189,7 +189,7 @@ namespace FractalExplorer.SelectorsForms
             lblQReal.Visible = isAdvanced;
         }
 
-        private void chkAdvancedMode_CheckedChanged(object sender, EventArgs e)
+        private void chkAdvancedMode_CheckedChanged(object? sender, EventArgs e)
         {
             ApplyBasicMode(chkAdvancedMode.Checked);
         }
@@ -203,7 +203,7 @@ namespace FractalExplorer.SelectorsForms
         /// </summary>
         /// <param name="sender">Источник события (NumericUpDown).</param>
         /// <param name="e">Данные события.</param>
-        private void NudValues_Changed(object sender, EventArgs e)
+        private void NudValues_Changed(object? sender, EventArgs e)
         {
             UpdateFixedValueLabels();
             sliceCanvasP.Invalidate(); // Перерисовываем для обновления маркера.
@@ -213,25 +213,25 @@ namespace FractalExplorer.SelectorsForms
             // Например, изменение nudPReal влияет на срез Q, т.к. nudPReal является фиксированной координатой для среза Q.
             if (sender == nudPReal)
             {
-                _renderDebounceTimerSliceQ.Stop();
-                _renderDebounceTimerSliceQ.Start();
+                _renderDebounceTimerSliceQ?.Stop();
+                _renderDebounceTimerSliceQ?.Start();
             }
             else if (sender == nudQImaginary)
             {
-                _renderDebounceTimerSliceP.Stop();
-                _renderDebounceTimerSliceP.Start();
+                _renderDebounceTimerSliceP?.Stop();
+                _renderDebounceTimerSliceP?.Start();
             }
             // nudPImaginary влияет на маркер на срезе P, поэтому требует его перерисовки.
             else if (sender == nudPImaginary)
             {
-                _renderDebounceTimerSliceP.Stop();
-                _renderDebounceTimerSliceP.Start();
+                _renderDebounceTimerSliceP?.Stop();
+                _renderDebounceTimerSliceP?.Start();
             }
             // nudQReal влияет на маркер на срезе Q, поэтому требует его перерисовки.
             else if (sender == nudQReal)
             {
-                _renderDebounceTimerSliceQ.Stop();
-                _renderDebounceTimerSliceQ.Start();
+                _renderDebounceTimerSliceQ?.Stop();
+                _renderDebounceTimerSliceQ?.Start();
             }
         }
 
@@ -274,13 +274,13 @@ namespace FractalExplorer.SelectorsForms
             // Запускаем рендер срезов, если их параметры изменились.
             if (triggerRenderP)
             {
-                _renderDebounceTimerSliceP.Stop();
-                _renderDebounceTimerSliceP.Start();
+                _renderDebounceTimerSliceP?.Stop();
+                _renderDebounceTimerSliceP?.Start();
             }
             if (triggerRenderQ)
             {
-                _renderDebounceTimerSliceQ.Stop();
-                _renderDebounceTimerSliceQ.Start();
+                _renderDebounceTimerSliceQ?.Stop();
+                _renderDebounceTimerSliceQ?.Start();
             }
         }
         #endregion
@@ -349,7 +349,7 @@ namespace FractalExplorer.SelectorsForms
             // Устанавливаем фиксированный параметр C2 для движка один раз перед циклом
             _sliceRenderEngine.C2 = _fixedC2;
 
-            Bitmap newBitmap = null;
+            Bitmap? newBitmap = null;
             try
             {
                 newBitmap = await Task.Run(() =>
@@ -475,7 +475,7 @@ namespace FractalExplorer.SelectorsForms
             // Устанавливаем фиксированный параметр C2 для движка один раз перед циклом
             _sliceRenderEngine.C2 = _fixedC2;
 
-            Bitmap newBitmap = null;
+            Bitmap? newBitmap = null;
             try
             {
                 newBitmap = await Task.Run(() =>
@@ -575,10 +575,14 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="sender">Источник события (PictureBox).</param>
         /// <param name="e">Данные события рисования.</param>
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
-        private void SliceCanvas_Paint(object sender, PaintEventArgs e, bool isPSliceTarget)
+        private void SliceCanvas_Paint(object? sender, PaintEventArgs e, bool isPSliceTarget)
         {
-            PictureBox canvas = sender as PictureBox;
-            Bitmap bmpToDraw = isPSliceTarget ? _slicePBitmap : _sliceQBitmap;
+            if (sender is not PictureBox canvas)
+            {
+                return;
+            }
+
+            Bitmap? bmpToDraw = isPSliceTarget ? _slicePBitmap : _sliceQBitmap;
 
             // Получаем параметры отрисованного фрагмента и текущего окна просмотра.
             double renderedMinRe = isPSliceTarget ? _renderedSlicePMinRe : _renderedSliceQMinRe;
@@ -750,9 +754,13 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="sender">Источник события (PictureBox).</param>
         /// <param name="e">Данные события мыши.</param>
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
-        private void SliceCanvas_MouseClick(object sender, MouseEventArgs e, bool isPSliceTarget)
+        private void SliceCanvas_MouseClick(object? sender, MouseEventArgs e, bool isPSliceTarget)
         {
-            PictureBox canvas = sender as PictureBox;
+            if (sender is not PictureBox canvas)
+            {
+                return;
+            }
+
             if (e.Button != MouseButtons.Left || canvas.Width <= 0 || canvas.Height <= 0)
             {
                 return;
@@ -801,9 +809,13 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="sender">Источник события (PictureBox).</param>
         /// <param name="e">Данные события мыши.</param>
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
-        private void SliceCanvas_MouseWheel(object sender, MouseEventArgs e, bool isPSliceTarget)
+        private void SliceCanvas_MouseWheel(object? sender, MouseEventArgs e, bool isPSliceTarget)
         {
-            PictureBox canvas = sender as PictureBox;
+            if (sender is not PictureBox canvas)
+            {
+                return;
+            }
+
             if (canvas.Width <= 0 || canvas.Height <= 0)
             {
                 return;
@@ -854,8 +866,8 @@ namespace FractalExplorer.SelectorsForms
 
             // Запускаем таймер для отложенного рендера, чтобы избежать частых перерисовок при прокрутке.
             var timer = isPSliceTarget ? _renderDebounceTimerSliceP : _renderDebounceTimerSliceQ;
-            timer.Stop();
-            timer.Start();
+            timer?.Stop();
+            timer?.Start();
         }
 
         /// <summary>
@@ -865,7 +877,7 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="sender">Источник события (PictureBox).</param>
         /// <param name="e">Данные события мыши.</param>
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
-        private void SliceCanvas_MouseDown(object sender, MouseEventArgs e, bool isPSliceTarget)
+        private void SliceCanvas_MouseDown(object? sender, MouseEventArgs e, bool isPSliceTarget)
         {
             if (e.Button == MouseButtons.Middle)
             {
@@ -893,9 +905,13 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="sender">Источник события (PictureBox).</param>
         /// <param name="e">Данные события мыши.</param>
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
-        private void SliceCanvas_MouseMove(object sender, MouseEventArgs e, bool isPSliceTarget)
+        private void SliceCanvas_MouseMove(object? sender, MouseEventArgs e, bool isPSliceTarget)
         {
-            PictureBox canvas = sender as PictureBox;
+            if (sender is not PictureBox canvas)
+            {
+                return;
+            }
+
             bool isPanning = isPSliceTarget ? _panningSliceP : _panningSliceQ;
             if (!isPanning || canvas.Width <= 0 || canvas.Height <= 0)
             {
@@ -940,7 +956,7 @@ namespace FractalExplorer.SelectorsForms
         /// <param name="sender">Источник события (PictureBox).</param>
         /// <param name="e">Данные события мыши.</param>
         /// <param name="isPSliceTarget">Истина, если это канвас для среза P; ложь для среза Q.</param>
-        private void SliceCanvas_MouseUp(object sender, MouseEventArgs e, bool isPSliceTarget)
+        private void SliceCanvas_MouseUp(object? sender, MouseEventArgs e, bool isPSliceTarget)
         {
             if (e.Button != MouseButtons.Middle)
             {
@@ -971,8 +987,8 @@ namespace FractalExplorer.SelectorsForms
             if (wasPanning)
             {
                 // Если было панорамирование, запускаем отложенный рендер для обновления изображения.
-                timerToStart.Stop();
-                timerToStart.Start();
+                timerToStart?.Stop();
+                timerToStart?.Start();
             }
         }
 
@@ -985,9 +1001,9 @@ namespace FractalExplorer.SelectorsForms
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private async void RenderDebounceTimerSliceP_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimerSliceP_Tick(object? sender, EventArgs e)
         {
-            _renderDebounceTimerSliceP.Stop(); // Останавливаем таймер, чтобы предотвратить повторные вызовы.
+            _renderDebounceTimerSliceP?.Stop(); // Останавливаем таймер, чтобы предотвратить повторные вызовы.
             // Проверяем состояние формы, чтобы избежать ошибок при попытке рендеринга на закрытой форме.
             if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
             {
@@ -1001,9 +1017,9 @@ namespace FractalExplorer.SelectorsForms
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private async void RenderDebounceTimerSliceQ_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimerSliceQ_Tick(object? sender, EventArgs e)
         {
-            _renderDebounceTimerSliceQ.Stop(); // Останавливаем таймер.
+            _renderDebounceTimerSliceQ?.Stop(); // Останавливаем таймер.
             // Проверяем состояние формы.
             if (this.IsHandleCreated && !this.IsDisposed && !this.Disposing)
             {
@@ -1019,7 +1035,7 @@ namespace FractalExplorer.SelectorsForms
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void btnApply_Click(object sender, EventArgs e)
+        private void btnApply_Click(object? sender, EventArgs e)
         {
             ComplexDecimal c1Result = new ComplexDecimal(nudPReal.Value, nudQImaginary.Value);
             ParametersSelected?.Invoke(c1Result, _fixedC2); // Вызываем событие, передавая выбранные параметры.
@@ -1031,7 +1047,7 @@ namespace FractalExplorer.SelectorsForms
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void btnCancel_Click(object sender, EventArgs e)
+        private void btnCancel_Click(object? sender, EventArgs e)
         {
             this.Close();
         }

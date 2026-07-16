@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 namespace FractalExplorer.Forms.Fractals
 {
     partial class FlameTransformEditorForm
@@ -5,66 +7,66 @@ namespace FractalExplorer.Forms.Fractals
         private System.ComponentModel.IContainer? components = null;
 
         // ── корневой SplitContainer ────────────────────────────────────────────
-        private SplitContainer _split;
+        private SplitContainer _split = null!;
 
         // ── левая панель: список трансформаций ────────────────────────────────
-        private Panel _leftPanel;
-        private Panel _listHeader;
-        private Label _lblListTitle;
-        private Button _btnAdd;
-        private Panel _listContainer;      // сюда динамически добавляются карточки
-        private Panel _listFooter;
-        private Label _lblTotalWeight;
+        private Panel _leftPanel = null!;
+        private Panel _listHeader = null!;
+        private Label _lblListTitle = null!;
+        private Button _btnAdd = null!;
+        private Panel _listContainer = null!;      // сюда динамически добавляются карточки
+        private Panel _listFooter = null!;
+        private Label _lblTotalWeight = null!;
 
         // ── правая панель: редактор выбранной трансформации ───────────────────
-        private Panel _rightPanel;
-        private Panel _editorHeader;
-        private Label _lblEditorTitle;
-        private TabControl _tabs;
-        private TabPage _tabMain;
-        private TabPage _tabMatrix;
+        private Panel _rightPanel = null!;
+        private Panel _editorHeader = null!;
+        private Label _lblEditorTitle = null!;
+        private TabControl _tabs = null!;
+        private TabPage _tabMain = null!;
+        private TabPage _tabMatrix = null!;
 
         // -- вкладка «Основное» -----------------------------------------------
-        private TableLayoutPanel _tblMain;
+        private TableLayoutPanel _tblMain = null!;
 
-        private Label _lblVariationCaption;
-        private TableLayoutPanel _tblVariationRow;
-        private ComboBox _cmbVariation;
-        private Panel _pnlColorPreview;
-        private Button _btnPickColor;
+        private Label _lblVariationCaption = null!;
+        private TableLayoutPanel _tblVariationRow = null!;
+        private ComboBox _cmbVariation = null!;
+        private Panel _pnlColorPreview = null!;
+        private Button _btnPickColor = null!;
 
-        private Label _lblWeightCaption;
-        private TableLayoutPanel _tblWeightRow;
-        private TrackBar _trkWeight;
-        private Label _lblWeightValue;
-        private Label _lblWeightPercent;
+        private Label _lblWeightCaption = null!;
+        private TableLayoutPanel _tblWeightRow = null!;
+        private TrackBar _trkWeight = null!;
+        private Label _lblWeightValue = null!;
+        private Label _lblWeightPercent = null!;
 
-        private Panel _divider;
+        private Panel _divider = null!;
 
-        private Label _lblAffineCaption;
-        private Label _lblAffineFormula;
-        private TableLayoutPanel _tblAffineGrid;
+        private Label _lblAffineCaption = null!;
+        private Label _lblAffineFormula = null!;
+        private TableLayoutPanel _tblAffineGrid = null!;
 
-        private Label _lblA; private NumericUpDown _nudA;
-        private Label _lblB; private NumericUpDown _nudB;
-        private Label _lblC; private NumericUpDown _nudC;
-        private Label _lblD; private NumericUpDown _nudD;
-        private Label _lblE; private NumericUpDown _nudE;
-        private Label _lblF; private NumericUpDown _nudF;
+        private Label _lblA = null!; private NumericUpDown _nudA = null!;
+        private Label _lblB = null!; private NumericUpDown _nudB = null!;
+        private Label _lblC = null!; private NumericUpDown _nudC = null!;
+        private Label _lblD = null!; private NumericUpDown _nudD = null!;
+        private Label _lblE = null!; private NumericUpDown _nudE = null!;
+        private Label _lblF = null!; private NumericUpDown _nudF = null!;
 
-        private Panel _pnlHint;
-        private Label _lblHint;
+        private Panel _pnlHint = null!;
+        private Label _lblHint = null!;
 
         // -- вкладка «Матрица» -----------------------------------------------
-        private Label _lblMatrixInfo;
+        private Label _lblMatrixInfo = null!;
 
         // ── нижняя полоска кнопок ─────────────────────────────────────────────
-        private Panel _footerPanel;
-        private Button _btnUndo;
-        private Button _btnRandomize;
-        private Button _btnCancel;
-        private Button _btnOk;
-        private Button _btnClose;
+        private Panel _footerPanel = null!;
+        private Button _btnUndo = null!;
+        private Button _btnRandomize = null!;
+        private Button _btnCancel = null!;
+        private Button _btnOk = null!;
+        private Button _btnClose = null!;
 
         protected override void Dispose(bool disposing)
         {

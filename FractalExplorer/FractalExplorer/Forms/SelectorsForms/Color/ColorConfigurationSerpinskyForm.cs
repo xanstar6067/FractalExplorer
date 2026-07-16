@@ -42,7 +42,7 @@ namespace FractalExplorer.SelectorsForms
             doubleBufferedProperty?.SetValue(control, true);
         }
 
-        private void ColorConfigurationSerpinskyForm_Load(object sender, EventArgs e)
+        private void ColorConfigurationSerpinskyForm_Load(object? sender, EventArgs e)
         {
             PopulatePaletteList();
         }
@@ -175,7 +175,7 @@ namespace FractalExplorer.SelectorsForms
             }
         }
 
-        private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbPalettes_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (_isProgrammaticChange || lbPalettes.SelectedItem is null)
             {
@@ -188,7 +188,7 @@ namespace FractalExplorer.SelectorsForms
             ResetUnsavedChanges();
         }
 
-        private void txtName_TextChanged(object sender, EventArgs e)
+        private void txtName_TextChanged(object? sender, EventArgs e)
         {
             if (_isProgrammaticChange || _selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -199,12 +199,12 @@ namespace FractalExplorer.SelectorsForms
             MarkUnsavedChanges();
         }
 
-        private void txtName_Leave(object sender, EventArgs e)
+        private void txtName_Leave(object? sender, EventArgs e)
         {
             UpdateSelectedPaletteDisplayName();
         }
 
-        private void txtName_KeyDown(object sender, KeyEventArgs e)
+        private void txtName_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode != Keys.Enter)
             {
@@ -215,7 +215,7 @@ namespace FractalExplorer.SelectorsForms
             UpdateSelectedPaletteDisplayName();
         }
 
-        private void panelFractalColor_Click(object sender, EventArgs e)
+        private void panelFractalColor_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -225,7 +225,7 @@ namespace FractalExplorer.SelectorsForms
             EditColor(panelFractalColor, color => _selectedPalette.FractalColor = color);
         }
 
-        private void panelBackgroundColor_Click(object sender, EventArgs e)
+        private void panelBackgroundColor_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -235,7 +235,7 @@ namespace FractalExplorer.SelectorsForms
             EditColor(panelBackgroundColor, color => _selectedPalette.BackgroundColor = color);
         }
 
-        private void btnNew_Click(object sender, EventArgs e)
+        private void btnNew_Click(object? sender, EventArgs e)
         {
             string newName = GenerateUniquePaletteName("Новая палитра");
             SerpinskyColorPalette newPalette = new()
@@ -253,7 +253,7 @@ namespace FractalExplorer.SelectorsForms
             lbPalettes.SelectedItem = newPalette.Name;
         }
 
-        private void btnCopy_Click(object sender, EventArgs e)
+        private void btnCopy_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -276,7 +276,7 @@ namespace FractalExplorer.SelectorsForms
             lbPalettes.SelectedItem = newPalette.Name;
         }
 
-        private void btnDelete_Click(object sender, EventArgs e)
+        private void btnDelete_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -300,7 +300,7 @@ namespace FractalExplorer.SelectorsForms
             PopulatePaletteList();
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        private void btnSave_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -313,7 +313,7 @@ namespace FractalExplorer.SelectorsForms
             MessageBox.Show("Изменения палитры сохранены!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void btnApply_Click(object sender, EventArgs e)
+        private void btnApply_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -324,12 +324,12 @@ namespace FractalExplorer.SelectorsForms
             PaletteApplied?.Invoke(this, EventArgs.Empty);
         }
 
-        private void btnClose_Click(object sender, EventArgs e)
+        private void btnClose_Click(object? sender, EventArgs e)
         {
             Hide();
         }
 
-        private void panelFractalColor_MouseEnter(object sender, EventArgs e)
+        private void panelFractalColor_MouseEnter(object? sender, EventArgs e)
         {
             if (_fractalColorHovered)
             {
@@ -340,7 +340,7 @@ namespace FractalExplorer.SelectorsForms
             panelFractalColor.Invalidate();
         }
 
-        private void panelFractalColor_MouseLeave(object sender, EventArgs e)
+        private void panelFractalColor_MouseLeave(object? sender, EventArgs e)
         {
             if (!_fractalColorHovered)
             {
@@ -351,7 +351,7 @@ namespace FractalExplorer.SelectorsForms
             panelFractalColor.Invalidate();
         }
 
-        private void panelBackgroundColor_MouseEnter(object sender, EventArgs e)
+        private void panelBackgroundColor_MouseEnter(object? sender, EventArgs e)
         {
             if (_backgroundColorHovered)
             {
@@ -362,7 +362,7 @@ namespace FractalExplorer.SelectorsForms
             panelBackgroundColor.Invalidate();
         }
 
-        private void panelBackgroundColor_MouseLeave(object sender, EventArgs e)
+        private void panelBackgroundColor_MouseLeave(object? sender, EventArgs e)
         {
             if (!_backgroundColorHovered)
             {
@@ -373,12 +373,12 @@ namespace FractalExplorer.SelectorsForms
             panelBackgroundColor.Invalidate();
         }
 
-        private void panelFractalColor_Paint(object sender, PaintEventArgs e)
+        private void panelFractalColor_Paint(object? sender, PaintEventArgs e)
         {
             DrawColorPanelBorder(panelFractalColor, e.Graphics, _fractalColorHovered);
         }
 
-        private void panelBackgroundColor_Paint(object sender, PaintEventArgs e)
+        private void panelBackgroundColor_Paint(object? sender, PaintEventArgs e)
         {
             DrawColorPanelBorder(panelBackgroundColor, e.Graphics, _backgroundColorHovered);
         }
@@ -411,7 +411,7 @@ namespace FractalExplorer.SelectorsForms
             lblEditHint.ForeColor = ThemeManager.CurrentDefinition.SecondaryText;
         }
 
-        private void ColorConfigurationSerpinskyForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void ColorConfigurationSerpinskyForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {

@@ -11,8 +11,8 @@ namespace FractalExplorer
     /// </summary>
     public partial class ColorConfigurationNewtonPoolsForm : Form
     {
-        public delegate void PaletteChangedEventHandler(object sender, NewtonColorPalette activePalette);
-        public event PaletteChangedEventHandler PaletteChanged;
+        public delegate void PaletteChangedEventHandler(object? sender, NewtonColorPalette activePalette);
+        public event PaletteChangedEventHandler? PaletteChanged;
 
         private readonly NewtonPaletteManager _paletteManager;
         private readonly ColorSelectionService _colorSelectionService = ColorSelectionService.Default;
@@ -207,7 +207,7 @@ namespace FractalExplorer
             btnSave.Enabled = false;
         }
 
-        private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbPalettes_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (_isProgrammaticChange || lbPalettes.SelectedItem is null)
             {
@@ -220,12 +220,12 @@ namespace FractalExplorer
             ResetUnsavedChanges();
         }
 
-        private void lbColorStops_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbColorStops_SelectedIndexChanged(object? sender, EventArgs e)
         {
             UpdateControlsState();
         }
 
-        private void txtName_TextChanged(object sender, EventArgs e)
+        private void txtName_TextChanged(object? sender, EventArgs e)
         {
             if (_isProgrammaticChange || _selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -236,12 +236,12 @@ namespace FractalExplorer
             MarkUnsavedChanges();
         }
 
-        private void txtName_Leave(object sender, EventArgs e)
+        private void txtName_Leave(object? sender, EventArgs e)
         {
             UpdateSelectedPaletteDisplayName();
         }
 
-        private void txtName_KeyDown(object sender, KeyEventArgs e)
+        private void txtName_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode != Keys.Enter)
             {
@@ -270,12 +270,12 @@ namespace FractalExplorer
             lbPalettes.SelectedIndexChanged += lbPalettes_SelectedIndexChanged;
         }
 
-        private void btnAddColor_Click(object sender, EventArgs e)
+        private void btnAddColor_Click(object? sender, EventArgs e)
         {
             // Кнопка удалена из UX: для корней число цветов определяется формулой.
         }
 
-        private void btnEditColor_Click(object sender, EventArgs e)
+        private void btnEditColor_Click(object? sender, EventArgs e)
         {
             if (!EnsureEditablePaletteOrWarn())
             {
@@ -313,7 +313,7 @@ namespace FractalExplorer
             }
         }
 
-        private void btnRemoveColor_Click(object sender, EventArgs e)
+        private void btnRemoveColor_Click(object? sender, EventArgs e)
         {
             // Кнопка удалена из UX: для корней число цветов определяется формулой.
         }
@@ -338,7 +338,7 @@ namespace FractalExplorer
             }
         }
 
-        private void chkIsGradient_CheckedChanged(object sender, EventArgs e)
+        private void chkIsGradient_CheckedChanged(object? sender, EventArgs e)
         {
             if (_isProgrammaticChange)
             {
@@ -357,7 +357,7 @@ namespace FractalExplorer
             MarkUnsavedChanges();
         }
 
-        private void btnAutoAdjustRoots_Click(object sender, EventArgs e)
+        private void btnAutoAdjustRoots_Click(object? sender, EventArgs e)
         {
             if (!EnsureEditablePaletteOrWarn())
             {
@@ -369,7 +369,7 @@ namespace FractalExplorer
             RefreshUIFromPalette(_selectedPalette);
         }
 
-        private void panelPreview_Paint(object sender, PaintEventArgs e)
+        private void panelPreview_Paint(object? sender, PaintEventArgs e)
         {
             Rectangle rect = panelPreview.ClientRectangle;
             if (rect.Width <= 0 || rect.Height <= 0 || _selectedPalette == null)
@@ -423,7 +423,7 @@ namespace FractalExplorer
             }
         }
 
-        private void panelPreview_MouseMove(object sender, MouseEventArgs e)
+        private void panelPreview_MouseMove(object? sender, MouseEventArgs e)
         {
             if (TryGetRootBoundsAtPreviewPoint(e.Location, out int rootIndex, out Rectangle rootBounds))
             {
@@ -446,7 +446,7 @@ namespace FractalExplorer
             toolTip1.SetToolTip(panelPreview, string.Empty);
         }
 
-        private void panelPreview_MouseLeave(object sender, EventArgs e)
+        private void panelPreview_MouseLeave(object? sender, EventArgs e)
         {
             UpdatePreviewHoverState(null, false, Rectangle.Empty);
             panelPreview.Cursor = Cursors.Default;
@@ -488,7 +488,7 @@ namespace FractalExplorer
             }
         }
 
-        private void panelPreview_MouseClick(object sender, MouseEventArgs e)
+        private void panelPreview_MouseClick(object? sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left)
             {
@@ -594,7 +594,7 @@ namespace FractalExplorer
             toolTip1.SetToolTip(panelPreview, string.Empty);
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        private void btnSave_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -607,7 +607,7 @@ namespace FractalExplorer
             MessageBox.Show("Изменения палитры сохранены!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void btnSaveAs_Click(object sender, EventArgs e)
+        private void btnSaveAs_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -632,7 +632,7 @@ namespace FractalExplorer
             lbPalettes.SelectedItem = newDisplayName;
         }
 
-        private void btnNew_Click(object sender, EventArgs e)
+        private void btnNew_Click(object? sender, EventArgs e)
         {
             string newName = GenerateUniquePaletteName("Новая палитра");
             NewtonColorPalette newPalette = new()
@@ -651,7 +651,7 @@ namespace FractalExplorer
             lbPalettes.SelectedItem = newPalette.Name;
         }
 
-        private void btnDelete_Click(object sender, EventArgs e)
+        private void btnDelete_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -675,7 +675,7 @@ namespace FractalExplorer
             PopulatePaletteList();
         }
 
-        private void btnApply_Click(object sender, EventArgs e)
+        private void btnApply_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -686,7 +686,7 @@ namespace FractalExplorer
             PaletteChanged?.Invoke(this, _selectedPalette);
         }
 
-        private void btnClose_Click(object sender, EventArgs e)
+        private void btnClose_Click(object? sender, EventArgs e)
         {
             Hide();
         }
@@ -771,7 +771,7 @@ namespace FractalExplorer
             return p;
         }
 
-        private void ColorSetting_FormClosing(object sender, FormClosingEventArgs e)
+        private void ColorSetting_FormClosing(object? sender, FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {

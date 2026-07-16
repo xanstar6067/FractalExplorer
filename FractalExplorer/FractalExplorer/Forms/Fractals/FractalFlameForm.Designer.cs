@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 namespace FractalExplorer.Forms.Fractals
 {
     partial class FractalFlameForm
@@ -7,36 +9,36 @@ namespace FractalExplorer.Forms.Fractals
         /// </summary>
         private System.ComponentModel.IContainer? components = null;
 
-        private Panel _controlsPanel;
-        private Panel _contentPanel;
-        private Panel _canvasHost;
-        private TableLayoutPanel _settingsLayout;
-        private Label _samplesLabel;
-        private Label _iterationsLabel;
-        private Label _warmupLabel;
-        private Label _scaleLabel;
-        private Label _centerXLabel;
-        private Label _centerYLabel;
-        private Label _exposureLabel;
-        private Label _gammaLabel;
-        private Label _threadsLabel;
-        private PictureBox _canvas;
-        private NumericUpDown _samples;
-        private NumericUpDown _iterations;
-        private NumericUpDown _warmup;
-        private NumericUpDown _scale;
-        private NumericUpDown _centerX;
-        private NumericUpDown _centerY;
-        private NumericUpDown _exposure;
-        private NumericUpDown _gamma;
-        private ComboBox _threads;
-        private Button _btnRender;
-        private Button _btnEditTransforms;
-        private Button _btnSaveLoad;
-        private Button _btnSaveImage;
-        private ProgressBar _pbRenderProgress;
-        private CheckBox _showCoverageMap;
-        private Button _btnToggleControls;
+        private Panel _controlsPanel = null!;
+        private Panel _contentPanel = null!;
+        private Panel _canvasHost = null!;
+        private TableLayoutPanel _settingsLayout = null!;
+        private Label _samplesLabel = null!;
+        private Label _iterationsLabel = null!;
+        private Label _warmupLabel = null!;
+        private Label _scaleLabel = null!;
+        private Label _centerXLabel = null!;
+        private Label _centerYLabel = null!;
+        private Label _exposureLabel = null!;
+        private Label _gammaLabel = null!;
+        private Label _threadsLabel = null!;
+        private PictureBox _canvas = null!;
+        private NumericUpDown _samples = null!;
+        private NumericUpDown _iterations = null!;
+        private NumericUpDown _warmup = null!;
+        private NumericUpDown _scale = null!;
+        private NumericUpDown _centerX = null!;
+        private NumericUpDown _centerY = null!;
+        private NumericUpDown _exposure = null!;
+        private NumericUpDown _gamma = null!;
+        private ComboBox _threads = null!;
+        private Button _btnRender = null!;
+        private Button _btnEditTransforms = null!;
+        private Button _btnSaveLoad = null!;
+        private Button _btnSaveImage = null!;
+        private ProgressBar _pbRenderProgress = null!;
+        private CheckBox _showCoverageMap = null!;
+        private Button _btnToggleControls = null!;
 
         /// <summary>
         /// Clean up any resources being used.

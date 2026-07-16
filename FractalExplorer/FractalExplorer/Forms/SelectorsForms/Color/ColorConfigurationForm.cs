@@ -23,7 +23,7 @@ namespace FractalExplorer.Utilities
         /// <summary>
         /// Текущая выбранная палитра в списке.
         /// </summary>
-        private Palette _selectedPalette;
+        private Palette? _selectedPalette;
         private bool _hasUnsavedChanges;
         #endregion
 
@@ -31,7 +31,7 @@ namespace FractalExplorer.Utilities
         /// <summary>
         /// Событие, которое возникает при применении палитры к главной форме.
         /// </summary>
-        public event EventHandler PaletteApplied;
+        public event EventHandler? PaletteApplied;
         #endregion
 
         #region Constructor
@@ -84,7 +84,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void ColorConfigurationForm_Load(object sender, EventArgs e)
+        private void ColorConfigurationForm_Load(object? sender, EventArgs e)
         {
             PopulatePaletteList();
             if (_paletteManager.ActivePalette != null)
@@ -117,7 +117,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void lbPalettes_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbPalettes_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (lbPalettes.SelectedIndex == -1)
             {
@@ -127,7 +127,10 @@ namespace FractalExplorer.Utilities
                 panelPreview.Invalidate();
                 return;
             }
-            string selectedName = lbPalettes.SelectedItem.ToString().Replace(" [Встроенная]", "");
+            string? selectedItem = lbPalettes.SelectedItem?.ToString();
+            if (selectedItem is null) return;
+
+            string selectedName = selectedItem.Replace(" [Встроенная]", "");
             _selectedPalette = _paletteManager.Palettes.FirstOrDefault(p => p.Name == selectedName);
             if (_selectedPalette == null) return;
 
@@ -141,6 +144,8 @@ namespace FractalExplorer.Utilities
         /// </summary>
         private void DisplayPaletteDetails()
         {
+            if (_selectedPalette is null) return;
+
             // Временно отписываемся от событий, чтобы избежать рекурсивных вызовов при программном изменении значений
             txtName.TextChanged -= txtName_TextChanged;
             checkAlignSteps.CheckedChanged -= checkAlignSteps_CheckedChanged;
@@ -238,7 +243,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события рисования.</param>
-        private void panelPreview_Paint(object sender, PaintEventArgs e)
+        private void panelPreview_Paint(object? sender, PaintEventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.Colors.Count == 0)
             {
@@ -279,7 +284,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void txtName_TextChanged(object sender, EventArgs e)
+        private void txtName_TextChanged(object? sender, EventArgs e)
         {
             // Теперь этот метод просто обновляет имя в объекте палитры.
             // Он больше не трогает ListBox, поэтому фокус не теряется.
@@ -315,8 +320,10 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnAddColor_Click(object sender, EventArgs e)
+        private void btnAddColor_Click(object? sender, EventArgs e)
         {
+            if (_selectedPalette is null) return;
+
             if (_colorSelectionService.TrySelectColor(this, Color.White, out Color selectedColor))
             {
                 _selectedPalette.Colors.Add(selectedColor);
@@ -331,9 +338,9 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnEditColor_Click(object sender, EventArgs e)
+        private void btnEditColor_Click(object? sender, EventArgs e)
         {
-            if (lbColorStops.SelectedIndex == -1) return;
+            if (_selectedPalette is null || lbColorStops.SelectedIndex == -1) return;
             Color initialColor = _selectedPalette.Colors[lbColorStops.SelectedIndex];
             if (_colorSelectionService.TrySelectColor(this, initialColor, out Color selectedColor))
             {
@@ -349,9 +356,9 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnRemoveColor_Click(object sender, EventArgs e)
+        private void btnRemoveColor_Click(object? sender, EventArgs e)
         {
-            if (lbColorStops.SelectedIndex != -1 && _selectedPalette.Colors.Count > 1)
+            if (_selectedPalette is not null && lbColorStops.SelectedIndex != -1 && _selectedPalette.Colors.Count > 1)
             {
                 _selectedPalette.Colors.RemoveAt(lbColorStops.SelectedIndex);
                 DisplayPaletteDetails();
@@ -363,7 +370,7 @@ namespace FractalExplorer.Utilities
         /// Обработчик события клика по кнопке "Случайная палитра".
         /// Заменяет текущий список цветов случайным набором с разным количеством ключевых точек.
         /// </summary>
-        private void btnRandomizeColors_Click(object sender, EventArgs e)
+        private void btnRandomizeColors_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
             {
@@ -395,7 +402,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnNew_Click(object sender, EventArgs e)
+        private void btnNew_Click(object? sender, EventArgs e)
         {
             string newName = "Новая палитра";
             int counter = 1;
@@ -419,7 +426,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnCopy_Click(object sender, EventArgs e)
+        private void btnCopy_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette == null)
             {
@@ -458,7 +465,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnDelete_Click(object sender, EventArgs e)
+        private void btnDelete_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
@@ -495,7 +502,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void checkIsGradient_CheckedChanged(object sender, EventArgs e)
+        private void checkIsGradient_CheckedChanged(object? sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
@@ -511,7 +518,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void checkAlignSteps_CheckedChanged(object sender, EventArgs e)
+        private void checkAlignSteps_CheckedChanged(object? sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
@@ -526,7 +533,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void nudMaxColorIterations_ValueChanged(object sender, EventArgs e)
+        private void nudMaxColorIterations_ValueChanged(object? sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
@@ -540,7 +547,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void nudGamma_ValueChanged(object sender, EventArgs e)
+        private void nudGamma_ValueChanged(object? sender, EventArgs e)
         {
             if (_selectedPalette != null && !_selectedPalette.IsBuiltIn)
             {
@@ -556,7 +563,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnSave_Click(object sender, EventArgs e)
+        private void btnSave_Click(object? sender, EventArgs e)
         {
             _paletteManager.SaveCustomPalettes();
             ResetUnsavedChanges();
@@ -630,13 +637,13 @@ namespace FractalExplorer.Utilities
 
         #region Main Form Actions
 
-        private void txtName_LostFocus(object sender, EventArgs e)
+        private void txtName_LostFocus(object? sender, EventArgs e)
         {
             // Когда пользователь уводит фокус с поля ввода, обновляем имя в списке.
             UpdatePaletteListDisplayName();
         }
 
-        private void txtName_KeyDown(object sender, KeyEventArgs e)
+        private void txtName_KeyDown(object? sender, KeyEventArgs e)
         {
             // Когда пользователь нажимает Enter, также обновляем имя в списке
             // и "съедаем" нажатие, чтобы не было системного звука "бип".
@@ -656,7 +663,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnApply_Click(object sender, EventArgs e)
+        private void btnApply_Click(object? sender, EventArgs e)
         {
             if (_selectedPalette != null)
             {
@@ -671,7 +678,7 @@ namespace FractalExplorer.Utilities
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void btnClose_Click(object sender, EventArgs e)
+        private void btnClose_Click(object? sender, EventArgs e)
         {
             Close();
         }
@@ -683,7 +690,7 @@ namespace FractalExplorer.Utilities
         /// Обработчик события нажатия кнопки мыши на списке цветов.
         /// Начинает операцию перетаскивания (Drag and Drop).
         /// </summary>
-        private void lbColorStops_MouseDown(object sender, MouseEventArgs e)
+        private void lbColorStops_MouseDown(object? sender, MouseEventArgs e)
         {
             // Перетаскивание доступно только для пользовательских палитр.
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
@@ -706,7 +713,7 @@ namespace FractalExplorer.Utilities
         /// Обработчик события, когда перетаскиваемый элемент находится над списком.
         /// Устанавливает эффект "перемещение", чтобы показать пользователю, что сюда можно "бросить" элемент.
         /// </summary>
-        private void lbColorStops_DragOver(object sender, DragEventArgs e)
+        private void lbColorStops_DragOver(object? sender, DragEventArgs e)
         {
             e.Effect = DragDropEffects.Move;
         }
@@ -715,7 +722,7 @@ namespace FractalExplorer.Utilities
         /// Обработчик события, когда пользователь "бросает" элемент на список.
         /// Выполняет фактическую перестановку цвета в источнике данных.
         /// </summary>
-        private void lbColorStops_DragDrop(object sender, DragEventArgs e)
+        private void lbColorStops_DragDrop(object? sender, DragEventArgs e)
         {
             // Перетаскивание доступно только для пользовательских палитр.
             if (_selectedPalette == null || _selectedPalette.IsBuiltIn)
@@ -735,7 +742,10 @@ namespace FractalExplorer.Utilities
             }
 
             // Получаем данные перетаскиваемого элемента (это текст, который мы передали в MouseDown).
-            string draggedItemText = (string)e.Data.GetData(typeof(string));
+            if (e.Data?.GetData(typeof(string)) is not string draggedItemText)
+            {
+                return;
+            }
             // Находим его исходный индекс в списке.
             int sourceIndex = lbColorStops.Items.IndexOf(draggedItemText);
 

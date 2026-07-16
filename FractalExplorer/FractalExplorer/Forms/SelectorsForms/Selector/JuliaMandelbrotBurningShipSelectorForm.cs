@@ -46,7 +46,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <summary>
         /// Bitmap с текущим отрисованным изображением множества.
         /// </summary>
-        private Bitmap renderedBitmap;
+        private Bitmap? renderedBitmap;
 
         /// <summary>
         /// Выбранные координаты на множестве (в системе координат комплексной плоскости).
@@ -136,7 +136,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <summary>
         /// Таймер для отложенного запуска рендеринга, чтобы избежать частых перерисовок.
         /// </summary>
-        private System.Windows.Forms.Timer renderDebounceTimer;
+        private System.Windows.Forms.Timer? renderDebounceTimer;
 
         /// <summary>
         /// Задержка в миллисекундах для таймера отложенного рендеринга.
@@ -150,7 +150,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// <summary>
         /// Событие, возникающее при выборе новых координат (параметра 'c').
         /// </summary>
-        public event Action<double, double> CoordinatesSelected;
+        public event Action<double, double>? CoordinatesSelected;
 
         #endregion
 
@@ -282,7 +282,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private async void SelectorForm_Load(object sender, EventArgs e)
+        private async void SelectorForm_Load(object? sender, EventArgs e)
         {
             await RenderSetAsync();
         }
@@ -293,9 +293,9 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimer_Tick(object? sender, EventArgs e)
         {
-            renderDebounceTimer.Stop();
+            renderDebounceTimer?.Stop();
             if (IsHandleCreated && !IsDisposed && !Disposing)
             {
                 await RenderSetAsync();
@@ -309,8 +309,8 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         {
             if (IsHandleCreated && !IsDisposed && !Disposing)
             {
-                renderDebounceTimer.Stop();
-                renderDebounceTimer.Start();
+                renderDebounceTimer?.Stop();
+                renderDebounceTimer?.Start();
             }
         }
 
@@ -320,7 +320,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события.</param>
-        private void DisplayPictureBox_Resize(object sender, EventArgs e)
+        private void DisplayPictureBox_Resize(object? sender, EventArgs e)
         {
             if (displayPictureBox.Width > 0 && displayPictureBox.Height > 0)
             {
@@ -354,7 +354,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             double minImCapture = currentMinIm;
             double maxImCapture = currentMaxIm;
 
-            Bitmap newRenderedBitmap = null;
+            Bitmap? newRenderedBitmap = null;
 
             try
             {
@@ -369,7 +369,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                     {
                         if (displayPictureBox.IsHandleCreated && !displayPictureBox.IsDisposed && !Disposing)
                         {
-                            Bitmap oldOwnedBitmap = renderedBitmap;
+                            Bitmap? oldOwnedBitmap = renderedBitmap;
                             renderedBitmap = newRenderedBitmap;
 
                             // Сохраняем параметры, по которым был отрисован текущий renderedBitmap.
@@ -512,7 +512,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void DisplayPictureBox_MouseClick(object sender, MouseEventArgs e)
+        private void DisplayPictureBox_MouseClick(object? sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
             {
@@ -548,7 +548,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события рисования.</param>
-        private void DisplayPictureBox_Paint(object sender, PaintEventArgs e)
+        private void DisplayPictureBox_Paint(object? sender, PaintEventArgs e)
         {
             if (renderedBitmap == null || displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
             {
@@ -675,7 +675,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void DisplayPictureBox_MouseWheel(object sender, MouseEventArgs e)
+        private void DisplayPictureBox_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (displayPictureBox.Width <= 0 || displayPictureBox.Height <= 0)
             {
@@ -732,7 +732,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void DisplayPictureBox_MouseDown(object sender, MouseEventArgs e)
+        private void DisplayPictureBox_MouseDown(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Middle)
             {
@@ -748,7 +748,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void DisplayPictureBox_MouseMove(object sender, MouseEventArgs e)
+        private void DisplayPictureBox_MouseMove(object? sender, MouseEventArgs e)
         {
             if (panning)
             {
@@ -792,7 +792,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Аргументы события мыши.</param>
-        private void DisplayPictureBox_MouseUp(object sender, MouseEventArgs e)
+        private void DisplayPictureBox_MouseUp(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Middle)
             {

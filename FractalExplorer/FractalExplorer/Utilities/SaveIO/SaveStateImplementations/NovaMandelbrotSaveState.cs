@@ -37,7 +37,7 @@
         /// <summary>
         /// Получает или задает имя цветовой палитры, примененной к фракталу.
         /// </summary>
-        public string PaletteName { get; set; }
+        public string PaletteName { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает действительную часть комплексной степени 'p',

@@ -13,7 +13,7 @@ namespace FractalExplorer.Forms.Other
             ThemeManager.RegisterForm(this);
         }
 
-        private void LinkRepository_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        private void LinkRepository_LinkClicked(object? sender, LinkLabelLinkClickedEventArgs e)
         {
             Process.Start(new ProcessStartInfo
             {

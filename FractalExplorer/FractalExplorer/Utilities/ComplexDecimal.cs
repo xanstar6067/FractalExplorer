@@ -327,7 +327,7 @@
         /// </summary>
         /// <param name="obj">Объект, который требуется сравнить с текущим объектом.</param>
         /// <returns>True, если указанный объект равен текущему; в противном случае False.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is ComplexDecimal other)
             {

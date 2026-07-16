@@ -16,7 +16,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         private readonly IFractalForm ownerForm;
         private bool isCanvasHovered = false;
         private EventHandler? themeChangedHandler;
-        private Bitmap mandelbrotBitmap;
+        private Bitmap? mandelbrotBitmap;
         private PointF selectedMandelbrotCoords = new PointF(float.NaN, float.NaN);
 
         private volatile bool isRendering = false;
@@ -34,7 +34,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         private double renderedMinIm;
         private double renderedMaxIm;
 
-        private System.Windows.Forms.Timer renderDebounceTimer;
+        private System.Windows.Forms.Timer? renderDebounceTimer;
         private const int RENDER_DEBOUNCE_MILLISECONDS = 300;
         private const int ITERATIONS = 100;
 
@@ -43,7 +43,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         private readonly double _m;
         private readonly Complex _z0;
 
-        public event Action<double, double> CoordinatesSelected;
+        public event Action<double, double>? CoordinatesSelected;
 
         public NovaMandelbrotSelectorForm(
             IFractalForm owner,
@@ -146,14 +146,14 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
         }
 
-        private async void MandelbrotSelectorForm_Load(object sender, EventArgs e)
+        private async void MandelbrotSelectorForm_Load(object? sender, EventArgs e)
         {
             await RenderMandelbrotAsync();
         }
 
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimer_Tick(object? sender, EventArgs e)
         {
-            renderDebounceTimer.Stop();
+            renderDebounceTimer?.Stop();
             if (IsHandleCreated && !IsDisposed && !Disposing)
             {
                 await RenderMandelbrotAsync();
@@ -164,12 +164,12 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
         {
             if (IsHandleCreated && !IsDisposed && !Disposing)
             {
-                renderDebounceTimer.Stop();
-                renderDebounceTimer.Start();
+                renderDebounceTimer?.Stop();
+                renderDebounceTimer?.Start();
             }
         }
 
-        private void MandelbrotDisplay_Resize(object sender, EventArgs e)
+        private void MandelbrotDisplay_Resize(object? sender, EventArgs e)
         {
             if (mandelbrotDisplay.Width > 0 && mandelbrotDisplay.Height > 0)
             {
@@ -197,7 +197,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             double minImCapture = currentMinIm;
             double maxImCapture = currentMaxIm;
 
-            Bitmap newRenderedBitmap = null;
+            Bitmap? newRenderedBitmap = null;
 
             try
             {
@@ -211,7 +211,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
                     {
                         if (mandelbrotDisplay.IsHandleCreated && !mandelbrotDisplay.IsDisposed && !Disposing)
                         {
-                            Bitmap oldOwnedBitmap = mandelbrotBitmap;
+                            Bitmap? oldOwnedBitmap = mandelbrotBitmap;
                             mandelbrotBitmap = newRenderedBitmap;
 
                             renderedMinRe = minReCapture;
@@ -344,7 +344,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             return bitmap;
         }
 
-        private void MandelbrotDisplay_MouseClick(object sender, MouseEventArgs e)
+        private void MandelbrotDisplay_MouseClick(object? sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left || mandelbrotDisplay.Width <= 0 || mandelbrotDisplay.Height <= 0)
                 return;
@@ -366,7 +366,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
         }
 
-        private void MandelbrotDisplay_Paint(object sender, PaintEventArgs e)
+        private void MandelbrotDisplay_Paint(object? sender, PaintEventArgs e)
         {
             if (mandelbrotBitmap == null || mandelbrotDisplay.Width <= 0 || mandelbrotDisplay.Height <= 0)
             {
@@ -455,7 +455,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
         }
 
-        private void MandelbrotDisplay_MouseWheel(object sender, MouseEventArgs e)
+        private void MandelbrotDisplay_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (mandelbrotDisplay.Width <= 0 || mandelbrotDisplay.Height <= 0) return;
 
@@ -484,7 +484,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             ScheduleDelayedRender();
         }
 
-        private void MandelbrotDisplay_MouseDown(object sender, MouseEventArgs e)
+        private void MandelbrotDisplay_MouseDown(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Middle)
             {
@@ -494,7 +494,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
         }
 
-        private void MandelbrotDisplay_MouseMove(object sender, MouseEventArgs e)
+        private void MandelbrotDisplay_MouseMove(object? sender, MouseEventArgs e)
         {
             if (panning)
             {
@@ -522,7 +522,7 @@ namespace FractalExplorer.Forms.SelectorsForms.Selector
             }
         }
 
-        private void MandelbrotDisplay_MouseUp(object sender, MouseEventArgs e)
+        private void MandelbrotDisplay_MouseUp(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Middle)
             {

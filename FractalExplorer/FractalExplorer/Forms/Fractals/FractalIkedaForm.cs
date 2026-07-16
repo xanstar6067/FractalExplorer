@@ -514,7 +514,7 @@ namespace FractalExplorer.Forms.Fractals
                 progress);
         }
 
-        private void btnToggleControls_Click(object sender, EventArgs e)
+        private void btnToggleControls_Click(object? sender, EventArgs e)
         {
             bool hide = _controlsHost.Visible && _controlsHost.Width > 0;
             if (hide)
@@ -534,21 +534,21 @@ namespace FractalExplorer.Forms.Fractals
             }
         }
 
-        private void btnRender_Click(object sender, EventArgs e) => ScheduleRender();
+        private void btnRender_Click(object? sender, EventArgs e) => ScheduleRender();
 
-        private void btnReset_Click(object sender, EventArgs e)
+        private void btnReset_Click(object? sender, EventArgs e)
         {
             ResetViewToCurrentRange();
             ScheduleRender();
         }
 
-        private void btnState_Click(object sender, EventArgs e)
+        private void btnState_Click(object? sender, EventArgs e)
         {
             using var dialog = new SaveLoadDialogForm(this);
             dialog.ShowDialog(this);
         }
 
-        private void btnSaveImage_Click(object sender, EventArgs e)
+        private void btnSaveImage_Click(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {

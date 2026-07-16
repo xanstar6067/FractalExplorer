@@ -12,7 +12,7 @@ namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
         /// <summary>
         /// Получает или задает математическую формулу, используемую для генерации фрактала Ньютона.
         /// </summary>
-        public string Formula { get; set; }
+        public string Formula { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает X-координату центра фрактала.
@@ -40,7 +40,7 @@ namespace FractalExplorer.Utilities.SaveIO.SaveStateImplementations
         /// Получает или задает снимок (копию) цветовой палитры, используемой для рендеринга фрактала.
         /// Это позволяет точно воспроизвести цвета, даже если исходная палитра изменится или будет удалена.
         /// </summary>
-        public NewtonColorPalette PaletteSnapshot { get; set; }
+        public NewtonColorPalette PaletteSnapshot { get; set; } = null!;
 
         /// <summary>
         /// Выбранный метод итерации для построения бассейнов.

@@ -19,13 +19,13 @@ namespace FractalExplorer.Forms
     public partial class SaveLoadDialogForm : Form
     {
         private readonly ISaveLoadCapableFractal _ownerFractalForm;
-        private List<FractalSaveStateBase> _displayedItems;
+        private List<FractalSaveStateBase> _displayedItems = null!;
 
         // --- Поля для мозаичного рендера ---
         private readonly RenderVisualizerComponent _renderVisualizer;
-        private CancellationTokenSource _previewRenderCts;
-        private Bitmap _previewBitmap;
-        private Bitmap _currentRenderingBitmap;
+        private CancellationTokenSource? _previewRenderCts;
+        private Bitmap? _previewBitmap;
+        private Bitmap? _currentRenderingBitmap;
         private readonly object _bitmapLock = new object();
         private const int TILE_SIZE = 16;
         private bool _isRenderingPreview = false;
@@ -38,18 +38,18 @@ namespace FractalExplorer.Forms
         /// Кешированный битмап полного превью. Заполняется по мере рендеринга плиток.
         /// Является статическим для сохранения между открытиями диалогового окна.
         /// </summary>
-        private static Bitmap _cachedFullPreviewBitmap;
+        private static Bitmap? _cachedFullPreviewBitmap;
 
         /// <summary>
         /// Уникальный идентификатор состояния, для которого был создан текущий кеш.
         /// </summary>
-        private static string _cachedPreviewStateIdentifier;
+        private static string? _cachedPreviewStateIdentifier;
 
         /// <summary>
         /// Набор для отслеживания уже отрендеренных плиток в кеше, чтобы избежать повторной работы.
         /// Использует Point(X, Y) плитки в качестве ключа.
         /// </summary>
-        private static HashSet<Point> _renderedTilesCache;
+        private static HashSet<Point>? _renderedTilesCache;
 
         /// <summary>
         /// Поколение кеш-сессии превью. Увеличивается при полной пересборке кеша,
@@ -108,7 +108,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие загрузки формы. Инициализирует список сохранений.
         /// </summary>
-        private void SaveLoadDialogForm_Load(object sender, EventArgs e)
+        private void SaveLoadDialogForm_Load(object? sender, EventArgs e)
         {
             PopulateList(false);
             UpdateButtonsState();
@@ -156,7 +156,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает изменение выбранного элемента в списке. Запускает рендер нового превью.
         /// </summary>
-        private void listBoxSaves_SelectedIndexChanged(object sender, EventArgs e)
+        private void listBoxSaves_SelectedIndexChanged(object? sender, EventArgs e)
         {
             CancelAndDisposePreviewCts();
             SetRenderStatus(string.Empty);
@@ -466,10 +466,10 @@ namespace FractalExplorer.Forms
                 }
 
                 cacheGeneration = _previewCacheGeneration;
-                if (_renderedTilesCache.Contains(tileCoord))
+                if (_renderedTilesCache!.Contains(tileCoord))
                 {
                     var cachedTileBuffer = new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
-                    BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.ReadOnly, _cachedFullPreviewBitmap.PixelFormat);
+                    BitmapData bmpData = _cachedFullPreviewBitmap!.LockBits(tile.Bounds, ImageLockMode.ReadOnly, _cachedFullPreviewBitmap!.PixelFormat);
                     try
                     {
                         int tileRowBytes = tile.Bounds.Width * 4;
@@ -504,9 +504,9 @@ namespace FractalExplorer.Forms
                     return renderedTileBuffer;
                 }
 
-                if (!_renderedTilesCache.Contains(tileCoord))
+                if (!_renderedTilesCache!.Contains(tileCoord))
                 {
-                    BitmapData bmpData = _cachedFullPreviewBitmap.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap.PixelFormat);
+                    BitmapData bmpData = _cachedFullPreviewBitmap!.LockBits(tile.Bounds, ImageLockMode.WriteOnly, _cachedFullPreviewBitmap!.PixelFormat);
                     try
                     {
                         int tileRowBytes = tile.Bounds.Width * 4;
@@ -530,7 +530,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие Paint для PictureBox. Отображает текущее превью и/или процесс рендеринга.
         /// </summary>
-        private void PictureBoxPreview_Paint(object sender, PaintEventArgs e)
+        private void PictureBoxPreview_Paint(object? sender, PaintEventArgs e)
         {
             try
             {
@@ -653,7 +653,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие закрытия формы, освобождая ресурсы.
         /// </summary>
-        private void SaveLoadDialogForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void SaveLoadDialogForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
             CancelAndDisposePreviewCts();
             ResetStaticPreviewCache();
@@ -713,7 +713,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие кнопки "Загрузить".
         /// </summary>
-        private void btnLoad_Click(object sender, EventArgs e)
+        private void btnLoad_Click(object? sender, EventArgs e)
         {
             TryLoadSelectedState();
         }
@@ -721,7 +721,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает двойной клик по элементу списка сохранений/точек интереса.
         /// </summary>
-        private void listBoxSaves_DoubleClick(object sender, EventArgs e)
+        private void listBoxSaves_DoubleClick(object? sender, EventArgs e)
         {
             TryLoadSelectedState();
         }
@@ -744,10 +744,10 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие кнопки "Сохранить как новую".
         /// </summary>
-        private void btnSaveAsNew_Click(object sender, EventArgs e)
+        private void btnSaveAsNew_Click(object? sender, EventArgs e)
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
-            if (presetsCheckBox.Checked) return;
+            if (presetsCheckBox?.Checked == true) return;
 
             string saveName = textBoxSaveName.Text.Trim();
             if (string.IsNullOrWhiteSpace(saveName))
@@ -794,10 +794,10 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие кнопки "Удалить".
         /// </summary>
-        private void btnDelete_Click(object sender, EventArgs e)
+        private void btnDelete_Click(object? sender, EventArgs e)
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
-            if (presetsCheckBox.Checked) return;
+            if (presetsCheckBox?.Checked == true) return;
 
             if (listBoxSaves.SelectedIndex >= 0 && _displayedItems != null && listBoxSaves.SelectedIndex < _displayedItems.Count)
             {
@@ -827,7 +827,7 @@ namespace FractalExplorer.Forms
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
             bool itemSelected = listBoxSaves.SelectedIndex != -1;
-            bool presetsMode = presetsCheckBox.Checked;
+            bool presetsMode = presetsCheckBox?.Checked == true;
 
             btnLoad.Enabled = itemSelected;
             btnDelete.Enabled = itemSelected && !presetsMode;
@@ -841,7 +841,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает изменение состояния чекбокса "Показать пресеты".
         /// </summary>
-        private void cbPresets_CheckedChanged(object sender, EventArgs e)
+        private void cbPresets_CheckedChanged(object? sender, EventArgs e)
         {
             if (sender is CheckBox presetsCheckBox)
             {
@@ -853,7 +853,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие кнопки "Отмена".
         /// </summary>
-        private void btnCancel_Click(object sender, EventArgs e)
+        private void btnCancel_Click(object? sender, EventArgs e)
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
@@ -862,7 +862,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Явный рендер превью выбранного сохранения и замена старого файла превью.
         /// </summary>
-        private async void btnRenderPreview_Click(object sender, EventArgs e)
+        private async void btnRenderPreview_Click(object? sender, EventArgs e)
         {
             var presetsCheckBox = this.Controls.Find("cbPresets", true).FirstOrDefault() as CheckBox
                                  ?? this.Controls.Find("checkBoxShowPresets", true).FirstOrDefault() as CheckBox;
@@ -1042,14 +1042,14 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Пытается построить превью из уже готового буфера текущего рендера формы-владельца.
         /// </summary>
-        private Bitmap TryBuildPreviewFromCurrentOwnerRender()
+        private Bitmap? TryBuildPreviewFromCurrentOwnerRender()
         {
             if (_ownerFractalForm is not Form ownerForm)
             {
                 return null;
             }
 
-            Bitmap sourceBitmap = null;
+            Bitmap? sourceBitmap = null;
             try
             {
                 sourceBitmap = TryGetBitmapFromOwnerCanvasImage(ownerForm);
@@ -1080,7 +1080,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private Bitmap TryGetBitmapFromOwnerCanvasImage(Form ownerForm)
+        private Bitmap? TryGetBitmapFromOwnerCanvasImage(Form ownerForm)
         {
             var canvasControl = ownerForm.Controls.Find("canvas", true).FirstOrDefault()
                                ?? ownerForm.Controls.Find("canvasSerpinsky", true).FirstOrDefault()
@@ -1093,7 +1093,7 @@ namespace FractalExplorer.Forms
             return null;
         }
 
-        private Bitmap TryGetBitmapFromOwnerField(Form ownerForm, string fieldName)
+        private Bitmap? TryGetBitmapFromOwnerField(Form ownerForm, string fieldName)
         {
             var field = ownerForm.GetType().GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             if (field?.GetValue(ownerForm) is Bitmap bitmap)
@@ -1104,7 +1104,7 @@ namespace FractalExplorer.Forms
             return null;
         }
 
-        private Bitmap TryCaptureOwnerCanvasBitmap(Form ownerForm)
+        private Bitmap? TryCaptureOwnerCanvasBitmap(Form ownerForm)
         {
             var canvasControl = ownerForm.Controls.Find("canvas", true).FirstOrDefault()
                                ?? ownerForm.Controls.Find("canvasSerpinsky", true).FirstOrDefault()
@@ -1123,7 +1123,7 @@ namespace FractalExplorer.Forms
         /// Создаёт превью, вырезая центральную область исходного изображения под нужное соотношение сторон
         /// и масштабируя её до целевого размера.
         /// </summary>
-        private Bitmap CreateCenterCroppedPreview(Bitmap source, int targetWidth, int targetHeight)
+        private Bitmap? CreateCenterCroppedPreview(Bitmap source, int targetWidth, int targetHeight)
         {
             if (source == null || targetWidth <= 0 || targetHeight <= 0)
             {

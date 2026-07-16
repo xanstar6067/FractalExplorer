@@ -12,7 +12,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <summary>
         /// Получает или задает имя цветовой палитры.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает основной цвет фрактала. По умолчанию - черный.
@@ -53,7 +53,7 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <summary>
         /// Получает или задает активную (текущую) цветовую палитру, которая будет использоваться для рендеринга.
         /// </summary>
-        public SerpinskyColorPalette ActivePalette { get; set; }
+        public SerpinskyColorPalette ActivePalette { get; set; } = null!;
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="SerpinskyPaletteManager"/>.
@@ -64,7 +64,9 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
             Palettes = new List<SerpinskyColorPalette>();
             LoadPalettes();
             // Устанавливаем "Классический Ч/Б" как палитру по умолчанию; если ее нет, выбираем первую доступную.
-            ActivePalette = Palettes.FirstOrDefault(p => p.Name == "Классический Ч/Б") ?? Palettes.FirstOrDefault();
+            ActivePalette = Palettes.FirstOrDefault(p => p.Name == "Классический Ч/Б")
+                ?? Palettes.FirstOrDefault()
+                ?? throw new InvalidOperationException("Не удалось загрузить палитру Серпинского.");
         }
 
         /// <summary>

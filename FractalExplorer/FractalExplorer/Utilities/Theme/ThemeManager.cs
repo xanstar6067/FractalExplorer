@@ -202,13 +202,15 @@ namespace FractalExplorer.Utilities.Theme
         {
             if (!string.IsNullOrWhiteSpace(id))
             {
-                if (CustomThemesById.TryGetValue(id, out theme))
+                if (CustomThemesById.TryGetValue(id, out ThemeDefinition? customTheme) && customTheme is not null)
                 {
+                    theme = customTheme;
                     return true;
                 }
 
-                if (BuiltInThemesById.TryGetValue(id, out theme))
+                if (BuiltInThemesById.TryGetValue(id, out ThemeDefinition? builtInTheme) && builtInTheme is not null)
                 {
+                    theme = builtInTheme;
                     return true;
                 }
 
@@ -571,6 +573,11 @@ namespace FractalExplorer.Utilities.Theme
 
             ControlEventHandler handler = (_, args) =>
             {
+                if (args.Control is null)
+                {
+                    return;
+                }
+
                 ApplyThemeToControl(args.Control, CurrentDefinition);
                 RegisterDynamicControlTracking(args.Control);
             };
@@ -979,7 +986,7 @@ namespace FractalExplorer.Utilities.Theme
 
             args.Graphics.FillRectangle(backgroundBrush, args.Bounds);
 
-            string itemText = comboBox.GetItemText(comboBox.Items[args.Index]);
+            string itemText = comboBox.GetItemText(comboBox.Items[args.Index]) ?? string.Empty;
             args.Graphics.DrawString(itemText, args.Font ?? comboBox.Font, textBrush, args.Bounds);
 
             args.DrawFocusRectangle();

@@ -28,31 +28,31 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Движок для рендеринга фрактала Феникс.
         /// </summary>
-        private PhoenixEngine _fractalEngine;
+        private PhoenixEngine _fractalEngine = null!;
         /// <summary>
         /// Компонент для визуализации процесса рендеринга (например, отображения тайлов).
         /// </summary>
-        private RenderVisualizerComponent _renderVisualizer;
+        private RenderVisualizerComponent _renderVisualizer = null!;
         /// <summary>
         /// Менеджер цветовых палитр для фракталов.
         /// </summary>
-        private PaletteManager _paletteManager;
+        private PaletteManager _paletteManager = null!;
         /// <summary>
         /// Кэш для цветов палитры с уже примененной гамма-коррекцией (для дискретного режима).
         /// </summary>
-        private Color[] _gammaCorrectedPaletteCache;
+        private Color[] _gammaCorrectedPaletteCache = null!;
         /// <summary>
         /// "Подпись" палитры, для которой был сгенерирован кэш. 
         /// </summary>
-        private string _paletteCacheSignature;
+        private string _paletteCacheSignature = null!;
         /// <summary>
         /// Форма для настройки параметров цветовой палитры.
         /// </summary>
-        private ColorConfigurationForm _colorConfigForm;
+        private ColorConfigurationForm? _colorConfigForm;
         /// <summary>
         /// Форма для выбора C-параметров фрактала Феникс.
         /// </summary>
-        private PhoenixCSelectorForm _phoenixCSelectorWindow;
+        private PhoenixCSelectorForm? _phoenixCSelectorWindow;
 
         /// <summary>
         /// Размер тайла для рендеринга в пикселях.
@@ -66,11 +66,11 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Битмап с отрендеренным предпросмотром фрактала.
         /// </summary>
-        private Bitmap _previewBitmap;
+        private Bitmap? _previewBitmap;
         /// <summary>
         /// Битмап, на котором происходит текущий рендеринг.
         /// </summary>
-        private Bitmap _currentRenderingBitmap;
+        private Bitmap? _currentRenderingBitmap;
         /// <summary>
         /// Размер полной буферной поверхности рендера для последнего завершенного кадра.
         /// </summary>
@@ -82,7 +82,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Источник токенов для отмены текущего рендеринга предпросмотра.
         /// </summary>
-        private CancellationTokenSource _previewRenderCts;
+        private CancellationTokenSource _previewRenderCts = null!;
 
         /// <summary>
         /// Флаг, указывающий, что в данный момент выполняется рендеринг в высоком разрешении.
@@ -131,7 +131,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Таймер для отложенного запуска рендеринга после изменения параметров.
         /// </summary>
-        private DebounceTimer _renderDebounceTimer;
+        private DebounceTimer _renderDebounceTimer = null!;
         /// <summary>
         /// Флаг, отключающий запуск полного рендера при программном изменении layout.
         /// </summary>
@@ -146,7 +146,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Базовый заголовок окна.
         /// </summary>
-        private string _baseTitle;
+        private string _baseTitle = null!;
         /// <summary>
         /// Базовый масштаб для вычислений.
         /// </summary>
@@ -246,14 +246,14 @@ namespace FractalExplorer.Forms
             ResizeEnd += Form_ResizeEnd;
         }
 
-        private void Form_ResizeBegin(object sender, EventArgs e)
+        private void Form_ResizeBegin(object? sender, EventArgs e)
         {
             _isUserResizingWindow = true;
             _hasPendingCanvasResizeRender = false;
             _renderDebounceTimer?.Stop();
         }
 
-        private void Form_ResizeEnd(object sender, EventArgs e)
+        private void Form_ResizeEnd(object? sender, EventArgs e)
         {
             if (!_isUserResizingWindow)
             {
@@ -313,7 +313,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Form_KeyDown(object sender, KeyEventArgs e)
+        private void Form_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F11)
             {
@@ -329,7 +329,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Form_FormClosing(object sender, FormClosingEventArgs e)
+        private void Form_FormClosing(object? sender, FormClosingEventArgs e)
         {
             ExitFullscreenSafely();
         }
@@ -338,7 +338,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает изменение значения в элементах управления параметрами фрактала.
         /// </summary>
-        private void ParamControl_Changed(object sender, EventArgs e)
+        private void ParamControl_Changed(object? sender, EventArgs e)
         {
             if (_isHighResRendering) return;
             if (sender == nudZoom && nudZoom.Value != _zoom) _zoom = nudZoom.Value;
@@ -348,7 +348,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие на кнопку "Рендер", запуская рендеринг предпросмотра.
         /// </summary>
-        private async void btnRender_Click(object sender, EventArgs e)
+        private async void btnRender_Click(object? sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
             _previewRenderCts?.Cancel();
@@ -369,7 +369,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие на кнопку конфигурации цветов, открывая соответствующее окно.
         /// </summary>
-        private void color_configurations_Click(object sender, EventArgs e)
+        private void color_configurations_Click(object? sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
@@ -387,7 +387,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Открывает окно для выбора параметров C для фрактала Феникс.
         /// </summary>
-        private void btnSelectPhoenixParameters_Click(object sender, EventArgs e)
+        private void btnSelectPhoenixParameters_Click(object? sender, EventArgs e)
         {
             ComplexDecimal currentC1 = new ComplexDecimal(nudC1Re.Value, nudC1Im.Value);
             ComplexDecimal currentC2 = new ComplexDecimal(nudC2Re.Value, nudC2Im.Value);
@@ -412,7 +412,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Открывает менеджер сохранения изображений.
         /// </summary>
-        private void btnOpenSaveManager_Click(object sender, EventArgs e)
+        private void btnOpenSaveManager_Click(object? sender, EventArgs e)
         {
             if (_isHighResRendering)
             {
@@ -432,7 +432,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие прокрутки колеса мыши для масштабирования.
         /// </summary>
-        private void Canvas_MouseWheel(object sender, MouseEventArgs e)
+        private void Canvas_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || canvas.Width <= 0 || canvas.Height <= 0) return;
             CommitAndBakePreview();
@@ -452,7 +452,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие кнопки мыши для начала панорамирования.
         /// </summary>
-        private void Canvas_MouseDown(object sender, MouseEventArgs e)
+        private void Canvas_MouseDown(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left)
@@ -465,7 +465,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает движение мыши для выполнения панорамирования.
         /// </summary>
-        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        private void Canvas_MouseMove(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering || !_panning || canvas.Width <= 0) return;
             CommitAndBakePreview();
@@ -479,7 +479,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает отпускание кнопки мыши для завершения панорамирования.
         /// </summary>
-        private void Canvas_MouseUp(object sender, MouseEventArgs e)
+        private void Canvas_MouseUp(object? sender, MouseEventArgs e)
         {
             if (_isHighResRendering) return;
             if (e.Button == MouseButtons.Left)
@@ -492,7 +492,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие перерисовки холста, отображая фрактал.
         /// </summary>
-        private void Canvas_Paint(object sender, PaintEventArgs e)
+        private void Canvas_Paint(object? sender, PaintEventArgs e)
         {
             if (canvas.Width <= 0 || canvas.Height <= 0) { e.Graphics.Clear(Color.Black); return; }
             e.Graphics.Clear(Color.Black);
@@ -830,7 +830,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает тик таймера отложенного рендеринга.
         /// </summary>
-        private async void RenderDebounceTimer_Tick(object sender, EventArgs e)
+        private async void RenderDebounceTimer_Tick(object? sender, EventArgs e)
         {
             _renderDebounceTimer.Stop();
             if (_isHighResRendering || _isRenderingPreview)
@@ -924,7 +924,7 @@ namespace FractalExplorer.Forms
             }
         }
 
-        private void Canvas_Resize(object sender, EventArgs e)
+        private void Canvas_Resize(object? sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized) return;
             if (_suppressResizeRender)
@@ -941,17 +941,17 @@ namespace FractalExplorer.Forms
             ScheduleRender(cancelCurrentRender: false);
         }
 
-        private void btnToggleControls_Click(object sender, EventArgs e)
+        private void btnToggleControls_Click(object? sender, EventArgs e)
         {
             ToggleControlsPanel();
         }
 
-        private void CanvasHost_Resize(object sender, EventArgs e)
+        private void CanvasHost_Resize(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
 
-        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        private void ControlsHost_SizeChanged(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
@@ -1305,7 +1305,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие применения новой палитры из формы конфигурации.
         /// </summary>
-        private void OnPaletteApplied(object sender, EventArgs e)
+        private void OnPaletteApplied(object? sender, EventArgs e)
         {
             UpdateEngineParameters();
             ScheduleRender();
@@ -1316,7 +1316,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие загрузки формы.
         /// </summary>
-        private void FractalPhoenixForm_Load(object sender, EventArgs e)
+        private void FractalPhoenixForm_Load(object? sender, EventArgs e)
         {
             _baseTitle = this.Text;
             _paletteManager = new PaletteManager();
@@ -1343,7 +1343,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает событие закрытия формы, освобождая ресурсы.
         /// </summary>
-        private void FractalPhoenixForm_FormClosed(object sender, FormClosedEventArgs e)
+        private void FractalPhoenixForm_FormClosed(object? sender, FormClosedEventArgs e)
         {
             _renderDebounceTimer?.Stop();
             _renderDebounceTimer?.Dispose();
@@ -1369,7 +1369,7 @@ namespace FractalExplorer.Forms
         /// <summary>
         /// Обрабатывает нажатие кнопки, открывая диалог сохранения/загрузки состояний.
         /// </summary>
-        private void btnStateManager_Click(object sender, EventArgs e)
+        private void btnStateManager_Click(object? sender, EventArgs e)
         {
             using (var dialog = new SaveLoadDialogForm(this))
             {
@@ -1394,7 +1394,7 @@ namespace FractalExplorer.Forms
             public decimal CenterY { get; set; }
             public decimal Zoom { get; set; }
             public int Iterations { get; set; }
-            public string PaletteName { get; set; }
+            public string PaletteName { get; set; } = string.Empty;
             public decimal Threshold { get; set; }
             public decimal C1Re { get; set; }
             public decimal C1Im { get; set; }
@@ -1484,7 +1484,7 @@ namespace FractalExplorer.Forms
             {
                 if (string.IsNullOrEmpty(state.PreviewParametersJson)) return new byte[tile.Bounds.Width * tile.Bounds.Height * 4];
                 PhoenixPreviewParams previewParams;
-                try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson); }
+                try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters."); }
                 catch { return new byte[tile.Bounds.Width * tile.Bounds.Height * 4]; }
 
                 var previewEngine = new PhoenixEngine();
@@ -1526,7 +1526,7 @@ namespace FractalExplorer.Forms
                 return bmpError;
             }
             PhoenixPreviewParams previewParams;
-            try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson); }
+            try { previewParams = JsonSerializer.Deserialize<PhoenixPreviewParams>(state.PreviewParametersJson) ?? throw new JsonException("Invalid preview parameters."); }
             catch (Exception)
             {
                 var bmpError = new Bitmap(previewWidth, previewHeight);
@@ -1619,7 +1619,7 @@ namespace FractalExplorer.Forms
             engine.CenterX = state.CenterX;
             engine.CenterY = state.CenterY;
             engine.Scale = state.BaseScale / state.Zoom;
-            engine.C1 = state.JuliaC.Value;
+            engine.C1 = state.JuliaC ?? throw new InvalidOperationException("Для Phoenix не задан параметр C1.");
             engine.C2 = ComplexDecimal.Zero;
             engine.UseSmoothColoring = state.UseSmoothColoring;
 

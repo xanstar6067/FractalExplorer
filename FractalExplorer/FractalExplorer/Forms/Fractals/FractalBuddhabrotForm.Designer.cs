@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 namespace FractalExplorer.Forms.Fractals
 {
     partial class FractalBuddhabrotForm
@@ -508,35 +510,35 @@ namespace FractalExplorer.Forms.Fractals
 
         #endregion
 
-        private Panel _contentPanel;
-        private Panel _canvasHost;
-        private Panel _controlsHost;
-        private TableLayoutPanel _controlsPanel;
-        private PictureBox _canvas;
-        private Button _btnToggleControls;
-        private ComboBox _modeCombo;
-        private Label _modeLabel;
-        private NumericUpDown _samples;
-        private Label _samplesLabel;
-        private ComboBox _threadsCombo;
-        private Label _threadsLabel;
-        private NumericUpDown _iterations;
-        private Label _iterationsLabel;
-        private Label _zoomLabel;
-        private NumericUpDown _zoom;
-        private NumericUpDown _sampleMinRe;
-        private Label _sampleMinReLabel;
-        private NumericUpDown _sampleMaxRe;
-        private Label _sampleMaxReLabel;
-        private NumericUpDown _sampleMinIm;
-        private Label _sampleMinImLabel;
-        private NumericUpDown _sampleMaxIm;
-        private Label _sampleMaxImLabel;
-        private Button _btnSaveImage;
-        private Button _btnPalette;
-        private Button _btnRender;
-        private Button _btnSaveLoad;
-        private Label _progressLabel;
-        private ProgressBar _renderProgress;
+        private Panel _contentPanel = null!;
+        private Panel _canvasHost = null!;
+        private Panel _controlsHost = null!;
+        private TableLayoutPanel _controlsPanel = null!;
+        private PictureBox _canvas = null!;
+        private Button _btnToggleControls = null!;
+        private ComboBox _modeCombo = null!;
+        private Label _modeLabel = null!;
+        private NumericUpDown _samples = null!;
+        private Label _samplesLabel = null!;
+        private ComboBox _threadsCombo = null!;
+        private Label _threadsLabel = null!;
+        private NumericUpDown _iterations = null!;
+        private Label _iterationsLabel = null!;
+        private Label _zoomLabel = null!;
+        private NumericUpDown _zoom = null!;
+        private NumericUpDown _sampleMinRe = null!;
+        private Label _sampleMinReLabel = null!;
+        private NumericUpDown _sampleMaxRe = null!;
+        private Label _sampleMaxReLabel = null!;
+        private NumericUpDown _sampleMinIm = null!;
+        private Label _sampleMinImLabel = null!;
+        private NumericUpDown _sampleMaxIm = null!;
+        private Label _sampleMaxImLabel = null!;
+        private Button _btnSaveImage = null!;
+        private Button _btnPalette = null!;
+        private Button _btnRender = null!;
+        private Button _btnSaveLoad = null!;
+        private Label _progressLabel = null!;
+        private ProgressBar _renderProgress = null!;
     }
 }

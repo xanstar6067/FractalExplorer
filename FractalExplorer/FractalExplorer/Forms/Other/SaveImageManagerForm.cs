@@ -29,7 +29,7 @@ namespace FractalExplorer.Forms.Other
         /// <summary>
         /// Источник токенов для отмены асинхронной операции рендеринга.
         /// </summary>
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts;
 
         /// <summary>
         /// Флаг, указывающий, выполняется ли в данный момент процесс рендеринга.
@@ -49,7 +49,7 @@ namespace FractalExplorer.Forms.Other
         /// <summary>
         /// Последнее сообщение о статусе для отображения пользователю.
         /// </summary>
-        private string _lastStatusMessage;
+        private string _lastStatusMessage = null!;
 
         #endregion
 
@@ -73,7 +73,7 @@ namespace FractalExplorer.Forms.Other
         /// <summary>
         /// Обрабатывает событие тика таймера для обновления статусной строки.
         /// </summary>
-        private void UiUpdateTimer_Tick(object sender, EventArgs e)
+        private void UiUpdateTimer_Tick(object? sender, EventArgs e)
         {
             if (lblStatus.IsHandleCreated && !lblStatus.IsDisposed)
             {
@@ -84,7 +84,7 @@ namespace FractalExplorer.Forms.Other
         /// <summary>
         /// Обрабатывает событие загрузки формы.
         /// </summary>
-        private void SaveImageManagerForm_Load(object sender, EventArgs e)
+        private void SaveImageManagerForm_Load(object? sender, EventArgs e)
         {
             LoadSettings();
             UpdateJpgQualityUI();
@@ -98,7 +98,7 @@ namespace FractalExplorer.Forms.Other
         /// Если рендеринг не выполняется, сохраняет настройки.
         /// Если рендеринг активен, отменяет его.
         /// </summary>
-        private void SaveImageManagerForm_FormClosing(object sender, FormClosingEventArgs e)
+        private void SaveImageManagerForm_FormClosing(object? sender, FormClosingEventArgs e)
         {
             if (!_isRendering)
             {
@@ -161,11 +161,11 @@ namespace FractalExplorer.Forms.Other
 
         #region Обработчики событий элементов UI
 
-        private void cbFormat_SelectedIndexChanged(object sender, EventArgs e) => UpdateJpgQualityUI();
-        private void trackBarJpgQuality_Scroll(object sender, EventArgs e) => lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
+        private void cbFormat_SelectedIndexChanged(object? sender, EventArgs e) => UpdateJpgQualityUI();
+        private void trackBarJpgQuality_Scroll(object? sender, EventArgs e) => lblJpgQualityValue.Text = $"{trackBarJpgQuality.Value}%";
 
         // MODIFIED: Обработчики для взаимного исключения чекбоксов
-        private void chkApplyBicubic_CheckedChanged(object sender, EventArgs e)
+        private void chkApplyBicubic_CheckedChanged(object? sender, EventArgs e)
         {
             if (chkApplyBicubic.Checked)
             {
@@ -175,7 +175,7 @@ namespace FractalExplorer.Forms.Other
         }
 
         // NEW: Обработчик для нового чекбокса
-        private void chkApplyLanczos_CheckedChanged(object sender, EventArgs e)
+        private void chkApplyLanczos_CheckedChanged(object? sender, EventArgs e)
         {
             if (chkApplyLanczos.Checked)
             {
@@ -184,18 +184,18 @@ namespace FractalExplorer.Forms.Other
             UpdateEffectControls();
         }
 
-        private void btnPreset720p_Click(object sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
-        private void btnPresetFHD_Click(object sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
-        private void btnPreset2K_Click(object sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
-        private void btnPreset4K_Click(object sender, EventArgs e) { nudWidth.Value = 3840; nudHeight.Value = 2160; }
-        private void btnPreset8K_Click(object sender, EventArgs e) { nudWidth.Value = 7680; nudHeight.Value = 4320; }
-        private void btnRotate_Click(object sender, EventArgs e) => (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value);
+        private void btnPreset720p_Click(object? sender, EventArgs e) { nudWidth.Value = 1280; nudHeight.Value = 720; }
+        private void btnPresetFHD_Click(object? sender, EventArgs e) { nudWidth.Value = 1920; nudHeight.Value = 1080; }
+        private void btnPreset2K_Click(object? sender, EventArgs e) { nudWidth.Value = 2560; nudHeight.Value = 1440; }
+        private void btnPreset4K_Click(object? sender, EventArgs e) { nudWidth.Value = 3840; nudHeight.Value = 2160; }
+        private void btnPreset8K_Click(object? sender, EventArgs e) { nudWidth.Value = 7680; nudHeight.Value = 4320; }
+        private void btnRotate_Click(object? sender, EventArgs e) => (nudWidth.Value, nudHeight.Value) = (nudHeight.Value, nudWidth.Value);
 
         /// <summary>
         /// Обрабатывает нажатие на кнопку "Отмена" или "Закрыть".
         /// Если идет рендеринг, отменяет его. В противном случае закрывает форму.
         /// </summary>
-        private void btnCancel_Click(object sender, EventArgs e)
+        private void btnCancel_Click(object? sender, EventArgs e)
         {
             if (_isRendering && _cts != null && !_cts.IsCancellationRequested)
             {
@@ -211,9 +211,9 @@ namespace FractalExplorer.Forms.Other
         /// <summary>
         /// Запускает процесс рендеринга и сохранения изображения.
         /// </summary>
-        private async void btnSave_Click(object sender, EventArgs e)
+        private async void btnSave_Click(object? sender, EventArgs e)
         {
-            string format = cbFormat.SelectedItem.ToString();
+            string format = cbFormat.SelectedItem?.ToString() ?? "png";
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string suggestedFileName = $"{_renderState.FileNameDetails}_{timestamp}.{format.ToLower()}";
 
@@ -241,8 +241,8 @@ namespace FractalExplorer.Forms.Other
                     }
                 });
 
-                Bitmap renderedBitmap = null;
-                Bitmap finalBitmap = null;
+                Bitmap? renderedBitmap = null;
+                Bitmap? finalBitmap = null;
 
                 try
                 {
@@ -376,7 +376,7 @@ namespace FractalExplorer.Forms.Other
             {
                 var qualityEncoder = Encoder.Quality;
                 var encoderParameters = new EncoderParameters(1) { Param = { [0] = new EncoderParameter(qualityEncoder, (long)jpgQuality) } };
-                ImageCodecInfo jpgEncoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
+                ImageCodecInfo? jpgEncoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
 
                 if (jpgEncoder != null)
                 {

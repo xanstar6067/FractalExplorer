@@ -7,16 +7,16 @@ namespace FractalExplorer.Utilities.RenderUtilities
     /// </summary>
     public class HighResRenderState
     {
-        public string EngineType { get; set; }
+        public string EngineType { get; set; } = string.Empty;
         public decimal CenterX { get; set; }
         public decimal CenterY { get; set; }
         public decimal Zoom { get; set; }
         public decimal BaseScale { get; set; }
         public int Iterations { get; set; }
         public decimal Threshold { get; set; }
-        public string ActivePaletteName { get; set; }
+        public string ActivePaletteName { get; set; } = string.Empty;
         public ComplexDecimal? JuliaC { get; set; }
-        public string FileNameDetails { get; set; }
+        public string FileNameDetails { get; set; } = string.Empty;
         public bool UseSmoothColoring { get; set; }
         public int ColoringMode { get; set; }
         public bool HistogramEnabledEqualization { get; set; }
@@ -89,7 +89,7 @@ namespace FractalExplorer.Utilities.RenderUtilities
     public class RenderProgress
     {
         public int Percentage { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 
     /// <summary>

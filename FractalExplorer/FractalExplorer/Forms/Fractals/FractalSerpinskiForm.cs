@@ -29,7 +29,7 @@ namespace FractalExplorer
         /// <summary>
         /// Bitmap для отображения на холсте.
         /// </summary>
-        private Bitmap canvasBitmap;
+        private Bitmap canvasBitmap = null!;
         /// <summary>
         /// Флаг, указывающий, что в данный момент выполняется рендеринг предпросмотра.
         /// </summary>
@@ -41,15 +41,15 @@ namespace FractalExplorer
         /// <summary>
         /// Источник токена отмены для рендеринга предпросмотра.
         /// </summary>
-        private CancellationTokenSource previewRenderCts;
+        private CancellationTokenSource previewRenderCts = null!;
         /// <summary>
         /// Источник токена отмены для рендеринга в высоком разрешении.
         /// </summary>
-        private CancellationTokenSource highResRenderCts;
+        private CancellationTokenSource? highResRenderCts;
         /// <summary>
         /// Таймер для отложенного запуска рендеринга после взаимодействия с пользователем.
         /// </summary>
-        private DebounceTimer renderTimer;
+        private DebounceTimer renderTimer = null!;
         /// <summary>
         /// Текущий уровень масштабирования.
         /// </summary>
@@ -85,7 +85,7 @@ namespace FractalExplorer
         /// <summary>
         /// Базовый заголовок окна.
         /// </summary>
-        private string _baseTitle;
+        private string _baseTitle = null!;
         /// <summary>
         /// Менеджер цветовых палитр для фрактала Серпинского.
         /// </summary>
@@ -93,7 +93,7 @@ namespace FractalExplorer
         /// <summary>
         /// Форма конфигурации цветов.
         /// </summary>
-        private ColorConfigurationSerpinskyForm _colorConfigForm;
+        private ColorConfigurationSerpinskyForm? _colorConfigForm;
         private const int ToggleButtonMargin = 12;
         private bool _suppressResizeRender = false;
         private bool _isUserResizingWindow = false;
@@ -169,14 +169,14 @@ namespace FractalExplorer
             UpdateAbortButtonState();
         }
 
-        private void Form_ResizeBegin(object sender, EventArgs e)
+        private void Form_ResizeBegin(object? sender, EventArgs e)
         {
             _isUserResizingWindow = true;
             _hasPendingCanvasResizeRender = false;
             renderTimer?.Stop();
         }
 
-        private void Form_ResizeEnd(object sender, EventArgs e)
+        private void Form_ResizeEnd(object? sender, EventArgs e)
         {
             if (!_isUserResizingWindow)
             {
@@ -192,7 +192,7 @@ namespace FractalExplorer
             }
         }
 
-        private void CanvasSerpinsky_Resize(object sender, EventArgs e)
+        private void CanvasSerpinsky_Resize(object? sender, EventArgs e)
         {
             if (WindowState == FormWindowState.Minimized) return;
             if (_suppressResizeRender)
@@ -211,17 +211,17 @@ namespace FractalExplorer
             ScheduleRender();
         }
 
-        private void btnToggleControls_Click(object sender, EventArgs e)
+        private void btnToggleControls_Click(object? sender, EventArgs e)
         {
             ToggleControlsPanel();
         }
 
-        private void CanvasHost_Resize(object sender, EventArgs e)
+        private void CanvasHost_Resize(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
 
-        private void ControlsHost_SizeChanged(object sender, EventArgs e)
+        private void ControlsHost_SizeChanged(object? sender, EventArgs e)
         {
             UpdateToggleControlsPosition();
         }
@@ -296,7 +296,7 @@ namespace FractalExplorer
             }
         }
 
-        private void Form_KeyDown(object sender, KeyEventArgs e)
+        private void Form_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F11)
             {
@@ -312,7 +312,7 @@ namespace FractalExplorer
             }
         }
 
-        private void Form_FormClosing(object sender, FormClosingEventArgs e)
+        private void Form_FormClosing(object? sender, FormClosingEventArgs e)
         {
             ExitFullscreenSafely();
         }
@@ -326,10 +326,9 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void FractalType_CheckedChanged(object sender, EventArgs e)
+        private void FractalType_CheckedChanged(object? sender, EventArgs e)
         {
-            CheckBox activeCheckBox = sender as CheckBox;
-            if (activeCheckBox == null || !activeCheckBox.Checked) return;
+            if (sender is not CheckBox activeCheckBox || !activeCheckBox.Checked) return;
 
             if (activeCheckBox == FractalTypeIsGeometry)
             {
@@ -353,7 +352,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void color_configurations_Click(object sender, EventArgs e)
+        private void color_configurations_Click(object? sender, EventArgs e)
         {
             if (_colorConfigForm == null || _colorConfigForm.IsDisposed)
             {
@@ -377,7 +376,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void OnPaletteApplied(object sender, EventArgs e)
+        private void OnPaletteApplied(object? sender, EventArgs e)
         {
             ApplyActivePalette();
             ScheduleRender();
@@ -388,7 +387,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void btnRender_Click(object sender, EventArgs e)
+        private void btnRender_Click(object? sender, EventArgs e)
         {
             previewRenderCts?.Cancel();
             renderTimer.Stop();
@@ -400,7 +399,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void btnStateManager_Click(object sender, EventArgs e)
+        private void btnStateManager_Click(object? sender, EventArgs e)
         {
             using (var dialog = new Forms.SaveLoadDialogForm(this))
             {
@@ -413,7 +412,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void abortRender_Click(object sender, EventArgs e)
+        private void abortRender_Click(object? sender, EventArgs e)
         {
             if (isRenderingPreview) previewRenderCts?.Cancel();
             if (isHighResRendering) highResRenderCts?.Cancel();
@@ -424,7 +423,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void btnOpenSaveManager_Click(object sender, EventArgs e)
+        private void btnOpenSaveManager_Click(object? sender, EventArgs e)
         {
             if (isRenderingPreview) previewRenderCts?.Cancel();
 
@@ -449,7 +448,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void ParamControl_Changed(object sender, EventArgs e)
+        private void ParamControl_Changed(object? sender, EventArgs e)
         {
             if (isHighResRendering) return;
             if (sender == nudZoom) currentZoom = (double)nudZoom.Value;
@@ -473,7 +472,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private async void RenderTimer_Tick(object sender, EventArgs e)
+        private async void RenderTimer_Tick(object? sender, EventArgs e)
         {
             renderTimer.Stop();
             if (isHighResRendering || WindowState == FormWindowState.Minimized)
@@ -571,7 +570,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события.</param>
-        private void CanvasSerpinsky_Paint(object sender, PaintEventArgs e)
+        private void CanvasSerpinsky_Paint(object? sender, PaintEventArgs e)
         {
             e.Graphics.Clear(_engine.BackgroundColor);
             if (canvasBitmap == null || canvasSerpinsky.Width <= 0 || canvasSerpinsky.Height <= 0) return;
@@ -602,7 +601,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события мыши.</param>
-        private void CanvasSerpinsky_MouseWheel(object sender, MouseEventArgs e)
+        private void CanvasSerpinsky_MouseWheel(object? sender, MouseEventArgs e)
         {
             if (isHighResRendering || canvasSerpinsky.Width <= 0) return;
 
@@ -624,7 +623,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события мыши.</param>
-        private void CanvasSerpinsky_MouseDown(object sender, MouseEventArgs e)
+        private void CanvasSerpinsky_MouseDown(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -639,7 +638,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события мыши.</param>
-        private void CanvasSerpinsky_MouseMove(object sender, MouseEventArgs e)
+        private void CanvasSerpinsky_MouseMove(object? sender, MouseEventArgs e)
         {
             if (!panning) return;
 
@@ -656,7 +655,7 @@ namespace FractalExplorer
         /// </summary>
         /// <param name="sender">Источник события.</param>
         /// <param name="e">Данные события мыши.</param>
-        private void CanvasSerpinsky_MouseUp(object sender, MouseEventArgs e)
+        private void CanvasSerpinsky_MouseUp(object? sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -918,11 +917,11 @@ namespace FractalExplorer
         /// <summary>
         /// Кэшированное изображение предпросмотра.
         /// </summary>
-        private static Bitmap _cachedPreviewBitmap;
+        private static Bitmap? _cachedPreviewBitmap;
         /// <summary>
         /// Идентификатор состояния для кэшированного предпросмотра.
         /// </summary>
-        private static string _cachedPreviewStateIdentifier;
+        private static string _cachedPreviewStateIdentifier = null!;
         /// <summary>
         /// Объект блокировки для доступа к кэшу предпросмотра.
         /// </summary>
@@ -996,7 +995,7 @@ namespace FractalExplorer
             {
                 var jsonOptions = new JsonSerializerOptions();
                 jsonOptions.Converters.Add(new Utilities.JsonConverters.JsonColorConverter());
-                previewParams = JsonSerializer.Deserialize<SerpinskyPreviewParams>(state.PreviewParametersJson, jsonOptions);
+                previewParams = JsonSerializer.Deserialize<SerpinskyPreviewParams>(state.PreviewParametersJson, jsonOptions) ?? throw new JsonException("Invalid preview parameters.");
             }
             catch (Exception)
             {

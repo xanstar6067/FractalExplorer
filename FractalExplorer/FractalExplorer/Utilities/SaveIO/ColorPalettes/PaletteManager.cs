@@ -19,13 +19,14 @@ namespace FractalExplorer.Utilities.SaveIO.ColorPalettes
         /// <summary>
         /// Текущая активная палитра, используемая для рендеринга.
         /// </summary>
-        public Palette ActivePalette { get; set; }
+        public Palette ActivePalette { get; set; } = null!;
 
         public PaletteManager()
         {
             Palettes = new List<Palette>();
             LoadPalettes();
-            ActivePalette ??= Palettes.FirstOrDefault();
+            ActivePalette ??= Palettes.FirstOrDefault()
+                ?? throw new InvalidOperationException("Не удалось загрузить палитру.");
         }
 
         private void LoadPalettes()

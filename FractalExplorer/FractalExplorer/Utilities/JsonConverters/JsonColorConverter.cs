@@ -29,7 +29,7 @@ namespace FractalExplorer.Utilities.JsonConverters
                 throw new JsonException("Ожидалась строка для значения Color.");
             }
 
-            string colorHex = reader.GetString();
+            string? colorHex = reader.GetString();
 
             // Проверяем формат строки: должна начинаться с '#' и иметь длину 9 символов (#AARRGGBB)
             if (string.IsNullOrEmpty(colorHex) || colorHex[0] != '#' || colorHex.Length != 9)

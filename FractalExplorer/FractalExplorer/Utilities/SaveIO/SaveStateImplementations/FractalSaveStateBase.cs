@@ -9,7 +9,7 @@
         /// <summary>
         /// Получает или задает имя сохранения, выбранное пользователем.
         /// </summary>
-        public string SaveName { get; set; }
+        public string SaveName { get; set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает метку времени, когда было создано это состояние сохранения.
@@ -20,12 +20,12 @@
         /// Получает строковый идентификатор типа фрактала, к которому относится это сохранение.
         /// Это свойство устанавливается в конструкторе производного класса.
         /// </summary>
-        public string FractalType { get; protected set; }
+        public string FractalType { get; protected set; } = string.Empty;
 
         /// <summary>
         /// Получает или задает JSON-строку, содержащую параметры, необходимые для быстрого рендеринга
         /// миниатюры или предварительного просмотра фрактала без загрузки полного состояния.
         /// </summary>
-        public string PreviewParametersJson { get; set; }
+        public string PreviewParametersJson { get; set; } = string.Empty;
     }
 }

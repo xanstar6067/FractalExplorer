@@ -66,7 +66,7 @@ namespace FractalExplorer.Forms.Other
             BuildColorEditors();
         }
 
-        private void ThemeEditorForm_Load(object sender, EventArgs e)
+        private void ThemeEditorForm_Load(object? sender, EventArgs e)
         {
             ReloadThemes(ThemeManager.CurrentThemeId);
         }
@@ -161,7 +161,7 @@ namespace FractalExplorer.Forms.Other
             return theme.IsBuiltIn ? $"{theme.DisplayName} [Встроенная]" : theme.DisplayName;
         }
 
-        private void lbThemes_SelectedIndexChanged(object sender, EventArgs e)
+        private void lbThemes_SelectedIndexChanged(object? sender, EventArgs e)
         {
             if (lbThemes.SelectedIndex < 0 || lbThemes.SelectedIndex >= _themes.Count)
             {
@@ -324,13 +324,13 @@ namespace FractalExplorer.Forms.Other
             UpdateControlsState();
         }
 
-        private void txtThemeName_TextChanged(object sender, EventArgs e)
+        private void txtThemeName_TextChanged(object? sender, EventArgs e)
         {
             ApplyPreviewTheme();
             UpdateControlsState();
         }
 
-        private void btnNew_Click(object sender, EventArgs e)
+        private void btnNew_Click(object? sender, EventArgs e)
         {
             if (!ThemeManager.TryGetTheme("light", out ThemeDefinition source))
             {
@@ -345,7 +345,7 @@ namespace FractalExplorer.Forms.Other
             ReloadThemes(newTheme.Id);
         }
 
-        private void btnCopy_Click(object sender, EventArgs e)
+        private void btnCopy_Click(object? sender, EventArgs e)
         {
             if (_selectedTheme is null)
             {
@@ -359,7 +359,7 @@ namespace FractalExplorer.Forms.Other
         }
 
 
-        private void btnCopyWindowsTheme_Click(object sender, EventArgs e)
+        private void btnCopyWindowsTheme_Click(object? sender, EventArgs e)
         {
             if (!IsWindowsThemeImportSupported())
             {
@@ -389,7 +389,7 @@ namespace FractalExplorer.Forms.Other
             ReloadThemes(newTheme.Id);
         }
 
-        private void btnDelete_Click(object sender, EventArgs e)
+        private void btnDelete_Click(object? sender, EventArgs e)
         {
             if (_selectedTheme is null || _selectedTheme.IsBuiltIn)
             {
@@ -421,7 +421,7 @@ namespace FractalExplorer.Forms.Other
             }
         }
 
-        private void btnSaveChanges_Click(object sender, EventArgs e)
+        private void btnSaveChanges_Click(object? sender, EventArgs e)
         {
             if (!TrySaveCurrentTheme(out ThemeDefinition? savedTheme) || savedTheme is null)
             {
@@ -431,7 +431,7 @@ namespace FractalExplorer.Forms.Other
             ReloadThemes(savedTheme.Id);
         }
 
-        private void btnApplyTheme_Click(object sender, EventArgs e)
+        private void btnApplyTheme_Click(object? sender, EventArgs e)
         {
             if (_selectedTheme is null)
             {
@@ -499,7 +499,7 @@ namespace FractalExplorer.Forms.Other
                 editedColor.ToArgb() != binding.Getter(_selectedTheme).ToArgb());
         }
 
-        private void pnlInteractiveBorderPreview_Paint(object sender, PaintEventArgs e)
+        private void pnlInteractiveBorderPreview_Paint(object? sender, PaintEventArgs e)
         {
             if (_previewTheme is null)
             {
@@ -516,13 +516,13 @@ namespace FractalExplorer.Forms.Other
             e.Graphics.DrawRectangle(pen, borderRectangle);
         }
 
-        private void pnlInteractiveBorderPreview_MouseEnter(object sender, EventArgs e)
+        private void pnlInteractiveBorderPreview_MouseEnter(object? sender, EventArgs e)
         {
             _isInteractivePreviewHovered = true;
             pnlInteractiveBorderPreview.Invalidate();
         }
 
-        private void pnlInteractiveBorderPreview_MouseLeave(object sender, EventArgs e)
+        private void pnlInteractiveBorderPreview_MouseLeave(object? sender, EventArgs e)
         {
             _isInteractivePreviewHovered = false;
             pnlInteractiveBorderPreview.Invalidate();
@@ -592,7 +592,7 @@ namespace FractalExplorer.Forms.Other
             return candidate;
         }
 
-        private void btnClose_Click(object sender, EventArgs e)
+        private void btnClose_Click(object? sender, EventArgs e)
         {
             Close();
         }

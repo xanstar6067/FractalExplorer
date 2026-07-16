@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 namespace FractalExplorer.Utilities
 {
     partial class ColoringModeSettingsForm
@@ -232,8 +234,8 @@ namespace FractalExplorer.Utilities
             ResumeLayout(false);
         }
 
-        private TableLayoutPanel root;
-        private GroupBox modeGroup;
-        private FlowLayoutPanel buttonsRow;
+        private TableLayoutPanel root = null!;
+        private GroupBox modeGroup = null!;
+        private FlowLayoutPanel buttonsRow = null!;
     }
 }
