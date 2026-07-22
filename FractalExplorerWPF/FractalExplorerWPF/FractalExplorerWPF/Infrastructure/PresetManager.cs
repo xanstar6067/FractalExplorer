@@ -58,7 +58,7 @@ public static class PresetManager
         MandelbrotVariant.Buffalo =>
         [
             M("Классический Буффало", variant, 0m, 0m, 0.8m, 500, "Ультрафиолет"),
-            M("Глаз Жука", variant, -1.25066m, 0.3837m, 1500m, 800, "Огонь")
+            M("Глаз Жука", variant, -1.25066m, -0.3837m, 1500m, 800, "Огонь")
         ],
         MandelbrotVariant.Simonobrot =>
         [
