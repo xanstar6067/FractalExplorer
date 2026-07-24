@@ -33,7 +33,11 @@
                  DisplayMemberPath="DisplayName" SelectionChanged="SavesList_OnSelectionChanged"
                  MouseDoubleClick="SavesList_OnMouseDoubleClick"/>
 
-        <Border Grid.Row="1" Grid.Column="2" Margin="0,7,0,0" Background="Black"
+        <!-- 431x288 minus the 1-DIP border gives a 429x286 (3:2) image area,
+             matching the shared 480x320 preview render size without letterboxing. -->
+        <Border x:Name="PreviewHost" Grid.Row="1" Grid.Column="2" Margin="0,7,0,0"
+                Width="431" Height="288" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Background="Black"
                 BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1"
                 CornerRadius="4" ClipToBounds="True" theme:ThemeContract.IgnoreAudit="True">
             <Grid>
