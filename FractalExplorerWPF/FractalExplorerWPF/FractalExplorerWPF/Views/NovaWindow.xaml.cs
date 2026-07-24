@@ -25,7 +25,7 @@ public partial class NovaWindow : Window
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
     private readonly DispatcherTimer _mapTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
     private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
-    private readonly MandelbrotPaletteManager _paletteManager = new();
+    private readonly NovaPaletteManager _paletteManager = new();
     private readonly NovaSaveStore _saveStore;
     private readonly TransformGroup _previewTransform = new();
     private readonly ScaleTransform _previewScale = new(1, 1);

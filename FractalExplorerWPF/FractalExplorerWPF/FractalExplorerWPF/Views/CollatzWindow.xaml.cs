@@ -22,7 +22,7 @@ public partial class CollatzWindow : Window
     private const decimal BaseScale = 4m;
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
     private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
-    private readonly MandelbrotPaletteManager _paletteManager = new();
+    private readonly CollatzPaletteManager _paletteManager = new();
     private readonly CollatzSaveStore _saveStore = new();
     private readonly TransformGroup _previewTransform = new();
     private readonly ScaleTransform _previewScale = new(1, 1);

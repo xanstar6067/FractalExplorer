@@ -6,9 +6,10 @@ using Color = System.Windows.Media.Color;
 
 namespace FractalExplorerWPF.Infrastructure;
 
-public sealed class MandelbrotPaletteManager
+public class MandelbrotPaletteManager
 {
-    private const string FileName = "custom_palettes_mandelbrot.json";
+    private const string DefaultFileName = "custom_palettes_mandelbrot.json";
+    private readonly string _fileName;
 
     public List<MandelbrotPalette> Palettes { get; } =
     [
@@ -43,22 +44,33 @@ public sealed class MandelbrotPaletteManager
 
     public MandelbrotPalette ActivePalette { get; set; }
 
-    public MandelbrotPaletteManager()
+    public MandelbrotPaletteManager() : this(DefaultFileName)
     {
+    }
+
+    protected MandelbrotPaletteManager(string fileName, int? builtInColorPeriod = null)
+    {
+        _fileName = fileName;
+        if (builtInColorPeriod is not null)
+        {
+            foreach (MandelbrotPalette palette in Palettes.Where(palette => palette.IsBuiltIn))
+                palette.ColorPeriod = builtInColorPeriod.Value;
+        }
+
         try { LoadCustomPalettes(); } catch { }
         ActivePalette = Palettes[0];
     }
 
     public void SaveCustomPalettes()
     {
-        string path = Path.Combine(AppPaths.EnsureSavesDirectory(), FileName);
+        string path = Path.Combine(AppPaths.EnsureSavesDirectory(), _fileName);
         File.WriteAllText(path, JsonSerializer.Serialize(
             Palettes.Where(p => !p.IsBuiltIn), JsonOptionsFactory.Create()));
     }
 
     private void LoadCustomPalettes()
     {
-        string path = Path.Combine(AppPaths.SavesDirectory, FileName);
+        string path = Path.Combine(AppPaths.SavesDirectory, _fileName);
         if (!File.Exists(path)) return;
         List<MandelbrotPalette>? custom = JsonSerializer.Deserialize<List<MandelbrotPalette>>(
             File.ReadAllText(path), JsonOptionsFactory.Create());
