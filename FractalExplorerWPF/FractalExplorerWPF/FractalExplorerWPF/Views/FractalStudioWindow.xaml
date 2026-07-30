@@ -1,0 +1,264 @@
+<Window x:Class="FractalExplorerWPF.Views.FractalStudioWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:FractalExplorerWPF.Studio.Models"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        Title="Fractal Studio"
+        Width="1460" Height="860" MinWidth="1100" MinHeight="680"
+        WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/FractalExplorer.ico"
+        Closing="Window_OnClosing"
+        KeyDown="Window_OnKeyDown">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="9,4"/>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="29"/>
+            <Setter Property="Margin" Value="2"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="Margin" Value="0,2,0,6"/>
+        </Style>
+        <Style x:Key="PanelBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Theme.PanelBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Theme.BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Margin="8,8,8,0" Padding="5"
+                Style="{StaticResource PanelBorderStyle}">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                    <Button Content="Новый" Click="NewProjectButton_OnClick"/>
+                    <Button Content="Открыть…" Click="OpenProjectButton_OnClick"/>
+                    <Button Content="Сохранить…" Click="SaveProjectButton_OnClick"/>
+                    <Button Content="Экспорт изображения…" Click="ExportImageButton_OnClick"/>
+                    <Separator Margin="6,2"/>
+                    <Button Content="Рендер слоя" Click="RenderLayerButton_OnClick"/>
+                    <Button Content="Рендер изменённых" Click="RenderDirtyButton_OnClick"/>
+                    <Button Content="Полный перерасчёт" Click="FullRenderButton_OnClick"/>
+                    <Button x:Name="CancelRenderButton" Content="Отмена"
+                            IsEnabled="False" Click="CancelRenderButton_OnClick"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox x:Name="AutoRenderBox" Margin="10,0,8,0"
+                              VerticalAlignment="Center" Content="Авто"
+                              Checked="AutoRenderBox_OnChanged"
+                              Unchecked="AutoRenderBox_OnChanged"/>
+                    <TextBlock Margin="5,0" VerticalAlignment="Center" Text="SSAA"/>
+                    <ComboBox x:Name="SsaaBox" Width="68" SelectionChanged="SsaaBox_OnChanged">
+                        <ComboBoxItem Content="1×" Tag="1"/>
+                        <ComboBoxItem Content="2×" Tag="2"/>
+                        <ComboBoxItem Content="3×" Tag="3"/>
+                        <ComboBoxItem Content="4×" Tag="4"/>
+                    </ComboBox>
+                    <TextBlock Margin="9,0,5,0" VerticalAlignment="Center" Text="Потоки"/>
+                    <ComboBox x:Name="ThreadsBox" Width="84" SelectionChanged="ThreadsBox_OnChanged"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" MinWidth="190"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*" MinWidth="420"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="390" MinWidth="310"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Padding="9" Style="{StaticResource PanelBorderStyle}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="3,2,3,9"
+                               FontSize="17" FontWeight="SemiBold" Text="Слои"/>
+                    <UniformGrid DockPanel.Dock="Bottom" Columns="4" Margin="0,7,0,0">
+                        <Button Content="+" ToolTip="Добавить слой" Click="AddLayerButton_OnClick"/>
+                        <Button Content="⧉" ToolTip="Дублировать слой" Click="DuplicateLayerButton_OnClick"/>
+                        <Button Content="↑" ToolTip="Поднять слой" Click="MoveLayerUpButton_OnClick"/>
+                        <Button Content="−" ToolTip="Удалить слой" Click="DeleteLayerButton_OnClick"/>
+                    </UniformGrid>
+                    <ListBox x:Name="LayersList"
+                             SelectionChanged="LayersList_OnSelectionChanged"
+                             HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:StudioLayer}">
+                                <Grid Margin="2,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Margin="2,2,8,2" VerticalAlignment="Center"
+                                              IsChecked="{Binding IsVisible, Mode=TwoWay}"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock FontSize="11"
+                                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                                   Text="{Binding RenderStateText}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource Theme.BorderBrush}"/>
+
+            <Border x:Name="CanvasHost" Grid.Column="2" Background="Black"
+                    BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" ClipToBounds="True"
+                    theme:ThemeContract.IgnoreAudit="True"
+                    SizeChanged="CanvasHost_OnSizeChanged"
+                    MouseWheel="CanvasHost_OnMouseWheel"
+                    MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
+                    MouseMove="CanvasHost_OnMouseMove"
+                    MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+                <Grid ClipToBounds="True">
+                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           RenderTransformOrigin="0,0"/>
+                    <Border x:Name="EmptyCanvasHint" HorizontalAlignment="Center"
+                            VerticalAlignment="Center" Padding="18,12"
+                            Background="#B0121212" CornerRadius="6">
+                        <TextBlock Foreground="White" TextAlignment="Center"
+                                   Text="Нажмите «Рендер слоя»&#x0a;или включите автоматический режим."/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource Theme.BorderBrush}"/>
+
+            <Border Grid.Column="4" Padding="8" Style="{StaticResource PanelBorderStyle}">
+                <TabControl x:Name="EditorTabs">
+                    <TabItem Header="Источник">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="LayerDetailsPanel" Margin="8">
+                                <TextBlock Text="Название"/>
+                                <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+
+                                <CheckBox Margin="0,5,0,8" Content="Связать с Master Camera"
+                                          IsChecked="{Binding IsLinkedToMasterCamera, Mode=TwoWay}"/>
+                                <TextBlock Text="Центр X"/>
+                                <TextBox x:Name="CenterXBox" LostFocus="CameraField_OnLostFocus"/>
+                                <TextBlock Text="Центр Y"/>
+                                <TextBox x:Name="CenterYBox" LostFocus="CameraField_OnLostFocus"/>
+                                <TextBlock Text="Масштаб"/>
+                                <TextBox x:Name="ZoomBox" LostFocus="CameraField_OnLostFocus"/>
+
+                                <TextBlock Text="Точность"/>
+                                <ComboBox x:Name="PrecisionBox"
+                                          SelectionChanged="PrecisionBox_OnSelectionChanged"/>
+                                <TextBlock Text="Режим смешивания"/>
+                                <ComboBox x:Name="BlendModeBox"
+                                          SelectionChanged="BlendModeBox_OnSelectionChanged"/>
+                                <TextBlock Margin="0,5,0,0" Text="Непрозрачность"/>
+                                <Slider x:Name="OpacitySlider" Minimum="0" Maximum="1"
+                                        TickFrequency="0.05" ValueChanged="OpacitySlider_OnValueChanged"/>
+
+                                <TextBlock Margin="0,12,0,5" FontSize="15" FontWeight="SemiBold"
+                                           Text="Параметры формулы"/>
+                                <ItemsControl x:Name="ParameterItems">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <TabItem Header="Формула">
+                        <Grid Margin="7">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="120"/>
+                            </Grid.RowDefinitions>
+                            <TextBox x:Name="FormulaEditor"
+                                     FontFamily="Consolas" FontSize="13"
+                                     AcceptsReturn="True" AcceptsTab="True"
+                                     TextWrapping="NoWrap"
+                                     TextChanged="FormulaEditor_OnTextChanged"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"/>
+                            <DockPanel Grid.Row="1" Margin="0,5">
+                                <Button DockPanel.Dock="Right" Content="Применить и скомпилировать"
+                                        Click="ApplyFormulaButton_OnClick"/>
+                                <TextBlock x:Name="FormulaStatusText"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                           Text="Формула не изменена"/>
+                            </DockPanel>
+                            <TreeView x:Name="FormulaStructureTree" Grid.Row="2"
+                                      ToolTip="Структурное представление AST"/>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="Цвет">
+                        <StackPanel Margin="12">
+                            <TextBlock FontSize="15" FontWeight="SemiBold"
+                                       Text="Smooth escape — HDR"/>
+                            <TextBlock Margin="0,12,0,0" Text="Частота палитры"/>
+                            <TextBox x:Name="PaletteFrequencyBox" LostFocus="PaletteField_OnLostFocus"/>
+                            <TextBlock Text="Фаза палитры"/>
+                            <TextBox x:Name="PalettePhaseBox" LostFocus="PaletteField_OnLostFocus"/>
+                            <TextBlock Margin="0,15,0,0"
+                                       Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                       TextWrapping="Wrap"
+                                       Text="Окрашивание уже отделено от орбитального ядра. Редактор DSL окрашивания будет подключён следующим срезом."/>
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="Маски">
+                        <TextBlock Margin="14" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   Text="Граф процедурных масок подготовлен архитектурой слоя и будет добавлен после стабилизации орбитального ядра."/>
+                    </TabItem>
+                    <TabItem Header="Эффекты">
+                        <TextBlock Margin="14" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   Text="Визуальный HDR-граф эффектов — следующий этап вертикального развития Studio."/>
+                    </TabItem>
+                </TabControl>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Margin="8,0,8,8" Padding="8,5"
+                Style="{StaticResource PanelBorderStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center" Text="Готово"/>
+                <ProgressBar x:Name="RenderProgress" Grid.Column="1" Height="18"
+                             Minimum="0" Maximum="100" Margin="10,0"/>
+                <TextBlock x:Name="RenderInfoText" Grid.Column="2" VerticalAlignment="Center"
+                           Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                           Text="double · SSAA 1×"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

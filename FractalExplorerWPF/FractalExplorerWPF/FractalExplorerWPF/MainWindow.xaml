@@ -49,6 +49,13 @@
                            Text="Каталог фракталов"/>
                 <Button DockPanel.Dock="Bottom"
                         Margin="0,10,0,0"
+                        Height="42"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Content="✦  Fractal Studio"
+                        Click="FractalStudioButton_OnClick"/>
+                <Button DockPanel.Dock="Bottom"
+                        Margin="0,10,0,0"
                         Style="{StaticResource AboutButtonStyle}"
                         Click="AboutButton_OnClick">
                     <StackPanel Orientation="Horizontal">
