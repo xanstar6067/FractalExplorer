@@ -47,6 +47,7 @@
                 <TextBlock DockPanel.Dock="Top" Margin="5,3,5,12"
                            FontSize="18" FontWeight="SemiBold"
                            Text="Каталог фракталов"/>
+                <!-- Fractal Studio is temporarily disabled.
                 <Button DockPanel.Dock="Bottom"
                         Margin="0,10,0,0"
                         Height="42"
@@ -54,6 +55,7 @@
                         FontWeight="SemiBold"
                         Content="✦  Fractal Studio"
                         Click="FractalStudioButton_OnClick"/>
+                -->
                 <Button DockPanel.Dock="Bottom"
                         Margin="0,10,0,0"
                         Style="{StaticResource AboutButtonStyle}"
