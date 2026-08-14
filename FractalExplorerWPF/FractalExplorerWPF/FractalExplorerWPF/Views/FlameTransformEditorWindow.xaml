@@ -42,7 +42,8 @@
             <StackPanel Orientation="Horizontal">
                 <Button x:Name="UndoButton" Width="145" Content="Отменить действие" IsEnabled="False" Click="Undo_OnClick"/>
                 <Button x:Name="RandomizeButton" Width="155" Content="Сделать случайно" Click="Randomize_OnClick"/>
-                <ToggleButton x:Name="RandomSettingsButton" Width="38" Margin="4,0,0,0" Padding="0" Content="⚙" FontSize="17" ToolTip="Настроить случайную генерацию"/>
+                <ToggleButton x:Name="RandomSettingsButton" Width="38" Margin="4,0,0,0" Padding="0" Content="⚙" FontSize="17"
+                              Style="{StaticResource ThemeToggleButtonStyle}" ToolTip="Настроить случайную генерацию"/>
                 <Popup x:Name="RandomSettingsPopup" PlacementTarget="{Binding ElementName=RandomSettingsButton}" Placement="Top" VerticalOffset="-7"
                        AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade"
                        IsOpen="{Binding IsChecked, ElementName=RandomSettingsButton, Mode=TwoWay}" Closed="RandomSettingsPopup_OnClosed">
