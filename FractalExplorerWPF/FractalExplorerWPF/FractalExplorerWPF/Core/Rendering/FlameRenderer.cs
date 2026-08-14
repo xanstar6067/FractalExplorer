@@ -33,27 +33,38 @@ public sealed class FlameRenderer : IDisposable
         double worldHeight = worldWidth * _height / (double)_width;
         double left = _state.CenterX - worldWidth / 2, top = _state.CenterY + worldHeight / 2;
         var locals = new ConcurrentBag<Dictionary<int, Pixel>>();
-        Parallel.For(start, end, new ParallelOptions { MaxDegreeOfParallelism = _threads, CancellationToken = token },
-            () => new Dictionary<int, Pixel>(4096),
-            (sample, _, local) =>
-            {
-                ulong seed = Mix((ulong)(sample + 1) * 0x9E3779B97F4A7C15UL);
-                double x = Signed(ref seed), y = Signed(ref seed), cr = .5, cg = .5, cb = .5;
-                int total = Math.Max(1, _state.WarmupIterations + _state.IterationsPerSample);
-                for (int i = 0; i < total; i++)
+        try
+        {
+            Parallel.For(start, end, new ParallelOptions { MaxDegreeOfParallelism = _threads, CancellationToken = token },
+                () => new Dictionary<int, Pixel>(4096),
+                (sample, loopState, local) =>
                 {
-                    if ((i & 63) == 0) token.ThrowIfCancellationRequested();
-                    FlameTransform transform = Select(Unit(ref seed));
-                    Apply(transform, ref x, ref y, ref seed);
-                    cr = (cr + transform.Color.R / 255d) * .5; cg = (cg + transform.Color.G / 255d) * .5; cb = (cb + transform.Color.B / 255d) * .5;
-                    if (i < _state.WarmupIterations || !double.IsFinite(x) || !double.IsFinite(y)) continue;
-                    int px = (int)((x - left) / worldWidth * _width), py = (int)((top - y) / worldHeight * _height);
-                    if ((uint)px >= (uint)_width || (uint)py >= (uint)_height) continue;
-                    int index = py * _width + px; local.TryGetValue(index, out Pixel p);
-                    p.Hit++; p.R += cr; p.G += cg; p.B += cb; local[index] = p;
-                }
-                return local;
-            }, local => locals.Add(local));
+                    ulong seed = Mix((ulong)(sample + 1) * 0x9E3779B97F4A7C15UL);
+                    double x = Signed(ref seed), y = Signed(ref seed), cr = .5, cg = .5, cb = .5;
+                    int total = Math.Max(1, _state.WarmupIterations + _state.IterationsPerSample);
+                    for (int i = 0; i < total; i++)
+                    {
+                        if ((i & 63) == 0 && token.IsCancellationRequested)
+                        {
+                            loopState.Stop();
+                            return local;
+                        }
+                        FlameTransform transform = Select(Unit(ref seed));
+                        Apply(transform, ref x, ref y, ref seed);
+                        cr = (cr + transform.Color.R / 255d) * .5; cg = (cg + transform.Color.G / 255d) * .5; cb = (cb + transform.Color.B / 255d) * .5;
+                        if (i < _state.WarmupIterations || !double.IsFinite(x) || !double.IsFinite(y)) continue;
+                        int px = (int)((x - left) / worldWidth * _width), py = (int)((top - y) / worldHeight * _height);
+                        if ((uint)px >= (uint)_width || (uint)py >= (uint)_height) continue;
+                        int index = py * _width + px; local.TryGetValue(index, out Pixel p);
+                        p.Hit++; p.R += cr; p.G += cg; p.B += cb; local[index] = p;
+                    }
+                    return local;
+                }, local => locals.Add(local));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            return;
+        }
         foreach (Dictionary<int, Pixel> local in locals)
             foreach ((int i, Pixel p) in local) { _hit[i] += p.Hit; _red[i] += p.R; _green[i] += p.G; _blue[i] += p.B; }
         ProcessedSamples = end;
