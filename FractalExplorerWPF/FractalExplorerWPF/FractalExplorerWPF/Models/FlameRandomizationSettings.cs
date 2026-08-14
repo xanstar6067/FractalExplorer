@@ -3,7 +3,7 @@ namespace FractalExplorerWPF.Models;
 public sealed class FlameRandomizationSettings
 {
     public const int MinimumAllowedTransforms = 1;
-    public const int MaximumAllowedTransforms = 10;
+    public const int MaximumAllowedTransforms = 25;
 
     public int MinimumTransforms { get; set; } = 3;
     public int MaximumTransforms { get; set; } = 6;
