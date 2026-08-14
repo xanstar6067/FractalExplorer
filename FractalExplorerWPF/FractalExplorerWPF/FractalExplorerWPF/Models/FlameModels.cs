@@ -4,7 +4,22 @@ using Color = System.Windows.Media.Color;
 
 namespace FractalExplorerWPF.Models;
 
-public enum FlameVariation { Linear, Sinusoidal, Spherical }
+// Numeric values follow the canonical flam3 variation indices and are persisted in save files.
+public enum FlameVariation
+{
+    Linear = 0,
+    Sinusoidal = 1,
+    Spherical = 2,
+    Swirl = 3,
+    Horseshoe = 4,
+    Polar = 5,
+    Heart = 7,
+    Disc = 8,
+    Spiral = 9,
+    Julia = 13,
+    Fisheye = 16,
+    Bubble = 28
+}
 
 public sealed class FlameTransform
 {

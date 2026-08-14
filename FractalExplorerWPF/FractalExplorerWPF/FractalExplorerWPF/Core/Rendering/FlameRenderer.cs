@@ -44,7 +44,7 @@ public sealed class FlameRenderer : IDisposable
                 {
                     if ((i & 63) == 0) token.ThrowIfCancellationRequested();
                     FlameTransform transform = Select(Unit(ref seed));
-                    Apply(transform, ref x, ref y);
+                    Apply(transform, ref x, ref y, ref seed);
                     cr = (cr + transform.Color.R / 255d) * .5; cg = (cg + transform.Color.G / 255d) * .5; cb = (cb + transform.Color.B / 255d) * .5;
                     if (i < _state.WarmupIterations || !double.IsFinite(x) || !double.IsFinite(y)) continue;
                     int px = (int)((x - left) / worldWidth * _width), py = (int)((top - y) / worldHeight * _height);
@@ -97,12 +97,11 @@ public sealed class FlameRenderer : IDisposable
     }
 
     private FlameTransform Select(double value) { int i = Array.BinarySearch(_weights, value); if (i < 0) i = ~i; return _transforms[Math.Min(i, _transforms.Count - 1)]; }
-    private static void Apply(FlameTransform t, ref double x, ref double y)
+    private static void Apply(FlameTransform t, ref double x, ref double y, ref ulong seed)
     {
         double ax = t.A * x + t.B * y + t.C, ay = t.D * x + t.E * y + t.F;
-        if (t.Variation == FlameVariation.Sinusoidal) { x = Math.Sin(ax); y = Math.Sin(ay); }
-        else if (t.Variation == FlameVariation.Spherical) { double r2 = ax * ax + ay * ay; if (r2 < 1e-12) x = y = 0; else { x = ax / r2; y = ay / r2; } }
-        else { x = ax; y = ay; }
+        bool secondJuliaBranch = t.Variation == FlameVariation.Julia && Unit(ref seed) >= .5;
+        (x, y) = FlameVariations.Apply(t.Variation, ax, ay, secondJuliaBranch);
     }
     private static byte Channel(double average, double density, double exposure, double invGamma) => (byte)Math.Clamp(Math.Round(Math.Pow(1 - Math.Exp(-average * density * exposure), invGamma) * 255), 0, 255);
     private static Color Heat(double t) { t = Math.Clamp(t, 0, 1); if (t < .33) { double k = t / .33; return Color.FromRgb((byte)(k * 90), (byte)(k * 255), 255); } if (t < .66) { double k = (t - .33) / .33; return Color.FromRgb((byte)(90 + k * 165), 255, (byte)(255 - k * 255)); } double q = (t - .66) / .34; return Color.FromRgb(255, (byte)(255 - q * 255), (byte)(q * 120)); }

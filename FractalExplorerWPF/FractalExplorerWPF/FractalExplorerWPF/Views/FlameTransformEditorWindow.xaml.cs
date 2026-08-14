@@ -12,6 +12,7 @@ namespace FractalExplorerWPF.Views;
 
 public partial class FlameTransformEditorWindow : Window
 {
+    private static readonly FlameVariation[] RandomVariations = Enum.GetValues<FlameVariation>();
     private readonly List<FlameTransform> _transforms;
     private readonly Stack<Snapshot> _undo = new();
     private readonly ColorSelectionService _picker = ColorSelectionService.Default;
@@ -94,7 +95,7 @@ public partial class FlameTransformEditorWindow : Window
     }
     private static FlameTransform RandomTransform(Random r,double weight,double hue)
     {
-        double angle=Range(r,-Math.PI,Math.PI),sx=Range(r,.22,.82),sy=Range(r,.22,.82),shear=Range(r,-.28,.28),cos=Math.Cos(angle),sin=Math.Sin(angle); FlameVariation variation=Enum.GetValues<FlameVariation>()[r.Next(3)]; double radius=variation==FlameVariation.Spherical?Range(r,.04,.48):Range(r,.12,.92),ta=Range(r,-Math.PI,Math.PI);
+        double angle=Range(r,-Math.PI,Math.PI),sx=Range(r,.22,.82),sy=Range(r,.22,.82),shear=Range(r,-.28,.28),cos=Math.Cos(angle),sin=Math.Sin(angle); FlameVariation variation=RandomVariations[r.Next(RandomVariations.Length)]; double radius=variation is FlameVariation.Spherical or FlameVariation.Spiral?Range(r,.04,.48):Range(r,.12,.92),ta=Range(r,-Math.PI,Math.PI);
         return new FlameTransform { Weight=weight,A=cos*sx+sin*shear,B=-sin*sy,C=Math.Cos(ta)*radius,D=sin*sx,E=cos*sy+cos*shear,F=Math.Sin(ta)*radius,Variation=variation,Color=Hsv(hue,Range(r,.62,.95),Range(r,.72,1)) };
     }
     private static double Range(Random r,double min,double max)=>min+r.NextDouble()*(max-min);
