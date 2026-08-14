@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Infrastructure.ColorPicking;
 using FractalExplorerWPF.Models;
 using Brush = System.Windows.Media.Brush;
@@ -12,18 +14,19 @@ namespace FractalExplorerWPF.Views;
 
 public partial class FlameTransformEditorWindow : Window
 {
-    private static readonly FlameVariation[] RandomVariations = Enum.GetValues<FlameVariation>();
     private readonly List<FlameTransform> _transforms;
     private readonly Stack<Snapshot> _undo = new();
     private readonly ColorSelectionService _picker = ColorSelectionService.Default;
+    private readonly FlameRandomizationSettings _randomSettings = FlameRandomizationSettingsStore.Load();
     private int _selectedIndex = -1; private bool _syncing;
+    private bool _randomSettingsSyncing;
     public event Action<IReadOnlyList<FlameTransform>>? TransformsApplied;
     public List<FlameTransform> ResultTransforms { get; private set; }
 
     public FlameTransformEditorWindow(IEnumerable<FlameTransform> transforms)
     {
         InitializeComponent(); _transforms = transforms.Select(t => t.Clone()).ToList(); ResultTransforms = _transforms;
-        VariationBox.ItemsSource = Enum.GetValues<FlameVariation>(); Rebind();
+        VariationBox.ItemsSource = Enum.GetValues<FlameVariation>(); InitializeRandomSettings(); Rebind();
         if (_transforms.Count > 0) TransformList.SelectedIndex = 0; else EnableEditor(false);
     }
 
@@ -68,7 +71,14 @@ public partial class FlameTransformEditorWindow : Window
         if ((sender as FrameworkElement)?.DataContext is not FlameTransform t) return; int index = _transforms.IndexOf(t); if (index < 0) return;
         PushUndo(); _transforms.RemoveAt(index); _selectedIndex = _transforms.Count == 0 ? -1 : Math.Min(index, _transforms.Count - 1); Rebind(); if (_selectedIndex < 0) EnableEditor(false);
     }
-    private void Randomize_OnClick(object sender, RoutedEventArgs e) { PushUndo(); int selected = _selectedIndex; _transforms.Clear(); _transforms.AddRange(CreateRandom()); Rebind(Math.Clamp(selected, 0, _transforms.Count - 1)); Commit(); }
+    private void Randomize_OnClick(object sender, RoutedEventArgs e)
+    {
+        CaptureRandomSettings();
+        if (_randomSettings.Variations.Count == 0) { RandomSettingsPopup.IsOpen = true; return; }
+        PersistRandomSettings(); PushUndo(); int selected = _selectedIndex; _transforms.Clear();
+        _transforms.AddRange(FlameRandomizer.Create(_randomSettings));
+        Rebind(Math.Clamp(selected, 0, _transforms.Count - 1)); Commit();
+    }
     private void Undo_OnClick(object sender, RoutedEventArgs e)
     {
         if (_undo.Count == 0) return; Snapshot s = _undo.Pop(); _transforms.Clear(); _transforms.AddRange(s.Transforms.Select(t => t.Clone())); _selectedIndex = s.SelectedIndex; Rebind(); EnableEditor(_transforms.Count > 0); UndoButton.IsEnabled = _undo.Count > 0;
@@ -86,19 +96,115 @@ public partial class FlameTransformEditorWindow : Window
     private static string F(double v) => v.ToString("0.########", CultureInfo.InvariantCulture);
     private static bool TryRead(string text, out double value) => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
 
-    private static List<FlameTransform> CreateRandom()
+    private void InitializeRandomSettings()
     {
-        Random random = Random.Shared; int count = random.Next(3, 7); double[] weights = new double[count]; double total = 0;
-        for (int i=0;i<count;i++) total += weights[i] = .25 + random.NextDouble() * random.NextDouble() * 2.5;
-        double hue = random.NextDouble() * 360; var result = new List<FlameTransform>();
-        for (int i=0;i<count;i++) result.Add(RandomTransform(random, weights[i] / total, hue + i * (360d/count) + Range(random,-28,28))); return result;
+        _randomSettings.Normalize(); _randomSettingsSyncing = true;
+        try
+        {
+            int[] counts = [.. Enumerable.Range(
+                FlameRandomizationSettings.MinimumAllowedTransforms,
+                FlameRandomizationSettings.MaximumAllowedTransforms - FlameRandomizationSettings.MinimumAllowedTransforms + 1)];
+            MinimumTransformCountBox.ItemsSource = counts;
+            MaximumTransformCountBox.ItemsSource = counts;
+            MinimumTransformCountBox.SelectedItem = _randomSettings.MinimumTransforms;
+            MaximumTransformCountBox.SelectedItem = _randomSettings.MaximumTransforms;
+
+            foreach (FlameVariation variation in Enum.GetValues<FlameVariation>())
+            {
+                var checkBox = new CheckBox
+                {
+                    Content = variation.ToString(), Tag = variation,
+                    IsChecked = _randomSettings.Variations.Contains(variation),
+                    Margin = new Thickness(0, 3, 12, 3)
+                };
+                checkBox.Checked += RandomVariation_OnChanged;
+                checkBox.Unchecked += RandomVariation_OnChanged;
+                RandomVariationPanel.Children.Add(checkBox);
+            }
+        }
+        finally { _randomSettingsSyncing = false; }
+        CaptureRandomSettings(); UpdateRandomSettingsSummary();
     }
-    private static FlameTransform RandomTransform(Random r,double weight,double hue)
+
+    private void RandomCount_OnChanged(object sender, SelectionChangedEventArgs e)
     {
-        double angle=Range(r,-Math.PI,Math.PI),sx=Range(r,.22,.82),sy=Range(r,.22,.82),shear=Range(r,-.28,.28),cos=Math.Cos(angle),sin=Math.Sin(angle); FlameVariation variation=RandomVariations[r.Next(RandomVariations.Length)]; double radius=variation is FlameVariation.Spherical or FlameVariation.Spiral?Range(r,.04,.48):Range(r,.12,.92),ta=Range(r,-Math.PI,Math.PI);
-        return new FlameTransform { Weight=weight,A=cos*sx+sin*shear,B=-sin*sy,C=Math.Cos(ta)*radius,D=sin*sx,E=cos*sy+cos*shear,F=Math.Sin(ta)*radius,Variation=variation,Color=Hsv(hue,Range(r,.62,.95),Range(r,.72,1)) };
+        if (_randomSettingsSyncing || MinimumTransformCountBox.SelectedItem is not int minimum || MaximumTransformCountBox.SelectedItem is not int maximum) return;
+        _randomSettingsSyncing = true;
+        try
+        {
+            if (sender == MinimumTransformCountBox && minimum > maximum) MaximumTransformCountBox.SelectedItem = minimum;
+            else if (sender == MaximumTransformCountBox && maximum < minimum) MinimumTransformCountBox.SelectedItem = maximum;
+        }
+        finally { _randomSettingsSyncing = false; }
+        CaptureRandomSettings(); UpdateRandomSettingsSummary();
     }
-    private static double Range(Random r,double min,double max)=>min+r.NextDouble()*(max-min);
-    private static Color Hsv(double hue,double saturation,double value) { hue=((hue%360)+360)%360;double c=value*saturation,x=c*(1-Math.Abs(hue/60%2-1)),m=value-c;(double r,double g,double b)=hue switch{<60=>(c,x,0d),<120=>(x,c,0d),<180=>(0d,c,x),<240=>(0d,x,c),<300=>(x,0d,c),_=>(c,0d,x)};return Color.FromRgb((byte)Math.Round((r+m)*255),(byte)Math.Round((g+m)*255),(byte)Math.Round((b+m)*255)); }
+
+    private void RandomVariation_OnChanged(object sender, RoutedEventArgs e)
+    {
+        if (_randomSettingsSyncing) return;
+        CaptureRandomSettings(); UpdateRandomSettingsSummary();
+    }
+
+    private void SelectAllVariations_OnClick(object sender, RoutedEventArgs e) => SetAllVariationChecks(true);
+    private void ClearVariations_OnClick(object sender, RoutedEventArgs e) => SetAllVariationChecks(false);
+    private void SetAllVariationChecks(bool isChecked)
+    {
+        _randomSettingsSyncing = true;
+        try
+        {
+            foreach (CheckBox checkBox in RandomVariationPanel.Children.OfType<CheckBox>())
+                checkBox.IsChecked = isChecked;
+        }
+        finally { _randomSettingsSyncing = false; }
+        CaptureRandomSettings(); UpdateRandomSettingsSummary();
+    }
+
+    private void CaptureRandomSettings()
+    {
+        if (MinimumTransformCountBox.SelectedItem is int minimum) _randomSettings.MinimumTransforms = minimum;
+        if (MaximumTransformCountBox.SelectedItem is int maximum) _randomSettings.MaximumTransforms = maximum;
+        _randomSettings.Variations = [.. RandomVariationPanel.Children.OfType<CheckBox>()
+            .Where(checkBox => checkBox.IsChecked == true)
+            .Select(checkBox => checkBox.Tag)
+            .OfType<FlameVariation>()];
+        _randomSettings.Normalize();
+    }
+
+    private void UpdateRandomSettingsSummary()
+    {
+        int variationCount = _randomSettings.Variations.Count;
+        bool exactCount = _randomSettings.MinimumTransforms == _randomSettings.MaximumTransforms;
+        RandomCountHintText.Text = exactCount ? $"ровно {_randomSettings.MinimumTransforms}" : string.Empty;
+        RandomSettingsValidationText.Text = variationCount == 0 ? "Выберите хотя бы одну допустимую вариацию." : string.Empty;
+        RandomSettingsSummaryText.Text = exactCount
+            ? $"Будет создано слоёв: {_randomSettings.MinimumTransforms}. Вариаций в наборе: {variationCount}."
+            : $"Будет создано слоёв: {_randomSettings.MinimumTransforms}–{_randomSettings.MaximumTransforms}. Вариаций в наборе: {variationCount}.";
+        RandomizeButton.IsEnabled = variationCount > 0;
+        RandomizeButton.Content = exactCount
+            ? $"Случайно · {_randomSettings.MinimumTransforms}"
+            : $"Случайно · {_randomSettings.MinimumTransforms}–{_randomSettings.MaximumTransforms}";
+        RandomizeButton.ToolTip = exactCount
+            ? $"Создать ровно {_randomSettings.MinimumTransforms} случайных трансформаций"
+            : $"Создать от {_randomSettings.MinimumTransforms} до {_randomSettings.MaximumTransforms} случайных трансформаций";
+    }
+
+    private void RandomSettingsPopup_OnClosed(object sender, EventArgs e)
+    {
+        CaptureRandomSettings(); PersistRandomSettings();
+    }
+
+    private void PersistRandomSettings()
+    {
+        try
+        {
+            FlameRandomizationSettingsStore.Save(_randomSettings);
+            RandomSettingsButton.ToolTip = "Настроить случайную генерацию";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            RandomSettingsButton.ToolTip = $"Настройки действуют в этом сеансе, но не сохранены: {exception.Message}";
+        }
+    }
+
     private sealed record Snapshot(List<FlameTransform> Transforms,int SelectedIndex) { public bool Same(Snapshot other) => SelectedIndex==other.SelectedIndex && Transforms.Count==other.Transforms.Count && Transforms.Zip(other.Transforms).All(x=>Equal(x.First,x.Second)); private static bool Equal(FlameTransform a,FlameTransform b)=>a.Weight==b.Weight&&a.A==b.A&&a.B==b.B&&a.C==b.C&&a.D==b.D&&a.E==b.E&&a.F==b.F&&a.Variation==b.Variation&&a.Color==b.Color; }
 }
