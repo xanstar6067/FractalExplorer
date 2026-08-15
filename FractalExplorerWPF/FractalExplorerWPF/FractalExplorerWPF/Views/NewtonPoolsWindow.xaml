@@ -86,7 +86,7 @@
                             </Grid>
 
                             <TextBlock Margin="0,4,0,0" Text="Отображение корней"/>
-                            <ComboBox x:Name="RootDisplayModeBox" SelectedIndex="1"
+                            <ComboBox x:Name="RootDisplayModeBox" SelectedIndex="0"
                                       SelectionChanged="RootDisplayModeBox_OnSelectionChanged">
                                 <ComboBoxItem Content="Скрыть"/>
                                 <ComboBoxItem Content="Маркеры"/>

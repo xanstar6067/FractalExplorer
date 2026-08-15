@@ -12,15 +12,21 @@ public sealed class NewtonPaletteManager
 
     public List<NewtonColorPalette> Palettes { get; } =
     [
-        BuiltIn("Оттенки серого", [Colors.White, Colors.LightGray, Colors.DarkGray], true),
-        BuiltIn("Классика", [], false),
-        BuiltIn("Классика — градиент", [], true),
-        BuiltIn("Чёрно-белый", [Colors.White], false),
-        BuiltIn("Пастель", [Rgb(255,182,193), Rgb(173,216,230), Rgb(189,252,201), Rgb(253,253,150)], false, Rgb(40,40,40)),
-        BuiltIn("Контраст", [Colors.Red, Colors.Yellow, Colors.Blue], false),
-        BuiltIn("Огонь", [Rgb(200,0,0), Rgb(255,100,0), Rgb(255,255,100)], true),
-        BuiltIn("Психоделика", [Rgb(10,0,20), Colors.Magenta, Colors.Cyan], true),
-        BuiltIn("Огонь и лёд", [Rgb(255,100,0), Rgb(0,100,255), Rgb(255,200,0), Rgb(0,200,255)], true)
+        BuiltIn("Оттенки серого", [Colors.White, Colors.LightGray, Colors.DarkGray], true,
+            NewtonPaletteExpansionMode.LinearRamp),
+        BuiltIn("Классика", [], false, NewtonPaletteExpansionMode.Harmonic),
+        BuiltIn("Классика — градиент", [], true, NewtonPaletteExpansionMode.Harmonic),
+        BuiltIn("Чёрно-белый", [Colors.White], false, NewtonPaletteExpansionMode.RepeatFirst),
+        BuiltIn("Пастель", [Rgb(255,182,193), Rgb(173,216,230), Rgb(189,252,201), Rgb(253,253,150)], false,
+            NewtonPaletteExpansionMode.CyclicRamp, Rgb(40,40,40)),
+        BuiltIn("Контраст", [Colors.Red, Colors.Yellow, Colors.Blue], false,
+            NewtonPaletteExpansionMode.Cycle),
+        BuiltIn("Огонь", [Rgb(200,0,0), Rgb(255,100,0), Rgb(255,255,100)], true,
+            NewtonPaletteExpansionMode.LinearRamp),
+        BuiltIn("Психоделика", [Rgb(10,0,20), Colors.Magenta, Colors.Cyan], true,
+            NewtonPaletteExpansionMode.CyclicRamp),
+        BuiltIn("Огонь и лёд", [Rgb(255,100,0), Rgb(0,100,255), Rgb(255,200,0), Rgb(0,200,255)], true,
+            NewtonPaletteExpansionMode.Cycle)
     ];
 
     public NewtonColorPalette ActivePalette { get; set; }
@@ -43,12 +49,15 @@ public sealed class NewtonPaletteManager
         if (requiredCount <= 0) return [];
         if (palette.RootColors.Count == 0) return GenerateHarmonicColors(requiredCount);
         if (palette.RootColors.Count == requiredCount) return [.. palette.RootColors];
-        if (palette.RootColors.Count > requiredCount) return palette.RootColors.Take(requiredCount).ToList();
 
-        var colors = new List<Color>(palette.RootColors);
-        List<Color> harmonic = GenerateHarmonicColors(requiredCount);
-        while (colors.Count < requiredCount) colors.Add(harmonic[colors.Count]);
-        return colors;
+        return palette.ExpansionMode switch
+        {
+            NewtonPaletteExpansionMode.Harmonic => GenerateHarmonicColors(requiredCount),
+            NewtonPaletteExpansionMode.CyclicRamp => CreateCyclicRamp(palette.RootColors, requiredCount),
+            NewtonPaletteExpansionMode.Cycle => CreateCycle(palette.RootColors, requiredCount),
+            NewtonPaletteExpansionMode.RepeatFirst => Enumerable.Repeat(palette.RootColors[0], requiredCount).ToList(),
+            _ => CreateLinearRamp(palette.RootColors, requiredCount)
+        };
     }
 
     public static List<Color> GenerateHarmonicColors(int count)
@@ -68,13 +77,62 @@ public sealed class NewtonPaletteManager
         if (custom is not null) Palettes.AddRange(custom.Where(palette => !palette.IsBuiltIn));
     }
 
-    private static NewtonColorPalette BuiltIn(string name, List<Color> colors, bool gradient, Color? background = null) => new()
+    private static List<Color> CreateLinearRamp(IReadOnlyList<Color> anchors, int count)
+    {
+        if (anchors.Count == 1) return Enumerable.Repeat(anchors[0], count).ToList();
+        if (count == 1) return [anchors[0]];
+
+        var colors = new List<Color>(count);
+        for (int index = 0; index < count; index++)
+        {
+            double position = index * (anchors.Count - 1d) / (count - 1d);
+            int left = Math.Min((int)Math.Floor(position), anchors.Count - 2);
+            colors.Add(Lerp(anchors[left], anchors[left + 1], position - left));
+        }
+        return colors;
+    }
+
+    private static List<Color> CreateCyclicRamp(IReadOnlyList<Color> anchors, int count)
+    {
+        if (anchors.Count == 1) return Enumerable.Repeat(anchors[0], count).ToList();
+
+        var colors = new List<Color>(count);
+        for (int index = 0; index < count; index++)
+        {
+            double position = index * anchors.Count / (double)count;
+            int left = (int)Math.Floor(position) % anchors.Count;
+            int right = (left + 1) % anchors.Count;
+            colors.Add(Lerp(anchors[left], anchors[right], position - Math.Floor(position)));
+        }
+        return colors;
+    }
+
+    private static List<Color> CreateCycle(IReadOnlyList<Color> anchors, int count) =>
+        Enumerable.Range(0, count).Select(index => anchors[index % anchors.Count]).ToList();
+
+    private static Color Lerp(Color start, Color end, double amount)
+    {
+        amount = Math.Clamp(amount, 0, 1);
+        return Color.FromArgb(
+            (byte)Math.Round(start.A + (end.A - start.A) * amount),
+            (byte)Math.Round(start.R + (end.R - start.R) * amount),
+            (byte)Math.Round(start.G + (end.G - start.G) * amount),
+            (byte)Math.Round(start.B + (end.B - start.B) * amount));
+    }
+
+    private static NewtonColorPalette BuiltIn(
+        string name,
+        List<Color> colors,
+        bool gradient,
+        NewtonPaletteExpansionMode expansionMode,
+        Color? background = null) => new()
     {
         Name = name,
         RootColors = colors,
         BackgroundColor = background ?? Colors.Black,
         IsGradient = gradient,
-        IsBuiltIn = true
+        IsBuiltIn = true,
+        ExpansionMode = expansionMode
     };
 
     private static Color Rgb(byte red, byte green, byte blue) => Color.FromRgb(red, green, blue);

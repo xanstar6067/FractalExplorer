@@ -86,7 +86,7 @@ public partial class NewtonPoolsWindow : Window
         FormulaBox.Text = _appliedFormula;
         MethodBox.SelectedIndex = 0;
         RootSearchModeBox.SelectedIndex = 0;
-        RootDisplayModeBox.SelectedIndex = 1;
+        RootDisplayModeBox.SelectedIndex = 0;
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto");
         ThreadsBox.SelectedItem = "Auto";

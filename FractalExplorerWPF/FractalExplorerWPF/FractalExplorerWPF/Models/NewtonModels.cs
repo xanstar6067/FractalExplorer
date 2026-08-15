@@ -25,6 +25,15 @@ public enum NewtonRootDisplayMode
     MarkersWithCoordinates
 }
 
+public enum NewtonPaletteExpansionMode
+{
+    LinearRamp,
+    CyclicRamp,
+    Cycle,
+    RepeatFirst,
+    Harmonic
+}
+
 public sealed class NewtonColorPalette
 {
     public string Name { get; set; } = "Новая палитра";
@@ -32,13 +41,15 @@ public sealed class NewtonColorPalette
     public Color BackgroundColor { get; set; } = Colors.Black;
     public bool IsGradient { get; set; }
     public bool IsBuiltIn { get; set; }
+    public NewtonPaletteExpansionMode ExpansionMode { get; set; }
 
     public NewtonColorPalette Clone(string name) => new()
     {
         Name = name,
         RootColors = [.. RootColors],
         BackgroundColor = BackgroundColor,
-        IsGradient = IsGradient
+        IsGradient = IsGradient,
+        ExpansionMode = ExpansionMode
     };
 
     public override string ToString() => Name;
@@ -57,7 +68,7 @@ public sealed class NewtonState
     public NewtonIterationMethod IterationMethod { get; set; }
     public int HouseholderOrder { get; set; } = 3;
     public NewtonRootSearchMode RootSearchMode { get; set; }
-    public NewtonRootDisplayMode RootDisplayMode { get; set; } = NewtonRootDisplayMode.Markers;
+    public NewtonRootDisplayMode RootDisplayMode { get; set; } = NewtonRootDisplayMode.Hidden;
     public double RootTolerance { get; set; } = 1e-6;
     public double RootSearchRadius { get; set; } = 8;
     public List<Complex> Roots { get; set; } = [];

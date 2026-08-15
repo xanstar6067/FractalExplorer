@@ -72,6 +72,8 @@ public partial class NewtonPaletteWindow : Window
         if (_selected is null) return;
         NewtonColorPalette copy = _selected.Clone(UniqueName($"{_selected.Name} копия"));
         copy.RootColors = NewtonPaletteManager.AdjustColors(_selected, _roots.Count);
+        if (copy.ExpansionMode == NewtonPaletteExpansionMode.Harmonic)
+            copy.ExpansionMode = NewtonPaletteExpansionMode.CyclicRamp;
         _manager.Palettes.Add(copy);
         RefreshPaletteList(copy);
     }
