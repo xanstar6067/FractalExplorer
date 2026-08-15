@@ -95,11 +95,13 @@ public partial class NewtonPoolsWindow : Window
         MethodBox.SelectedIndex = 0;
         RootSearchModeBox.SelectedIndex = 0;
         RootDisplayModeBox.SelectedIndex = 0;
+        DiagnosticColoringBox.SelectedIndex = 0;
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto");
         ThreadsBox.SelectedItem = "Auto";
         ApplyFormula(showMessage: false);
         UpdateMethodControls();
+        UpdateDiagnosticModeHint();
         Loaded += (_, _) => ScheduleRender();
     }
 
@@ -124,6 +126,7 @@ public partial class NewtonPoolsWindow : Window
             HouseholderOrder = order,
             RootSearchMode = SelectedRootSearchMode,
             RootDisplayMode = SelectedRootDisplayMode,
+            DiagnosticColoringMode = SelectedDiagnosticColoringMode,
             RootTolerance = rootTolerance,
             RootSearchRadius = rootSearchRadius,
             Roots = [.. _formulaEngine.Roots],
@@ -145,6 +148,7 @@ public partial class NewtonPoolsWindow : Window
         HouseholderOrderBox.Text = Math.Clamp(state.HouseholderOrder, 2, 12).ToString(CultureInfo.InvariantCulture);
         RootSearchModeBox.SelectedIndex = (int)state.RootSearchMode;
         RootDisplayModeBox.SelectedIndex = (int)state.RootDisplayMode;
+        DiagnosticColoringBox.SelectedIndex = Math.Clamp((int)state.DiagnosticColoringMode, 0, 4);
         RootToleranceBox.Text = Math.Clamp(state.RootTolerance, 1e-12, 0.1).ToString("G6", CultureInfo.InvariantCulture);
         RootSearchRadiusBox.Text = Math.Clamp(state.RootSearchRadius, 0.01, 1e9).ToString("G6", CultureInfo.InvariantCulture);
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
@@ -177,6 +181,15 @@ public partial class NewtonPoolsWindow : Window
         0 => NewtonRootDisplayMode.Hidden,
         2 => NewtonRootDisplayMode.MarkersWithCoordinates,
         _ => NewtonRootDisplayMode.Markers
+    };
+
+    private NewtonDiagnosticColoringMode SelectedDiagnosticColoringMode => DiagnosticColoringBox.SelectedIndex switch
+    {
+        1 => NewtonDiagnosticColoringMode.OrbitOutcome,
+        2 => NewtonDiagnosticColoringMode.CyclesOnly,
+        3 => NewtonDiagnosticColoringMode.Residual,
+        4 => NewtonDiagnosticColoringMode.FinalValuePhase,
+        _ => NewtonDiagnosticColoringMode.Disabled
     };
 
     private void FormulaPresetBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -455,6 +468,29 @@ public partial class NewtonPoolsWindow : Window
         ScheduleRender();
     }
 
+    private void DiagnosticColoringBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateDiagnosticModeHint();
+        ScheduleRender();
+    }
+
+    private void UpdateDiagnosticModeHint()
+    {
+        if (DiagnosticModeHint is null) return;
+        DiagnosticModeHint.Text = SelectedDiagnosticColoringMode switch
+        {
+            NewtonDiagnosticColoringMode.OrbitOutcome =>
+                "Корни — цвета палитры; циклы 2–8 — отдельные цвета; жёлтый — нулевая производная или вырожденный шаг, синий — уход за 10⁶, розовый — NaN/переполнение, серый — лимит итераций.",
+            NewtonDiagnosticColoringMode.CyclesOnly =>
+                "Только циклы: 2 — голубой, 3 — розовый, 4 — оранжевый, 5 — зелёный, 6 — фиолетовый, 7 — бирюзовый, 8 — красный.",
+            NewtonDiagnosticColoringMode.Residual =>
+                "Логарифмическая шкала остатка |f(z)|: синий — малый остаток, красный — большой, розовый — нечисловое значение.",
+            NewtonDiagnosticColoringMode.FinalValuePhase =>
+                "Цветовой круг показывает аргумент последнего вычисленного f(z); NaN и переполнение выделяются розовым.",
+            _ => "Диагностика выключена: используется обычная палитра бассейнов без анализа циклов."
+        };
+    }
+
     private void UpdateMethodControls()
     {
         if (HouseholderOrderPanel is not null) HouseholderOrderPanel.IsEnabled = SelectedMethod == NewtonIterationMethod.Householder;
@@ -522,6 +558,7 @@ public partial class NewtonPoolsWindow : Window
         if (!IsLoaded) return;
         _renderCts?.Cancel();
         _renderTimer.Stop();
+        if (_isPanning) return;
         _renderTimer.Start();
     }
 
@@ -533,6 +570,8 @@ public partial class NewtonPoolsWindow : Window
 
     private async Task RenderPreviewAsync()
     {
+        if (_isPanning) return;
+
         if (_isRendering)
         {
             ScheduleRender();
@@ -561,7 +600,7 @@ public partial class NewtonPoolsWindow : Window
             WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(
                 renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
             NewtonPoolsEngine engine = CreateEngine(state);
-            var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight);
+            var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight, _renderCts);
             _activeSession = session;
             CanvasImage.Source = bitmap;
             RenderOverlay.BeginSession(renderWidth, renderHeight);
@@ -649,6 +688,38 @@ public partial class NewtonPoolsWindow : Window
         RenderProgress.Value = session.TileCount == 0 ? 0 : session.CompletedTiles * 100.0 / session.TileCount;
     }
 
+    private void CommitAndBakePreview()
+    {
+        RenderSession? session = _activeSession;
+        if (session is null) return;
+
+        session.Cancellation.Cancel();
+        FlushVisualizationEvents(session, true);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(ImageLayer);
+        try
+        {
+            var baked = new RenderTargetBitmap(surface.PixelWidth, surface.PixelHeight,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            baked.Render(ImageLayer);
+            baked.Freeze();
+            StablePreviewImage.Source = baked;
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+        }
+        catch (InvalidOperationException)
+        {
+            // Layout can briefly be unavailable during minimization or a resize transition.
+        }
+
+        CanvasImage.Source = null;
+        _visualizationTimer.Stop();
+        RenderOverlay.EndSession();
+        if (ReferenceEquals(_activeSession, session)) _activeSession = null;
+    }
+
     private async Task<BitmapSource> RenderBitmapAsync(NewtonState state, int width, int height, int ssaaFactor,
         CancellationToken token, IProgress<int>? progress)
     {
@@ -682,7 +753,8 @@ public partial class NewtonPoolsWindow : Window
             RootTolerance = state.RootTolerance,
             RootSearchRadius = state.RootSearchRadius,
             BackgroundColor = state.Palette.BackgroundColor,
-            UseGradient = state.Palette.IsGradient
+            UseGradient = state.Palette.IsGradient,
+            DiagnosticColoringMode = state.DiagnosticColoringMode
         };
         bool useSavedRoots = state.Roots.Count > 0 || state.RootSearchMode == NewtonRootSearchMode.ManualOnly;
         if (!engine.SetFormula(state.Formula, out string debug, !useSavedRoots)) throw new InvalidOperationException(debug);
@@ -714,10 +786,7 @@ public partial class NewtonPoolsWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        // Не оставляем незавершённый bitmap поверх масштабируемого стабильного кадра.
-        _renderCts?.Cancel();
-        CanvasImage.Source = null;
-
+        CommitAndBakePreview();
         Point mouse = e.GetPosition(CanvasHost);
         Point before = ScreenToWorld(mouse);
         _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2 : 1 / 1.2), 0.001, 1_000_000_000_000);
@@ -745,7 +814,9 @@ public partial class NewtonPoolsWindow : Window
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _renderTimer.Stop();
         _isPanning = true;
+        CommitAndBakePreview();
         _lastPanPoint = e.GetPosition(CanvasHost);
         CanvasHost.CaptureMouse();
         Mouse.OverrideCursor = Cursors.SizeAll;
@@ -835,12 +906,14 @@ public partial class NewtonPoolsWindow : Window
         double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
         double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
 
-    private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight)
+    private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight,
+        CancellationTokenSource cancellation)
     {
         public WriteableBitmap Bitmap { get; } = bitmap;
         public int TileCount { get; } = tileCount;
         public int RenderWidth { get; } = renderWidth;
         public int RenderHeight { get; } = renderHeight;
+        public CancellationTokenSource Cancellation { get; } = cancellation;
         public int CompletedTiles { get; set; }
         public ConcurrentQueue<TileRenderEvent> Events { get; } = new();
     }

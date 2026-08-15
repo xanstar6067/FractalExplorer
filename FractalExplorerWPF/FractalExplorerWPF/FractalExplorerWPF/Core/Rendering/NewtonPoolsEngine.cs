@@ -9,6 +9,8 @@ namespace FractalExplorerWPF.Core.Rendering;
 
 public sealed class NewtonPoolsEngine
 {
+    private const double DiagnosticEscapeRadius = 1e6;
+    private const double DerivativeZeroTolerance = 1e-14;
     private ExpressionNode? _formula;
     private ExpressionNode? _firstDerivative;
     private ExpressionNode? _secondDerivative;
@@ -30,6 +32,7 @@ public sealed class NewtonPoolsEngine
     public Color[] RootColors { get; set; } = [];
     public Color BackgroundColor { get; set; } = Colors.Black;
     public bool UseGradient { get; set; }
+    public NewtonDiagnosticColoringMode DiagnosticColoringMode { get; set; }
     public NewtonIterationMethod IterationMethod
     {
         get => _iterationMethod;
@@ -145,12 +148,54 @@ public sealed class NewtonPoolsEngine
         if (width <= 0 || height <= 0 || stride < width * 4)
             throw new ArgumentOutOfRangeException(nameof(width));
 
-        if (_compiledFormula is null || _compiledFirstDerivative is null || Roots.Count == 0)
+        bool diagnosticsEnabled = DiagnosticColoringMode != NewtonDiagnosticColoringMode.Disabled;
+        if (_compiledFormula is null || _compiledFirstDerivative is null || (!diagnosticsEnabled && Roots.Count == 0))
         {
             Fill(buffer, width, height, stride, BackgroundColor);
             reportProgress?.Invoke(100);
             return;
         }
+
+        if (diagnosticsEnabled)
+            RenderDiagnosticToBuffer(buffer, width, height, stride, threadCount, cancellationToken, reportProgress);
+        else
+            RenderNormalToBuffer(buffer, width, height, stride, threadCount, cancellationToken, reportProgress);
+    }
+
+    private void RenderNormalToBuffer(
+        byte[] buffer,
+        int width,
+        int height,
+        int stride,
+        int threadCount,
+        CancellationToken cancellationToken,
+        Action<int>? reportProgress)
+    {
+        RenderRows(buffer, width, height, stride, threadCount, cancellationToken, reportProgress, diagnostics: false);
+    }
+
+    private void RenderDiagnosticToBuffer(
+        byte[] buffer,
+        int width,
+        int height,
+        int stride,
+        int threadCount,
+        CancellationToken cancellationToken,
+        Action<int>? reportProgress)
+    {
+        RenderRows(buffer, width, height, stride, threadCount, cancellationToken, reportProgress, diagnostics: true);
+    }
+
+    private void RenderRows(
+        byte[] buffer,
+        int width,
+        int height,
+        int stride,
+        int threadCount,
+        CancellationToken cancellationToken,
+        Action<int>? reportProgress,
+        bool diagnostics)
+    {
 
         long completedRows = 0;
         double unitsPerPixel = Scale / width;
@@ -169,13 +214,19 @@ public sealed class NewtonPoolsEngine
                 Complex z = new(
                     CenterX + (x - width / 2.0) * unitsPerPixel,
                     CenterY - (y - height / 2.0) * unitsPerPixel);
-                int iteration = Iterate(ref z);
-                Color color = GetPixelColor(z, iteration);
+                Color color;
+                if (diagnostics)
+                {
+                    NewtonOrbitResult result = DiagnoseOrbit(z);
+                    color = GetDiagnosticColor(result);
+                }
+                else
+                {
+                    int iteration = IterateNormal(ref z);
+                    color = GetPixelColor(z, iteration);
+                }
                 int offset = row + x * 4;
-                buffer[offset] = color.B;
-                buffer[offset + 1] = color.G;
-                buffer[offset + 2] = color.R;
-                buffer[offset + 3] = color.A;
+                WriteColor(buffer, offset, color);
             }
 
             int rows = (int)Interlocked.Increment(ref completedRows);
@@ -187,11 +238,40 @@ public sealed class NewtonPoolsEngine
     public byte[]? RenderTile(MandelbrotRenderTile tile, int canvasWidth, int canvasHeight, CancellationToken token)
     {
         byte[] buffer = new byte[checked(tile.Width * tile.Height * 4)];
-        if (_compiledFormula is null || _compiledFirstDerivative is null || Roots.Count == 0)
+        bool diagnosticsEnabled = DiagnosticColoringMode != NewtonDiagnosticColoringMode.Disabled;
+        if (_compiledFormula is null || _compiledFirstDerivative is null || (!diagnosticsEnabled && Roots.Count == 0))
         {
             Fill(buffer, tile.Width, tile.Height, tile.Width * 4, BackgroundColor);
             return buffer;
         }
+
+        return diagnosticsEnabled
+            ? RenderDiagnosticTile(buffer, tile, canvasWidth, canvasHeight, token)
+            : RenderNormalTile(buffer, tile, canvasWidth, canvasHeight, token);
+    }
+
+    private byte[]? RenderNormalTile(
+        byte[] buffer,
+        MandelbrotRenderTile tile,
+        int canvasWidth,
+        int canvasHeight,
+        CancellationToken token) => RenderTileCore(buffer, tile, canvasWidth, canvasHeight, token, diagnostics: false);
+
+    private byte[]? RenderDiagnosticTile(
+        byte[] buffer,
+        MandelbrotRenderTile tile,
+        int canvasWidth,
+        int canvasHeight,
+        CancellationToken token) => RenderTileCore(buffer, tile, canvasWidth, canvasHeight, token, diagnostics: true);
+
+    private byte[]? RenderTileCore(
+        byte[] buffer,
+        MandelbrotRenderTile tile,
+        int canvasWidth,
+        int canvasHeight,
+        CancellationToken token,
+        bool diagnostics)
+    {
         double unitsPerPixel = Scale / canvasWidth;
         for (int localY = 0; localY < tile.Height; localY++)
         {
@@ -204,16 +284,25 @@ public sealed class NewtonPoolsEngine
                 Complex z = new(
                     CenterX + (canvasX - canvasWidth / 2.0) * unitsPerPixel,
                     CenterY - (canvasY - canvasHeight / 2.0) * unitsPerPixel);
-                int iteration = Iterate(ref z);
-                Color color = GetPixelColor(z, iteration);
+                Color color;
+                if (diagnostics)
+                {
+                    NewtonOrbitResult result = DiagnoseOrbit(z);
+                    color = GetDiagnosticColor(result);
+                }
+                else
+                {
+                    int iteration = IterateNormal(ref z);
+                    color = GetPixelColor(z, iteration);
+                }
                 int offset = (localY * tile.Width + localX) * 4;
-                buffer[offset] = color.B; buffer[offset + 1] = color.G; buffer[offset + 2] = color.R; buffer[offset + 3] = color.A;
+                WriteColor(buffer, offset, color);
             }
         }
         return buffer;
     }
 
-    private int Iterate(ref Complex z)
+    private int IterateNormal(ref Complex z)
     {
         int iteration = 0;
         while (iteration < MaxIterations)
@@ -235,6 +324,180 @@ public sealed class NewtonPoolsEngine
         }
         return iteration;
     }
+
+    public NewtonOrbitResult DiagnoseOrbit(Complex initialPoint)
+    {
+        if (_compiledFormula is null || _compiledFirstDerivative is null)
+            throw new InvalidOperationException("Сначала задайте корректную формулу.");
+
+        Span<Complex> history = stackalloc Complex[16];
+        int historyCount = 0;
+        int historyNext = 0;
+        Complex z = initialPoint;
+        Complex lastValue = new(double.NaN, double.NaN);
+        AddHistory(history, ref historyCount, ref historyNext, z);
+
+        for (int iteration = 0; iteration < MaxIterations; iteration++)
+        {
+            if (!IsFinite(z))
+                return CreateOrbitResult(NewtonOrbitOutcome.NonFinite, iteration, z, lastValue);
+            if (IsEscaped(z))
+                return CreateOrbitResult(NewtonOrbitOutcome.Escaped, iteration, z, lastValue);
+
+            Complex f = _compiledFormula.Evaluate(z);
+            lastValue = f;
+            if (!IsFinite(f))
+                return CreateOrbitResult(NewtonOrbitOutcome.NonFinite, iteration, z, f);
+
+            int rootIndex = FindKnownRootIndex(z);
+            if (f == Complex.Zero || f.Magnitude <= RootTolerance || rootIndex >= 0)
+                return CreateOrbitResult(NewtonOrbitOutcome.ConvergedToRoot, iteration, z, f, rootIndex);
+
+            int cyclePeriod = DetectCycle(history, historyCount, historyNext);
+            if (cyclePeriod is >= 2 and <= 8)
+                return CreateOrbitResult(NewtonOrbitOutcome.Cycle, iteration, z, f, cyclePeriod: cyclePeriod);
+
+            DiagnosticStep step = ComputeDiagnosticStep(z, f);
+            if (step.Status == DiagnosticStepStatus.NonFinite)
+                return CreateOrbitResult(NewtonOrbitOutcome.NonFinite, iteration, z, f);
+            if (step.Status == DiagnosticStepStatus.ZeroDerivative)
+                return CreateOrbitResult(NewtonOrbitOutcome.ZeroDerivative, iteration, z, f);
+
+            z += step.Value;
+            AddHistory(history, ref historyCount, ref historyNext, z);
+        }
+
+        if (!IsFinite(z)) return CreateOrbitResult(NewtonOrbitOutcome.NonFinite, MaxIterations, z, lastValue);
+        if (IsEscaped(z)) return CreateOrbitResult(NewtonOrbitOutcome.Escaped, MaxIterations, z, lastValue);
+
+        Complex finalValue = _compiledFormula.Evaluate(z);
+        if (!IsFinite(finalValue)) return CreateOrbitResult(NewtonOrbitOutcome.NonFinite, MaxIterations, z, finalValue);
+        int finalRootIndex = FindKnownRootIndex(z);
+        if (finalValue == Complex.Zero || finalValue.Magnitude <= RootTolerance || finalRootIndex >= 0)
+            return CreateOrbitResult(NewtonOrbitOutcome.ConvergedToRoot, MaxIterations, z, finalValue, finalRootIndex);
+        int finalCyclePeriod = DetectCycle(history, historyCount, historyNext);
+        return finalCyclePeriod is >= 2 and <= 8
+            ? CreateOrbitResult(NewtonOrbitOutcome.Cycle, MaxIterations, z, finalValue, cyclePeriod: finalCyclePeriod)
+            : CreateOrbitResult(NewtonOrbitOutcome.IterationLimit, MaxIterations, z, finalValue);
+    }
+
+    private DiagnosticStep ComputeDiagnosticStep(Complex z, Complex f)
+    {
+        switch (IterationMethod)
+        {
+            case NewtonIterationMethod.Halley:
+            {
+                Complex first = _compiledFirstDerivative!.Evaluate(z);
+                if (!IsFinite(first)) return DiagnosticStep.NonFinite(first);
+                if (IsEffectivelyZero(first)) return DiagnosticStep.ZeroDerivative;
+                Complex second = _compiledSecondDerivative!.Evaluate(z);
+                if (!IsFinite(second)) return DiagnosticStep.NonFinite(second);
+                Complex denominator = 2 * first * first - f * second;
+                if (!IsFinite(denominator)) return DiagnosticStep.NonFinite(denominator);
+                if (IsEffectivelyZero(denominator)) return DiagnosticStep.ZeroDerivative;
+                Complex value = -(2 * f * first) / denominator;
+                return IsFinite(value) ? DiagnosticStep.Success(value) : DiagnosticStep.NonFinite(value);
+            }
+            case NewtonIterationMethod.Householder:
+            {
+                int order = HouseholderOrder;
+                if (_compiledInverseDerivatives.Count <= order) return DiagnosticStep.ZeroDerivative;
+                Complex previous = _compiledInverseDerivatives[order - 1].Evaluate(z);
+                Complex current = _compiledInverseDerivatives[order].Evaluate(z);
+                if (!IsFinite(previous)) return DiagnosticStep.NonFinite(previous);
+                if (!IsFinite(current)) return DiagnosticStep.NonFinite(current);
+                if (IsEffectivelyZero(current)) return DiagnosticStep.ZeroDerivative;
+                Complex value = order * previous / current;
+                return IsFinite(value) ? DiagnosticStep.Success(value) : DiagnosticStep.NonFinite(value);
+            }
+            default:
+            {
+                Complex derivative = _compiledFirstDerivative!.Evaluate(z);
+                if (!IsFinite(derivative)) return DiagnosticStep.NonFinite(derivative);
+                if (IsEffectivelyZero(derivative)) return DiagnosticStep.ZeroDerivative;
+                Complex value = -f / derivative;
+                return IsFinite(value) ? DiagnosticStep.Success(value) : DiagnosticStep.NonFinite(value);
+            }
+        }
+    }
+
+    private int DetectCycle(Span<Complex> history, int historyCount, int historyNext)
+    {
+        double tolerance = Math.Clamp(RootTolerance * 4, 1e-10, 1e-4);
+        if (historyCount < 4) return 0;
+
+        Complex latest = GetRecent(history, historyNext, 0);
+        Complex previous = GetRecent(history, historyNext, 1);
+        if (AreClose(latest, previous, tolerance)) return 0;
+
+        for (int period = 2; period <= 8; period++)
+        {
+            if (historyCount < period * 2) break;
+            bool matches = true;
+            for (int offset = 0; offset < period; offset++)
+            {
+                if (AreClose(
+                        GetRecent(history, historyNext, offset),
+                        GetRecent(history, historyNext, offset + period),
+                        tolerance)) continue;
+                matches = false;
+                break;
+            }
+            if (matches) return period;
+        }
+        return 0;
+    }
+
+    private int FindKnownRootIndex(Complex z)
+    {
+        int nearest = -1;
+        double nearestDistance = double.MaxValue;
+        for (int index = 0; index < Roots.Count; index++)
+        {
+            double distance = (z - Roots[index]).Magnitude;
+            if (distance >= nearestDistance) continue;
+            nearest = index;
+            nearestDistance = distance;
+        }
+        return nearestDistance <= RootTolerance ? nearest : -1;
+    }
+
+    private static void AddHistory(Span<Complex> history, ref int count, ref int next, Complex value)
+    {
+        history[next] = value;
+        next = (next + 1) % history.Length;
+        if (count < history.Length) count++;
+    }
+
+    private static Complex GetRecent(Span<Complex> history, int next, int offset)
+    {
+        int index = next - 1 - offset;
+        while (index < 0) index += history.Length;
+        return history[index];
+    }
+
+    private static bool AreClose(Complex left, Complex right, double tolerance) =>
+        (left - right).Magnitude <= tolerance * Math.Max(1, Math.Max(left.Magnitude, right.Magnitude));
+
+    private static bool IsEffectivelyZero(Complex value) => value.Magnitude <= DerivativeZeroTolerance;
+
+    private static bool IsEscaped(Complex value) =>
+        Math.Abs(value.Real) > DiagnosticEscapeRadius || Math.Abs(value.Imaginary) > DiagnosticEscapeRadius;
+
+    private static NewtonOrbitResult CreateOrbitResult(
+        NewtonOrbitOutcome outcome,
+        int iterations,
+        Complex point,
+        Complex value,
+        int rootIndex = -1,
+        int cyclePeriod = 0) => new(
+        outcome,
+        iterations,
+        point,
+        value,
+        IsFinite(value) ? value.Magnitude : double.PositiveInfinity,
+        rootIndex,
+        cyclePeriod);
 
     private Complex ComputeNewtonStep(Complex z, Complex f)
     {
@@ -347,6 +610,84 @@ public sealed class NewtonPoolsEngine
         return Lerp(baseColor, BackgroundColor, t);
     }
 
+    private Color GetDiagnosticColor(NewtonOrbitResult result) => DiagnosticColoringMode switch
+    {
+        NewtonDiagnosticColoringMode.CyclesOnly => result.Outcome == NewtonOrbitOutcome.Cycle
+            ? GetCycleColor(result.CyclePeriod)
+            : BackgroundColor,
+        NewtonDiagnosticColoringMode.Residual => GetResidualColor(result),
+        NewtonDiagnosticColoringMode.FinalValuePhase => GetPhaseColor(result),
+        _ => GetOutcomeColor(result)
+    };
+
+    private Color GetOutcomeColor(NewtonOrbitResult result) => result.Outcome switch
+    {
+        NewtonOrbitOutcome.ConvergedToRoot => result.RootIndex >= 0 && RootColors.Length > 0
+            ? RootColors[result.RootIndex % RootColors.Length]
+            : Color.FromRgb(70, 220, 120),
+        NewtonOrbitOutcome.Cycle => GetCycleColor(result.CyclePeriod),
+        NewtonOrbitOutcome.ZeroDerivative => Color.FromRgb(255, 214, 64),
+        NewtonOrbitOutcome.Escaped => Color.FromRgb(41, 121, 255),
+        NewtonOrbitOutcome.NonFinite => Color.FromRgb(255, 23, 104),
+        _ => Color.FromRgb(117, 117, 117)
+    };
+
+    private static Color GetCycleColor(int period) => period switch
+    {
+        2 => Color.FromRgb(0, 229, 255),
+        3 => Color.FromRgb(255, 0, 212),
+        4 => Color.FromRgb(255, 145, 0),
+        5 => Color.FromRgb(118, 255, 3),
+        6 => Color.FromRgb(124, 77, 255),
+        7 => Color.FromRgb(0, 191, 165),
+        8 => Color.FromRgb(255, 23, 68),
+        _ => Colors.White
+    };
+
+    private Color GetResidualColor(NewtonOrbitResult result)
+    {
+        if (result.Outcome == NewtonOrbitOutcome.NonFinite) return Color.FromRgb(255, 23, 104);
+        if (!double.IsFinite(result.Residual)) return Color.FromRgb(255, 23, 104);
+        double minimumLog = Math.Log10(Math.Max(1e-15, RootTolerance));
+        const double maximumLog = 6;
+        double logResidual = Math.Log10(Math.Max(1e-300, result.Residual));
+        double normalized = Math.Clamp((logResidual - minimumLog) / Math.Max(1, maximumLog - minimumLog), 0, 1);
+        return ColorFromHsv(240 * (1 - normalized), 0.95, 0.95);
+    }
+
+    private static Color GetPhaseColor(NewtonOrbitResult result)
+    {
+        if (result.Outcome == NewtonOrbitOutcome.NonFinite) return Color.FromRgb(255, 23, 104);
+        if (!IsFinite(result.FinalValue)) return Color.FromRgb(255, 23, 104);
+        if (result.FinalValue == Complex.Zero) return Colors.Black;
+        double hue = (Math.Atan2(result.FinalValue.Imaginary, result.FinalValue.Real) + Math.PI) * 180 / Math.PI;
+        return ColorFromHsv(hue, 0.95, 0.95);
+    }
+
+    private static Color ColorFromHsv(double hue, double saturation, double value)
+    {
+        hue = ((hue % 360) + 360) % 360;
+        saturation = Math.Clamp(saturation, 0, 1);
+        value = Math.Clamp(value, 0, 1);
+        double chroma = value * saturation;
+        double segment = hue / 60;
+        double secondary = chroma * (1 - Math.Abs(segment % 2 - 1));
+        (double red, double green, double blue) = segment switch
+        {
+            < 1 => (chroma, secondary, 0d),
+            < 2 => (secondary, chroma, 0d),
+            < 3 => (0d, chroma, secondary),
+            < 4 => (0d, secondary, chroma),
+            < 5 => (secondary, 0d, chroma),
+            _ => (chroma, 0d, secondary)
+        };
+        double match = value - chroma;
+        return Color.FromRgb(
+            (byte)Math.Round((red + match) * 255),
+            (byte)Math.Round((green + match) * 255),
+            (byte)Math.Round((blue + match) * 255));
+    }
+
     private static Color Lerp(Color start, Color end, double amount)
     {
         amount = Math.Clamp(amount, 0, 1);
@@ -371,5 +712,27 @@ public sealed class NewtonPoolsEngine
             buffer[offset + 2] = color.R;
             buffer[offset + 3] = color.A;
         }
+    }
+
+    private static void WriteColor(byte[] buffer, int offset, Color color)
+    {
+        buffer[offset] = color.B;
+        buffer[offset + 1] = color.G;
+        buffer[offset + 2] = color.R;
+        buffer[offset + 3] = color.A;
+    }
+
+    private enum DiagnosticStepStatus
+    {
+        Success,
+        ZeroDerivative,
+        NonFinite
+    }
+
+    private readonly record struct DiagnosticStep(DiagnosticStepStatus Status, Complex Value)
+    {
+        public static DiagnosticStep Success(Complex value) => new(DiagnosticStepStatus.Success, value);
+        public static DiagnosticStep ZeroDerivative => new(DiagnosticStepStatus.ZeroDerivative, Complex.Zero);
+        public static DiagnosticStep NonFinite(Complex value) => new(DiagnosticStepStatus.NonFinite, value);
     }
 }

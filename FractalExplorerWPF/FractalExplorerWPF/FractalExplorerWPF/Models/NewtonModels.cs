@@ -25,6 +25,25 @@ public enum NewtonRootDisplayMode
     MarkersWithCoordinates
 }
 
+public enum NewtonDiagnosticColoringMode
+{
+    Disabled,
+    OrbitOutcome,
+    CyclesOnly,
+    Residual,
+    FinalValuePhase
+}
+
+public enum NewtonOrbitOutcome
+{
+    ConvergedToRoot,
+    Cycle,
+    ZeroDerivative,
+    Escaped,
+    NonFinite,
+    IterationLimit
+}
+
 public enum NewtonPaletteExpansionMode
 {
     LinearRamp,
@@ -69,11 +88,21 @@ public sealed class NewtonState
     public int HouseholderOrder { get; set; } = 3;
     public NewtonRootSearchMode RootSearchMode { get; set; }
     public NewtonRootDisplayMode RootDisplayMode { get; set; } = NewtonRootDisplayMode.Hidden;
+    public NewtonDiagnosticColoringMode DiagnosticColoringMode { get; set; }
     public double RootTolerance { get; set; } = 1e-6;
     public double RootSearchRadius { get; set; } = 8;
     public List<Complex> Roots { get; set; } = [];
     public NewtonColorPalette Palette { get; set; } = new();
 }
+
+public readonly record struct NewtonOrbitResult(
+    NewtonOrbitOutcome Outcome,
+    int Iterations,
+    Complex FinalPoint,
+    Complex FinalValue,
+    double Residual,
+    int RootIndex = -1,
+    int CyclePeriod = 0);
 
 public sealed record NewtonRootColorItem(int Index, Complex Root, Color Color)
 {

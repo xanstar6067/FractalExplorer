@@ -98,6 +98,23 @@
                         </StackPanel>
                     </Expander>
 
+                    <Expander Margin="0,4" Header="Диагностическая раскраска">
+                        <StackPanel Margin="0,6,0,0">
+                            <TextBlock Text="Режим отображения"/>
+                            <ComboBox x:Name="DiagnosticColoringBox" SelectedIndex="0"
+                                      SelectionChanged="DiagnosticColoringBox_OnSelectionChanged">
+                                <ComboBoxItem Content="Выключена — обычные бассейны"/>
+                                <ComboBoxItem Content="Исход орбиты"/>
+                                <ComboBoxItem Content="Только циклы периода 2–8"/>
+                                <ComboBoxItem Content="Остаток |f(z)|"/>
+                                <ComboBoxItem Content="Фаза последнего f(z)"/>
+                            </ComboBox>
+                            <TextBlock x:Name="DiagnosticModeHint"
+                                       Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Expander>
+
                     <TextBlock Margin="0,8,0,0" Text="Метод итерации"/>
                     <ComboBox x:Name="MethodBox" SelectionChanged="MethodBox_OnSelectionChanged">
                         <ComboBoxItem Content="Newton"/>
