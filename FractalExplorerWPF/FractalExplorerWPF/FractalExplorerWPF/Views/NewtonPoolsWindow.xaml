@@ -40,7 +40,8 @@
 
                     <TextBlock Text="Полином / функция f(z)"/>
                     <TextBox x:Name="FormulaBox" Height="64" AcceptsReturn="True" TextWrapping="Wrap"
-                             VerticalContentAlignment="Top" ToolTip="Поддерживаются z, i, числа, +, −, *, /, ^ и скобки."/>
+                             VerticalContentAlignment="Top"
+                             ToolTip="Поддерживаются z, i, pi, e, числа, +, −, *, /, ^, sin, cos, tan, exp, log, sqrt и гиперболические функции."/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

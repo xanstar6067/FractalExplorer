@@ -13,6 +13,7 @@ namespace FractalExplorerWPF.Core.NewtonMath
     {
         Number,
         Variable,
+        Function,
         Operator,
         LeftParen,  // Открывающая скобка '('
         RightParen  // Закрывающая скобка ')'
@@ -63,9 +64,14 @@ namespace FractalExplorerWPF.Core.NewtonMath
                 if (char.IsDigit(current) || current == '.')
                 {
                     var start = _pos;
-                    while (_pos < _text.Length && (char.IsDigit(_text[_pos]) || _text[_pos] == '.'))
+                    while (_pos < _text.Length && (char.IsDigit(_text[_pos]) || _text[_pos] == '.')) _pos++;
+                    if (_pos < _text.Length && _text[_pos] == 'e')
                     {
-                        _pos++;
+                        int exponentStart = _pos++;
+                        if (_pos < _text.Length && _text[_pos] is '+' or '-') _pos++;
+                        int exponentDigits = _pos;
+                        while (_pos < _text.Length && char.IsDigit(_text[_pos])) _pos++;
+                        if (_pos == exponentDigits) _pos = exponentStart;
                     }
                     tokens.Add(new Token(TokenType.Number, _text.Substring(start, _pos - start)));
                     continue;
@@ -78,7 +84,11 @@ namespace FractalExplorerWPF.Core.NewtonMath
                     {
                         _pos++;
                     }
-                    tokens.Add(new Token(TokenType.Variable, _text.Substring(start, _pos - start)));
+                    string identifier = _text.Substring(start, _pos - start);
+                    bool isFunction = FunctionNode.IsSupported(identifier);
+                    if (!isFunction && _pos < _text.Length && _text[_pos] == '(' && identifier is not ("z" or "i" or "pi" or "e"))
+                        throw new Exception($"Неизвестная функция '{identifier}'");
+                    tokens.Add(new Token(isFunction ? TokenType.Function : TokenType.Variable, identifier));
                     continue;
                 }
 
@@ -125,9 +135,9 @@ namespace FractalExplorerWPF.Core.NewtonMath
                     var current = tokens[i];
                     var next = tokens[i + 1];
 
-                    // Умножение после числа, переменной или закрывающей скобки перед числом, переменной или открывающей скобкой
+                    // Функция и её открывающая скобка не разделяются умножением: sin(z).
                     if ((current.Type == TokenType.Number || current.Type == TokenType.Variable || current.Type == TokenType.RightParen) &&
-                        (next.Type == TokenType.Number || next.Type == TokenType.Variable || next.Type == TokenType.LeftParen))
+                        (next.Type == TokenType.Number || next.Type == TokenType.Variable || next.Type == TokenType.Function || next.Type == TokenType.LeftParen))
                     {
                         result.Add(new Token(TokenType.Operator, "*"));
                     }
@@ -264,10 +274,9 @@ namespace FractalExplorerWPF.Core.NewtonMath
         /// <exception cref="Exception">Выбрасывается, если значение переменной не предоставлено.</exception>
         public override Complex Evaluate(Dictionary<string, Complex> variables)
         {
-            if (Name == "i")
-            {
-                return Complex.ImaginaryOne;
-            }
+            if (Name == "i") return Complex.ImaginaryOne;
+            if (Name == "pi") return new Complex(Math.PI, 0);
+            if (Name == "e") return new Complex(Math.E, 0);
             if (variables.TryGetValue(Name, out var value))
             {
                 return value;
@@ -286,17 +295,19 @@ namespace FractalExplorerWPF.Core.NewtonMath
             {
                 return new NumberNode(Complex.One);
             }
-            if (Name == "i") // Производная от константы 'i' равна 0
-            {
-                return new NumberNode(Complex.Zero);
-            }
             return new NumberNode(Complex.Zero);
         }
 
         /// <summary>
         /// Возвращает сам узел, так как переменная не может быть упрощена.
         /// </summary>
-        public override ExpressionNode Simplify() => this;
+        public override ExpressionNode Simplify() => Name switch
+        {
+            "i" => new NumberNode(Complex.ImaginaryOne),
+            "pi" => new NumberNode(new Complex(Math.PI, 0)),
+            "e" => new NumberNode(new Complex(Math.E, 0)),
+            _ => this
+        };
 
         /// <summary>
         /// Печатает структурированное представление узла переменной.
@@ -564,6 +575,98 @@ namespace FractalExplorerWPF.Core.NewtonMath
         public override string PrintSimple() => $"({Operator}{Operand.PrintSimple()})";
     }
 
+    /// <summary>
+    /// Представляет вызов поддерживаемой комплексной функции и применяет цепное правило при дифференцировании.
+    /// </summary>
+    public sealed class FunctionNode : ExpressionNode
+    {
+        private static readonly HashSet<string> SupportedNames =
+        [
+            "sin", "cos", "tan", "asin", "acos", "atan",
+            "sinh", "cosh", "tanh", "exp", "log", "ln", "sqrt"
+        ];
+
+        public string Name { get; }
+        public ExpressionNode Argument { get; }
+
+        public FunctionNode(string name, ExpressionNode argument)
+        {
+            Name = NormalizeName(name);
+            if (!IsSupported(Name)) throw new Exception($"Неизвестная функция '{name}'");
+            Argument = argument;
+        }
+
+        public static bool IsSupported(string name) => SupportedNames.Contains(name.ToLowerInvariant());
+
+        public override Complex Evaluate(Dictionary<string, Complex> variables) => Evaluate(Name, Argument.Evaluate(variables));
+
+        public override ExpressionNode Differentiate(string varName)
+        {
+            ExpressionNode u = Argument;
+            ExpressionNode du = u.Differentiate(varName);
+            ExpressionNode one = new NumberNode(Complex.One);
+            ExpressionNode two = new NumberNode(new Complex(2, 0));
+            ExpressionNode outer = Name switch
+            {
+                "sin" => new FunctionNode("cos", u),
+                "cos" => new UnaryOpNode("-", new FunctionNode("sin", u)),
+                "tan" => new BinaryOpNode(one, "/", Square(new FunctionNode("cos", u))),
+                "asin" => new BinaryOpNode(one, "/", new FunctionNode("sqrt",
+                    new BinaryOpNode(one, "-", Square(u)))),
+                "acos" => new UnaryOpNode("-", new BinaryOpNode(one, "/", new FunctionNode("sqrt",
+                    new BinaryOpNode(one, "-", Square(u))))),
+                "atan" => new BinaryOpNode(one, "/", new BinaryOpNode(one, "+", Square(u))),
+                "sinh" => new FunctionNode("cosh", u),
+                "cosh" => new FunctionNode("sinh", u),
+                "tanh" => new BinaryOpNode(one, "/", Square(new FunctionNode("cosh", u))),
+                "exp" => new FunctionNode("exp", u),
+                "log" => new BinaryOpNode(one, "/", u),
+                "sqrt" => new BinaryOpNode(one, "/", new BinaryOpNode(two, "*", new FunctionNode("sqrt", u))),
+                _ => throw new Exception($"Производная функции '{Name}' не поддерживается.")
+            };
+            return new BinaryOpNode(outer, "*", du);
+        }
+
+        public override ExpressionNode Simplify()
+        {
+            ExpressionNode argument = Argument.Simplify();
+            return argument is NumberNode number
+                ? new NumberNode(Evaluate(Name, number.Value))
+                : new FunctionNode(Name, argument);
+        }
+
+        public override string Print(string indent = "")
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"{indent}Function({Name})");
+            builder.Append(Argument.Print(indent + "  "));
+            return builder.ToString();
+        }
+
+        public override string PrintSimple() => $"{Name}({Argument.PrintSimple()})";
+
+        public static Complex Evaluate(string name, Complex value) => NormalizeName(name) switch
+        {
+            "sin" => Complex.Sin(value),
+            "cos" => Complex.Cos(value),
+            "tan" => Complex.Tan(value),
+            "asin" => Complex.Asin(value),
+            "acos" => Complex.Acos(value),
+            "atan" => Complex.Atan(value),
+            "sinh" => Complex.Sinh(value),
+            "cosh" => Complex.Cosh(value),
+            "tanh" => Complex.Tanh(value),
+            "exp" => Complex.Exp(value),
+            "log" => Complex.Log(value),
+            "sqrt" => Complex.Sqrt(value),
+            _ => throw new Exception($"Неизвестная функция '{name}'")
+        };
+
+        private static string NormalizeName(string name) => name.ToLowerInvariant() == "ln" ? "log" : name.ToLowerInvariant();
+        private static ExpressionNode Square(ExpressionNode value) =>
+            new BinaryOpNode(value, "^", new NumberNode(new Complex(2, 0)));
+    }
+
     #endregion
 
     #region Parser
@@ -705,6 +808,19 @@ namespace FractalExplorerWPF.Core.NewtonMath
             {
                 Advance();
                 return new VariableNode(token.Value);
+            }
+
+            if (token.Type == TokenType.Function)
+            {
+                Advance();
+                if (Current.Type != TokenType.LeftParen)
+                    throw new Exception($"После функции '{token.Value}' ожидалась открывающая скобка '('");
+                Advance();
+                ExpressionNode argument = ParseExpression();
+                if (Current.Type != TokenType.RightParen)
+                    throw new Exception($"У функции '{token.Value}' ожидалась закрывающая скобка ')'");
+                Advance();
+                return new FunctionNode(token.Value, argument);
             }
 
             if (token.Type == TokenType.LeftParen)

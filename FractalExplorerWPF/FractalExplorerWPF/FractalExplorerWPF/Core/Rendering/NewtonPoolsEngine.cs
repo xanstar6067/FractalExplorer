@@ -12,8 +12,13 @@ public sealed class NewtonPoolsEngine
     private ExpressionNode? _formula;
     private ExpressionNode? _firstDerivative;
     private ExpressionNode? _secondDerivative;
+    private CompiledNewtonExpression? _compiledFormula;
+    private CompiledNewtonExpression? _compiledFirstDerivative;
+    private CompiledNewtonExpression? _compiledSecondDerivative;
     private readonly List<ExpressionNode> _inverseDerivatives = [];
+    private readonly List<CompiledNewtonExpression> _compiledInverseDerivatives = [];
     private int _householderOrder = 3;
+    private NewtonIterationMethod _iterationMethod;
     private double _rootTolerance = 1e-6;
     private double _rootSearchRadius = 8;
 
@@ -25,7 +30,18 @@ public sealed class NewtonPoolsEngine
     public Color[] RootColors { get; set; } = [];
     public Color BackgroundColor { get; set; } = Colors.Black;
     public bool UseGradient { get; set; }
-    public NewtonIterationMethod IterationMethod { get; set; }
+    public NewtonIterationMethod IterationMethod
+    {
+        get => _iterationMethod;
+        set
+        {
+            if (_iterationMethod == value) return;
+            _iterationMethod = value;
+            if (_formula is null) return;
+            if (value == NewtonIterationMethod.Householder) BuildInverseDerivatives();
+            else ClearInverseDerivatives();
+        }
+    }
     public NewtonRootSearchMode RootSearchMode { get; set; }
     public string RootSearchStrategy { get; private set; } = "Не запускался";
 
@@ -47,7 +63,7 @@ public sealed class NewtonPoolsEngine
         set
         {
             _householderOrder = Math.Clamp(value, 2, 12);
-            if (_formula is not null) BuildInverseDerivatives();
+            if (_formula is not null && IterationMethod == NewtonIterationMethod.Householder) BuildInverseDerivatives();
         }
     }
 
@@ -60,7 +76,11 @@ public sealed class NewtonPoolsEngine
             _formula = new Parser(tokens).Parse().Simplify();
             _firstDerivative = _formula.Differentiate("z").Simplify();
             _secondDerivative = _firstDerivative.Differentiate("z").Simplify();
-            BuildInverseDerivatives();
+            _compiledFormula = CompiledNewtonExpression.Compile(_formula);
+            _compiledFirstDerivative = CompiledNewtonExpression.Compile(_firstDerivative);
+            _compiledSecondDerivative = CompiledNewtonExpression.Compile(_secondDerivative);
+            if (IterationMethod == NewtonIterationMethod.Householder) BuildInverseDerivatives();
+            else ClearInverseDerivatives();
             if (discoverRoots) FindRoots();
             else
             {
@@ -73,6 +93,9 @@ public sealed class NewtonPoolsEngine
             debug.AppendLine($"f(z) = {_formula}");
             debug.AppendLine($"f'(z) = {_firstDerivative}");
             debug.AppendLine($"f''(z) = {_secondDerivative}");
+            debug.AppendLine($"Байткод: f={_compiledFormula.InstructionCount} инструкций, " +
+                             $"f'={_compiledFirstDerivative.InstructionCount}, f''={_compiledSecondDerivative.InstructionCount}; " +
+                             $"макс. стек={Math.Max(_compiledFormula.MaxStackDepth, Math.Max(_compiledFirstDerivative.MaxStackDepth, _compiledSecondDerivative.MaxStackDepth))}");
             debug.AppendLine($"Найдено корней: {Roots.Count}");
             debug.AppendLine($"Поиск: {RootSearchStrategy}");
             debug.AppendLine($"Точность: {RootTolerance:G3}; радиус адаптивного поиска: {RootSearchRadius:G6}");
@@ -84,7 +107,10 @@ public sealed class NewtonPoolsEngine
             _formula = null;
             _firstDerivative = null;
             _secondDerivative = null;
-            _inverseDerivatives.Clear();
+            _compiledFormula = null;
+            _compiledFirstDerivative = null;
+            _compiledSecondDerivative = null;
+            ClearInverseDerivatives();
             Roots = [];
             RootSearchStrategy = "Ошибка формулы";
             debugInfo = $"ОШИБКА ПАРСИНГА:{Environment.NewLine}{ex.Message}";
@@ -119,7 +145,7 @@ public sealed class NewtonPoolsEngine
         if (width <= 0 || height <= 0 || stride < width * 4)
             throw new ArgumentOutOfRangeException(nameof(width));
 
-        if (_formula is null || _firstDerivative is null || Roots.Count == 0)
+        if (_compiledFormula is null || _compiledFirstDerivative is null || Roots.Count == 0)
         {
             Fill(buffer, width, height, stride, BackgroundColor);
             reportProgress?.Invoke(100);
@@ -136,7 +162,6 @@ public sealed class NewtonPoolsEngine
         Parallel.For(0, height, options, (y, loopState) =>
         {
             if (cancellationToken.IsCancellationRequested) { loopState.Stop(); return; }
-            var variables = new Dictionary<string, Complex>(1);
             int row = y * stride;
             for (int x = 0; x < width; x++)
             {
@@ -144,7 +169,7 @@ public sealed class NewtonPoolsEngine
                 Complex z = new(
                     CenterX + (x - width / 2.0) * unitsPerPixel,
                     CenterY - (y - height / 2.0) * unitsPerPixel);
-                int iteration = Iterate(ref z, variables);
+                int iteration = Iterate(ref z);
                 Color color = GetPixelColor(z, iteration);
                 int offset = row + x * 4;
                 buffer[offset] = color.B;
@@ -162,13 +187,12 @@ public sealed class NewtonPoolsEngine
     public byte[]? RenderTile(MandelbrotRenderTile tile, int canvasWidth, int canvasHeight, CancellationToken token)
     {
         byte[] buffer = new byte[checked(tile.Width * tile.Height * 4)];
-        if (_formula is null || _firstDerivative is null || Roots.Count == 0)
+        if (_compiledFormula is null || _compiledFirstDerivative is null || Roots.Count == 0)
         {
             Fill(buffer, tile.Width, tile.Height, tile.Width * 4, BackgroundColor);
             return buffer;
         }
         double unitsPerPixel = Scale / canvasWidth;
-        var variables = new Dictionary<string, Complex>(1);
         for (int localY = 0; localY < tile.Height; localY++)
         {
             if (token.IsCancellationRequested) return null;
@@ -180,7 +204,7 @@ public sealed class NewtonPoolsEngine
                 Complex z = new(
                     CenterX + (canvasX - canvasWidth / 2.0) * unitsPerPixel,
                     CenterY - (canvasY - canvasHeight / 2.0) * unitsPerPixel);
-                int iteration = Iterate(ref z, variables);
+                int iteration = Iterate(ref z);
                 Color color = GetPixelColor(z, iteration);
                 int offset = (localY * tile.Width + localX) * 4;
                 buffer[offset] = color.B; buffer[offset + 1] = color.G; buffer[offset + 2] = color.R; buffer[offset + 3] = color.A;
@@ -189,21 +213,20 @@ public sealed class NewtonPoolsEngine
         return buffer;
     }
 
-    private int Iterate(ref Complex z, Dictionary<string, Complex> variables)
+    private int Iterate(ref Complex z)
     {
         int iteration = 0;
         while (iteration < MaxIterations)
         {
-            variables["z"] = z;
-            Complex f = _formula!.Evaluate(variables);
+            Complex f = _compiledFormula!.Evaluate(z);
             if (!IsFinite(f) || f == Complex.Zero) break;
             if ((f.Magnitude <= RootTolerance || (iteration & 7) == 7) && IsNearKnownRoot(z)) break;
 
             Complex step = IterationMethod switch
             {
-                NewtonIterationMethod.Halley => ComputeHalleyStep(variables, f),
-                NewtonIterationMethod.Householder => ComputeHouseholderStep(variables),
-                _ => ComputeNewtonStep(variables, f)
+                NewtonIterationMethod.Halley => ComputeHalleyStep(z, f),
+                NewtonIterationMethod.Householder => ComputeHouseholderStep(z),
+                _ => ComputeNewtonStep(z, f)
             };
 
             if (!IsFinite(step) || step == Complex.Zero) break;
@@ -213,27 +236,27 @@ public sealed class NewtonPoolsEngine
         return iteration;
     }
 
-    private Complex ComputeNewtonStep(Dictionary<string, Complex> variables, Complex f)
+    private Complex ComputeNewtonStep(Complex z, Complex f)
     {
-        Complex f1 = _firstDerivative!.Evaluate(variables);
+        Complex f1 = _compiledFirstDerivative!.Evaluate(z);
         return !IsFinite(f1) || f1 == Complex.Zero ? Complex.Zero : -f / f1;
     }
 
-    private Complex ComputeHalleyStep(Dictionary<string, Complex> variables, Complex f)
+    private Complex ComputeHalleyStep(Complex z, Complex f)
     {
-        Complex f1 = _firstDerivative!.Evaluate(variables);
+        Complex f1 = _compiledFirstDerivative!.Evaluate(z);
         if (!IsFinite(f1) || f1 == Complex.Zero) return Complex.Zero;
-        Complex f2 = _secondDerivative!.Evaluate(variables);
+        Complex f2 = _compiledSecondDerivative!.Evaluate(z);
         Complex denominator = 2 * f1 * f1 - f * f2;
         return !IsFinite(denominator) || denominator == Complex.Zero ? Complex.Zero : -(2 * f * f1) / denominator;
     }
 
-    private Complex ComputeHouseholderStep(Dictionary<string, Complex> variables)
+    private Complex ComputeHouseholderStep(Complex z)
     {
         int order = HouseholderOrder;
-        if (_inverseDerivatives.Count <= order) return Complex.Zero;
-        Complex previous = _inverseDerivatives[order - 1].Evaluate(variables);
-        Complex current = _inverseDerivatives[order].Evaluate(variables);
+        if (_compiledInverseDerivatives.Count <= order) return Complex.Zero;
+        Complex previous = _compiledInverseDerivatives[order - 1].Evaluate(z);
+        Complex current = _compiledInverseDerivatives[order].Evaluate(z);
         return !IsFinite(previous) || !IsFinite(current) || current == Complex.Zero
             ? Complex.Zero
             : order * previous / current;
@@ -241,15 +264,23 @@ public sealed class NewtonPoolsEngine
 
     private void BuildInverseDerivatives()
     {
-        _inverseDerivatives.Clear();
+        ClearInverseDerivatives();
         if (_formula is null) return;
         ExpressionNode current = new BinaryOpNode(new NumberNode(Complex.One), "/", _formula).Simplify();
         _inverseDerivatives.Add(current);
+        _compiledInverseDerivatives.Add(CompiledNewtonExpression.Compile(current));
         for (int index = 1; index <= Math.Max(2, HouseholderOrder); index++)
         {
             current = current.Differentiate("z").Simplify();
             _inverseDerivatives.Add(current);
+            _compiledInverseDerivatives.Add(CompiledNewtonExpression.Compile(current));
         }
+    }
+
+    private void ClearInverseDerivatives()
+    {
+        _inverseDerivatives.Clear();
+        _compiledInverseDerivatives.Clear();
     }
 
     private void FindRoots()
@@ -279,8 +310,8 @@ public sealed class NewtonPoolsEngine
         }
 
         Roots = NewtonRootFinder.FindAdaptiveRoots(
-            _formula,
-            _firstDerivative,
+            _compiledFormula!.Evaluate,
+            _compiledFirstDerivative!.Evaluate,
             CenterX,
             CenterY,
             RootSearchRadius,

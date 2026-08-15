@@ -46,8 +46,8 @@ internal static class NewtonRootFinder
     }
 
     public static IReadOnlyList<Complex> FindAdaptiveRoots(
-        ExpressionNode formula,
-        ExpressionNode derivative,
+        Func<Complex, Complex> formula,
+        Func<Complex, Complex> derivative,
         double centerX,
         double centerY,
         double radius,
@@ -58,7 +58,6 @@ internal static class NewtonRootFinder
         requestedTolerance = Math.Clamp(requestedTolerance, 1e-12, 0.1);
         double solverTolerance = Math.Min(requestedTolerance * 0.05, 1e-10);
         var roots = new List<Complex>();
-        var variables = new Dictionary<string, Complex>(1);
         double mergeDistance = Math.Max(1e-8, Math.Min(1e-4, requestedTolerance * 2));
         double residualLimit = Math.Max(1e-12, solverTolerance);
 
@@ -74,8 +73,8 @@ internal static class NewtonRootFinder
                 centerX - radius + 2 * radius * x / (gridSize - 1),
                 centerY - radius + 2 * radius * y / (gridSize - 1));
             samples[x, y] = point;
-            values[x, y] = Evaluate(formula, variables, point);
-            TrySeed(formula, derivative, point, solverTolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+            values[x, y] = Evaluate(formula, point);
+            TrySeed(formula, derivative, point, solverTolerance, residualLimit, maxIterations, roots, mergeDistance);
         }
 
         for (int y = 0; y < gridSize - 1; y++)
@@ -94,7 +93,6 @@ internal static class NewtonRootFinder
                 solverTolerance,
                 residualLimit,
                 maxIterations,
-                variables,
                 roots,
                 mergeDistance);
         }
@@ -109,16 +107,19 @@ internal static class NewtonRootFinder
             {
                 double angle = 2 * Math.PI * (index + ring * 0.3819660112501051) / count;
                 Complex point = new(centerX + ringRadius * Math.Cos(angle), centerY + ringRadius * Math.Sin(angle));
-                TrySeed(formula, derivative, point, solverTolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+                TrySeed(formula, derivative, point, solverTolerance, residualLimit, maxIterations, roots, mergeDistance);
             }
         }
 
-        return Sort(roots);
+        double boundaryAllowance = radius * 1e-9 + requestedTolerance;
+        return Sort(roots.Where(root =>
+            Math.Abs(root.Real - centerX) <= radius + boundaryAllowance &&
+            Math.Abs(root.Imaginary - centerY) <= radius + boundaryAllowance));
     }
 
     private static void RefineCell(
-        ExpressionNode formula,
-        ExpressionNode derivative,
+        Func<Complex, Complex> formula,
+        Func<Complex, Complex> derivative,
         Complex min,
         Complex max,
         Complex bottomLeft,
@@ -129,13 +130,12 @@ internal static class NewtonRootFinder
         double tolerance,
         double residualLimit,
         int maxIterations,
-        Dictionary<string, Complex> variables,
         List<Complex> roots,
         double mergeDistance)
     {
         Complex center = (min + max) / 2;
-        Complex centerValue = Evaluate(formula, variables, center);
-        TrySeed(formula, derivative, center, tolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+        Complex centerValue = Evaluate(formula, center);
+        TrySeed(formula, derivative, center, tolerance, residualLimit, maxIterations, roots, mergeDistance);
 
         if (depth >= 3) return;
         double winding = PhaseDelta(bottomLeft, bottomRight) + PhaseDelta(bottomRight, topRight) +
@@ -150,40 +150,39 @@ internal static class NewtonRootFinder
         Complex rightMidPoint = new(max.Real, center.Imaginary);
         Complex topMidPoint = new(center.Real, max.Imaginary);
         Complex leftMidPoint = new(min.Real, center.Imaginary);
-        Complex bottomMid = Evaluate(formula, variables, bottomMidPoint);
-        Complex rightMid = Evaluate(formula, variables, rightMidPoint);
-        Complex topMid = Evaluate(formula, variables, topMidPoint);
-        Complex leftMid = Evaluate(formula, variables, leftMidPoint);
+        Complex bottomMid = Evaluate(formula, bottomMidPoint);
+        Complex rightMid = Evaluate(formula, rightMidPoint);
+        Complex topMid = Evaluate(formula, topMidPoint);
+        Complex leftMid = Evaluate(formula, leftMidPoint);
 
         RefineCell(formula, derivative, min, center, bottomLeft, bottomMid, centerValue, leftMid,
-            depth + 1, tolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+            depth + 1, tolerance, residualLimit, maxIterations, roots, mergeDistance);
         RefineCell(formula, derivative, bottomMidPoint, new Complex(max.Real, center.Imaginary), bottomMid, bottomRight,
-            rightMid, centerValue, depth + 1, tolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+            rightMid, centerValue, depth + 1, tolerance, residualLimit, maxIterations, roots, mergeDistance);
         RefineCell(formula, derivative, center, max, centerValue, rightMid, topRight, topMid,
-            depth + 1, tolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+            depth + 1, tolerance, residualLimit, maxIterations, roots, mergeDistance);
         RefineCell(formula, derivative, leftMidPoint, topMidPoint, leftMid, centerValue, topMid, topLeft,
-            depth + 1, tolerance, residualLimit, maxIterations, variables, roots, mergeDistance);
+            depth + 1, tolerance, residualLimit, maxIterations, roots, mergeDistance);
     }
 
     private static void TrySeed(
-        ExpressionNode formula,
-        ExpressionNode derivative,
+        Func<Complex, Complex> formula,
+        Func<Complex, Complex> derivative,
         Complex seed,
         double tolerance,
         double residualLimit,
         int maxIterations,
-        Dictionary<string, Complex> variables,
         List<Complex> roots,
         double mergeDistance)
     {
         Complex z = seed;
         for (int iteration = 0; iteration < maxIterations; iteration++)
         {
-            Complex f = Evaluate(formula, variables, z);
+            Complex f = Evaluate(formula, z);
             if (!IsFinite(f)) return;
             if (f == Complex.Zero) break;
 
-            Complex f1 = Evaluate(derivative, variables, z);
+            Complex f1 = Evaluate(derivative, z);
             if (!IsFinite(f1)) return;
             if (f1 == Complex.Zero)
             {
@@ -195,13 +194,13 @@ internal static class NewtonRootFinder
 
             // Backtracking prevents one large Newton jump from losing a useful seed.
             Complex next = z - step;
-            Complex nextValue = Evaluate(formula, variables, next);
+            Complex nextValue = Evaluate(formula, next);
             for (int damping = 0; damping < 8 &&
                  (!IsFinite(nextValue) || nextValue.Magnitude > f.Magnitude * 1.25); damping++)
             {
                 step *= 0.5;
                 next = z - step;
-                nextValue = Evaluate(formula, variables, next);
+                nextValue = Evaluate(formula, next);
             }
 
             z = next;
@@ -209,7 +208,7 @@ internal static class NewtonRootFinder
             if (step.Magnitude <= tolerance * Math.Max(1, z.Magnitude)) break;
         }
 
-        Complex residual = Evaluate(formula, variables, z);
+        Complex residual = Evaluate(formula, z);
         if (!IsFinite(residual) || residual.Magnitude > residualLimit * 10) return;
         AddUnique(roots, z, mergeDistance * Math.Max(1, z.Magnitude));
     }
@@ -470,10 +469,9 @@ internal static class NewtonRootFinder
         return coefficients.Take(last + 1).ToArray();
     }
 
-    private static Complex Evaluate(ExpressionNode expression, Dictionary<string, Complex> variables, Complex z)
+    private static Complex Evaluate(Func<Complex, Complex> expression, Complex z)
     {
-        variables["z"] = z;
-        try { return expression.Evaluate(variables); }
+        try { return expression(z); }
         catch { return new Complex(double.NaN, double.NaN); }
     }
 
