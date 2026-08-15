@@ -16,6 +16,65 @@
             </Grid>
             <Border Margin="0,12,0,0" Padding="18" Background="{DynamicResource Theme.ControlBackgroundBrush}" CornerRadius="6"><TextBlock x:Name="MatrixText" FontFamily="Consolas" FontSize="17" TextAlignment="Center"/></Border>
         </StackPanel></ScrollViewer></Grid></Border>
-        <Border Grid.Row="1" Grid.ColumnSpan="2" Padding="10,7" Background="{DynamicResource Theme.PanelBackgroundBrush}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="0,1,0,0"><DockPanel><StackPanel Orientation="Horizontal"><Button x:Name="UndoButton" Width="135" Content="Отменить действие" IsEnabled="False" Click="Undo_OnClick"/><Button Width="150" Content="Нормализовать" Click="Normalize_OnClick"/><Button Width="145" Content="Сделать случайно" Click="Randomize_OnClick"/></StackPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Width="95" Content="Отмена" IsCancel="True"/><Button Width="105" Content="Применить" Click="Apply_OnClick"/><Button Width="105" Content="Готово" Click="Done_OnClick"/></StackPanel></DockPanel></Border>
+        <Border Grid.Row="1" Grid.ColumnSpan="2" Padding="10,7" Background="{DynamicResource Theme.PanelBackgroundBrush}" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="UndoButton" Width="128" Content="Отменить действие" IsEnabled="False" Click="Undo_OnClick"/>
+                    <Button Width="132" Content="Нормализовать" Click="Normalize_OnClick"/>
+                    <Button x:Name="RandomizeButton" Width="135" Content="Сделать случайно" Click="Randomize_OnClick"/>
+                    <ToggleButton x:Name="RandomSettingsButton" Width="38" Margin="4,0,0,0" Padding="0" Content="⚙" FontSize="17"
+                                  Style="{StaticResource ThemeToggleButtonStyle}" ToolTip="Настроить случайную генерацию"/>
+                    <Popup x:Name="RandomSettingsPopup" PlacementTarget="{Binding ElementName=RandomSettingsButton}" Placement="Top" VerticalOffset="-7"
+                           AllowsTransparency="True" StaysOpen="False" PopupAnimation="Fade"
+                           IsOpen="{Binding IsChecked, ElementName=RandomSettingsButton, Mode=TwoWay}" Closed="RandomSettingsPopup_OnClosed">
+                        <Border Width="470" Padding="16" CornerRadius="7" Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock FontSize="17" FontWeight="SemiBold" Text="Настройка IFS-рандома"/>
+                                <TextBlock Margin="0,3,0,13" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"
+                                           Text="Диапазон 5–5 всегда создаёт ровно пять преобразований. Все вероятности нормализуются автоматически."/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="72"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="72"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Text="Количество: от"/>
+                                    <ComboBox x:Name="MinimumTransformCountBox" Grid.Column="1" Margin="8,0" SelectionChanged="RandomCount_OnChanged"/>
+                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="до"/>
+                                    <ComboBox x:Name="MaximumTransformCountBox" Grid.Column="3" Margin="8,0" SelectionChanged="RandomCount_OnChanged"/>
+                                    <TextBlock x:Name="RandomCountHintText" Grid.Column="4" VerticalAlignment="Center" Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+                                </Grid>
+
+                                <Grid Margin="0,11,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Text="Расположение"/>
+                                    <ComboBox x:Name="PlacementModeBox" Grid.Column="1" SelectionChanged="RandomOption_OnChanged"/>
+                                </Grid>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" Text="Вероятности"/>
+                                    <ComboBox x:Name="ProbabilityModeBox" Grid.Column="1" SelectionChanged="RandomOption_OnChanged"/>
+                                </Grid>
+
+                                <Separator Margin="0,14"/>
+                                <DockPanel Margin="0,0,0,7">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button Width="58" Height="28" Padding="4,2" Content="Все" Click="SelectAllFamilies_OnClick"/>
+                                        <Button Width="78" Height="28" Padding="4,2" Content="Снять все" Click="ClearFamilies_OnClick"/>
+                                    </StackPanel>
+                                    <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="Семейства преобразований"/>
+                                </DockPanel>
+                                <UniformGrid x:Name="RandomFamilyPanel" Columns="2"/>
+                                <TextBlock x:Name="RandomSettingsValidationText" Margin="0,9,0,0" Foreground="{DynamicResource Theme.AccentSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="RandomSettingsSummaryText" Margin="0,7,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Width="90" Content="Отмена" IsCancel="True"/>
+                    <Button Width="98" Content="Применить" Click="Apply_OnClick"/>
+                    <Button Width="98" Content="Готово" Click="Done_OnClick"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
     </Grid>
 </Window>

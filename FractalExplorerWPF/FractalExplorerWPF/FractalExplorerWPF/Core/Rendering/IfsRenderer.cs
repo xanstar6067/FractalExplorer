@@ -10,6 +10,7 @@ public sealed class IfsRenderer
     private readonly float[] _x;
     private readonly float[] _y;
     private readonly byte[] _pixels;
+    private readonly double[] _cumulativeWeights;
     private readonly Random _random = new(12345);
 
     private double _currentX;
@@ -33,6 +34,7 @@ public sealed class IfsRenderer
         _x = new float[count];
         _y = new float[count];
         _pixels = new byte[checked(width * height * 4)];
+        _cumulativeWeights = BuildCumulativeWeights(_state.Transforms);
         FillBackground();
     }
 
@@ -111,16 +113,39 @@ public sealed class IfsRenderer
 
     private IfsAffineTransform Pick(double value)
     {
-        double total = _state.Transforms.Sum(transform => Math.Max(0, transform.Probability));
-        if (total <= 0) return _state.Transforms[^1];
-
-        double sum = 0;
-        foreach (IfsAffineTransform transform in _state.Transforms)
+        int lower = 0;
+        int upper = _cumulativeWeights.Length - 1;
+        while (lower < upper)
         {
-            sum += Math.Max(0, transform.Probability) / total;
-            if (value <= sum) return transform;
+            int middle = lower + (upper - lower) / 2;
+            if (value <= _cumulativeWeights[middle])
+                upper = middle;
+            else
+                lower = middle + 1;
         }
-        return _state.Transforms[^1];
+
+        return _state.Transforms[lower];
+    }
+
+    private static double[] BuildCumulativeWeights(IReadOnlyList<IfsAffineTransform> transforms)
+    {
+        var cumulativeWeights = new double[transforms.Count];
+        if (transforms.Count == 0)
+            return cumulativeWeights;
+
+        double total = transforms.Sum(transform => Math.Max(0, transform.Probability));
+        double cumulative = 0;
+        for (int index = 0; index < transforms.Count; index++)
+        {
+            cumulative += total > 0
+                ? Math.Max(0, transforms[index].Probability) / total
+                : 1d / transforms.Count;
+            cumulativeWeights[index] = cumulative;
+        }
+
+        // Avoid a floating-point gap at the top of the interval.
+        cumulativeWeights[^1] = 1;
+        return cumulativeWeights;
     }
 
     private void PrepareBounds(CancellationToken token)
