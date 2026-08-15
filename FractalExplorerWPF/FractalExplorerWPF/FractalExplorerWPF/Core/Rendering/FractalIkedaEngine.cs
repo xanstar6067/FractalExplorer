@@ -39,10 +39,10 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, seeds, new ParallelOptions
             {
-                MaxDegreeOfParallelism = Math.Max(1, settings.Threads),
-                CancellationToken = token
-            }, seedIndex =>
+                MaxDegreeOfParallelism = Math.Max(1, settings.Threads)
+            }, (seedIndex, loopState) =>
             {
+                if (token.IsCancellationRequested) { loopState.Stop(); return; }
                 double x = (double)settings.X0 + seedIndex * 0.000127;
                 double y = (double)settings.Y0 - seedIndex * 0.000093;
                 int localSteps = seedIndex == seeds - 1 ? settings.Iterations - pointsPerSeed * (seeds - 1) : pointsPerSeed;
@@ -55,7 +55,7 @@ namespace FractalExplorer.Engines
 
                 for (int i = 0; i < localSteps; i++)
                 {
-                    token.ThrowIfCancellationRequested();
+                    if ((i & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
 
                     IterateIkeda(ref x, ref y, u);
 
@@ -70,6 +70,8 @@ namespace FractalExplorer.Engines
 
                 progress?.Report(Math.Min(99, (int)((seedIndex + 1) * 100.0 / seeds)));
             });
+
+            if (token.IsCancellationRequested) return new byte[width * height * 4];
 
             int maxHit = hits.Max();
             if (maxHit <= 0)

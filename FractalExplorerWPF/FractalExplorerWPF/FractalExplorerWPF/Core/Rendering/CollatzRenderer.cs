@@ -11,7 +11,7 @@ public static class CollatzRenderer
     private const decimal BaseScale = 4m;
     private const decimal DecimalScaleThreshold = 4m / 2_000_000_000m;
 
-    public static byte[] RenderTile(CollatzState state, int canvasWidth, int canvasHeight,
+    public static byte[]? RenderTile(CollatzState state, int canvasWidth, int canvasHeight,
         MandelbrotRenderTile tile, CancellationToken token)
     {
         byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
@@ -19,11 +19,12 @@ public static class CollatzRenderer
 
         for (int localY = 0; localY < tile.Height; localY++)
         {
+            if (token.IsCancellationRequested) return null;
             int canvasY = tile.Y + localY;
             decimal imaginary = state.CenterY - (canvasY - canvasHeight / 2m) * scale / canvasWidth;
             for (int localX = 0; localX < tile.Width; localX++)
             {
-                if ((localX & 31) == 0) token.ThrowIfCancellationRequested();
+                if ((localX & 31) == 0 && token.IsCancellationRequested) return null;
                 int canvasX = tile.X + localX;
                 decimal real = state.CenterX + (canvasX - canvasWidth / 2m) * scale / canvasWidth;
                 Color color = CalculateColor(state, real, imaginary, scale);
@@ -45,15 +46,15 @@ public static class CollatzRenderer
 
         Parallel.For(0, height, new ParallelOptions
         {
-            MaxDegreeOfParallelism = Math.Max(1, threadCount),
-            CancellationToken = token
-        }, y =>
+            MaxDegreeOfParallelism = Math.Max(1, threadCount)
+        }, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             int row = y * stride;
             decimal imaginary = state.CenterY - (y - height / 2m) * scale / width;
             for (int x = 0; x < width; x++)
             {
-                if ((x & 63) == 0) token.ThrowIfCancellationRequested();
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal real = state.CenterX + (x - width / 2m) * scale / width;
                 Color color = CalculateColor(state, real, imaginary, scale);
                 int offset = row + x * 4;

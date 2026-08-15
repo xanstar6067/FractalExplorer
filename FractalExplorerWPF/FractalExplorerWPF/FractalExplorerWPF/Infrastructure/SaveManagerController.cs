@@ -229,7 +229,11 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         {
             BitmapSource preview = await _configuration.RenderPreviewAsync(
                 entry.State, _configuration.PreviewWidth, _configuration.PreviewHeight, cts.Token);
-            cts.Token.ThrowIfCancellationRequested();
+            if (cts.Token.IsCancellationRequested)
+            {
+                if (ReferenceEquals(_previewCts, cts) && manual) _view.SetStatus("Рендер отменён.");
+                return;
+            }
             if (!ReferenceEquals(_previewCts, cts)) return;
 
             if (!preview.IsFrozen && preview.CanFreeze) preview.Freeze();

@@ -22,12 +22,11 @@ public static class DynamicSystemRenderer
         int rw = checked(width * factor), rh = checked(height * factor);
         byte[] pixels = state.Kind == DynamicSystemKind.Lyapunov
             ? await RenderLyapunovAsync(state, rw, rh, palette, token, progress, tileReady, tileStarted)
-            : await Task.Run(() => RenderOther(state, rw, rh, palette, token, progress, drawAxes), token);
-        token.ThrowIfCancellationRequested();
+            : await Task.Run(() => RenderOther(state, rw, rh, palette, token, progress, drawAxes));
         BitmapSource raw = BitmapSource.Create(rw, rh, dpiX, dpiY, PixelFormats.Bgra32, null, pixels, rw * 4);
         raw.Freeze();
-        if (factor == 1) return raw;
-        BitmapSource resized = await Task.Run(() => BitmapResampler.ResizeLanczos3(raw, width, height, token), token);
+        if (factor == 1 || token.IsCancellationRequested) return raw;
+        BitmapSource resized = await Task.Run(() => BitmapResampler.ResizeLanczos3(raw, width, height, token));
         return WithDpi(resized, dpiX, dpiY);
     }
 
@@ -42,13 +41,15 @@ public static class DynamicSystemRenderer
             TransientIterations = Math.Clamp(s.TransientIterations, 0, FractalLyapunovEngine.MaxStableDepth),
             Pattern = s.Pattern, ColorPalette = ToLyapunovPalette(source)
         };
-        LyapunovColoringContext? context = await Task.Run(() => engine.PrepareColoringContext(width, height, token), token);
+        LyapunovColoringContext? context = await Task.Run(() => engine.PrepareColoringContext(width, height, token));
         IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(width, height, 16 * Math.Clamp(s.SsaaFactor, 1, 4), TileSchedulingStrategy.Classic);
         byte[] output = new byte[checked(width * height * 4)]; int done = 0;
-        await Parallel.ForEachAsync(tiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, s.Threads), CancellationToken = token }, (tile, cancellationToken) =>
+        await Parallel.ForEachAsync(tiles, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, s.Threads) }, (tile, ignoredCancellationToken) =>
         {
+            if (token.IsCancellationRequested) return ValueTask.CompletedTask;
             tileStarted?.Invoke(tile);
-            byte[] data = engine.RenderSingleTile(new TileInfo(tile.X, tile.Y, tile.Width, tile.Height), width, height, out _, context);
+            byte[] data = engine.RenderSingleTile(new TileInfo(tile.X, tile.Y, tile.Width, tile.Height), width, height, out _, context, token);
+            if (token.IsCancellationRequested) return ValueTask.CompletedTask;
             for (int y = 0; y < tile.Height; y++) Buffer.BlockCopy(data, y * tile.Width * 4, output, ((tile.Y + y) * width + tile.X) * 4, tile.Width * 4);
             tileReady?.Invoke(tile, data);
             progress?.Report(Interlocked.Increment(ref done) * 100 / tiles.Count);

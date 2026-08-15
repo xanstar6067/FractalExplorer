@@ -699,19 +699,19 @@ public partial class MandelbrotWindow : Window
         int stride = checked(renderWidth * 4);
         byte[] buffer = new byte[checked(stride * renderHeight)];
         await Task.Run(() => MandelbrotFamilyRenderer.Render(state, buffer, renderWidth, renderHeight,
-            stride, token, value => progress?.Report(value)), token);
-        token.ThrowIfCancellationRequested();
+            stride, token, value => progress?.Report(value)));
 
-        if (factor == 1)
+        BitmapSource source = BitmapSource.Create(renderWidth, renderHeight, dpiX, dpiY,
+            PixelFormats.Bgra32, null, buffer, stride);
+        source.Freeze();
+
+        if (factor == 1 || token.IsCancellationRequested)
         {
-            BitmapSource source = BitmapSource.Create(renderWidth, renderHeight, dpiX, dpiY,
-                PixelFormats.Bgra32, null, buffer, stride);
-            source.Freeze();
             return source;
         }
 
         byte[] downsampled = await Task.Run(() => DownsampleBox(
-            buffer, renderWidth, width, height, factor, token), token);
+            buffer, renderWidth, width, height, factor, token));
         BitmapSource result = BitmapSource.Create(width, height, dpiX, dpiY,
             PixelFormats.Bgra32, null, downsampled, width * 4);
         result.Freeze();
@@ -730,13 +730,14 @@ public partial class MandelbrotWindow : Window
         int sampleCount = factor * factor;
         var options = new ParallelOptions
         {
-            CancellationToken = token,
             MaxDegreeOfParallelism = Environment.ProcessorCount
         };
-        Parallel.For(0, targetHeight, options, y =>
+        Parallel.For(0, targetHeight, options, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             for (int x = 0; x < targetWidth; x++)
             {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 int blue = 0, green = 0, red = 0;
                 for (int sampleY = 0; sampleY < factor; sampleY++)
                 {

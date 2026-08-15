@@ -160,14 +160,18 @@ namespace FractalExplorer.Engines
             object extremaLock = new();
             var po = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
-                CancellationToken = cancellationToken
+                MaxDegreeOfParallelism = Environment.ProcessorCount
             };
 
             Parallel.For(0, sampleHeight, po,
                 () => (LocalMin: double.PositiveInfinity, LocalMax: double.NegativeInfinity),
-                (y, _, local) =>
+                (y, loopState, local) =>
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        loopState.Stop();
+                        return local;
+                    }
                     decimal b = BMax - (BMax - BMin) * y / Math.Max(1, sampleHeight - 1);
                     int row = y * sampleWidth;
                     for (int x = 0; x < sampleWidth; x++)
@@ -191,6 +195,8 @@ namespace FractalExplorer.Engines
                         max = Math.Max(max, local.LocalMax);
                     }
                 });
+
+            if (cancellationToken.IsCancellationRequested) return null;
 
             if (!double.IsFinite(min) || !double.IsFinite(max) || max <= min)
             {
@@ -233,7 +239,8 @@ namespace FractalExplorer.Engines
             };
         }
 
-        public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel, LyapunovColoringContext? coloringContext = null)
+        public byte[] RenderSingleTile(TileInfo tile, int canvasWidth, int canvasHeight, out int bytesPerPixel,
+            LyapunovColoringContext? coloringContext = null, CancellationToken cancellationToken = default)
         {
             bytesPerPixel = 4;
             byte[] buffer = new byte[tile.Bounds.Width * tile.Bounds.Height * bytesPerPixel];
@@ -248,6 +255,7 @@ namespace FractalExplorer.Engines
 
             for (int y = 0; y < tile.Bounds.Height; y++)
             {
+                if (cancellationToken.IsCancellationRequested) return buffer;
                 int globalY = tile.Bounds.Top + y;
                 decimal b = BMax - (BMax - BMin) * globalY / Math.Max(1, canvasHeight - 1);
 
@@ -290,12 +298,12 @@ namespace FractalExplorer.Engines
 
             var po = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Math.Max(1, threads),
-                CancellationToken = cancellationToken
+                MaxDegreeOfParallelism = Math.Max(1, threads)
             };
 
-            Parallel.For(0, height, po, y =>
+            Parallel.For(0, height, po, (y, loopState) =>
             {
+                if (cancellationToken.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal b = BMax - (BMax - BMin) * y / Math.Max(1, height - 1);
                 int rowBase = y * data.Stride;
 

@@ -14,19 +14,24 @@ public sealed class BuddhabrotRenderer(BuddhabrotState state, int width, int hei
 
     public void Accumulate(int count, CancellationToken token)
     {
+        if (token.IsCancellationRequested) return;
         int start = ProcessedSamples, end = Math.Min(state.SampleCount, start + Math.Max(1, count));
         double minRe = (double)state.SampleMinRe, maxRe = (double)state.SampleMaxRe;
         double minIm = (double)state.SampleMinIm, maxIm = (double)state.SampleMaxIm;
         double viewScale = 4d / Math.Max(0.0000001, (double)state.Zoom), viewScaleY = viewScale * height / width;
-        Parallel.For(start, end, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threads), CancellationToken = token },
-            () => Rent(state.MaxIterations), (sample, _, orbit) =>
+        Parallel.For(start, end, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threads) },
+            () => Rent(state.MaxIterations), (sample, loopState, orbit) =>
             {
                 orbit.Clear(); ulong random = Mix((ulong)sample + 0x9E3779B97F4A7C15UL);
                 double cr = minRe + Next(ref random) * (maxRe - minRe), ci = minIm + Next(ref random) * (maxIm - minIm);
                 double zr = 0, zi = 0; bool escaped = false;
                 for (int i = 0; i < state.MaxIterations; i++)
                 {
-                    if ((i & 63) == 0) token.ThrowIfCancellationRequested();
+                    if ((i & 63) == 0 && token.IsCancellationRequested)
+                    {
+                        loopState.Stop();
+                        return orbit;
+                    }
                     (zr, zi) = (zr * zr - zi * zi + cr, 2 * zr * zi + ci);
                     if (i >= 2) orbit.Add((zr, zi));
                     if (zr * zr + zi * zi > 16) { escaped = true; break; }
@@ -49,6 +54,7 @@ public sealed class BuddhabrotRenderer(BuddhabrotState state, int width, int hei
                 }
                 return orbit;
             }, Return);
+        if (token.IsCancellationRequested) return;
         ProcessedSamples = end;
     }
 

@@ -560,7 +560,12 @@ public partial class NewtonPoolsWindow : Window
             _visualizationTimer.Start();
 
             await RenderTilesAsync(engine, tiles, session, GetThreadCount(), token);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                CanvasImage.Source = null;
+                StatusText.Text = "Рендер отменён";
+                return;
+            }
             FlushVisualizationEvents(session, true);
 
             BitmapSource completed = session.Bitmap.Clone();
@@ -603,12 +608,13 @@ public partial class NewtonPoolsWindow : Window
         {
             while (queue.TryDequeue(out MandelbrotRenderTile tile))
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(true, tile, null));
-                byte[] pixels = engine.RenderTile(tile, session.RenderWidth, session.RenderHeight, token);
+                byte[]? pixels = engine.RenderTile(tile, session.RenderWidth, session.RenderHeight, token);
+                if (pixels is null || token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(false, tile, pixels));
             }
-        }, token)).ToArray();
+        })).ToArray();
         await Task.WhenAll(workers);
     }
 
@@ -646,13 +652,12 @@ public partial class NewtonPoolsWindow : Window
         NewtonPoolsEngine engine = CreateEngine(state);
         int threads = GetThreadCount();
         await Task.Run(() => engine.RenderToBuffer(buffer, renderWidth, renderHeight, stride, threads, token,
-            value => progress?.Report(factor == 1 ? value : value * 90 / 100)), token);
-        token.ThrowIfCancellationRequested();
+            value => progress?.Report(factor == 1 ? value : value * 90 / 100)));
 
         BitmapSource source = BitmapSource.Create(renderWidth, renderHeight, 96, 96, PixelFormats.Bgra32, null, buffer, stride);
         source.Freeze();
-        if (factor == 1) return source;
-        return await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token, value => progress?.Report(value)), token);
+        if (factor == 1 || token.IsCancellationRequested) return source;
+        return await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token, value => progress?.Report(value)));
     }
 
     private static NewtonPoolsEngine CreateEngine(NewtonState state)

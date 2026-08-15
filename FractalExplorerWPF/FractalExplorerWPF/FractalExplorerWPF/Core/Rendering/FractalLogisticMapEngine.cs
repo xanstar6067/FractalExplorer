@@ -72,10 +72,10 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, actualWorkers, new ParallelOptions
             {
-                MaxDegreeOfParallelism = threadCount,
-                CancellationToken = ct
-            }, chunkIndex =>
+                MaxDegreeOfParallelism = threadCount
+            }, (chunkIndex, loopState) =>
             {
+                if (ct.IsCancellationRequested) { loopState.Stop(); return; }
                 int start = chunkIndex * chunkSize;
                 if (start >= iterations) return;
                 int end = Math.Min(iterations, start + chunkSize);
@@ -85,14 +85,14 @@ namespace FractalExplorer.Engines
                 double localX = x;
                 for (int i = 0; i < start; i++)
                 {
-                    ct.ThrowIfCancellationRequested();
+                    if ((i & 63) == 0 && ct.IsCancellationRequested) { loopState.Stop(); return; }
                     localX = r * localX * (1.0 - localX);
                 }
 
                 int localPlotted = 0;
                 for (int i = start; i < end; i++)
                 {
-                    ct.ThrowIfCancellationRequested();
+                    if ((i & 63) == 0 && ct.IsCancellationRequested) { loopState.Stop(); return; }
                     localX = r * localX * (1.0 - localX);
                     if (i >= transient)
                     {
@@ -129,6 +129,8 @@ namespace FractalExplorer.Engines
 
                 plottedPerChunk[chunkIndex] = localPlotted;
             });
+
+            if (ct.IsCancellationRequested) return buffer;
 
             int plotted = 0;
             for (int chunkIndex = 0; chunkIndex < actualWorkers; chunkIndex++)
@@ -209,10 +211,10 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, actualWorkers, new ParallelOptions
             {
-                MaxDegreeOfParallelism = threadCount,
-                CancellationToken = ct
-            }, chunkIndex =>
+                MaxDegreeOfParallelism = threadCount
+            }, (chunkIndex, loopState) =>
             {
+                if (ct.IsCancellationRequested) { loopState.Stop(); return; }
                 int start = chunkIndex * chunkSize;
                 if (start >= rSamples) return;
                 int end = Math.Min(rSamples, start + chunkSize);
@@ -221,7 +223,7 @@ namespace FractalExplorer.Engines
 
                 for (int sample = start; sample < end; sample++)
                 {
-                    ct.ThrowIfCancellationRequested();
+                    if (ct.IsCancellationRequested) { loopState.Stop(); return; }
                     double t = rSamples > 1 ? (double)sample / (rSamples - 1) : 0.0;
                     double r = (double)rMin + ((double)rMax - (double)rMin) * t;
                     double x = x0;
@@ -261,6 +263,8 @@ namespace FractalExplorer.Engines
                     }
                 }
             });
+
+            if (ct.IsCancellationRequested) return buffer;
 
             foreach (byte[]? local in localBuffers)
             {
@@ -311,7 +315,7 @@ namespace FractalExplorer.Engines
 
             for (int i = 0; i < steps; i++)
             {
-                ct.ThrowIfCancellationRequested();
+                if (ct.IsCancellationRequested) return buffer;
                 double y = r * x * (1d - x);
                 Color stepColor = paletteColors.Count > 0 ? paletteColors[i % paletteColors.Count] : Color.Lime;
                 DrawLine(buffer, width, height, min, max, min, max, (decimal)x, (decimal)x, (decimal)x, (decimal)y, stepColor);

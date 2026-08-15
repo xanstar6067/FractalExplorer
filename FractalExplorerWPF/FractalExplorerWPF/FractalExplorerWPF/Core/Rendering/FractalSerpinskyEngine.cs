@@ -131,7 +131,7 @@
             }
 
             FillBackground(buffer, width, height, stride, bytesPerPixel, effectiveBackgroundColor, token);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested) return;
 
             if (RenderMode == SerpinskyRenderMode.Geometric)
             {
@@ -166,7 +166,7 @@
 
             for (int y = 0; y < height; y++)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) return;
                 for (int x = 0; x < width; x++)
                 {
                     int index = y * stride + x * bytesPerPixel;
@@ -198,7 +198,7 @@
                 reportProgress(100);
                 return;
             }
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested) return;
 
             double side = 1.0;
             double triangleHeight = side * Math.Sqrt(3) / 2.0;
@@ -271,15 +271,16 @@
             }
 
             generateTopLevelTasks(parallelDepth, p1World, p2World, p3World);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested) return;
 
-            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token };
+            var po = new ParallelOptions { MaxDegreeOfParallelism = numThreads };
             long tasksDone = 0;
 
             try
             {
-                Parallel.ForEach(topLevelTasks, po, task =>
+                Parallel.ForEach(topLevelTasks, po, (task, loopState) =>
                 {
+                    if (token.IsCancellationRequested) { loopState.Stop(); return; }
                     // Каждая задача рекурсивно отрисовывает свою ветвь фрактала
                     drawTriangleBranch(task.Item1, task.Item2, task.Item3, task.Item4);
                     long currentDone = Interlocked.Increment(ref tasksDone);
@@ -337,8 +338,9 @@
 
             try
             {
-                Parallel.For(0, numThreads, new ParallelOptions { MaxDegreeOfParallelism = numThreads, CancellationToken = token }, threadId =>
+                Parallel.For(0, numThreads, new ParallelOptions { MaxDegreeOfParallelism = numThreads }, (threadId, loopState) =>
                 {
+                    if (token.IsCancellationRequested) { loopState.Stop(); return; }
                     Random localRand = new Random();
                     // Начальная случайная точка внутри области (например, квадрат от -0.5 до 0.5)
                     PointF currentPoint = new PointF((float)(localRand.NextDouble() - 0.5), (float)(localRand.NextDouble() - 0.5));

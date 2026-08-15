@@ -11,18 +11,19 @@ public static class NovaRenderer
     private const decimal BaseScale = 4m;
     private const decimal DecimalScaleThreshold = 4m / 2_000_000_000m;
 
-    public static byte[] RenderTile(NovaState state, int canvasWidth, int canvasHeight,
+    public static byte[]? RenderTile(NovaState state, int canvasWidth, int canvasHeight,
         MandelbrotRenderTile tile, CancellationToken token, bool selectorPalette = false)
     {
         byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
         decimal scale = BaseScale / Math.Max(0.000000000000001m, state.Zoom);
         for (int localY = 0; localY < tile.Height; localY++)
         {
+            if (token.IsCancellationRequested) return null;
             int canvasY = tile.Y + localY;
             decimal imaginary = state.CenterY - (canvasY - canvasHeight / 2m) * scale / canvasWidth;
             for (int localX = 0; localX < tile.Width; localX++)
             {
-                if ((localX & 31) == 0) token.ThrowIfCancellationRequested();
+                if ((localX & 31) == 0 && token.IsCancellationRequested) return null;
                 int canvasX = tile.X + localX;
                 decimal real = state.CenterX + (canvasX - canvasWidth / 2m) * scale / canvasWidth;
                 Color color = CalculateColor(state, real, imaginary, scale, selectorPalette);
@@ -43,14 +44,15 @@ public static class NovaRenderer
         long completed = 0;
         Parallel.For(0, height, new ParallelOptions
         {
-            MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token
-        }, y =>
+            MaxDegreeOfParallelism = Math.Max(1, threadCount)
+        }, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             decimal imaginary = state.CenterY - (y - height / 2m) * scale / width;
             int row = y * stride;
             for (int x = 0; x < width; x++)
             {
-                if ((x & 63) == 0) token.ThrowIfCancellationRequested();
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal real = state.CenterX + (x - width / 2m) * scale / width;
                 Color color = CalculateColor(state, real, imaginary, scale, false);
                 int offset = row + x * 4;

@@ -73,7 +73,7 @@ namespace FractalExplorer.Engines
 
             for (int i = 0; i < warmup; i++)
             {
-                ct.ThrowIfCancellationRequested();
+                if (ct.IsCancellationRequested) return buffer;
                 StepRosslerRk4(ref x, ref y, ref z, a, b, c, dtD);
                 if (!IsFiniteState(x, y, z))
                 {
@@ -86,7 +86,7 @@ namespace FractalExplorer.Engines
 
             for (int i = 0; i < steps; i++)
             {
-                ct.ThrowIfCancellationRequested();
+                if (ct.IsCancellationRequested) return buffer;
                 StepRosslerRk4(ref x, ref y, ref z, a, b, c, dtD);
                 if (!IsFiniteState(x, y, z))
                 {

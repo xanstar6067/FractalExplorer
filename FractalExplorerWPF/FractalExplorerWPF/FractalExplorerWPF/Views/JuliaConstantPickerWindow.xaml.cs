@@ -93,8 +93,8 @@ public partial class JuliaConstantPickerWindow : Window
             MandelbrotState state = CreateMapState();
             byte[] pixels = new byte[checked(width * height * 4)];
             await Task.Run(() => MandelbrotFamilyRenderer.Render(
-                state, pixels, width, height, width * 4, cts.Token), cts.Token);
-            cts.Token.ThrowIfCancellationRequested();
+                state, pixels, width, height, width * 4, cts.Token));
+            if (cts.Token.IsCancellationRequested) return;
             BitmapSource bitmap = BitmapSource.Create(width, height,
                 surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY,
                 PixelFormats.Bgra32, null, pixels, width * 4);

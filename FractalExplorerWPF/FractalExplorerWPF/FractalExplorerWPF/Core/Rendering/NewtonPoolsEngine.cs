@@ -130,17 +130,17 @@ public sealed class NewtonPoolsEngine
         double unitsPerPixel = Scale / width;
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Math.Max(1, threadCount),
-            CancellationToken = cancellationToken
+            MaxDegreeOfParallelism = Math.Max(1, threadCount)
         };
 
-        Parallel.For(0, height, options, y =>
+        Parallel.For(0, height, options, (y, loopState) =>
         {
+            if (cancellationToken.IsCancellationRequested) { loopState.Stop(); return; }
             var variables = new Dictionary<string, Complex>(1);
             int row = y * stride;
             for (int x = 0; x < width; x++)
             {
-                if ((x & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
+                if ((x & 63) == 0 && cancellationToken.IsCancellationRequested) { loopState.Stop(); return; }
                 Complex z = new(
                     CenterX + (x - width / 2.0) * unitsPerPixel,
                     CenterY - (y - height / 2.0) * unitsPerPixel);
@@ -159,7 +159,7 @@ public sealed class NewtonPoolsEngine
         });
     }
 
-    public byte[] RenderTile(MandelbrotRenderTile tile, int canvasWidth, int canvasHeight, CancellationToken token)
+    public byte[]? RenderTile(MandelbrotRenderTile tile, int canvasWidth, int canvasHeight, CancellationToken token)
     {
         byte[] buffer = new byte[checked(tile.Width * tile.Height * 4)];
         if (_formula is null || _firstDerivative is null || Roots.Count == 0)
@@ -171,10 +171,11 @@ public sealed class NewtonPoolsEngine
         var variables = new Dictionary<string, Complex>(1);
         for (int localY = 0; localY < tile.Height; localY++)
         {
+            if (token.IsCancellationRequested) return null;
             int canvasY = tile.Y + localY;
             for (int localX = 0; localX < tile.Width; localX++)
             {
-                if ((localX & 31) == 0) token.ThrowIfCancellationRequested();
+                if ((localX & 31) == 0 && token.IsCancellationRequested) return null;
                 int canvasX = tile.X + localX;
                 Complex z = new(
                     CenterX + (canvasX - canvasWidth / 2.0) * unitsPerPixel,

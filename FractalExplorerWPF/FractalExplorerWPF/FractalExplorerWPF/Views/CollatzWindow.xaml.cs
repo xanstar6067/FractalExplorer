@@ -209,7 +209,12 @@ public partial class CollatzWindow : Window
             _visualizationTimer.Start();
 
             await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                CanvasImage.Source = null;
+                StatusText.Text = "Рендер отменён";
+                return;
+            }
             FlushVisualizationEvents(session, true);
             BitmapSource completed = session.Bitmap.Clone();
             completed.Freeze();
@@ -241,12 +246,13 @@ public partial class CollatzWindow : Window
         {
             while (queue.TryDequeue(out MandelbrotRenderTile tile))
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(true, tile, null));
-                byte[] pixels = CollatzRenderer.RenderTile(state, session.RenderWidth, session.RenderHeight, tile, token);
+                byte[]? pixels = CollatzRenderer.RenderTile(state, session.RenderWidth, session.RenderHeight, tile, token);
+                if (pixels is null || token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(false, tile, pixels));
             }
-        }, token)).ToArray();
+        })).ToArray();
         await Task.WhenAll(workers);
     }
 
@@ -283,11 +289,11 @@ public partial class CollatzWindow : Window
         byte[] pixels = new byte[checked(stride * renderHeight)];
         int threads = GetThreadCount();
         await Task.Run(() => CollatzRenderer.Render(state, pixels, renderWidth, renderHeight, stride, threads, token,
-            value => progress?.Report(factor == 1 ? value : value * 90 / 100)), token);
+            value => progress?.Report(factor == 1 ? value : value * 90 / 100)));
         BitmapSource source = BitmapSource.Create(renderWidth, renderHeight, 96, 96, PixelFormats.Bgra32, null, pixels, stride);
         source.Freeze();
-        return factor == 1 ? source : await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token,
-            value => progress?.Report(value)), token);
+        return factor == 1 || token.IsCancellationRequested ? source : await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token,
+            value => progress?.Report(value)));
     }
 
     private int GetThreadCount() => ThreadsBox.SelectedItem?.ToString() == "Auto"

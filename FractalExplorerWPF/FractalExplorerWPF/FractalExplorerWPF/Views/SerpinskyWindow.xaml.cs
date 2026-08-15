@@ -224,7 +224,11 @@ public partial class SerpinskyWindow : Window
                 new Progress<int>(value => RenderProgress.Value = value),
                 surface.Dpi.PixelsPerInchX,
                 surface.Dpi.PixelsPerInchY);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                StatusText.Text = "Рендер отменён";
+                return;
+            }
             CanvasImage.Source = bitmap;
             stopwatch.Stop();
             StatusText.Text = $"Готово за {stopwatch.Elapsed.TotalSeconds:F3} сек.";
@@ -274,9 +278,7 @@ public partial class SerpinskyWindow : Window
                 4,
                 threadCount,
                 token,
-                value => progress?.Report(value)),
-            token);
-        token.ThrowIfCancellationRequested();
+                value => progress?.Report(value)));
 
         BitmapSource source = BitmapSource.Create(
             renderWidth,

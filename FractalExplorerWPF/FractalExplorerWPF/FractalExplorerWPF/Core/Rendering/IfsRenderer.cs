@@ -57,7 +57,7 @@ public sealed class IfsRenderer
         int end = Math.Min(_x.Length, GeneratedPoints + Math.Max(1, count));
         for (; GeneratedPoints < end; GeneratedPoints++)
         {
-            if ((GeneratedPoints & 4095) == 0) token.ThrowIfCancellationRequested();
+            if ((GeneratedPoints & 4095) == 0 && token.IsCancellationRequested) return;
             Step();
             (_x[GeneratedPoints], _y[GeneratedPoints]) = ((float)_currentX, (float)_currentY);
         }
@@ -79,8 +79,13 @@ public sealed class IfsRenderer
         int start = PlottedPoints;
         int end = Math.Min(_x.Length, start + Math.Max(1, count));
 
-        Parallel.For(start, end, ParallelOptions(token), pointIndex =>
+        Parallel.For(start, end, ParallelOptions(), (pointIndex, loopState) =>
         {
+            if (token.IsCancellationRequested)
+            {
+                loopState.Stop();
+                return;
+            }
             double nx = (_x[pointIndex] - _minX) / dx;
             double ny = (_y[pointIndex] - _minY) / dy;
             double worldX = (nx - .5) * 2;
@@ -97,7 +102,7 @@ public sealed class IfsRenderer
             _pixels[pixel + 3] = 255;
         });
 
-        PlottedPoints = end;
+        if (!token.IsCancellationRequested) PlottedPoints = end;
     }
 
     public byte[] CreateFrame() => (byte[])_pixels.Clone();
@@ -156,11 +161,16 @@ public sealed class IfsRenderer
         _maxY = float.NegativeInfinity;
         object extremaLock = new();
 
-        Parallel.For(0, _x.Length, ParallelOptions(token),
+        Parallel.For(0, _x.Length, ParallelOptions(),
             () => (MinX: float.PositiveInfinity, MaxX: float.NegativeInfinity,
                 MinY: float.PositiveInfinity, MaxY: float.NegativeInfinity),
-            (index, _, local) =>
+            (index, loopState, local) =>
             {
+                if (token.IsCancellationRequested)
+                {
+                    loopState.Stop();
+                    return local;
+                }
                 float x = _x[index];
                 float y = _y[index];
                 return (Math.Min(local.MinX, x), Math.Max(local.MaxX, x),
@@ -177,7 +187,7 @@ public sealed class IfsRenderer
                 }
             });
 
-        _boundsReady = true;
+        _boundsReady = !token.IsCancellationRequested;
     }
 
     private void FillBackground()
@@ -195,9 +205,8 @@ public sealed class IfsRenderer
         });
     }
 
-    private static ParallelOptions ParallelOptions(CancellationToken token = default) => new()
+    private static ParallelOptions ParallelOptions() => new()
     {
-        CancellationToken = token,
         MaxDegreeOfParallelism = Environment.ProcessorCount
     };
 }

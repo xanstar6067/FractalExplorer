@@ -64,7 +64,6 @@ public static class MandelbrotFamilyRenderer
         int threads = state.Threads <= 0 ? Environment.ProcessorCount : state.Threads;
         var options = new ParallelOptions
         {
-            CancellationToken = token,
             MaxDegreeOfParallelism = Math.Clamp(threads, 1, Environment.ProcessorCount)
         };
         decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
@@ -74,16 +73,18 @@ public static class MandelbrotFamilyRenderer
         if (state.ColoringMode == MandelbrotColoringMode.Histogram)
         {
             RenderHistogram(state, buffer, width, height, stride, viewWidth, viewHeight,
-                options, ref completedRows, reportProgress);
+                options, token, ref completedRows, reportProgress);
             return;
         }
 
-        Parallel.For(0, height, options, y =>
+        Parallel.For(0, height, options, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             int row = y * stride;
             decimal im = state.CenterY + (0.5m - (decimal)y / height) * viewHeight;
             for (int x = 0; x < width; x++)
             {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
                 PixelMetrics metrics = IterateAt(state, re, im);
                 Color color = ResolveColor(state, metrics, 0);
@@ -101,7 +102,7 @@ public static class MandelbrotFamilyRenderer
     private static void RenderHistogram(
         MandelbrotState state, byte[] buffer, int width, int height, int stride,
         decimal viewWidth, decimal viewHeight, ParallelOptions options,
-        ref int completedRows, Action<int>? progress)
+        CancellationToken token, ref int completedRows, Action<int>? progress)
     {
         completedRows = 0;
         int scanRows = 0;
@@ -109,13 +110,15 @@ public static class MandelbrotFamilyRenderer
         var bins = new int[state.Iterations + 1];
         object histogramLock = new();
 
-        Parallel.For(0, height, options, y =>
+        Parallel.For(0, height, options, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             var localBins = new int[bins.Length];
             decimal im = state.CenterY + (0.5m - (decimal)y / height) * viewHeight;
             int row = y * width;
             for (int x = 0; x < width; x++)
             {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
                 PixelMetrics value = IterateAt(state, re, im);
                 metrics[row + x] = value;
@@ -132,6 +135,8 @@ public static class MandelbrotFamilyRenderer
             progress?.Invoke(done * 65 / height);
         });
 
+        if (token.IsCancellationRequested) return;
+
         long total = (long)width * height;
         var cdf = new double[bins.Length];
         long cumulative = 0;
@@ -142,12 +147,14 @@ public static class MandelbrotFamilyRenderer
         }
 
         int coloredRows = 0;
-        Parallel.For(0, height, options, y =>
+        Parallel.For(0, height, options, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             int metricRow = y * width;
             int outputRow = y * stride;
             for (int x = 0; x < width; x++)
             {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 PixelMetrics value = metrics[metricRow + x];
                 int bin = state.HistogramInputUseSmooth
                     ? Math.Clamp((int)Math.Floor(value.Smooth), 0, state.Iterations)

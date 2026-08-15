@@ -160,7 +160,7 @@ public partial class DynamicSystemWindow : Window
             var progress=new Progress<int>(p=>{ProgressBar.Value=p;ProgressText.Text=$"Рендер: {p}%";RenderBadgeText.Text=$"{p}%";});
             image=await DynamicSystemRenderer.RenderAsync(state,width,height,ActivePalette,token,progress,tileReady,tileStarted:tileStarted,dpiX:dpi.PixelsPerInchX,dpiY:dpi.PixelsPerInchY);
             FlushVisualizationEvents(true);
-            token.ThrowIfCancellationRequested(); StableImage.Source=image; CurrentImage.Source=null; RememberRenderedViewport(state); UpdatePreviewTransform(); ProgressBar.Value=100; ProgressText.Text="Готово"; StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F2} сек.";
+            if(token.IsCancellationRequested){CurrentImage.Source=null;StatusText.Text="Рендер отменён";return;} StableImage.Source=image; CurrentImage.Source=null; RememberRenderedViewport(state); UpdatePreviewTransform(); ProgressBar.Value=100; ProgressText.Text="Готово"; StatusText.Text=$"Готово за {watch.Elapsed.TotalSeconds:F2} сек.";
         }
         catch(OperationCanceledException){CurrentImage.Source=null;StatusText.Text="Рендер отменён";}
         catch(Exception ex){CurrentImage.Source=null;MessageBox.Show(this,ex.Message,DisplayName(_kind),MessageBoxButton.OK,MessageBoxImage.Error);}

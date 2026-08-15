@@ -129,11 +129,11 @@ public partial class JuliaGalleryWindow : Window
             {
                 var options = new ParallelOptions
                 {
-                    CancellationToken = cts.Token,
                     MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1)
                 };
-                await Parallel.ForEachAsync(cells, options, (cell, token) =>
+                await Parallel.ForEachAsync(cells, options, (cell, ignoredCancellationToken) =>
                 {
+                    if (cts.Token.IsCancellationRequested) return ValueTask.CompletedTask;
                     var state = new MandelbrotState
                     {
                         Variant = _variant,
@@ -152,7 +152,8 @@ public partial class JuliaGalleryWindow : Window
                     int tileStride = parameters.TileSize * 4;
                     byte[] tile = new byte[checked(tileStride * parameters.TileSize)];
                     MandelbrotFamilyRenderer.Render(state, tile, parameters.TileSize, parameters.TileSize,
-                        tileStride, token);
+                        tileStride, cts.Token);
+                    if (cts.Token.IsCancellationRequested) return ValueTask.CompletedTask;
                     for (int y = 0; y < parameters.TileSize; y++)
                     {
                         int sourceOffset = y * tileStride;
@@ -163,9 +164,9 @@ public partial class JuliaGalleryWindow : Window
                     progress.Report(new GalleryTileResult(cell, tile, Interlocked.Increment(ref completed)));
                     return ValueTask.CompletedTask;
                 });
-            }, cts.Token);
+            });
 
-            cts.Token.ThrowIfCancellationRequested();
+            if (cts.Token.IsCancellationRequested) { StatusText.Text = "Рендер отменён"; return; }
             BitmapSource bitmap = BitmapSource.Create(width, height, 96, 96,
                 PixelFormats.Bgra32, null, output, width * 4);
             bitmap.Freeze();
@@ -286,7 +287,7 @@ public partial class JuliaGalleryWindow : Window
                     return galleryBitmap;
                 }
                 return await Task.Run(() => BitmapResampler.ResizeLanczos3(galleryBitmap,
-                    request.Width, request.Height, token, progress.Report), token);
+                    request.Width, request.Height, token, progress.Report));
             }
         });
     }

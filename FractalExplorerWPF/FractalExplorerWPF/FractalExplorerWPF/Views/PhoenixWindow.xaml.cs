@@ -161,7 +161,7 @@ public partial class PhoenixWindow : Window
             RenderOverlay.BeginSession(renderWidth, renderHeight);
             _visualizationTimer.Start();
             await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested) { CanvasImage.Source = null; StatusText.Text = "Рендер отменён"; return; }
             FlushVisualizationEvents(session, true);
             BitmapSource completed = session.Bitmap.Clone();
             completed.Freeze();
@@ -189,12 +189,13 @@ public partial class PhoenixWindow : Window
         {
             while (queue.TryDequeue(out MandelbrotRenderTile tile))
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(true, tile, null));
-                byte[] pixels = PhoenixRenderer.RenderTile(state, session.RenderWidth, session.RenderHeight, tile, token);
+                byte[]? pixels = PhoenixRenderer.RenderTile(state, session.RenderWidth, session.RenderHeight, tile, token);
+                if (pixels is null || token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileRenderEvent(false, tile, pixels));
             }
-        }, token)).ToArray();
+        })).ToArray();
         await Task.WhenAll(workers);
     }
 
@@ -225,9 +226,9 @@ public partial class PhoenixWindow : Window
         // before Task.Run so the renderer never touches ThreadsBox/ComboBoxItem.
         int threadCount = GetThreadCount();
         byte[] pixels = new byte[checked(stride * rh)];
-        await Task.Run(() => PhoenixRenderer.Render(state, pixels, rw, rh, stride, threadCount, token, v => progress?.Report(factor == 1 ? v : v * 90 / 100)), token);
+        await Task.Run(() => PhoenixRenderer.Render(state, pixels, rw, rh, stride, threadCount, token, v => progress?.Report(factor == 1 ? v : v * 90 / 100)));
         BitmapSource source = BitmapSource.Create(rw, rh, 96, 96, PixelFormats.Bgra32, null, pixels, stride); source.Freeze();
-        return factor == 1 ? source : await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token, v => progress?.Report(v)), token);
+        return factor == 1 || token.IsCancellationRequested ? source : await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token, v => progress?.Report(v)));
     }
 
     private int GetThreadCount() => ThreadsBox.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Math.Max(1, Convert.ToInt32(ThreadsBox.SelectedItem, CultureInfo.InvariantCulture));

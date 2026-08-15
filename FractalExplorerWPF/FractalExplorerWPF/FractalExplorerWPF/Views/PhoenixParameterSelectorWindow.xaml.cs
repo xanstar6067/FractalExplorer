@@ -122,7 +122,8 @@ public partial class PhoenixParameterSelectorWindow : Window
             };
             decimal fixedValue = pSlice ? SelectedC1Imaginary : SelectedC1Real;
             await Task.Run(() => PhoenixRenderer.RenderSlice(pixels, width, height, width * 4, range, pSlice, fixedValue,
-                SliceIterations, 4, Environment.ProcessorCount, cts.Token, value => Dispatcher.Invoke(() => progress.Value = value)), cts.Token);
+                SliceIterations, 4, Environment.ProcessorCount, cts.Token, value => Dispatcher.Invoke(() => progress.Value = value)));
+            if (cts.Token.IsCancellationRequested) return;
             BitmapSource bitmap = BitmapSource.Create(width, height, dpi.PixelsPerInchX,
                 dpi.PixelsPerInchY, PixelFormats.Bgra32, null, pixels, width * 4);
             bitmap.Freeze();

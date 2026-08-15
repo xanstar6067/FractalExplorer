@@ -73,7 +73,7 @@ namespace FractalExplorer.Engines
 
             for (int i = 0; i < warmup; i++)
             {
-                ct.ThrowIfCancellationRequested();
+                if (ct.IsCancellationRequested) return buffer;
                 StepLorenzRk4(ref x, ref y, ref z, sigma, rho, beta, dtD);
                 if (!IsFiniteState(x, y, z))
                 {
@@ -86,7 +86,7 @@ namespace FractalExplorer.Engines
 
             for (int i = 0; i < steps; i++)
             {
-                ct.ThrowIfCancellationRequested();
+                if (ct.IsCancellationRequested) return buffer;
                 StepLorenzRk4(ref x, ref y, ref z, sigma, rho, beta, dtD);
                 if (!IsFiniteState(x, y, z))
                 {

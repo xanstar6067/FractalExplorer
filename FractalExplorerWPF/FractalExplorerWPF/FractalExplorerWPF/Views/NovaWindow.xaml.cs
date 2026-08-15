@@ -133,7 +133,8 @@ public partial class NovaWindow : Window
             var session = new RenderSession(bitmap, tiles.Count, width, height); _activeSession = session; CanvasImage.Source = bitmap;
             RenderOverlay.BeginSession(width, height); _visualizationTimer.Start();
             await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
-            token.ThrowIfCancellationRequested(); FlushVisualizationEvents(session, true);
+            if (token.IsCancellationRequested) { CanvasImage.Source = null; StatusText.Text = "Рендер отменён"; return; }
+            FlushVisualizationEvents(session, true);
             BitmapSource completed = session.Bitmap.Clone(); completed.Freeze(); StablePreviewImage.Source = completed; CanvasImage.Source = null;
             _renderedCenterX = state.CenterX; _renderedCenterY = state.CenterY; _renderedZoom = state.Zoom; _hasRenderedFrame = true; UpdatePreviewTransform();
             StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек. Стратегия: {strategy}.";
@@ -150,11 +151,13 @@ public partial class NovaWindow : Window
         {
             while (queue.TryDequeue(out MandelbrotRenderTile tile))
             {
-                token.ThrowIfCancellationRequested(); session.Events.Enqueue(new TileEvent(true, tile, null));
-                byte[] pixels = NovaRenderer.RenderTile(state, session.Width, session.Height, tile, token);
+                if (token.IsCancellationRequested) return;
+                session.Events.Enqueue(new TileEvent(true, tile, null));
+                byte[]? pixels = NovaRenderer.RenderTile(state, session.Width, session.Height, tile, token);
+                if (pixels is null || token.IsCancellationRequested) return;
                 session.Events.Enqueue(new TileEvent(false, tile, pixels));
             }
-        }, token)).ToArray();
+        })).ToArray();
         await Task.WhenAll(workers);
     }
 
@@ -191,9 +194,11 @@ public partial class NovaWindow : Window
             await Task.Run(() =>
             {
                 var tile = new MandelbrotRenderTile(0, 0, width, height, 0, 0);
-                byte[] rendered = NovaRenderer.RenderTile(state, width, height, tile, token, true);
+                byte[]? rendered = NovaRenderer.RenderTile(state, width, height, tile, token, true);
+                if (rendered is null) return;
                 Buffer.BlockCopy(rendered, 0, pixels, 0, pixels.Length);
-            }, token);
+            });
+            if (token.IsCancellationRequested) return;
             BitmapSource bitmap = BitmapSource.Create(width, height, surface.Dpi.PixelsPerInchX,
                 surface.Dpi.PixelsPerInchY, PixelFormats.Bgra32, null, pixels, stride); bitmap.Freeze();
             JuliaMapPreviewImage.Source = bitmap; DrawMapMarker();
@@ -244,9 +249,9 @@ public partial class NovaWindow : Window
     private async Task<BitmapSource> RenderBitmapAsync(NovaState state, int width, int height, int ssaa, CancellationToken token, IProgress<int>? progress)
     {
         int factor = Math.Clamp(ssaa, 1, 4), rw = checked(width * factor), rh = checked(height * factor), stride = checked(rw * 4), threads = GetThreadCount();
-        byte[] pixels = new byte[checked(stride * rh)]; await Task.Run(() => NovaRenderer.Render(state, pixels, rw, rh, stride, threads, token, v => progress?.Report(factor == 1 ? v : v * 90 / 100)), token);
+        byte[] pixels = new byte[checked(stride * rh)]; await Task.Run(() => NovaRenderer.Render(state, pixels, rw, rh, stride, threads, token, v => progress?.Report(factor == 1 ? v : v * 90 / 100)));
         BitmapSource source = BitmapSource.Create(rw, rh, 96, 96, PixelFormats.Bgra32, null, pixels, stride); source.Freeze();
-        return factor == 1 ? source : await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token, v => progress?.Report(v)), token);
+        return factor == 1 || token.IsCancellationRequested ? source : await Task.Run(() => BitmapResampler.ResizeLanczos3(source, width, height, token, v => progress?.Report(v)));
     }
 
     private int GetThreadCount() => ThreadsBox.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Math.Max(1, Convert.ToInt32(ThreadsBox.SelectedItem, CultureInfo.InvariantCulture));

@@ -228,7 +228,7 @@ public partial class ImageExportManagerWindow : Window
             bitmap = await _configuration.RenderAsync(
                 new ImageExportRenderRequest(plan.RenderWidth, plan.RenderHeight, plan.RenderSsaaFactor),
                 token, renderProgress);
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested) { StatusText.Text = "Операция отменена."; return; }
 
             if (bitmap.PixelWidth != plan.OutputWidth || bitmap.PixelHeight != plan.OutputHeight)
             {
@@ -239,19 +239,19 @@ public partial class ImageExportManagerWindow : Window
                 {
                     bitmap = await Task.Run(() => BitmapResampler.ResizeLanczos3(bitmap, plan.OutputWidth,
                         plan.OutputHeight, token,
-                        value => Dispatcher.Invoke(() => ProgressBar.Value = 90 + value / 10.0)), token);
+                        value => Dispatcher.Invoke(() => ProgressBar.Value = 90 + value / 10.0)));
                 }
                 else
                 {
                     bitmap = BitmapResampler.ResizeBicubic(bitmap, plan.OutputWidth, plan.OutputHeight);
                 }
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) { StatusText.Text = "Операция отменена."; return; }
             }
 
             StatusText.Text = "Запись файла...";
             ProgressBar.Value = 98;
             if (bitmap.CanFreeze && !bitmap.IsFrozen) bitmap.Freeze();
-            await Task.Run(() => SaveBitmap(bitmap, dialog.FileName, plan.Format, plan.JpegQuality), token);
+            await Task.Run(() => SaveBitmap(bitmap, dialog.FileName, plan.Format, plan.JpegQuality));
             ProgressBar.Value = 100;
             _stopwatch.Stop();
             StatusText.Text = $"Сохранено: {dialog.FileName}";

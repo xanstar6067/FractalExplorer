@@ -118,17 +118,17 @@ namespace FractalExplorer.Engines
 
             Parallel.For(0, actualWorkers, new ParallelOptions
             {
-                MaxDegreeOfParallelism = threadCount,
-                CancellationToken = ct
-            }, chunkIndex =>
+                MaxDegreeOfParallelism = threadCount
+            }, (chunkIndex, loopState) =>
             {
+                if (ct.IsCancellationRequested) { loopState.Stop(); return; }
                 int start = chunkIndex * chunkSize;
                 if (start >= rSamples) return;
                 int end = Math.Min(rSamples, start + chunkSize);
 
                 for (int i = start; i < end; i++)
                 {
-                    ct.ThrowIfCancellationRequested();
+                    if (ct.IsCancellationRequested) { loopState.Stop(); return; }
 
                     int px = sampleColumns[i];
                     if (px < 0 || sampleOwners[i] != chunkIndex || columnOwner[px] != chunkIndex)
@@ -184,6 +184,8 @@ namespace FractalExplorer.Engines
                     }
                 }
             });
+
+            if (ct.IsCancellationRequested) return buffer;
 
             Color resolvedPointColor = pointColor == default ? Color.White : pointColor;
             for (int pixel = 0; pixel < hit.Length; pixel++)

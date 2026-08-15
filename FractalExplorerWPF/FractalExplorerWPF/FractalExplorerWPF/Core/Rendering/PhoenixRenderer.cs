@@ -18,13 +18,14 @@ public static class PhoenixRenderer
         double p = (double)state.C1Real;
         double q = (double)state.C1Imaginary;
         long completed = 0;
-        Parallel.For(0, height, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token }, y =>
+        Parallel.For(0, height, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount) }, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             int row = y * stride;
             double imaginary = centerY + (height / 2.0 - y) * scale / width;
             for (int x = 0; x < width; x++)
             {
-                if ((x & 63) == 0) token.ThrowIfCancellationRequested();
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 double real = centerX + (x - width / 2.0) * scale / width;
                 int iterations = Iterate(real, imaginary, p, q, state.Iterations, thresholdSquared, out double finalMagnitudeSquared);
                 double smooth = Smooth(iterations, state.Iterations, finalMagnitudeSquared);
@@ -37,7 +38,7 @@ public static class PhoenixRenderer
         });
     }
 
-    public static byte[] RenderTile(PhoenixState state, int canvasWidth, int canvasHeight,
+    public static byte[]? RenderTile(PhoenixState state, int canvasWidth, int canvasHeight,
         MandelbrotRenderTile tile, CancellationToken token)
     {
         byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
@@ -49,11 +50,12 @@ public static class PhoenixRenderer
         double q = (double)state.C1Imaginary;
         for (int localY = 0; localY < tile.Height; localY++)
         {
+            if (token.IsCancellationRequested) return null;
             int canvasY = tile.Y + localY;
             double imaginary = centerY + (canvasHeight / 2.0 - canvasY) * scale / canvasWidth;
             for (int localX = 0; localX < tile.Width; localX++)
             {
-                if ((localX & 31) == 0) token.ThrowIfCancellationRequested();
+                if ((localX & 31) == 0 && token.IsCancellationRequested) return null;
                 int canvasX = tile.X + localX;
                 double real = centerX + (canvasX - canvasWidth / 2.0) * scale / canvasWidth;
                 int iterations = Iterate(real, imaginary, p, q, state.Iterations, thresholdSquared, out double magnitudeSquared);
@@ -72,12 +74,14 @@ public static class PhoenixRenderer
         double fixedValue = (double)fixedParameter;
         double thresholdSquared = (double)(threshold * threshold);
         long completed = 0;
-        Parallel.For(0, height, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token }, y =>
+        Parallel.For(0, height, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount) }, (y, loopState) =>
         {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
             double z0Imaginary = range.MaxY - y * (range.MaxY - range.MinY) / height;
             int row = y * stride;
             for (int x = 0; x < width; x++)
             {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 double axis = range.MinX + x * (range.MaxX - range.MinX) / width;
                 double p = pSlice ? axis : fixedValue;
                 double q = pSlice ? fixedValue : axis;

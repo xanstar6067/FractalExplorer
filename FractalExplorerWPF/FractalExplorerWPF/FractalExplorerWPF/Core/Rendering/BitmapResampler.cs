@@ -27,6 +27,7 @@ public static class BitmapResampler
         Action<int>? reportProgress = null)
     {
         if (source.PixelWidth == width && source.PixelHeight == height) return source;
+        if (token.IsCancellationRequested) return source;
 
         // Filtering premultiplied channels prevents dark/colored halos at
         // partially transparent edges and keeps PNG alpha intact.
@@ -44,7 +45,6 @@ public static class BitmapResampler
         byte[] output = new byte[checked(width * height * 4)];
         var options = new ParallelOptions
         {
-            CancellationToken = token,
             MaxDegreeOfParallelism = Environment.ProcessorCount
         };
 
@@ -59,12 +59,12 @@ public static class BitmapResampler
         // and keeps only the horizontally resized source rows needed by that
         // range. This uses all processors without retaining a full intermediate
         // image in memory during large/SSAA exports.
-        Parallel.ForEach(Partitioner.Create(0, height, rangeSize), options, range =>
+        Parallel.ForEach(Partitioner.Create(0, height, rangeSize), options, (range, loopState) =>
         {
             var rowCache = new Dictionary<int, byte[]>();
             for (int targetY = range.Item1; targetY < range.Item2; targetY++)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) { loopState.Stop(); return; }
                 Contribution[] yContributions = vertical[targetY];
                 foreach (Contribution contribution in yContributions)
                 {

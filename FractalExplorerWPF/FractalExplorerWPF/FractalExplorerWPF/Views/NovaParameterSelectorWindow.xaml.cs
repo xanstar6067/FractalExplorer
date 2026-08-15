@@ -71,12 +71,16 @@ public partial class NovaParameterSelectorWindow : Window
             {
                 while (queue.TryDequeue(out MandelbrotRenderTile tile))
                 {
-                    token.ThrowIfCancellationRequested(); session.Events.Enqueue(new TileEvent(true, tile, null));
-                    byte[] pixels = NovaRenderer.RenderTile(_mapState, width, height, tile, token, true);
+                    if (token.IsCancellationRequested) return;
+                    session.Events.Enqueue(new TileEvent(true, tile, null));
+                    byte[]? pixels = NovaRenderer.RenderTile(_mapState, width, height, tile, token, true);
+                    if (pixels is null || token.IsCancellationRequested) return;
                     session.Events.Enqueue(new TileEvent(false, tile, pixels));
                 }
-            }, token)).ToArray();
-            await Task.WhenAll(workers); token.ThrowIfCancellationRequested(); Flush(session, true);
+            })).ToArray();
+            await Task.WhenAll(workers);
+            if (token.IsCancellationRequested) return;
+            Flush(session, true);
             BitmapSource completed = bitmap.Clone(); completed.Freeze(); StableImage.Source = completed; CurrentImage.Source = null;
             _renderedCenterX = _centerX; _renderedCenterY = _centerY; _renderedZoom = _zoom; _hasFrame = true; UpdateTransform(); DrawOverlays();
             StatusText.Text = $"C = {_selectedReal:G8} {(_selectedImaginary < 0 ? '−' : '+')} {Math.Abs(_selectedImaginary):G8}i";
