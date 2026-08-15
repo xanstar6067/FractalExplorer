@@ -11,6 +11,20 @@ public enum NewtonIterationMethod
     Householder
 }
 
+public enum NewtonRootSearchMode
+{
+    Automatic,
+    Adaptive,
+    ManualOnly
+}
+
+public enum NewtonRootDisplayMode
+{
+    Hidden,
+    Markers,
+    MarkersWithCoordinates
+}
+
 public sealed class NewtonColorPalette
 {
     public string Name { get; set; } = "Новая палитра";
@@ -42,6 +56,11 @@ public sealed class NewtonState
     public double CenterY { get; set; }
     public NewtonIterationMethod IterationMethod { get; set; }
     public int HouseholderOrder { get; set; } = 3;
+    public NewtonRootSearchMode RootSearchMode { get; set; }
+    public NewtonRootDisplayMode RootDisplayMode { get; set; } = NewtonRootDisplayMode.Markers;
+    public double RootTolerance { get; set; } = 1e-6;
+    public double RootSearchRadius { get; set; } = 8;
+    public List<Complex> Roots { get; set; } = [];
     public NewtonColorPalette Palette { get; set; } = new();
 }
 

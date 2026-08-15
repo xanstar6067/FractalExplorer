@@ -2,17 +2,22 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using System.Windows.Threading;
+using FractalExplorerWPF.Core.NewtonMath;
 using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
 using Microsoft.Win32;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
 using Point = System.Windows.Point;
 
 namespace FractalExplorerWPF.Views;
@@ -80,6 +85,8 @@ public partial class NewtonPoolsWindow : Window
         FormulaPresetBox.SelectedIndex = 0;
         FormulaBox.Text = _appliedFormula;
         MethodBox.SelectedIndex = 0;
+        RootSearchModeBox.SelectedIndex = 0;
+        RootDisplayModeBox.SelectedIndex = 1;
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto");
         ThreadsBox.SelectedItem = "Auto";
@@ -93,6 +100,8 @@ public partial class NewtonPoolsWindow : Window
         if (!int.TryParse(IterationsBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int iterations) || iterations is < 1 or > 100_000)
             throw new InvalidOperationException("Итерации должны быть целым числом от 1 до 100000.");
         int order = ReadHouseholderOrder();
+        if (!TryReadRootSettings(out double rootTolerance, out double rootSearchRadius, out string rootError))
+            throw new InvalidOperationException(rootError);
         NewtonColorPalette palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name);
         return new NewtonState
         {
@@ -105,6 +114,11 @@ public partial class NewtonPoolsWindow : Window
             CenterY = _centerY,
             IterationMethod = SelectedMethod,
             HouseholderOrder = order,
+            RootSearchMode = SelectedRootSearchMode,
+            RootDisplayMode = SelectedRootDisplayMode,
+            RootTolerance = rootTolerance,
+            RootSearchRadius = rootSearchRadius,
+            Roots = [.. _formulaEngine.Roots],
             Palette = palette
         };
     }
@@ -121,9 +135,16 @@ public partial class NewtonPoolsWindow : Window
         SetZoomText();
         MethodBox.SelectedIndex = (int)state.IterationMethod;
         HouseholderOrderBox.Text = Math.Clamp(state.HouseholderOrder, 2, 12).ToString(CultureInfo.InvariantCulture);
+        RootSearchModeBox.SelectedIndex = (int)state.RootSearchMode;
+        RootDisplayModeBox.SelectedIndex = (int)state.RootDisplayMode;
+        RootToleranceBox.Text = Math.Clamp(state.RootTolerance, 1e-12, 0.1).ToString("G6", CultureInfo.InvariantCulture);
+        RootSearchRadiusBox.Text = Math.Clamp(state.RootSearchRadius, 0.01, 1e9).ToString("G6", CultureInfo.InvariantCulture);
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
         UpdatePreviewTransform();
-        if (ApplyFormula(showMessage: true)) ScheduleRender();
+        IReadOnlyList<Complex>? savedRoots = state.Roots.Count > 0 || state.RootSearchMode == NewtonRootSearchMode.ManualOnly
+            ? state.Roots
+            : null;
+        if (ApplyFormula(showMessage: true, savedRoots)) ScheduleRender();
     }
 
     public Task<BitmapSource> RenderStatePreviewAsync(NewtonState state, int width, int height, CancellationToken token) =>
@@ -136,6 +157,20 @@ public partial class NewtonPoolsWindow : Window
         _ => NewtonIterationMethod.Newton
     };
 
+    private NewtonRootSearchMode SelectedRootSearchMode => RootSearchModeBox.SelectedIndex switch
+    {
+        1 => NewtonRootSearchMode.Adaptive,
+        2 => NewtonRootSearchMode.ManualOnly,
+        _ => NewtonRootSearchMode.Automatic
+    };
+
+    private NewtonRootDisplayMode SelectedRootDisplayMode => RootDisplayModeBox.SelectedIndex switch
+    {
+        0 => NewtonRootDisplayMode.Hidden,
+        2 => NewtonRootDisplayMode.MarkersWithCoordinates,
+        _ => NewtonRootDisplayMode.Markers
+    };
+
     private void FormulaPresetBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || FormulaPresetBox.SelectedItem is not string formula) return;
@@ -145,10 +180,23 @@ public partial class NewtonPoolsWindow : Window
 
     private void ApplyFormulaButton_OnClick(object sender, RoutedEventArgs e) => ApplyFormula(showMessage: true);
 
-    private bool ApplyFormula(bool showMessage)
+    private bool ApplyFormula(bool showMessage, IReadOnlyList<Complex>? suppliedRoots = null)
     {
+        if (!TryReadRootSettings(out double tolerance, out double searchRadius, out string rootError))
+        {
+            StatusText.Text = rootError;
+            if (showMessage) MessageBox.Show(this, rootError, "Параметры поиска", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
         _formulaEngine.HouseholderOrder = ReadHouseholderOrder();
-        if (!_formulaEngine.SetFormula(FormulaBox.Text.Trim(), out string debug))
+        _formulaEngine.CenterX = _centerX;
+        _formulaEngine.CenterY = _centerY;
+        _formulaEngine.RootTolerance = tolerance;
+        _formulaEngine.RootSearchRadius = searchRadius;
+        _formulaEngine.RootSearchMode = SelectedRootSearchMode;
+        bool discoverRoots = suppliedRoots is null;
+        if (!_formulaEngine.SetFormula(FormulaBox.Text.Trim(), out string debug, discoverRoots))
         {
             DebugOutput.Text = debug;
             RootCountText.Text = "Найдено корней: 0";
@@ -156,12 +204,168 @@ public partial class NewtonPoolsWindow : Window
             if (showMessage) MessageBox.Show(this, "Проверьте формулу: есть синтаксическая ошибка.", "Ошибка формулы", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
+        if (suppliedRoots is not null)
+        {
+            _formulaEngine.ReplaceRoots(suppliedRoots);
+            debug += $"{Environment.NewLine}Загружено/задано корней: {_formulaEngine.Roots.Count}";
+        }
         _appliedFormula = FormulaBox.Text.Trim();
         DebugOutput.Text = debug;
-        RootCountText.Text = $"Найдено корней: {_formulaEngine.Roots.Count}";
-        StatusText.Text = _formulaEngine.Roots.Count == 0 ? "Формула корректна, но корни не найдены." : "Формула применена";
+        RefreshRootUi();
+        StatusText.Text = _formulaEngine.Roots.Count == 0
+            ? "Формула корректна, но корни не найдены. Увеличьте радиус или добавьте корень вручную."
+            : $"Формула применена. {_formulaEngine.RootSearchStrategy}";
         ScheduleRender();
         return true;
+    }
+
+    private void RootSearchModeBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (RootSearchRadiusPanel is not null)
+            RootSearchRadiusPanel.IsEnabled = SelectedRootSearchMode != NewtonRootSearchMode.ManualOnly;
+    }
+
+    private void FindRootsButton_OnClick(object sender, RoutedEventArgs e) => ApplyFormula(showMessage: true);
+
+    private void AddRootButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!TryParseComplex(ManualRootBox.Text, out Complex root))
+        {
+            MessageBox.Show(this, "Введите комплексное число, например 1+2*i или -0.5*i.",
+                "Добавление корня", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var roots = _formulaEngine.Roots.ToList();
+        roots.Add(root);
+        _formulaEngine.ReplaceRoots(roots);
+        ManualRootBox.Clear();
+        RefreshRootUi();
+        StatusText.Text = $"Корень {FormatComplex(root)} добавлен вручную.";
+        ScheduleRender();
+    }
+
+    private void RemoveRootButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        int index = RootListBox.SelectedIndex;
+        if (index < 0 || index >= _formulaEngine.Roots.Count)
+        {
+            MessageBox.Show(this, "Выберите корень в списке.", "Удаление корня",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        Complex removed = _formulaEngine.Roots[index];
+        var roots = _formulaEngine.Roots.ToList();
+        roots.RemoveAt(index);
+        _formulaEngine.ReplaceRoots(roots);
+        RefreshRootUi();
+        StatusText.Text = $"Корень {FormatComplex(removed)} удалён.";
+        ScheduleRender();
+    }
+
+    private void RootDisplayModeBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateRootOverlay();
+
+    private void RefreshRootUi()
+    {
+        if (RootListBox is null) return;
+        RootCountText.Text = $"Корней: {_formulaEngine.Roots.Count} · {_formulaEngine.RootSearchStrategy}";
+        RootListBox.ItemsSource = _formulaEngine.Roots
+            .Select((root, index) => $"{index + 1}. {FormatComplex(root)}")
+            .ToArray();
+        UpdateRootOverlay();
+    }
+
+    private void UpdateRootOverlay()
+    {
+        if (RootOverlay is null) return;
+        RootOverlay.Children.Clear();
+        if (SelectedRootDisplayMode == NewtonRootDisplayMode.Hidden || _formulaEngine.Roots.Count == 0) return;
+
+        double width = RootOverlay.ActualWidth;
+        double height = RootOverlay.ActualHeight;
+        if (width <= 0 || height <= 0) return;
+
+        double worldWidth = BaseScale / Math.Max(0.001, _zoom);
+        IReadOnlyList<Color> colors = NewtonPaletteManager.AdjustColors(_paletteManager.ActivePalette, _formulaEngine.Roots.Count);
+        for (int index = 0; index < _formulaEngine.Roots.Count; index++)
+        {
+            Complex root = _formulaEngine.Roots[index];
+            double x = width / 2 + (root.Real - _centerX) * width / worldWidth;
+            double y = height / 2 - (root.Imaginary - _centerY) * width / worldWidth;
+            if (x < -80 || x > width + 80 || y < -30 || y > height + 30) continue;
+
+            Color color = colors[index % colors.Count];
+            var marker = new Ellipse
+            {
+                Width = 13,
+                Height = 13,
+                Fill = new SolidColorBrush(color),
+                Stroke = Brushes.White,
+                StrokeThickness = 2
+            };
+            Canvas.SetLeft(marker, x - marker.Width / 2);
+            Canvas.SetTop(marker, y - marker.Height / 2);
+            RootOverlay.Children.Add(marker);
+
+            if (SelectedRootDisplayMode != NewtonRootDisplayMode.MarkersWithCoordinates) continue;
+            var label = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(210, 20, 20, 24)),
+                BorderBrush = new SolidColorBrush(color),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(4, 2, 4, 2),
+                Child = new TextBlock
+                {
+                    Foreground = Brushes.White,
+                    FontSize = 11,
+                    Text = $"r{index + 1} = {FormatComplex(root)}"
+                }
+            };
+            Canvas.SetLeft(label, x + 9);
+            Canvas.SetTop(label, y - 11);
+            RootOverlay.Children.Add(label);
+        }
+    }
+
+    private bool TryReadRootSettings(out double tolerance, out double radius, out string error)
+    {
+        if (!TryReadDouble(RootToleranceBox.Text, out tolerance) || tolerance is < 1e-12 or > 0.1)
+        {
+            radius = 0;
+            error = "Точность корней должна быть числом от 1e-12 до 0.1.";
+            return false;
+        }
+        if (!TryReadDouble(RootSearchRadiusBox.Text, out radius) || radius is < 0.01 or > 1e9)
+        {
+            error = "Радиус поиска должен быть числом от 0.01 до 1e9.";
+            return false;
+        }
+        error = string.Empty;
+        return true;
+    }
+
+    private static bool TryParseComplex(string text, out Complex value)
+    {
+        value = Complex.Zero;
+        try
+        {
+            ExpressionNode expression = new Parser(new Tokenizer(text.Trim()).Tokenize()).Parse().Simplify();
+            value = expression.Evaluate([]);
+            return double.IsFinite(value.Real) && double.IsFinite(value.Imaginary);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string FormatComplex(Complex value)
+    {
+        string real = value.Real.ToString("0.##########", CultureInfo.InvariantCulture);
+        string imaginary = Math.Abs(value.Imaginary).ToString("0.##########", CultureInfo.InvariantCulture);
+        return $"{real} {(value.Imaginary < 0 ? '−' : '+')} {imaginary}i";
     }
 
     private void RandomFormulaButton_OnClick(object sender, RoutedEventArgs e)
@@ -272,7 +476,11 @@ public partial class NewtonPoolsWindow : Window
             return;
         }
         var dialog = new NewtonPaletteWindow(_paletteManager, _formulaEngine.Roots) { Owner = this };
-        dialog.PaletteApplied += (_, _) => ScheduleRender();
+        dialog.PaletteApplied += (_, _) =>
+        {
+            UpdateRootOverlay();
+            ScheduleRender();
+        };
         dialog.ShowDialog();
     }
 
@@ -457,10 +665,15 @@ public partial class NewtonPoolsWindow : Window
             Scale = BaseScale / Math.Max(0.001, state.Zoom),
             IterationMethod = state.IterationMethod,
             HouseholderOrder = state.HouseholderOrder,
+            RootSearchMode = state.RootSearchMode,
+            RootTolerance = state.RootTolerance,
+            RootSearchRadius = state.RootSearchRadius,
             BackgroundColor = state.Palette.BackgroundColor,
             UseGradient = state.Palette.IsGradient
         };
-        if (!engine.SetFormula(state.Formula, out string debug)) throw new InvalidOperationException(debug);
+        bool useSavedRoots = state.Roots.Count > 0 || state.RootSearchMode == NewtonRootSearchMode.ManualOnly;
+        if (!engine.SetFormula(state.Formula, out string debug, !useSavedRoots)) throw new InvalidOperationException(debug);
+        if (useSavedRoots) engine.ReplaceRoots(state.Roots);
         engine.RootColors = NewtonPaletteManager.AdjustColors(state.Palette, engine.Roots.Count).ToArray();
         return engine;
     }
@@ -556,6 +769,7 @@ public partial class NewtonPoolsWindow : Window
 
     private void UpdatePreviewTransform()
     {
+        UpdateRootOverlay();
         if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 || CanvasHost.ActualWidth <= 0) return;
         double scale = _zoom / _renderedZoom;
         double currentScale = BaseScale / _zoom;

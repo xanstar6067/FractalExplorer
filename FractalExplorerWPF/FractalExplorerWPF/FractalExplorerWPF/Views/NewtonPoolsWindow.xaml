@@ -51,6 +51,50 @@
                                 Click="RandomFormulaButton_OnClick"/>
                     </Grid>
 
+                    <Expander Margin="0,8,0,4" Header="Поиск и корни" IsExpanded="True">
+                        <StackPanel Margin="0,6,0,0">
+                            <TextBlock Text="Стратегия поиска"/>
+                            <ComboBox x:Name="RootSearchModeBox" SelectedIndex="0"
+                                      SelectionChanged="RootSearchModeBox_OnSelectionChanged">
+                                <ComboBoxItem Content="Авто: полином / адаптивно"/>
+                                <ComboBoxItem Content="Всегда адаптивный"/>
+                                <ComboBoxItem Content="Только вручную"/>
+                            </ComboBox>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="Точность корней"/>
+                                <TextBox x:Name="RootToleranceBox" Grid.Column="1" Text="1e-6"/>
+                            </Grid>
+                            <Grid x:Name="RootSearchRadiusPanel">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="Радиус поиска"/>
+                                <TextBox x:Name="RootSearchRadiusBox" Grid.Column="1" Text="8"/>
+                            </Grid>
+                            <Button Content="Повторить поиск корней" Click="FindRootsButton_OnClick"/>
+
+                            <TextBlock x:Name="RootCountText" Margin="0,5,0,5"
+                                       Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"
+                                       Text="Найдено корней: 0"/>
+                            <ListBox x:Name="RootListBox" Height="86" Margin="0,0,0,4"/>
+                            <TextBlock Text="Ручной корень"/>
+                            <TextBox x:Name="ManualRootBox" ToolTip="Например: 1+2*i или -0.5*i"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Button Margin="0,0,3,4" Content="Добавить" Click="AddRootButton_OnClick"/>
+                                <Button Grid.Column="1" Margin="3,0,0,4" Content="Удалить" Click="RemoveRootButton_OnClick"/>
+                            </Grid>
+
+                            <TextBlock Margin="0,4,0,0" Text="Отображение корней"/>
+                            <ComboBox x:Name="RootDisplayModeBox" SelectedIndex="1"
+                                      SelectionChanged="RootDisplayModeBox_OnSelectionChanged">
+                                <ComboBoxItem Content="Скрыть"/>
+                                <ComboBoxItem Content="Маркеры"/>
+                                <ComboBoxItem Content="Маркеры и координаты"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Expander>
+
                     <TextBlock Margin="0,8,0,0" Text="Метод итерации"/>
                     <ComboBox x:Name="MethodBox" SelectionChanged="MethodBox_OnSelectionChanged">
                         <ComboBoxItem Content="Newton"/>
@@ -86,9 +130,6 @@
                         <ComboBoxItem Content="4×" Tag="4"/>
                     </ComboBox>
 
-                    <TextBlock x:Name="RootCountText" Margin="0,3,0,8"
-                               Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Найдено корней: 0"/>
-
                     <Button Content="Запустить рендер" Click="RenderButton_OnClick"/>
                     <Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
                     <Button Content="Настроить палитру" Click="PaletteButton_OnClick"/>
@@ -120,6 +161,7 @@
                     <Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
                     <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
                 </Grid>
+                <Canvas x:Name="RootOverlay" ClipToBounds="True" IsHitTestVisible="False"/>
                 <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/>
             </Grid>
         </Border>

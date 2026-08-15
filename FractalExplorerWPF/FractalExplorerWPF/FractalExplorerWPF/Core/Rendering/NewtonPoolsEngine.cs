@@ -9,12 +9,13 @@ namespace FractalExplorerWPF.Core.Rendering;
 
 public sealed class NewtonPoolsEngine
 {
-    private const double Epsilon = 1e-6;
     private ExpressionNode? _formula;
     private ExpressionNode? _firstDerivative;
     private ExpressionNode? _secondDerivative;
     private readonly List<ExpressionNode> _inverseDerivatives = [];
     private int _householderOrder = 3;
+    private double _rootTolerance = 1e-6;
+    private double _rootSearchRadius = 8;
 
     public int MaxIterations { get; set; } = 500;
     public double CenterX { get; set; }
@@ -25,6 +26,20 @@ public sealed class NewtonPoolsEngine
     public Color BackgroundColor { get; set; } = Colors.Black;
     public bool UseGradient { get; set; }
     public NewtonIterationMethod IterationMethod { get; set; }
+    public NewtonRootSearchMode RootSearchMode { get; set; }
+    public string RootSearchStrategy { get; private set; } = "Не запускался";
+
+    public double RootTolerance
+    {
+        get => _rootTolerance;
+        set => _rootTolerance = Math.Clamp(value, 1e-12, 0.1);
+    }
+
+    public double RootSearchRadius
+    {
+        get => _rootSearchRadius;
+        set => _rootSearchRadius = Math.Clamp(value, 0.01, 1e9);
+    }
 
     public int HouseholderOrder
     {
@@ -36,7 +51,7 @@ public sealed class NewtonPoolsEngine
         }
     }
 
-    public bool SetFormula(string expression, out string debugInfo)
+    public bool SetFormula(string expression, out string debugInfo, bool discoverRoots = true)
     {
         var debug = new StringBuilder();
         try
@@ -46,7 +61,12 @@ public sealed class NewtonPoolsEngine
             _firstDerivative = _formula.Differentiate("z").Simplify();
             _secondDerivative = _firstDerivative.Differentiate("z").Simplify();
             BuildInverseDerivatives();
-            FindRoots();
+            if (discoverRoots) FindRoots();
+            else
+            {
+                Roots = [];
+                RootSearchStrategy = "Использован сохранённый список";
+            }
 
             debug.AppendLine($"Источник: {expression}");
             debug.AppendLine("Токены: " + string.Join(" ", tokens.Select(token => $"[{token.Type}:{token.Value}]")));
@@ -54,6 +74,8 @@ public sealed class NewtonPoolsEngine
             debug.AppendLine($"f'(z) = {_firstDerivative}");
             debug.AppendLine($"f''(z) = {_secondDerivative}");
             debug.AppendLine($"Найдено корней: {Roots.Count}");
+            debug.AppendLine($"Поиск: {RootSearchStrategy}");
+            debug.AppendLine($"Точность: {RootTolerance:G3}; радиус адаптивного поиска: {RootSearchRadius:G6}");
             debugInfo = debug.ToString();
             return true;
         }
@@ -64,9 +86,25 @@ public sealed class NewtonPoolsEngine
             _secondDerivative = null;
             _inverseDerivatives.Clear();
             Roots = [];
+            RootSearchStrategy = "Ошибка формулы";
             debugInfo = $"ОШИБКА ПАРСИНГА:{Environment.NewLine}{ex.Message}";
             return false;
         }
+    }
+
+    public void ReplaceRoots(IEnumerable<Complex> roots)
+    {
+        double mergeDistance = Math.Max(1e-10, RootTolerance * 0.05);
+        var accepted = new List<Complex>();
+        foreach (Complex candidate in roots)
+        {
+            if (!IsFinite(candidate)) continue;
+            int existing = accepted.FindIndex(root => (root - candidate).Magnitude <= mergeDistance);
+            if (existing < 0) accepted.Add(candidate);
+            else accepted[existing] = (accepted[existing] + candidate) / 2;
+        }
+
+        Roots = accepted.OrderBy(root => root.Real).ThenBy(root => root.Imaginary).ToArray();
     }
 
     public void RenderToBuffer(
@@ -157,7 +195,8 @@ public sealed class NewtonPoolsEngine
         {
             variables["z"] = z;
             Complex f = _formula!.Evaluate(variables);
-            if (f.Magnitude < Epsilon) break;
+            if (!IsFinite(f) || f == Complex.Zero) break;
+            if ((f.Magnitude <= RootTolerance || (iteration & 7) == 7) && IsNearKnownRoot(z)) break;
 
             Complex step = IterationMethod switch
             {
@@ -176,16 +215,16 @@ public sealed class NewtonPoolsEngine
     private Complex ComputeNewtonStep(Dictionary<string, Complex> variables, Complex f)
     {
         Complex f1 = _firstDerivative!.Evaluate(variables);
-        return f1.Magnitude < Epsilon ? Complex.Zero : -f / f1;
+        return !IsFinite(f1) || f1 == Complex.Zero ? Complex.Zero : -f / f1;
     }
 
     private Complex ComputeHalleyStep(Dictionary<string, Complex> variables, Complex f)
     {
         Complex f1 = _firstDerivative!.Evaluate(variables);
-        if (f1.Magnitude < Epsilon) return Complex.Zero;
+        if (!IsFinite(f1) || f1 == Complex.Zero) return Complex.Zero;
         Complex f2 = _secondDerivative!.Evaluate(variables);
         Complex denominator = 2 * f1 * f1 - f * f2;
-        return denominator.Magnitude < Epsilon ? Complex.Zero : -(2 * f * f1) / denominator;
+        return !IsFinite(denominator) || denominator == Complex.Zero ? Complex.Zero : -(2 * f * f1) / denominator;
     }
 
     private Complex ComputeHouseholderStep(Dictionary<string, Complex> variables)
@@ -194,7 +233,9 @@ public sealed class NewtonPoolsEngine
         if (_inverseDerivatives.Count <= order) return Complex.Zero;
         Complex previous = _inverseDerivatives[order - 1].Evaluate(variables);
         Complex current = _inverseDerivatives[order].Evaluate(variables);
-        return current.Magnitude < Epsilon ? Complex.Zero : order * previous / current;
+        return !IsFinite(previous) || !IsFinite(current) || current == Complex.Zero
+            ? Complex.Zero
+            : order * previous / current;
     }
 
     private void BuildInverseDerivatives()
@@ -210,45 +251,47 @@ public sealed class NewtonPoolsEngine
         }
     }
 
-    private void FindRoots(int maxIterations = 100)
+    private void FindRoots()
     {
-        var roots = new List<Complex>();
         if (_formula is null || _firstDerivative is null)
         {
-            Roots = roots;
+            Roots = [];
+            RootSearchStrategy = "Формула не задана";
             return;
         }
 
-        var starts = new List<Complex>();
-        for (double radius = 0.1; radius < 2.5; radius += 0.4)
-            for (int index = 0; index < 16; index++)
-                starts.Add(Complex.FromPolarCoordinates(radius, 2 * Math.PI * index / 16));
-        starts.Add(Complex.Zero);
-
-        foreach (Complex start in starts)
+        if (RootSearchMode == NewtonRootSearchMode.ManualOnly)
         {
-            Complex z = start;
-            var variables = new Dictionary<string, Complex>(1);
-            for (int iteration = 0; iteration < maxIterations; iteration++)
-            {
-                variables["z"] = z;
-                Complex f = _formula.Evaluate(variables);
-                Complex f1 = _firstDerivative.Evaluate(variables);
-                if (f1.Magnitude < Epsilon / 100) break;
-                Complex step = f / f1;
-                z -= step;
-                if (!IsFinite(z) || z.Magnitude > 1e4) break;
-                if (step.Magnitude >= Epsilon) continue;
-
-                variables["z"] = z;
-                if (_formula.Evaluate(variables).Magnitude < Epsilon * 10 &&
-                    roots.All(root => (z - root).Magnitude >= Epsilon))
-                    roots.Add(z);
-                break;
-            }
+            Roots = [];
+            RootSearchStrategy = "Только вручную";
+            return;
         }
 
-        Roots = roots.OrderBy(root => root.Real).ThenBy(root => root.Imaginary).ToArray();
+        if (RootSearchMode == NewtonRootSearchMode.Automatic &&
+            NewtonRootFinder.TryFindPolynomialRoots(_formula, RootTolerance, out IReadOnlyList<Complex> polynomialRoots, out int degree))
+        {
+            Roots = polynomialRoots;
+            RootSearchStrategy = degree > 0
+                ? $"Aberth–Ehrlich, полином степени {degree}"
+                : "Константный полином";
+            return;
+        }
+
+        Roots = NewtonRootFinder.FindAdaptiveRoots(
+            _formula,
+            _firstDerivative,
+            CenterX,
+            CenterY,
+            RootSearchRadius,
+            RootTolerance);
+        RootSearchStrategy = $"Адаптивное сканирование, радиус {RootSearchRadius:G6}";
+    }
+
+    private bool IsNearKnownRoot(Complex z)
+    {
+        foreach (Complex root in Roots)
+            if ((z - root).Magnitude <= RootTolerance) return true;
+        return false;
     }
 
     private Color GetPixelColor(Complex z, int iteration)
@@ -263,7 +306,7 @@ public sealed class NewtonPoolsEngine
             distance = candidate;
             rootIndex = index;
         }
-        if (rootIndex < 0 || distance >= Epsilon) return BackgroundColor;
+        if (rootIndex < 0 || distance > RootTolerance) return BackgroundColor;
 
         Color baseColor = RootColors[rootIndex % RootColors.Length];
         if (!UseGradient) return baseColor;

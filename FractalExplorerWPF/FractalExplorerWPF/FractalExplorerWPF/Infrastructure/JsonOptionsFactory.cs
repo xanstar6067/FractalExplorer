@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FractalExplorerWPF.Infrastructure.Serialization;
 
 namespace FractalExplorerWPF.Infrastructure;
 
@@ -8,6 +9,7 @@ public static class JsonOptionsFactory
     {
         var options = new JsonSerializerOptions { WriteIndented = true };
         options.Converters.Add(new WpfColorJsonConverter());
+        options.Converters.Add(new NumericsComplexJsonConverter());
         return options;
     }
 }

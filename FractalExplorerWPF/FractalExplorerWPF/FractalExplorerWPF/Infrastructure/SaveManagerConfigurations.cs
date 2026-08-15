@@ -51,7 +51,8 @@ public static class SaveManagerConfigurations
         GetName = state => state.SaveName,
         GetTimestamp = state => state.Timestamp,
         GetDetails = state => $"{Prefix(state.Timestamp)} · Метод: {state.IterationMethod} · Итерации: {state.MaxIterations}\n" +
-                                    $"Формула: {state.Formula} · Масштаб: {state.Zoom:0.####}",
+                                    $"Формула: {state.Formula} · Масштаб: {state.Zoom:0.####}\n" +
+                                    $"Корней: {state.Roots.Count} · Точность: {state.RootTolerance:G3} · Поиск: {state.RootSearchMode}",
         PointsOfInterest = PresetManager.GetNewtonPresets()
     };
 
