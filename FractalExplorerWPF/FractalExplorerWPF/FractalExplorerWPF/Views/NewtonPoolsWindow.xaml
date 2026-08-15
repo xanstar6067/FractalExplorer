@@ -69,8 +69,10 @@
                             </Grid>
                             <Grid x:Name="RootSearchRadiusPanel">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
-                                <TextBlock VerticalAlignment="Center" Text="Радиус поиска"/>
-                                <TextBox x:Name="RootSearchRadiusBox" Grid.Column="1" Text="8"/>
+                                <TextBlock VerticalAlignment="Center" Text="Радиус поиска"
+                                           ToolTip="Поиск выполняется вокруг точки 0 + 0i"/>
+                                <TextBox x:Name="RootSearchRadiusBox" Grid.Column="1" Text="8"
+                                         ToolTip="Радиус области поиска вокруг точки 0 + 0i"/>
                             </Grid>
                             <Button Content="Повторить поиск корней" Click="FindRootsButton_OnClick"/>
 

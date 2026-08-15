@@ -312,11 +312,11 @@ public sealed class NewtonPoolsEngine
         Roots = NewtonRootFinder.FindAdaptiveRoots(
             _compiledFormula!.Evaluate,
             _compiledFirstDerivative!.Evaluate,
-            CenterX,
-            CenterY,
+            0,
+            0,
             RootSearchRadius,
             RootTolerance);
-        RootSearchStrategy = $"Адаптивное сканирование, радиус {RootSearchRadius:G6}";
+        RootSearchStrategy = $"Адаптивное сканирование от 0, радиус {RootSearchRadius:G6}";
     }
 
     private bool IsNearKnownRoot(Complex z)

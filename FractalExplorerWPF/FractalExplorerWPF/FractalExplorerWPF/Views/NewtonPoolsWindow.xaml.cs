@@ -66,12 +66,15 @@ public partial class NewtonPoolsWindow : Window
         "(z^4-1)/(z*z-2*z+1)", "(z-1)*(z+1)*(z-0.2)*(z+0.2)",
         "(z-1)^2*(z+1)", "z^7-0.5*z^3+1", "z^5+(0.3-0.8*i)*z^2-(1.2+0.1*i)",
         "(z-1)*(z+1)*(z-0.1)*(z+0.1)*(z-0.01)", "(z-1)*(z-0.3)*(z+0.7)*(z-0.05)",
-        "(z-1)^2*(z+1)*(z-0.2)", "sin(z)-z^3", "z^3-exp(-z)", "cos(z)-z",
-        "z^3-exp(z)", "log(z)-z^3", "tan(z)-z^3",
+        "(z-1)^2*(z+1)*(z-0.2)", "sin(z)-1", "z-exp(-z)", "cos(z)-z",
+        "z^3-exp(z)", "log(z)-1", "tan(z)-z",
         "sin(z)-0.5", "cos(z)-0.5", "tan(z)-1",
-        "asin(z^4)-0.5", "acos(z^4)-1", "atan(z^3)-0.5",
+        "asin(z)-0.5", "acos(z)-1", "atan(z)-0.5",
         "sinh(z)-1", "cosh(z)-2", "tanh(z)-0.5",
-        "exp(z)-2", "ln(z^4)-z^2", "sqrt(z)-z^3", "sin(sqrt(z^3))-z"
+        "exp(z)-2", "ln(z)-2", "sqrt(z)-1", "sin(sqrt(z))-0.5",
+        "sin(z)-z^3", "z^3-exp(-z)", "log(z)-z^3", "tan(z)-z^3",
+        "asin(z^4)-0.5", "acos(z^4)-1", "atan(z^3)-0.5",
+        "ln(z^4)-z^2", "sqrt(z)-z^3", "sin(sqrt(z^3))-z"
     ];
 
     public NewtonPoolsWindow()
