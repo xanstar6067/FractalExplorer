@@ -33,6 +33,9 @@ public sealed class NewtonPoolsEngine
     public Color BackgroundColor { get; set; } = Colors.Black;
     public bool UseGradient { get; set; }
     public NewtonDiagnosticColoringMode DiagnosticColoringMode { get; set; }
+    public NewtonRelaxedPlaneMode RelaxedPlaneMode { get; set; }
+    public Complex Relaxation { get; set; } = Complex.One;
+    public Complex FixedInitialZ { get; set; } = new(0.5, 0.5);
     public NewtonIterationMethod IterationMethod
     {
         get => _iterationMethod;
@@ -199,6 +202,7 @@ public sealed class NewtonPoolsEngine
 
         long completedRows = 0;
         double unitsPerPixel = Scale / width;
+        bool lambdaPlane = UsesLambdaParameterPlane;
         var options = new ParallelOptions
         {
             MaxDegreeOfParallelism = Math.Max(1, threadCount)
@@ -211,18 +215,20 @@ public sealed class NewtonPoolsEngine
             for (int x = 0; x < width; x++)
             {
                 if ((x & 63) == 0 && cancellationToken.IsCancellationRequested) { loopState.Stop(); return; }
-                Complex z = new(
+                Complex coordinate = new(
                     CenterX + (x - width / 2.0) * unitsPerPixel,
                     CenterY - (y - height / 2.0) * unitsPerPixel);
+                Complex z = lambdaPlane ? FixedInitialZ : coordinate;
+                Complex lambda = lambdaPlane ? coordinate : Relaxation;
                 Color color;
                 if (diagnostics)
                 {
-                    NewtonOrbitResult result = DiagnoseOrbit(z);
+                    NewtonOrbitResult result = DiagnoseOrbit(z, lambda);
                     color = GetDiagnosticColor(result);
                 }
                 else
                 {
-                    int iteration = IterateNormal(ref z);
+                    int iteration = IterateNormal(ref z, lambda);
                     color = GetPixelColor(z, iteration);
                 }
                 int offset = row + x * 4;
@@ -273,6 +279,7 @@ public sealed class NewtonPoolsEngine
         bool diagnostics)
     {
         double unitsPerPixel = Scale / canvasWidth;
+        bool lambdaPlane = UsesLambdaParameterPlane;
         for (int localY = 0; localY < tile.Height; localY++)
         {
             if (token.IsCancellationRequested) return null;
@@ -281,18 +288,20 @@ public sealed class NewtonPoolsEngine
             {
                 if ((localX & 31) == 0 && token.IsCancellationRequested) return null;
                 int canvasX = tile.X + localX;
-                Complex z = new(
+                Complex coordinate = new(
                     CenterX + (canvasX - canvasWidth / 2.0) * unitsPerPixel,
                     CenterY - (canvasY - canvasHeight / 2.0) * unitsPerPixel);
+                Complex z = lambdaPlane ? FixedInitialZ : coordinate;
+                Complex lambda = lambdaPlane ? coordinate : Relaxation;
                 Color color;
                 if (diagnostics)
                 {
-                    NewtonOrbitResult result = DiagnoseOrbit(z);
+                    NewtonOrbitResult result = DiagnoseOrbit(z, lambda);
                     color = GetDiagnosticColor(result);
                 }
                 else
                 {
-                    int iteration = IterateNormal(ref z);
+                    int iteration = IterateNormal(ref z, lambda);
                     color = GetPixelColor(z, iteration);
                 }
                 int offset = (localY * tile.Width + localX) * 4;
@@ -302,7 +311,10 @@ public sealed class NewtonPoolsEngine
         return buffer;
     }
 
-    private int IterateNormal(ref Complex z)
+    private bool UsesLambdaParameterPlane =>
+        IterationMethod == NewtonIterationMethod.RelaxedNewton && RelaxedPlaneMode == NewtonRelaxedPlaneMode.LambdaPlane;
+
+    private int IterateNormal(ref Complex z, Complex lambda)
     {
         int iteration = 0;
         while (iteration < MaxIterations)
@@ -315,6 +327,7 @@ public sealed class NewtonPoolsEngine
             {
                 NewtonIterationMethod.Halley => ComputeHalleyStep(z, f),
                 NewtonIterationMethod.Householder => ComputeHouseholderStep(z),
+                NewtonIterationMethod.RelaxedNewton => ComputeRelaxedNewtonStep(z, f, lambda),
                 _ => ComputeNewtonStep(z, f)
             };
 
@@ -325,7 +338,9 @@ public sealed class NewtonPoolsEngine
         return iteration;
     }
 
-    public NewtonOrbitResult DiagnoseOrbit(Complex initialPoint)
+    public NewtonOrbitResult DiagnoseOrbit(Complex initialPoint) => DiagnoseOrbit(initialPoint, Relaxation);
+
+    public NewtonOrbitResult DiagnoseOrbit(Complex initialPoint, Complex lambda)
     {
         if (_compiledFormula is null || _compiledFirstDerivative is null)
             throw new InvalidOperationException("Сначала задайте корректную формулу.");
@@ -357,7 +372,7 @@ public sealed class NewtonPoolsEngine
             if (cyclePeriod is >= 2 and <= 8)
                 return CreateOrbitResult(NewtonOrbitOutcome.Cycle, iteration, z, f, cyclePeriod: cyclePeriod);
 
-            DiagnosticStep step = ComputeDiagnosticStep(z, f);
+            DiagnosticStep step = ComputeDiagnosticStep(z, f, lambda);
             if (step.Status == DiagnosticStepStatus.NonFinite)
                 return CreateOrbitResult(NewtonOrbitOutcome.NonFinite, iteration, z, f);
             if (step.Status == DiagnosticStepStatus.ZeroDerivative)
@@ -381,7 +396,7 @@ public sealed class NewtonPoolsEngine
             : CreateOrbitResult(NewtonOrbitOutcome.IterationLimit, MaxIterations, z, finalValue);
     }
 
-    private DiagnosticStep ComputeDiagnosticStep(Complex z, Complex f)
+    private DiagnosticStep ComputeDiagnosticStep(Complex z, Complex f, Complex lambda)
     {
         switch (IterationMethod)
         {
@@ -408,6 +423,14 @@ public sealed class NewtonPoolsEngine
                 if (!IsFinite(current)) return DiagnosticStep.NonFinite(current);
                 if (IsEffectivelyZero(current)) return DiagnosticStep.ZeroDerivative;
                 Complex value = order * previous / current;
+                return IsFinite(value) ? DiagnosticStep.Success(value) : DiagnosticStep.NonFinite(value);
+            }
+            case NewtonIterationMethod.RelaxedNewton:
+            {
+                Complex derivative = _compiledFirstDerivative!.Evaluate(z);
+                if (!IsFinite(derivative)) return DiagnosticStep.NonFinite(derivative);
+                if (IsEffectivelyZero(derivative)) return DiagnosticStep.ZeroDerivative;
+                Complex value = -lambda * f / derivative;
                 return IsFinite(value) ? DiagnosticStep.Success(value) : DiagnosticStep.NonFinite(value);
             }
             default:
@@ -503,6 +526,14 @@ public sealed class NewtonPoolsEngine
     {
         Complex f1 = _compiledFirstDerivative!.Evaluate(z);
         return !IsFinite(f1) || f1 == Complex.Zero ? Complex.Zero : -f / f1;
+    }
+
+    private Complex ComputeRelaxedNewtonStep(Complex z, Complex f, Complex lambda)
+    {
+        Complex derivative = _compiledFirstDerivative!.Evaluate(z);
+        return !IsFinite(derivative) || derivative == Complex.Zero
+            ? Complex.Zero
+            : -lambda * f / derivative;
     }
 
     private Complex ComputeHalleyStep(Complex z, Complex f)

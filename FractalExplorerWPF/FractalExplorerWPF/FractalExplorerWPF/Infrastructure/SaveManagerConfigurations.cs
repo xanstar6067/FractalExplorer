@@ -50,9 +50,7 @@ public static class SaveManagerConfigurations
         RenderPreviewAsync = window.RenderStatePreviewAsync,
         GetName = state => state.SaveName,
         GetTimestamp = state => state.Timestamp,
-        GetDetails = state => $"{Prefix(state.Timestamp)} · Метод: {state.IterationMethod} · Итерации: {state.MaxIterations}\n" +
-                                    $"Формула: {state.Formula} · Масштаб: {state.Zoom:0.####}\n" +
-                                    $"Корней: {state.Roots.Count} · Точность: {state.RootTolerance:G3} · Поиск: {state.RootSearchMode}",
+        GetDetails = DescribeNewton,
         PointsOfInterest = PresetManager.GetNewtonPresets()
     };
 
@@ -171,10 +169,29 @@ public static class SaveManagerConfigurations
         return state.Variant == NovaVariant.Julia ? details + $"\nC: {Complex(state.CReal, state.CImaginary)}" : details;
     }
 
+    private static string DescribeNewton(NewtonState state)
+    {
+        string details = $"{Prefix(state.Timestamp)} · Метод: {state.IterationMethod} · Итерации: {state.MaxIterations}\n" +
+                         $"Формула: {state.Formula} · Масштаб: {state.Zoom:0.####}\n" +
+                         $"Корней: {state.Roots.Count} · Точность: {state.RootTolerance:G3} · Поиск: {state.RootSearchMode}";
+        if (state.IterationMethod == NewtonIterationMethod.RelaxedNewton)
+        {
+            details += state.RelaxedPlaneMode == NewtonRelaxedPlaneMode.LambdaPlane
+                ? $"\nПлоскость λ · z₀: {FormatComplex(state.FixedInitialZ)}"
+                : $"\nПлоскость z · λ: {FormatComplex(state.Relaxation)}";
+        }
+        if (state.DiagnosticColoringMode != NewtonDiagnosticColoringMode.Disabled)
+            details += $"\nДиагностика: {state.DiagnosticColoringMode}";
+        return details;
+    }
+
     private static string Prefix(DateTime timestamp) => timestamp == DateTime.MinValue ? "Точка интереса" : timestamp.ToString("g");
 
     private static string Complex(decimal real, decimal imaginary) =>
         $"{real:G8} {(imaginary < 0 ? '−' : '+')} {Math.Abs(imaginary):G8}i";
+
+    private static string FormatComplex(System.Numerics.Complex value) =>
+        $"{value.Real:G8} {(value.Imaginary < 0 ? '−' : '+')} {Math.Abs(value.Imaginary):G8}i";
 
     private static string VariationName(CollatzVariation variation) => variation switch
     {

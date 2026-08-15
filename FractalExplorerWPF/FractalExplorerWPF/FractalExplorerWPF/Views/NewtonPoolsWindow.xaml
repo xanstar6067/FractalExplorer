@@ -120,6 +120,7 @@
                         <ComboBoxItem Content="Newton"/>
                         <ComboBoxItem Content="Halley"/>
                         <ComboBoxItem Content="Householder"/>
+                        <ComboBoxItem Content="Relaxed Newton"/>
                     </ComboBox>
 
                     <Grid x:Name="HouseholderOrderPanel">
@@ -127,6 +128,45 @@
                         <TextBlock VerticalAlignment="Center" Text="Порядок Householder"/>
                         <TextBox x:Name="HouseholderOrderBox" Grid.Column="1" Text="3" TextChanged="Parameter_OnChanged"/>
                     </Grid>
+
+                    <StackPanel x:Name="RelaxedNewtonPanel" Margin="0,2,0,4">
+                        <TextBlock Text="Плоскость Relaxed Newton"/>
+                        <ComboBox x:Name="RelaxedPlaneModeBox" SelectedIndex="0"
+                                  SelectionChanged="RelaxedPlaneModeBox_OnSelectionChanged">
+                            <ComboBoxItem Content="Плоскость z — λ фиксирована"/>
+                            <ComboBoxItem Content="Плоскость λ — z₀ фиксировано"/>
+                        </ComboBox>
+
+                        <StackPanel x:Name="RelaxationPanel">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="Re λ"/>
+                                <TextBox x:Name="RelaxationRealBox" Grid.Column="1" Text="1" TextChanged="Parameter_OnChanged"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="Im λ"/>
+                                <TextBox x:Name="RelaxationImaginaryBox" Grid.Column="1" Text="0" TextChanged="Parameter_OnChanged"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel x:Name="FixedInitialZPanel">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="Re z₀"/>
+                                <TextBox x:Name="FixedInitialZRealBox" Grid.Column="1" Text="0.5" TextChanged="Parameter_OnChanged"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center" Text="Im z₀"/>
+                                <TextBox x:Name="FixedInitialZImaginaryBox" Grid.Column="1" Text="0.5" TextChanged="Parameter_OnChanged"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <TextBlock x:Name="RelaxedPlaneHint"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
 
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>

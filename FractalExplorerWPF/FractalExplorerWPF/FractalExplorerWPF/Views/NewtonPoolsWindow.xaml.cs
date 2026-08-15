@@ -93,6 +93,7 @@ public partial class NewtonPoolsWindow : Window
         FormulaPresetBox.SelectedIndex = 0;
         FormulaBox.Text = _appliedFormula;
         MethodBox.SelectedIndex = 0;
+        RelaxedPlaneModeBox.SelectedIndex = 0;
         RootSearchModeBox.SelectedIndex = 0;
         RootDisplayModeBox.SelectedIndex = 0;
         DiagnosticColoringBox.SelectedIndex = 0;
@@ -112,6 +113,14 @@ public partial class NewtonPoolsWindow : Window
         int order = ReadHouseholderOrder();
         if (!TryReadRootSettings(out double rootTolerance, out double rootSearchRadius, out string rootError))
             throw new InvalidOperationException(rootError);
+        bool validRelaxedSettings = TryReadRelaxedSettings(out Complex relaxation, out Complex fixedInitialZ, out string relaxedError);
+        if (!validRelaxedSettings && SelectedMethod == NewtonIterationMethod.RelaxedNewton)
+            throw new InvalidOperationException(relaxedError);
+        if (!validRelaxedSettings)
+        {
+            relaxation = Complex.One;
+            fixedInitialZ = new Complex(0.5, 0.5);
+        }
         NewtonColorPalette palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name);
         return new NewtonState
         {
@@ -124,6 +133,9 @@ public partial class NewtonPoolsWindow : Window
             CenterY = _centerY,
             IterationMethod = SelectedMethod,
             HouseholderOrder = order,
+            RelaxedPlaneMode = SelectedRelaxedPlaneMode,
+            Relaxation = relaxation,
+            FixedInitialZ = fixedInitialZ,
             RootSearchMode = SelectedRootSearchMode,
             RootDisplayMode = SelectedRootDisplayMode,
             DiagnosticColoringMode = SelectedDiagnosticColoringMode,
@@ -146,6 +158,13 @@ public partial class NewtonPoolsWindow : Window
         SetZoomText();
         MethodBox.SelectedIndex = (int)state.IterationMethod;
         HouseholderOrderBox.Text = Math.Clamp(state.HouseholderOrder, 2, 12).ToString(CultureInfo.InvariantCulture);
+        RelaxedPlaneModeBox.SelectedIndex = Math.Clamp((int)state.RelaxedPlaneMode, 0, 1);
+        Complex relaxation = IsFinite(state.Relaxation) ? state.Relaxation : Complex.One;
+        Complex fixedInitialZ = IsFinite(state.FixedInitialZ) ? state.FixedInitialZ : new Complex(0.5, 0.5);
+        RelaxationRealBox.Text = relaxation.Real.ToString("G10", CultureInfo.InvariantCulture);
+        RelaxationImaginaryBox.Text = relaxation.Imaginary.ToString("G10", CultureInfo.InvariantCulture);
+        FixedInitialZRealBox.Text = fixedInitialZ.Real.ToString("G10", CultureInfo.InvariantCulture);
+        FixedInitialZImaginaryBox.Text = fixedInitialZ.Imaginary.ToString("G10", CultureInfo.InvariantCulture);
         RootSearchModeBox.SelectedIndex = (int)state.RootSearchMode;
         RootDisplayModeBox.SelectedIndex = (int)state.RootDisplayMode;
         DiagnosticColoringBox.SelectedIndex = Math.Clamp((int)state.DiagnosticColoringMode, 0, 4);
@@ -166,8 +185,17 @@ public partial class NewtonPoolsWindow : Window
     {
         1 => NewtonIterationMethod.Halley,
         2 => NewtonIterationMethod.Householder,
+        3 => NewtonIterationMethod.RelaxedNewton,
         _ => NewtonIterationMethod.Newton
     };
+
+    private NewtonRelaxedPlaneMode SelectedRelaxedPlaneMode => RelaxedPlaneModeBox.SelectedIndex == 1
+        ? NewtonRelaxedPlaneMode.LambdaPlane
+        : NewtonRelaxedPlaneMode.ZPlane;
+
+    private bool IsLambdaParameterPlaneSelected =>
+        SelectedMethod == NewtonIterationMethod.RelaxedNewton &&
+        SelectedRelaxedPlaneMode == NewtonRelaxedPlaneMode.LambdaPlane;
 
     private NewtonRootSearchMode SelectedRootSearchMode => RootSearchModeBox.SelectedIndex switch
     {
@@ -301,7 +329,9 @@ public partial class NewtonPoolsWindow : Window
     {
         if (RootOverlay is null) return;
         RootOverlay.Children.Clear();
-        if (SelectedRootDisplayMode == NewtonRootDisplayMode.Hidden || _formulaEngine.Roots.Count == 0) return;
+        if (SelectedRootDisplayMode == NewtonRootDisplayMode.Hidden ||
+            IsLambdaParameterPlaneSelected ||
+            _formulaEngine.Roots.Count == 0) return;
 
         double width = RootOverlay.ActualWidth;
         double height = RootOverlay.ActualHeight;
@@ -367,6 +397,39 @@ public partial class NewtonPoolsWindow : Window
         return true;
     }
 
+    private bool TryReadRelaxedSettings(out Complex relaxation, out Complex fixedInitialZ, out string error)
+    {
+        double lambdaReal = 0;
+        double lambdaImaginary = 0;
+        double initialReal = 0;
+        double initialImaginary = 0;
+        bool validRelaxation = TryReadDouble(RelaxationRealBox.Text, out lambdaReal) &&
+                               TryReadDouble(RelaxationImaginaryBox.Text, out lambdaImaginary) &&
+                               double.IsFinite(lambdaReal) && double.IsFinite(lambdaImaginary);
+        bool validInitial = TryReadDouble(FixedInitialZRealBox.Text, out initialReal) &&
+                            TryReadDouble(FixedInitialZImaginaryBox.Text, out initialImaginary) &&
+                            double.IsFinite(initialReal) && double.IsFinite(initialImaginary);
+        relaxation = validRelaxation ? new Complex(lambdaReal, lambdaImaginary) : Complex.One;
+        fixedInitialZ = validInitial ? new Complex(initialReal, initialImaginary) : new Complex(0.5, 0.5);
+
+        if (SelectedMethod == NewtonIterationMethod.RelaxedNewton &&
+            SelectedRelaxedPlaneMode == NewtonRelaxedPlaneMode.ZPlane &&
+            !validRelaxation)
+        {
+            error = "Re λ и Im λ должны быть конечными числами.";
+            return false;
+        }
+        if (SelectedMethod == NewtonIterationMethod.RelaxedNewton &&
+            SelectedRelaxedPlaneMode == NewtonRelaxedPlaneMode.LambdaPlane &&
+            !validInitial)
+        {
+            error = "Re z₀ и Im z₀ должны быть конечными числами.";
+            return false;
+        }
+        error = string.Empty;
+        return true;
+    }
+
     private static bool TryParseComplex(string text, out Complex value)
     {
         value = Complex.Zero;
@@ -388,6 +451,9 @@ public partial class NewtonPoolsWindow : Window
         string imaginary = Math.Abs(value.Imaginary).ToString("0.##########", CultureInfo.InvariantCulture);
         return $"{real} {(value.Imaginary < 0 ? '−' : '+')} {imaginary}i";
     }
+
+    private static bool IsFinite(Complex value) =>
+        double.IsFinite(value.Real) && double.IsFinite(value.Imaginary);
 
     private void RandomFormulaButton_OnClick(object sender, RoutedEventArgs e)
     {
@@ -468,6 +534,12 @@ public partial class NewtonPoolsWindow : Window
         ScheduleRender();
     }
 
+    private void RelaxedPlaneModeBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateRelaxedPlaneControls();
+        ScheduleRender();
+    }
+
     private void DiagnosticColoringBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         UpdateDiagnosticModeHint();
@@ -494,6 +566,23 @@ public partial class NewtonPoolsWindow : Window
     private void UpdateMethodControls()
     {
         if (HouseholderOrderPanel is not null) HouseholderOrderPanel.IsEnabled = SelectedMethod == NewtonIterationMethod.Householder;
+        UpdateRelaxedPlaneControls();
+    }
+
+    private void UpdateRelaxedPlaneControls()
+    {
+        if (RelaxedNewtonPanel is null || RelaxationPanel is null || FixedInitialZPanel is null) return;
+        bool relaxed = SelectedMethod == NewtonIterationMethod.RelaxedNewton;
+        bool lambdaPlane = relaxed && SelectedRelaxedPlaneMode == NewtonRelaxedPlaneMode.LambdaPlane;
+        RelaxedNewtonPanel.Visibility = relaxed ? Visibility.Visible : Visibility.Collapsed;
+        RelaxationPanel.Visibility = lambdaPlane ? Visibility.Collapsed : Visibility.Visible;
+        FixedInitialZPanel.Visibility = lambdaPlane ? Visibility.Visible : Visibility.Collapsed;
+        if (RelaxedPlaneHint is not null)
+            RelaxedPlaneHint.Text = lambdaPlane
+                ? "Каждый пиксель задаёт комплексное λ; итерации начинаются из фиксированного z₀. Масштаб и перемещение относятся к плоскости λ."
+                : "Каждый пиксель задаёт начальное z; ко всем орбитам применяется одно комплексное λ. При λ = 1 + 0i получается обычный Newton.";
+        if (RootDisplayModeBox is not null) RootDisplayModeBox.IsEnabled = !lambdaPlane;
+        UpdateRootOverlay();
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
@@ -749,6 +838,9 @@ public partial class NewtonPoolsWindow : Window
             Scale = BaseScale / Math.Max(0.001, state.Zoom),
             IterationMethod = state.IterationMethod,
             HouseholderOrder = state.HouseholderOrder,
+            RelaxedPlaneMode = state.RelaxedPlaneMode,
+            Relaxation = state.Relaxation,
+            FixedInitialZ = state.FixedInitialZ,
             RootSearchMode = state.RootSearchMode,
             RootTolerance = state.RootTolerance,
             RootSearchRadius = state.RootSearchRadius,

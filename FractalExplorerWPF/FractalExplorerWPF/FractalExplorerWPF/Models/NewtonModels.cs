@@ -8,7 +8,14 @@ public enum NewtonIterationMethod
 {
     Newton,
     Halley,
-    Householder
+    Householder,
+    RelaxedNewton
+}
+
+public enum NewtonRelaxedPlaneMode
+{
+    ZPlane,
+    LambdaPlane
 }
 
 public enum NewtonRootSearchMode
@@ -86,6 +93,9 @@ public sealed class NewtonState
     public double CenterY { get; set; }
     public NewtonIterationMethod IterationMethod { get; set; }
     public int HouseholderOrder { get; set; } = 3;
+    public NewtonRelaxedPlaneMode RelaxedPlaneMode { get; set; }
+    public Complex Relaxation { get; set; } = Complex.One;
+    public Complex FixedInitialZ { get; set; } = new(0.5, 0.5);
     public NewtonRootSearchMode RootSearchMode { get; set; }
     public NewtonRootDisplayMode RootDisplayMode { get; set; } = NewtonRootDisplayMode.Hidden;
     public NewtonDiagnosticColoringMode DiagnosticColoringMode { get; set; }
