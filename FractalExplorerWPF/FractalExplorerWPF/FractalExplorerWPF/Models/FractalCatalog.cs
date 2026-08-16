@@ -31,7 +31,8 @@ public static class FractalCatalog
         Item("Динамические системы", "Логистическое отображение (орбиты)", "Орбитальный график логистического отображения.", "logistic_map_preview_sq512.png", "LogisticMap"),
         Item("Динамические системы", "Диаграмма бифуркации", "Диаграмма бифуркаций логистического отображения.", "bifurcation_preview_sq512.png", "Bifurcation"),
         Item("Динамические системы", "Карта Хенона", "Классическое двумерное отображение Хенона.", "henon_preview_sq512.png", "Henon"),
-        Item("Динамические системы", "Отображение Икэды", "Двумерное нелинейное отображение Икэды.", "ikeda_preview_sq512.png", "Ikeda")
+        Item("Динамические системы", "Отображение Икэды", "Двумерное нелинейное отображение Икэды.", "ikeda_preview_sq512.png", "Ikeda"),
+        Item("Аттракторы", "2D-аттракторы", "Облака плотности для аттракторов Клиффорда, Питера де Йонга, Tinkerbell и Gumowski–Mira.", "henon_preview_sq512.png", "Attractors2D")
     ];
 
     private static FractalCatalogItem Item(

@@ -11,7 +11,16 @@ public enum DynamicSystemKind
     LogisticMap,
     Bifurcation,
     Henon,
-    Ikeda
+    Ikeda,
+    Attractors2D
+}
+
+public enum Attractor2DKind
+{
+    Clifford,
+    PeterDeJong,
+    Tinkerbell,
+    GumowskiMira
 }
 
 public sealed class DynamicSystemState
@@ -50,11 +59,14 @@ public sealed class DynamicSystemState
     public double A { get; set; } = 1.4;
     public double B { get; set; } = .3;
     public double C { get; set; } = 5.7;
+    public double D { get; set; }
     public double R { get; set; } = 3.8;
     public double U { get; set; } = .918;
     public double X0 { get; set; } = .1;
     public double Y0 { get; set; }
     public int DiscardIterations { get; set; } = 500;
+    public string Attractor2DMode { get; set; } = nameof(Attractor2DKind.Clifford);
+    public double DensityGamma { get; set; } = .65;
     public string VisualizationMode { get; set; } = "Orbit";
     public double BifurcationRMin { get; set; } = 2.8;
     public double BifurcationRMax { get; set; } = 4;
@@ -107,8 +119,40 @@ public sealed class DynamicSystemState
             case DynamicSystemKind.Ikeda:
                 state.Iterations = 1_000_000; state.X0 = .1; state.Y0 = .1;
                 break;
+            case DynamicSystemKind.Attractors2D:
+                state.Iterations = 2_000_000;
+                state.DiscardIterations = 1_000;
+                state.FractalColor = Color.FromRgb(126, 224, 255);
+                state.ApplyAttractor2DPreset(Attractor2DKind.Clifford);
+                break;
         }
         return state;
+    }
+
+    public void ApplyAttractor2DPreset(Attractor2DKind kind)
+    {
+        Attractor2DMode = kind.ToString();
+        Zoom = 1;
+
+        switch (kind)
+        {
+            case Attractor2DKind.Clifford:
+                A = -1.4; B = 1.6; C = 1; D = .7;
+                X0 = .1; Y0 = .1; CenterX = 0; CenterY = 0;
+                break;
+            case Attractor2DKind.PeterDeJong:
+                A = 1.4; B = -2.3; C = 2.4; D = -2.1;
+                X0 = 0; Y0 = 0; CenterX = 0; CenterY = 0;
+                break;
+            case Attractor2DKind.Tinkerbell:
+                A = .9; B = -.6013; C = 2; D = .5;
+                X0 = -.72; Y0 = -.64; CenterX = 0; CenterY = -.3;
+                break;
+            case Attractor2DKind.GumowskiMira:
+                A = .008; B = .05; C = -.496; D = 0;
+                X0 = .1; Y0 = 0; CenterX = 0; CenterY = 0;
+                break;
+        }
     }
 }
 

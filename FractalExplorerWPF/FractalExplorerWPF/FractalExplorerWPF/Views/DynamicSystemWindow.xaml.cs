@@ -27,6 +27,8 @@ public partial class DynamicSystemWindow : Window
     private readonly DynamicPaletteStore? _paletteStore;
     private readonly Dictionary<string, TextBox> _boxes = [];
     private readonly Dictionary<string, ComboBox> _choices = [];
+    private readonly Dictionary<string, StackPanel> _fieldPanels = [];
+    private readonly Dictionary<string, TextBlock> _fieldLabels = [];
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
     private readonly ConcurrentQueue<DynamicTileRenderEvent> _visualizationEvents = new();
@@ -43,6 +45,7 @@ public partial class DynamicSystemWindow : Window
     private double _renderedAMin, _renderedAMax, _renderedBMin, _renderedBMax;
     private WindowStyle _oldStyle;
     private WindowState _oldState;
+    private TextBlock? _attractorFormulaText;
 
     public DynamicSystemWindow(DynamicSystemKind kind)
     {
@@ -62,14 +65,34 @@ public partial class DynamicSystemWindow : Window
 
     private void BuildParameterPanel()
     {
+        if (_kind == DynamicSystemKind.Attractors2D)
+        {
+            AddChoice("Формула", "Attractor2DMode",
+            new ChoiceOption[]
+            {
+                new("Клиффорд", nameof(Attractor2DKind.Clifford)),
+                new("Питер де Йонг", nameof(Attractor2DKind.PeterDeJong)),
+                new("Tinkerbell", nameof(Attractor2DKind.Tinkerbell)),
+                new("Gumowski–Mira", nameof(Attractor2DKind.GumowskiMira))
+            });
+            _attractorFormulaText = new TextBlock
+            {
+                Margin = new Thickness(0, 2, 0, 10),
+                TextWrapping = TextWrapping.Wrap
+            };
+            _attractorFormulaText.SetResourceReference(TextBlock.ForegroundProperty, "Theme.SecondaryTextBrush");
+            ParameterPanel.Children.Add(_attractorFormulaText);
+        }
         foreach ((string label, string key) in Fields(_kind)) AddField(label, key);
         if (_kind is DynamicSystemKind.Lorenz or DynamicSystemKind.Rossler) AddChoice("Проекция", "ProjectionMode", ["XY", "XZ", "YZ"]);
         if (_kind == DynamicSystemKind.LogisticMap) AddChoice("Режим", "VisualizationMode", ["Orbit", "Bifurcation", "Cobweb"]);
-        if (_kind == DynamicSystemKind.Lyapunov) AddChoice("Сглаживание", "SsaaFactor", ["1", "2", "4"]);
+        if (_kind is DynamicSystemKind.Lyapunov or DynamicSystemKind.Attractors2D) AddChoice("Сглаживание", "SsaaFactor", ["1", "2", "4"]);
         AddField("Потоки ЦП", "Threads");
         PaletteButton.Visibility = _paletteStore is null ? Visibility.Collapsed : Visibility.Visible;
-        FractalColorPanel.Visibility = _kind == DynamicSystemKind.Bifurcation ? Visibility.Visible : Visibility.Collapsed;
+        FractalColorPanel.Visibility = _kind is DynamicSystemKind.Bifurcation or DynamicSystemKind.Attractors2D ? Visibility.Visible : Visibility.Collapsed;
         BackgroundColorPanel.Visibility = _kind is DynamicSystemKind.Lyapunov or DynamicSystemKind.Henon or DynamicSystemKind.Ikeda ? Visibility.Collapsed : Visibility.Visible;
+        FractalColorButton.Content = _kind == DynamicSystemKind.Attractors2D ? "Цвет плотности" : "Цвет фрактала";
+        UpdateAttractorPresentation();
     }
 
     private static IEnumerable<(string, string)> Fields(DynamicSystemKind kind) => kind switch
@@ -80,31 +103,61 @@ public partial class DynamicSystemWindow : Window
         DynamicSystemKind.LogisticMap => [("Параметр r","R"),("Нач. x₀","X0"),("Итерации","Iterations"),("Прогрев","TransientIterations"),("Bif r min","BifurcationRMin"),("Bif r max","BifurcationRMax"),("Bif samples","BifurcationSamples"),("Bif transient","BifurcationTransient"),("Bif plotted","BifurcationPlottedPoints"),("Cobweb шаги","CobwebSteps"),("Центр X","CenterX"),("Центр Y","CenterY"),("Масштаб","Zoom")],
         DynamicSystemKind.Bifurcation => [("r min","RMin"),("r max","RMax"),("x min","XMin"),("x max","XMax"),("Прогрев","TransientIterations"),("Samples / r","SamplesPerR"),("Итерации","Iterations"),("Центр X","CenterX"),("Центр Y","CenterY"),("Масштаб","Zoom")],
         DynamicSystemKind.Henon => [("Параметр a","A"),("Параметр b","B"),("Нач. x₀","X0"),("Нач. y₀","Y0"),("Итерации","Iterations"),("Пропуск","DiscardIterations"),("Центр X","CenterX"),("Центр Y","CenterY"),("Масштаб","Zoom")],
+        DynamicSystemKind.Attractors2D => [("a","A"),("b","B"),("c","C"),("d","D"),("Нач. x₀","X0"),("Нач. y₀","Y0"),("Число точек","Iterations"),("Прогрев","DiscardIterations"),("Гамма плотности","DensityGamma"),("Центр X","CenterX"),("Центр Y","CenterY"),("Масштаб","Zoom")],
         _ => [("Параметр u","U"),("Нач. x₀","X0"),("Нач. y₀","Y0"),("Итерации","Iterations"),("Пропуск","DiscardIterations"),("X min","RangeXMin"),("X max","RangeXMax"),("Y min","RangeYMin"),("Y max","RangeYMax"),("Центр X","CenterX"),("Центр Y","CenterY"),("Масштаб","Zoom")]
     };
 
     private void AddField(string label, string key)
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = label });
+        var labelBlock = new TextBlock { Text = label };
+        panel.Children.Add(labelBlock);
         var box = new TextBox { Tag = key }; panel.Children.Add(box); _boxes[key] = box;
+        _fieldPanels[key] = panel; _fieldLabels[key] = labelBlock;
         box.TextChanged += (_, _) => { if (!_syncing) Schedule(); };
         ParameterPanel.Children.Add(panel);
     }
 
     private void AddChoice(string label, string key, string[] values)
+        => AddChoice(label, key, values.Select(value => new ChoiceOption(value, value)).ToArray());
+
+    private void AddChoice(string label, string key, ChoiceOption[] values)
     {
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock { Text = label });
-        var combo = new ComboBox { Name = key + "Box", ItemsSource=values, Tag=key };
+        var combo = new ComboBox { Name = key + "Box", ItemsSource=values, DisplayMemberPath=nameof(ChoiceOption.Display), Tag=key };
         _choices[key]=combo; combo.SelectionChanged += Choice_OnChanged; panel.Children.Add(combo); ParameterPanel.Children.Add(panel);
     }
 
     private void Choice_OnChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_syncing || sender is not ComboBox { Tag: string key, SelectedItem: string value }) return;
+        if (_syncing || sender is not ComboBox { Tag: string key, SelectedItem: ChoiceOption option }) return;
         PropertyInfo? property = typeof(DynamicSystemState).GetProperty(key); if (property is null) return;
-        property.SetValue(_state, property.PropertyType == typeof(int) ? int.Parse(value, CultureInfo.InvariantCulture) : value); Schedule();
+        property.SetValue(_state, property.PropertyType == typeof(int) ? int.Parse(option.Value, CultureInfo.InvariantCulture) : option.Value);
+        if (key == "Attractor2DMode")
+        {
+            _state.ApplyAttractor2DPreset(Attractor2DRenderer.ParseKind(option.Value));
+            SyncControls();
+            UpdateAttractorPresentation();
+        }
+        Schedule();
+    }
+
+    private void UpdateAttractorPresentation()
+    {
+        if (_kind != DynamicSystemKind.Attractors2D || _attractorFormulaText is null) return;
+        Attractor2DKind kind = Attractor2DRenderer.ParseKind(_state.Attractor2DMode);
+        if (_fieldPanels.TryGetValue("D", out StackPanel? dPanel))
+            dPanel.Visibility = kind == Attractor2DKind.GumowskiMira ? Visibility.Collapsed : Visibility.Visible;
+        if (_fieldLabels.TryGetValue("C", out TextBlock? cLabel))
+            cLabel.Text = kind == Attractor2DKind.GumowskiMira ? "μ" : "c";
+        _attractorFormulaText.Text = kind switch
+        {
+            Attractor2DKind.Clifford => "x′ = sin(a·y) + c·cos(a·x)\ny′ = sin(b·x) + d·cos(b·y)",
+            Attractor2DKind.PeterDeJong => "x′ = sin(a·y) − cos(b·x)\ny′ = sin(c·x) − cos(d·y)",
+            Attractor2DKind.Tinkerbell => "x′ = x² − y² + a·x + b·y\ny′ = 2xy + c·x + d·y",
+            _ => "x′ = y + a(1 − b·y²)y + f(x)\ny′ = −x + f(x′),  f(t) = μt + 2(1−μ)t²/(1+t²)"
+        } + "\n\nОкраска: монохромная плотность. Основа для многоцветных палитр уже отделена от расчёта орбит.";
     }
 
     private void LoadPalettes()
@@ -125,15 +178,20 @@ public partial class DynamicSystemWindow : Window
         }
         if (_state.Zoom <= 0 || _state.Threads is < 1 or > 256) throw new InvalidOperationException("Масштаб должен быть положительным, число потоков — от 1 до 256.");
         if (_kind == DynamicSystemKind.Lyapunov && (_state.AMax <= _state.AMin || _state.BMax <= _state.BMin || !_state.Pattern.Any(c => c is 'A' or 'a' or 'B' or 'b'))) throw new InvalidOperationException("Проверьте диапазоны A/B и паттерн.");
+        if (_kind == DynamicSystemKind.Attractors2D && (_state.Iterations < 1 || _state.DensityGamma is < .05 or > 8)) throw new InvalidOperationException("Число точек должно быть положительным, гамма плотности — от 0.05 до 8.");
         DynamicSystemState result = _state.Clone(name); result.Timestamp = DateTime.Now; result.PaletteName = ActivePalette?.Name ?? string.Empty; return result;
     }
 
-    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; _state = state.Clone(); _state.Kind = _kind; SyncControls(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
+    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; _state = state.Clone(); _state.Kind = _kind; SyncControls(); UpdateAttractorPresentation(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
     private void SyncControls()
     {
         _syncing=true;
         foreach ((string key, TextBox box) in _boxes) box.Text = Format(typeof(DynamicSystemState).GetProperty(key)!.GetValue(_state));
-        foreach ((string key,ComboBox combo) in _choices) combo.SelectedItem = Format(typeof(DynamicSystemState).GetProperty(key)!.GetValue(_state));
+        foreach ((string key,ComboBox combo) in _choices)
+        {
+            string value = Format(typeof(DynamicSystemState).GetProperty(key)!.GetValue(_state));
+            combo.SelectedItem = combo.Items.OfType<ChoiceOption>().FirstOrDefault(option => option.Value == value);
+        }
         _syncing=false;
     }
 
@@ -183,7 +241,14 @@ public partial class DynamicSystemWindow : Window
     private void Schedule(){if(!IsLoaded)return;_timer.Stop();_timer.Start();}
     private void Render_OnClick(object sender,RoutedEventArgs e){_timer.Stop();_cts?.Cancel();_=RenderAsync();}
     private void Cancel_OnClick(object sender,RoutedEventArgs e)=>_cts?.Cancel();
-    private void Reset_OnClick(object sender,RoutedEventArgs e){DynamicSystemState defaults=DynamicSystemState.CreateDefault(_kind);_state.CenterX=defaults.CenterX;_state.CenterY=defaults.CenterY;_state.Zoom=1;if(_kind==DynamicSystemKind.Lyapunov){_state.AMin=defaults.AMin;_state.AMax=defaults.AMax;_state.BMin=defaults.BMin;_state.BMax=defaults.BMax;}SyncControls();UpdatePreviewTransform();Schedule();}
+    private void Reset_OnClick(object sender,RoutedEventArgs e)
+    {
+        DynamicSystemState defaults=DynamicSystemState.CreateDefault(_kind);
+        if(_kind==DynamicSystemKind.Attractors2D)defaults.ApplyAttractor2DPreset(Attractor2DRenderer.ParseKind(_state.Attractor2DMode));
+        _state.CenterX=defaults.CenterX;_state.CenterY=defaults.CenterY;_state.Zoom=1;
+        if(_kind==DynamicSystemKind.Lyapunov){_state.AMin=defaults.AMin;_state.AMax=defaults.AMax;_state.BMin=defaults.BMin;_state.BMax=defaults.BMax;}
+        SyncControls();UpdatePreviewTransform();Schedule();
+    }
     private void Palette_OnClick(object sender, RoutedEventArgs e)
     {
         if (_paletteStore is null) return;
@@ -210,9 +275,32 @@ public partial class DynamicSystemWindow : Window
 
     private void Saves_OnClick(object sender,RoutedEventArgs e)
     {
-        IReadOnlyList<DynamicSystemState> presets=_kind==DynamicSystemKind.Lyapunov?
-        [new(){Kind=_kind,SaveName="Классический AB",Timestamp=DateTime.MinValue,PointOfInterestId="classic_ab",AMin=2.5,AMax=4,BMin=2.5,BMax=4,Pattern="AB",Iterations=320,TransientIterations=80,PaletteName="Классическая Ляпунова"},new(){Kind=_kind,SaveName="ABBA-структуры",Timestamp=DateTime.MinValue,PointOfInterestId="abba",AMin=3.2,AMax=4,BMin=2.6,BMax=3.6,Pattern="ABBA",Iterations=350,TransientIterations=100,PaletteName="Классическая Ляпунова"}]:[];
+        IReadOnlyList<DynamicSystemState> presets=_kind switch
+        {
+            DynamicSystemKind.Lyapunov =>
+            [
+                new(){Kind=_kind,SaveName="Классический AB",Timestamp=DateTime.MinValue,PointOfInterestId="classic_ab",AMin=2.5,AMax=4,BMin=2.5,BMax=4,Pattern="AB",Iterations=320,TransientIterations=80,PaletteName="Классическая Ляпунова"},
+                new(){Kind=_kind,SaveName="ABBA-структуры",Timestamp=DateTime.MinValue,PointOfInterestId="abba",AMin=3.2,AMax=4,BMin=2.6,BMax=3.6,Pattern="ABBA",Iterations=350,TransientIterations=100,PaletteName="Классическая Ляпунова"}
+            ],
+            DynamicSystemKind.Attractors2D => Attractor2DPointsOfInterest(),
+            _ => []
+        };
         SaveManagerWindow.Open(this,new SaveManagerConfiguration<DynamicSystemState>{WindowTitle=$"Сохранение/Загрузка: {DisplayName(_kind)}",FractalIdentifier=_kind.ToString(),LoadStates=_saves.Load,SaveStates=s=>_saves.Save(s),CaptureState=CaptureState,LoadState=LoadState,RenderPreviewAsync=RenderStatePreviewAsync,GetName=s=>s.SaveName,GetTimestamp=s=>s.Timestamp,GetDetails=s=>$"{s.Timestamp:g} · {Details(s)}",PointsOfInterest=presets});
+    }
+
+    private static IReadOnlyList<DynamicSystemState> Attractor2DPointsOfInterest() =>
+    [
+        CreateAttractor2DPoint("Клиффорд — классический", "clifford_classic", Attractor2DKind.Clifford),
+        CreateAttractor2DPoint("Питер де Йонг — вихрь", "de_jong_swirl", Attractor2DKind.PeterDeJong),
+        CreateAttractor2DPoint("Tinkerbell — классический", "tinkerbell_classic", Attractor2DKind.Tinkerbell),
+        CreateAttractor2DPoint("Gumowski–Mira — организм", "gumowski_mira_organism", Attractor2DKind.GumowskiMira)
+    ];
+
+    private static DynamicSystemState CreateAttractor2DPoint(string name, string id, Attractor2DKind kind)
+    {
+        DynamicSystemState state=DynamicSystemState.CreateDefault(DynamicSystemKind.Attractors2D);
+        state.ApplyAttractor2DPreset(kind);state.SaveName=name;state.PointOfInterestId=id;state.Timestamp=DateTime.MinValue;
+        return state;
     }
 
     private void Export_OnClick(object sender,RoutedEventArgs e)
@@ -323,11 +411,13 @@ public partial class DynamicSystemWindow : Window
     private void Window_OnKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.F11||e.Key==Key.Escape&&_fullscreen){if(!_fullscreen){_oldStyle=WindowStyle;_oldState=WindowState;WindowStyle=WindowStyle.None;WindowState=WindowState.Maximized;}else{WindowStyle=_oldStyle;WindowState=_oldState;}_fullscreen=!_fullscreen;}}
     private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();EndVisualization();_cts?.Cancel();_cts?.Dispose();}
 
-    private static string DisplayName(DynamicSystemKind k)=>k switch{DynamicSystemKind.Lyapunov=>"Экспонента Ляпунова",DynamicSystemKind.Lorenz=>"Аттрактор Лоренца",DynamicSystemKind.Rossler=>"Аттрактор Рёсслера",DynamicSystemKind.LogisticMap=>"Логистическое отображение",DynamicSystemKind.Bifurcation=>"Диаграмма бифуркации",DynamicSystemKind.Henon=>"Карта Хенона",_=>"Отображение Икэды"};
-    private static string Details(DynamicSystemState s)=>s.Kind==DynamicSystemKind.Lyapunov?$"{s.Pattern} · {s.Iterations} итераций · {s.PaletteName}":$"Масштаб {s.Zoom:G5} · {Math.Max(s.Iterations,s.Steps):N0} итераций";
-    private static double BaseSpan(DynamicSystemState s)=>s.Kind switch{DynamicSystemKind.Lorenz or DynamicSystemKind.Rossler=>80,DynamicSystemKind.Henon=>6,DynamicSystemKind.Ikeda=>Math.Max(.0001,s.RangeXMax-s.RangeXMin),_=>1};
+    private static string DisplayName(DynamicSystemKind k)=>k switch{DynamicSystemKind.Lyapunov=>"Экспонента Ляпунова",DynamicSystemKind.Lorenz=>"Аттрактор Лоренца",DynamicSystemKind.Rossler=>"Аттрактор Рёсслера",DynamicSystemKind.LogisticMap=>"Логистическое отображение",DynamicSystemKind.Bifurcation=>"Диаграмма бифуркации",DynamicSystemKind.Henon=>"Карта Хенона",DynamicSystemKind.Ikeda=>"Отображение Икэды",_=>"2D-аттракторы"};
+    private static string Details(DynamicSystemState s)=>s.Kind switch{DynamicSystemKind.Lyapunov=>$"{s.Pattern} · {s.Iterations} итераций · {s.PaletteName}",DynamicSystemKind.Attractors2D=>$"{Attractor2DDisplayName(Attractor2DRenderer.ParseKind(s.Attractor2DMode))} · {s.Iterations:N0} точек · масштаб {s.Zoom:G5}",_=>$"Масштаб {s.Zoom:G5} · {Math.Max(s.Iterations,s.Steps):N0} итераций"};
+    private static string Attractor2DDisplayName(Attractor2DKind kind)=>kind switch{Attractor2DKind.Clifford=>"Клиффорд",Attractor2DKind.PeterDeJong=>"Питер де Йонг",Attractor2DKind.Tinkerbell=>"Tinkerbell",_=>"Gumowski–Mira"};
+    private static double BaseSpan(DynamicSystemState s)=>s.Kind switch{DynamicSystemKind.Lorenz or DynamicSystemKind.Rossler=>80,DynamicSystemKind.Henon=>6,DynamicSystemKind.Ikeda=>Math.Max(.0001,s.RangeXMax-s.RangeXMin),DynamicSystemKind.Attractors2D=>Attractor2DRenderer.GetBaseSpan(Attractor2DRenderer.ParseKind(s.Attractor2DMode)),_=>1};
     private static string Format(object? value)=>value switch{double d=>d.ToString("G15",CultureInfo.InvariantCulture),float f=>f.ToString("G9",CultureInfo.InvariantCulture),null=>string.Empty,_=>Convert.ToString(value,CultureInfo.InvariantCulture)??string.Empty};
     private static bool TryDouble(string text,out double value)=>double.TryParse(text,NumberStyles.Float,CultureInfo.InvariantCulture,out value)||double.TryParse(text,NumberStyles.Float,CultureInfo.CurrentCulture,out value);
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T:DependencyObject{for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++){DependencyObject child=VisualTreeHelper.GetChild(root,i);if(child is T match)yield return match;foreach(T nested in FindVisualChildren<T>(child))yield return nested;}}
+    private sealed record ChoiceOption(string Display,string Value);
     private readonly record struct DynamicTileRenderEvent(bool IsStart,MandelbrotRenderTile Tile,byte[]? Pixels);
 }

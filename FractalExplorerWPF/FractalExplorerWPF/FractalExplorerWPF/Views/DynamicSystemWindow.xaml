@@ -49,7 +49,7 @@
 
                     <Grid x:Name="FractalColorPanel" Margin="0,4,0,0">
                         <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                        <Button Content="Цвет фрактала" Click="FractalColor_OnClick"/>
+                        <Button x:Name="FractalColorButton" Content="Цвет фрактала" Click="FractalColor_OnClick"/>
                         <Border x:Name="FractalColorSwatch" Grid.Column="1" Margin="6"
                                 CornerRadius="4" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1"
                                 MouseLeftButtonDown="FractalColor_OnClick"/>
