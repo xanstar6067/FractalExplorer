@@ -52,6 +52,8 @@ public partial class CollatzWindow : Window
         ThresholdBox.Text = "100";
         ZoomBox.Text = "1";
         PParameterBox.Text = "3";
+        QRealParameterBox.Text = "0";
+        QImaginaryParameterBox.Text = "0";
         VariationBox.SelectedIndex = 0;
         ColoringBox.SelectedIndex = 1;
         SsaaBox.SelectedIndex = 0;
@@ -69,7 +71,11 @@ public partial class CollatzWindow : Window
         if (!TryRead(ThresholdBox.Text, out decimal threshold) || threshold is < 2 or > 10_000)
             throw new InvalidOperationException("Порог выхода должен быть от 2 до 10000.");
         if (!TryRead(PParameterBox.Text, out decimal p) || p is < -100 or > 100)
-            throw new InvalidOperationException("Параметр P должен быть от −100 до 100.");
+            throw new InvalidOperationException("Параметр p должен быть от −100 до 100.");
+        if (!TryRead(QRealParameterBox.Text, out decimal qReal) || qReal is < -100 or > 100)
+            throw new InvalidOperationException("Re(q) должна быть от −100 до 100.");
+        if (!TryRead(QImaginaryParameterBox.Text, out decimal qImaginary) || qImaginary is < -100 or > 100)
+            throw new InvalidOperationException("Im(q) должна быть от −100 до 100.");
         return new CollatzState
         {
             SaveName = name,
@@ -79,8 +85,11 @@ public partial class CollatzWindow : Window
             Zoom = _zoom,
             Threshold = threshold,
             Iterations = iterations,
-            Variation = (CollatzVariation)Math.Clamp(VariationBox.SelectedIndex, 0, 2),
+            Variation = (CollatzVariation)Math.Clamp(VariationBox.SelectedIndex, 0,
+                (int)CollatzVariation.GeneralizedPQ),
             PParameter = p,
+            QRealParameter = qReal,
+            QImaginaryParameter = qImaginary,
             UseSmoothColoring = ColoringBox.SelectedIndex == 1,
             Palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name)
         };
@@ -96,7 +105,10 @@ public partial class CollatzWindow : Window
         ThresholdBox.Text = Format(state.Threshold);
         ZoomBox.Text = Format(_zoom);
         PParameterBox.Text = Format(state.PParameter);
-        VariationBox.SelectedIndex = (int)state.Variation;
+        QRealParameterBox.Text = Format(state.QRealParameter);
+        QImaginaryParameterBox.Text = Format(state.QImaginaryParameter);
+        VariationBox.SelectedIndex = Math.Clamp((int)state.Variation, 0,
+            (int)CollatzVariation.GeneralizedPQ);
         ColoringBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0;
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
         UpdateVariationControls();
@@ -115,8 +127,17 @@ public partial class CollatzWindow : Window
 
     private void UpdateVariationControls()
     {
+        CollatzVariation variation = (CollatzVariation)Math.Clamp(VariationBox.SelectedIndex, 0,
+            (int)CollatzVariation.GeneralizedPQ);
         if (PParameterPanel is not null)
-            PParameterPanel.Visibility = VariationBox.SelectedIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+            PParameterPanel.Visibility = variation is CollatzVariation.ParityBranchVariation or
+                CollatzVariation.GeneralizedP or CollatzVariation.GeneralizedPQ
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (QParameterPanel is not null)
+            QParameterPanel.Visibility = variation == CollatzVariation.GeneralizedPQ
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (VariationHintText is not null)
+            VariationHintText.Text = VariationDescription(variation);
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
@@ -411,9 +432,20 @@ public partial class CollatzWindow : Window
 
     private static string VariationDisplayName(CollatzVariation variation) => variation switch
     {
-        CollatzVariation.SineVariation => "синусная вариация",
-        CollatzVariation.GeneralizedP => "обобщённая p·x+1",
+        CollatzVariation.SineVariation => "синусная арт-вариация",
+        CollatzVariation.ParityBranchVariation => "арт-вариация с ветвями 1 / (p−1)n",
+        CollatzVariation.GeneralizedP => "обобщённая Cₚ",
+        CollatzVariation.GeneralizedPQ => "семейство C(p,q)",
         _ => "стандартная вариация"
+    };
+
+    private static string VariationDescription(CollatzVariation variation) => variation switch
+    {
+        CollatzVariation.SineVariation => "Художественная вариация; не сохраняет отображение Коллатца на целых.",
+        CollatzVariation.ParityBranchVariation => "Прежний режим Generalized P: чётное n → 1, нечётное n → (p−1)n.",
+        CollatzVariation.GeneralizedP => "Аналитическое продолжение: чётное n → n/2, нечётное n → pn+1.",
+        CollatzVariation.GeneralizedPQ => "То же отображение на целых; комплексный q меняет только продолжение между ними.",
+        _ => "Классическое продолжение Коллатца (p = 3)."
     };
 
     private static bool TryRead(string text, out decimal value) =>

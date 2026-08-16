@@ -98,8 +98,7 @@ public static class SaveManagerConfigurations
         RenderPreviewAsync = window.RenderStatePreviewAsync,
         GetName = state => state.SaveName,
         GetTimestamp = state => state.Timestamp,
-        GetDetails = state => $"{Prefix(state.Timestamp)} · Режим: {VariationName(state.Variation)} · Итерации: {state.Iterations}\n" +
-                                    $"Порог: {state.Threshold:G8} · Масштаб: {state.Zoom:G8}",
+        GetDetails = DescribeCollatz,
         PointsOfInterest = PresetManager.GetCollatzPresets()
     };
 
@@ -185,6 +184,18 @@ public static class SaveManagerConfigurations
         return details;
     }
 
+    private static string DescribeCollatz(CollatzState state)
+    {
+        string details = $"{Prefix(state.Timestamp)} · Режим: {VariationName(state.Variation)} · Итерации: {state.Iterations}\n" +
+                         $"Порог: {state.Threshold:G8} · Масштаб: {state.Zoom:G8}";
+        if (state.Variation is CollatzVariation.ParityBranchVariation or
+            CollatzVariation.GeneralizedP or CollatzVariation.GeneralizedPQ)
+            details += $" · p: {state.PParameter:G8}";
+        if (state.Variation == CollatzVariation.GeneralizedPQ)
+            details += $" · q: {Complex(state.QRealParameter, state.QImaginaryParameter)}";
+        return details;
+    }
+
     private static string Prefix(DateTime timestamp) => timestamp == DateTime.MinValue ? "Точка интереса" : timestamp.ToString("g");
 
     private static string Complex(decimal real, decimal imaginary) =>
@@ -195,8 +206,10 @@ public static class SaveManagerConfigurations
 
     private static string VariationName(CollatzVariation variation) => variation switch
     {
-        CollatzVariation.SineVariation => "Синусная",
-        CollatzVariation.GeneralizedP => "Обобщённая p·x+1",
+        CollatzVariation.SineVariation => "Синусная (арт)",
+        CollatzVariation.ParityBranchVariation => "Ветви 1 / (p−1)n (арт)",
+        CollatzVariation.GeneralizedP => "Обобщённая Cₚ",
+        CollatzVariation.GeneralizedPQ => "Семейство C(p,q)",
         _ => "Стандартная"
     };
 }

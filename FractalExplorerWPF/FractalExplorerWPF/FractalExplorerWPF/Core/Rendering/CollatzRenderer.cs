@@ -75,21 +75,24 @@ public static class CollatzRenderer
         if (scale < DecimalScaleThreshold)
         {
             var z = new ComplexDecimal(real, imaginary);
-            iteration = IterateDecimal(ref z, state.Variation, state.PParameter, state.Iterations,
-                state.Threshold);
+            var q = new ComplexDecimal(state.QRealParameter, state.QImaginaryParameter);
+            iteration = IterateDecimal(ref z, state.Variation, state.PParameter, q,
+                state.Iterations, state.Threshold);
             smooth = Smooth(iteration, state.Iterations, z);
         }
         else
         {
             var z = new Complex((double)real, (double)imaginary);
-            iteration = Iterate(ref z, state.Variation, (double)state.PParameter, state.Iterations,
-                (double)(state.Threshold * state.Threshold));
+            var q = new Complex((double)state.QRealParameter, (double)state.QImaginaryParameter);
+            iteration = Iterate(ref z, state.Variation, (double)state.PParameter, q,
+                state.Iterations, (double)(state.Threshold * state.Threshold));
             smooth = Smooth(iteration, state.Iterations, z);
         }
         return ResolveColor(state, iteration, smooth);
     }
 
-    private static int Iterate(ref Complex z, CollatzVariation variation, double p, int maximum, double thresholdSquared)
+    private static int Iterate(ref Complex z, CollatzVariation variation, double p, Complex q,
+        int maximum, double thresholdSquared)
     {
         int iteration = 0;
         while (iteration < maximum)
@@ -97,19 +100,14 @@ public static class CollatzRenderer
             double magnitudeSquared = z.Real * z.Real + z.Imaginary * z.Imaginary;
             if (!double.IsFinite(magnitudeSquared) || magnitudeSquared > thresholdSquared || Math.Abs(z.Imaginary * Math.PI) > 700) break;
 
-            z = variation switch
-            {
-                CollatzVariation.SineVariation => 0.25 * (2 + 7 * z - (2 + 5 * z) * Complex.Sin(Math.PI * z)),
-                CollatzVariation.GeneralizedP => 0.5 * ((p - 1) * z + 1 - ((p - 1) * z - 1) * Complex.Cos(Math.PI * z)),
-                _ => 0.25 * (2 + 7 * z - (2 + 5 * z) * Complex.Cos(Math.PI * z))
-            };
+            z = ApplyFormula(z, variation, p, q);
             iteration++;
         }
         return iteration;
     }
 
-    private static int IterateDecimal(ref ComplexDecimal z, CollatzVariation variation, decimal p, int maximum,
-        decimal threshold)
+    private static int IterateDecimal(ref ComplexDecimal z, CollatzVariation variation, decimal p,
+        ComplexDecimal q, int maximum, decimal threshold)
     {
         int iteration = 0;
         while (iteration < maximum && IsWithinEscapeRadius(z, threshold))
@@ -117,16 +115,7 @@ public static class CollatzRenderer
             if (Math.Abs(z.Imaginary * (decimal)Math.PI) > 60m) break;
             try
             {
-                ComplexDecimal argument = z * (decimal)Math.PI;
-                z = variation switch
-                {
-                    CollatzVariation.SineVariation => 0.25m *
-                        (new ComplexDecimal(2, 0) + z * 7 - (new ComplexDecimal(2, 0) + z * 5) * ComplexSin(argument)),
-                    CollatzVariation.GeneralizedP => 0.5m *
-                        ((p - 1) * z + 1 - ((p - 1) * z - 1) * ComplexCos(argument)),
-                    _ => (new ComplexDecimal(2, 0) + z * 7 -
-                          (new ComplexDecimal(2, 0) + z * 5) * ComplexCos(argument)) / 4m
-                };
+                z = ApplyFormula(z, variation, p, q);
                 iteration++;
             }
             catch (OverflowException)
@@ -135,6 +124,49 @@ public static class CollatzRenderer
             }
         }
         return iteration;
+    }
+
+    internal static Complex ApplyFormula(Complex z, CollatzVariation variation, double p, Complex q)
+    {
+        Complex argument = Math.PI * z;
+        return variation switch
+        {
+            CollatzVariation.SineVariation =>
+                0.25 * (2 + 7 * z - (2 + 5 * z) * Complex.Sin(argument)),
+            CollatzVariation.ParityBranchVariation =>
+                0.5 * ((p - 1) * z + 1 - ((p - 1) * z - 1) * Complex.Cos(argument)),
+            CollatzVariation.GeneralizedP => GeneralizedCollatz(z, p, Complex.Cos(argument)),
+            CollatzVariation.GeneralizedPQ =>
+                GeneralizedCollatz(z, p, Complex.Cos(argument)) + q * Complex.Sin(argument),
+            _ => 0.25 * (2 + 7 * z - (2 + 5 * z) * Complex.Cos(argument))
+        };
+    }
+
+    internal static ComplexDecimal ApplyFormula(ComplexDecimal z, CollatzVariation variation, decimal p,
+        ComplexDecimal q)
+    {
+        ComplexDecimal argument = z * (decimal)Math.PI;
+        var two = new ComplexDecimal(2, 0);
+        return variation switch
+        {
+            CollatzVariation.SineVariation =>
+                (two + z * 7 - (two + z * 5) * ComplexSin(argument)) / 4m,
+            CollatzVariation.ParityBranchVariation =>
+                ((p - 1) * z + 1 - ((p - 1) * z - 1) * ComplexCos(argument)) * 0.5m,
+            CollatzVariation.GeneralizedP => GeneralizedCollatz(z, p, ComplexCos(argument)),
+            CollatzVariation.GeneralizedPQ =>
+                GeneralizedCollatz(z, p, ComplexCos(argument)) + q * ComplexSin(argument),
+            _ => (two + z * 7 - (two + z * 5) * ComplexCos(argument)) / 4m
+        };
+    }
+
+    private static Complex GeneralizedCollatz(Complex z, double p, Complex cosine) =>
+        (2 + (2 * p + 1) * z - (2 + (2 * p - 1) * z) * cosine) / 4;
+
+    private static ComplexDecimal GeneralizedCollatz(ComplexDecimal z, decimal p, ComplexDecimal cosine)
+    {
+        var two = new ComplexDecimal(2, 0);
+        return (two + (2 * p + 1) * z - (two + (2 * p - 1) * z) * cosine) / 4m;
     }
 
     private static bool IsWithinEscapeRadius(ComplexDecimal z, decimal threshold)

@@ -2,9 +2,14 @@ namespace FractalExplorerWPF.Models;
 
 public enum CollatzVariation
 {
-    Standard,
-    SineVariation,
-    GeneralizedP
+    Standard = 0,
+    SineVariation = 1,
+
+    // Value 2 used to be named GeneralizedP. Keep its numeric value so existing
+    // saves continue to render with the formula with which they were created.
+    ParityBranchVariation = 2,
+    GeneralizedP = 3,
+    GeneralizedPQ = 4
 }
 
 public sealed class CollatzState
@@ -19,6 +24,8 @@ public sealed class CollatzState
     public int Iterations { get; set; } = 150;
     public CollatzVariation Variation { get; set; }
     public decimal PParameter { get; set; } = 3;
+    public decimal QRealParameter { get; set; }
+    public decimal QImaginaryParameter { get; set; }
     public bool UseSmoothColoring { get; set; } = true;
     public MandelbrotPalette Palette { get; set; } = new();
 }
