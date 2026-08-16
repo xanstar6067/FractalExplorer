@@ -174,7 +174,8 @@
                 MouseWheel="CanvasHost_OnMouseWheel"
                 MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
                 MouseMove="CanvasHost_OnMouseMove"
-                MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+                MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp"
+                LostMouseCapture="CanvasHost_OnLostMouseCapture">
             <Grid>
                 <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/>
                 <Border x:Name="AnimationBadge" HorizontalAlignment="Right" VerticalAlignment="Top"

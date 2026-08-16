@@ -94,6 +94,7 @@
         <Border x:Name="CanvasHost"
                 Grid.Column="1" Margin="0,10,10,10"
                 Background="Black"
+                ClipToBounds="True"
                 BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7"
                 theme:ThemeContract.IgnoreAudit="True"
@@ -101,7 +102,8 @@
                 MouseWheel="CanvasHost_OnMouseWheel"
                 MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
                 MouseMove="CanvasHost_OnMouseMove"
-                MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+                MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp"
+                LostMouseCapture="CanvasHost_OnLostMouseCapture">
             <Image x:Name="CanvasImage"
                    Stretch="Fill"
                    SnapsToDevicePixels="True"/>

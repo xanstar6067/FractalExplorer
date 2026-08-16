@@ -631,14 +631,24 @@ public partial class LSystemWindow : Window
         _redrawTimer.Stop();
         _isPanning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
-        CanvasHost.CaptureMouse();
-        Mouse.OverrideCursor = Cursors.SizeAll;
+        CanvasHost.Cursor = Cursors.SizeAll;
+        if (!CanvasHost.CaptureMouse())
+        {
+            _isPanning = false;
+            CanvasHost.Cursor = null;
+        }
     }
 
     private void CanvasHost_OnMouseMove(object sender, MouseEventArgs e)
     {
         if (!_isPanning)
         {
+            return;
+        }
+
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            StopPanning();
             return;
         }
 
@@ -652,15 +662,29 @@ public partial class LSystemWindow : Window
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        StopPanning();
+    }
+
+    private void CanvasHost_OnLostMouseCapture(object sender, MouseEventArgs e) => StopPanning();
+
+    private void StopPanning(bool scheduleRedraw = true)
+    {
         if (!_isPanning)
         {
             return;
         }
 
         _isPanning = false;
-        CanvasHost.ReleaseMouseCapture();
-        Mouse.OverrideCursor = null;
-        ScheduleRedraw();
+        if (CanvasHost.IsMouseCaptured)
+        {
+            CanvasHost.ReleaseMouseCapture();
+        }
+
+        CanvasHost.Cursor = null;
+        if (scheduleRedraw)
+        {
+            ScheduleRedraw();
+        }
     }
 
     private void Window_OnKeyDown(object sender, KeyEventArgs e)
@@ -690,6 +714,7 @@ public partial class LSystemWindow : Window
 
     private void Window_OnClosing(object? sender, CancelEventArgs e)
     {
+        StopPanning(scheduleRedraw: false);
         _redrawTimer.Stop();
         _animationTimer.Stop();
         _buildCts?.Cancel();

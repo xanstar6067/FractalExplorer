@@ -405,14 +405,24 @@ public partial class SerpinskyWindow : Window
         _renderCts?.Cancel();
         _isPanning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
-        CanvasHost.CaptureMouse();
-        Mouse.OverrideCursor = Cursors.SizeAll;
+        CanvasHost.Cursor = Cursors.SizeAll;
+        if (!CanvasHost.CaptureMouse())
+        {
+            _isPanning = false;
+            CanvasHost.Cursor = null;
+        }
     }
 
     private void CanvasHost_OnMouseMove(object sender, MouseEventArgs e)
     {
         if (!_isPanning)
         {
+            return;
+        }
+
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            StopPanning();
             return;
         }
 
@@ -427,15 +437,29 @@ public partial class SerpinskyWindow : Window
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        StopPanning();
+    }
+
+    private void CanvasHost_OnLostMouseCapture(object sender, MouseEventArgs e) => StopPanning();
+
+    private void StopPanning(bool scheduleRender = true)
+    {
         if (!_isPanning)
         {
             return;
         }
 
         _isPanning = false;
-        CanvasHost.ReleaseMouseCapture();
-        Mouse.OverrideCursor = null;
-        ScheduleRender();
+        if (CanvasHost.IsMouseCaptured)
+        {
+            CanvasHost.ReleaseMouseCapture();
+        }
+
+        CanvasHost.Cursor = null;
+        if (scheduleRender)
+        {
+            ScheduleRender();
+        }
     }
 
     private void PresentBitmap(BitmapSource bitmap, SerpinskySaveState state)
@@ -516,6 +540,7 @@ public partial class SerpinskyWindow : Window
 
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        StopPanning(scheduleRender: false);
         _renderTimer.Stop();
         _renderCts?.Cancel();
         _renderCts?.Dispose();
