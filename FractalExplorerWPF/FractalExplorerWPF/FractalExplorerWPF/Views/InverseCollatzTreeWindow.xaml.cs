@@ -82,7 +82,7 @@ public partial class InverseCollatzTreeWindow : Window
         int interval = ReadInt(AnimationIntervalBox.Text, "интервал роста", 30, 5_000);
         int modulus = SelectedModulus;
         int residue = modulus <= 0 || ResidueBox.SelectedIndex <= 0 ? -1 : ResidueBox.SelectedIndex - 1;
-        MandelbrotPalette palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name);
+        InverseCollatzPalette palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name);
         return new InverseCollatzState
         {
             SaveName = name,
@@ -202,7 +202,7 @@ public partial class InverseCollatzTreeWindow : Window
 
     private void PaletteButton_OnClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new MandelbrotPaletteWindow(_paletteManager) { Owner = this };
+        var dialog = new InverseCollatzPaletteWindow(_paletteManager) { Owner = this };
         dialog.PaletteApplied += (_, _) => ScheduleRender();
         dialog.ShowDialog();
     }

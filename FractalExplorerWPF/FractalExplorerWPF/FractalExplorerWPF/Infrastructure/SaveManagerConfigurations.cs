@@ -117,7 +117,11 @@ public static class SaveManagerConfigurations
         GetDetails = state => $"{Prefix(state.Timestamp)} · Глубина: {state.Depth} · " +
                                     $"Узлов до: {state.MaxNodes:N0}\n" +
                                     $"Раскладка: {(state.Layout == InverseCollatzLayout.Radial ? "радиальная" : "по уровням")} · " +
-                                    $"Фильтр: {DescribeInverseCollatzFilter(state)} · Масштаб: {state.Zoom:G6}"
+                                    $"Фильтр: {DescribeInverseCollatzFilter(state)} · Масштаб: {state.Zoom:G6}\n" +
+                                    $"Палитра: {state.Palette.Name} · " +
+                                    (state.Palette.Mapping == InverseCollatzPaletteMapping.RepeatByLevel
+                                        ? $"цикл через {state.Palette.LevelsPerCycle} уровней"
+                                        : "растяжение по глубине")
     };
 
     public static SaveManagerConfiguration<BuddhabrotState> ForBuddhabrot(

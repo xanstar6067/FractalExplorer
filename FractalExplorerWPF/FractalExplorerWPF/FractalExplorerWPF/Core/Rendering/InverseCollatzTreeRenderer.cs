@@ -372,10 +372,23 @@ public static class InverseCollatzTreeRenderer
     private static byte Blend(byte background, byte foreground, double alpha) =>
         (byte)Math.Clamp((int)Math.Round(background + (foreground - background) * alpha), 0, 255);
 
-    private static Color DepthColor(MandelbrotPalette palette, int depth, int maximumDepth) =>
-        SamplePalette(palette, depth / (double)Math.Max(1, maximumDepth));
+    private static Color DepthColor(InverseCollatzPalette palette, int depth, int maximumDepth)
+    {
+        double normalized;
+        if (palette.Mapping == InverseCollatzPaletteMapping.RepeatByLevel)
+        {
+            int levels = Math.Clamp(palette.LevelsPerCycle, 2, 500);
+            normalized = depth % levels / (double)(levels - 1);
+        }
+        else
+        {
+            normalized = depth / (double)Math.Max(1, maximumDepth);
+        }
+        if (palette.Reverse) normalized = 1 - normalized;
+        return SamplePalette(palette, normalized);
+    }
 
-    private static Color SamplePalette(MandelbrotPalette palette, double normalized)
+    private static Color SamplePalette(InverseCollatzPalette palette, double normalized)
     {
         if (palette.Colors.Count == 0) return Colors.White;
         if (palette.Colors.Count == 1) return ApplyGamma(palette.Colors[0], palette.Gamma);
