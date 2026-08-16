@@ -31,7 +31,7 @@
 | Множество Мандельброта | Mandelbrot, Burning Ship, Tricorn (Mandelbar), Buffalo, Celtic Mandelbrot, Simonobrot, Generalized Mandelbrot |
 | Множество Жюлиа | Julia, Julia Burning Ship и две галереи констант `C` |
 | Итерируемые функции | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame |
-| Геометрические фракталы | Треугольник Серпинского, IFS Барнсли / Хейуэя |
+| Геометрические фракталы | L‑системы (Кох, Гильберт, Леви, Dragon Curve, деревья, растения, Серпинский), IFS Барнсли / Хейуэя |
 | Динамические системы | Lyapunov, Lorenz, Rössler, Logistic Map, Bifurcation, Hénon, Ikeda |
 
 ### Интерфейс
@@ -58,6 +58,10 @@ Newton Pools+ поддерживает готовые и пользовател�
     <td align="center"><sub>IFS — папоротник Барнсли</sub></td>
   </tr>
 </table>
+
+#### L‑системы
+
+Модуль L‑систем объединяет готовые геометрические фракталы и редактор аксиомы, правил, угла, глубины и рисующих символов. Цвет и толщину можно распределять по поколению, глубине ветвления или ходу построения; построение анимируется и экспортируется в высоком разрешении. Треугольник Серпинского теперь входит в этот общий режим.
 
 #### Стохастические фракталы и динамические системы
 
@@ -164,7 +168,7 @@ An interactive fractal and dynamical-systems laboratory for Windows. The current
 | Mandelbrot set | Mandelbrot, Burning Ship, Tricorn (Mandelbar), Buffalo, Celtic Mandelbrot, Simonobrot, Generalized Mandelbrot |
 | Julia set | Julia, Julia Burning Ship, and two constant-`C` galleries |
 | Iterated functions | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame |
-| Geometric fractals | Sierpiński triangle, Barnsley / Heighway IFS |
+| Geometric fractals | L‑systems (Koch, Hilbert, Lévy C, Dragon Curve, trees, plants, Sierpiński), Barnsley / Heighway IFS |
 | Dynamical systems | Lyapunov, Lorenz, Rössler, Logistic Map, Bifurcation, Hénon, Ikeda |
 
 ### Interface
@@ -191,6 +195,10 @@ Newton Pools+ supports presets and custom formulas together with the Newton, Hal
     <td align="center"><sub>Barnsley fern IFS</sub></td>
   </tr>
 </table>
+
+#### L‑systems
+
+The L‑system module combines geometric presets with an editor for the axiom, rewriting rules, angle, depth, and drawing symbols. Color and thickness can follow symbol generation, branch depth, or drawing order; construction can be animated and exported at high resolution. The Sierpiński triangle is now a preset in this shared module.
 
 #### Stochastic fractals and dynamical systems
 

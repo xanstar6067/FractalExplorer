@@ -167,9 +167,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_selectedItem?.LaunchKey == "Serpinsky")
+        if (_selectedItem?.LaunchKey is "LSystem" or "Serpinsky")
         {
-            new SerpinskyWindow { Owner = this }.Show();
+            new LSystemWindow { Owner = this }.Show();
             return;
         }
 

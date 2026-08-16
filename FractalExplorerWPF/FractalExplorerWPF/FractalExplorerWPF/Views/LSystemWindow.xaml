@@ -1,0 +1,193 @@
+<Window x:Class="FractalExplorerWPF.Views.LSystemWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        Title="L‑системы и черепашья графика"
+        Width="1280" Height="780" MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/leaf.ico"
+        KeyDown="Window_OnKeyDown"
+        Closing="Window_OnClosing">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Margin" Value="0,3"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="6,3"/>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="30"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="ControlsColumn" Width="370"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border x:Name="ControlsHost" Grid.Column="0" Margin="10" Padding="14"
+                Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}"
+                BorderThickness="1" CornerRadius="7">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Text="L‑системы"/>
+                    <TextBlock Margin="0,3,0,12"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                               Text="Детерминированная перезапись и черепашья графика"/>
+
+                    <TextBlock Text="Готовый набор"/>
+                    <ComboBox x:Name="PresetBox" Margin="0,4,0,5"
+                              SelectionChanged="Preset_OnChanged"/>
+                    <TextBlock x:Name="PresetDescription" Margin="0,0,0,10"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock FontWeight="SemiBold" Text="Редактор правил"/>
+                    <TextBlock Margin="0,7,0,2" Text="Аксиома"/>
+                    <TextBox x:Name="AxiomBox" FontFamily="Consolas"
+                             TextChanged="Input_OnChanged"/>
+                    <TextBlock Margin="0,7,0,2" Text="Правила (по одному на строку)"/>
+                    <TextBox x:Name="RulesBox" Height="112" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto" FontFamily="Consolas"
+                             TextChanged="Input_OnChanged"/>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Угол, °"/>
+                            <TextBox x:Name="AngleBox" Margin="0,3,0,0"
+                                     TextChanged="Input_OnChanged"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Глубина"/>
+                            <TextBox x:Name="DepthBox" Margin="0,3,0,0"
+                                     TextChanged="Input_OnChanged"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Стартовый угол, °"/>
+                            <TextBox x:Name="InitialAngleBox" Margin="0,3,0,0"
+                                     TextChanged="Input_OnChanged"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Рисующие символы"/>
+                            <TextBox x:Name="DrawSymbolsBox" Margin="0,3,0,0" FontFamily="Consolas"
+                                     TextChanged="Input_OnChanged"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Expander Margin="0,12,0,0" Header="Цвет и толщина" IsExpanded="True">
+                        <StackPanel Margin="0,7,0,0">
+                            <TextBlock Text="Распределение стиля"/>
+                            <ComboBox x:Name="StyleModeBox" Margin="0,3,0,8"
+                                      SelectionChanged="Appearance_OnChanged"/>
+                            <TextBlock Text="Начальный цвет"/>
+                            <controls:ColorSelectorControl x:Name="StartColorSelector" Margin="0,3,0,7"
+                                                           SelectedColorChanged="Appearance_OnChanged"/>
+                            <TextBlock Text="Конечный цвет"/>
+                            <controls:ColorSelectorControl x:Name="EndColorSelector" Margin="0,3,0,7"
+                                                           SelectedColorChanged="Appearance_OnChanged"/>
+                            <TextBlock Text="Цвет фона"/>
+                            <controls:ColorSelectorControl x:Name="BackgroundColorSelector" Margin="0,3,0,7"
+                                                           SelectedColorChanged="Appearance_OnChanged"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Толщина в начале"/>
+                                    <TextBox x:Name="StartThicknessBox" Margin="0,3,0,0"
+                                             TextChanged="Appearance_OnChanged"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Толщина в конце"/>
+                                    <TextBox x:Name="EndThicknessBox" Margin="0,3,0,0"
+                                             TextChanged="Appearance_OnChanged"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Expander>
+
+                    <TextBlock Margin="0,12,0,2" Text="Длительность анимации, сек"/>
+                    <TextBox x:Name="AnimationDurationBox" Text="6"
+                             TextChanged="Input_OnChanged"/>
+
+                    <Grid Margin="0,7,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Построить" Click="Build_OnClick"/>
+                        <Button x:Name="AnimateButton" Grid.Column="2"
+                                Content="▶ Анимация" Click="Animate_OnClick"/>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Сбросить вид" Click="ResetView_OnClick"/>
+                        <Button x:Name="CancelButton" Grid.Column="2" Content="Отмена"
+                                IsEnabled="False" Click="Cancel_OnClick"/>
+                    </Grid>
+                    <Button Content="Сохранить изображение" Click="Export_OnClick"/>
+
+                    <ProgressBar x:Name="RenderProgress" Height="18" Margin="0,10,0,0"
+                                 Minimum="0" Maximum="100"/>
+                    <TextBlock x:Name="StatusText" Margin="0,7,0,0"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                               TextWrapping="Wrap" Text="Готово"/>
+                    <TextBlock Margin="0,12,0,0"
+                               Foreground="{DynamicResource Theme.DisabledTextBrush}"
+                               TextWrapping="Wrap"
+                               Text="Команды: +/− — поворот, [ ] — ветвь, | — разворот, f — ход без линии. Колесо: масштаб. ЛКМ: перемещение. F11: весь экран."/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10"
+                Background="Black" ClipToBounds="True"
+                BorderBrush="{DynamicResource Theme.BorderBrush}"
+                BorderThickness="1" CornerRadius="7"
+                theme:ThemeContract.IgnoreAudit="True"
+                SizeChanged="CanvasHost_OnSizeChanged"
+                MouseWheel="CanvasHost_OnMouseWheel"
+                MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
+                MouseMove="CanvasHost_OnMouseMove"
+                MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+            <Grid>
+                <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"/>
+                <Border x:Name="AnimationBadge" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000"
+                        Visibility="Collapsed">
+                    <TextBlock x:Name="AnimationBadgeText" Foreground="White"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Button x:Name="ToggleControlsButton" Grid.Column="1"
+                Style="{StaticResource FractalPanelToggleButtonStyle}"
+                Content="✕" ToolTip="Скрыть панель параметров"
+                Click="ToggleControlsButton_OnClick"/>
+    </Grid>
+</Window>
