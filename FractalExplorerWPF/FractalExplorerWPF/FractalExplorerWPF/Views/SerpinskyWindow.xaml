@@ -39,14 +39,14 @@
                 <StackPanel>
                     <TextBlock FontSize="18" FontWeight="SemiBold" Text="Параметры"/>
 
-                    <TextBlock Margin="0,14,0,0" Text="Режим"/>
+                    <TextBlock x:Name="RenderModeLabel" Margin="0,14,0,0" Text="Режим"/>
                     <ComboBox x:Name="RenderModeBox"
                               SelectionChanged="Parameter_OnChanged">
                         <ComboBoxItem Content="Геометрический"/>
                         <ComboBoxItem Content="Игра хаоса"/>
                     </ComboBox>
 
-                    <TextBlock Text="Итерации / точки"/>
+                    <TextBlock x:Name="IterationsLabel" Text="Итерации / точки"/>
                     <TextBox x:Name="IterationsBox"
                              TextChanged="Parameter_OnChanged"/>
 

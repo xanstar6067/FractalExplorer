@@ -23,6 +23,10 @@ public partial class SerpinskyWindow : Window
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private readonly SerpinskyPaletteManager _paletteManager = new();
     private readonly SerpinskySaveStore _saveStore = new();
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly TranslateTransform _previewTranslation = new();
+    private readonly bool _chaosOnly;
     private CancellationTokenSource? _renderCts;
     private bool _isRendering;
     private bool _isPanning;
@@ -34,14 +38,32 @@ public partial class SerpinskyWindow : Window
     private double _centerX;
     private double _centerY;
     private double _zoom = 1.0;
+    private bool _hasRenderedFrame;
+    private double _renderedCenterX;
+    private double _renderedCenterY;
+    private double _renderedZoom = 1;
 
-    public SerpinskyWindow()
+    public SerpinskyWindow(bool chaosOnly = false)
     {
+        _chaosOnly = chaosOnly;
         InitializeComponent();
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewTranslation);
+        CanvasImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        CanvasImage.RenderTransform = _previewTransform;
+        UpdateCanvasBackground();
         _renderTimer.Tick += RenderTimer_OnTick;
-        RenderModeBox.SelectedIndex = 0;
-        IterationsBox.Text = "8";
+        RenderModeBox.SelectedIndex = chaosOnly ? 1 : 0;
+        IterationsBox.Text = chaosOnly ? "250000" : "8";
         ZoomBox.Text = "1";
+
+        if (chaosOnly)
+        {
+            Title = "Серпинский — игра хаоса";
+            RenderModeLabel.Visibility = Visibility.Collapsed;
+            RenderModeBox.Visibility = Visibility.Collapsed;
+            IterationsLabel.Text = "Количество точек";
+        }
 
         for (int threadCount = 1; threadCount <= Environment.ProcessorCount; threadCount++)
         {
@@ -70,8 +92,11 @@ public partial class SerpinskyWindow : Window
     public void LoadState(SerpinskySaveState state)
     {
         _renderCts?.Cancel();
-        RenderModeBox.SelectedIndex = state.RenderMode == SerpinskyRenderMode.Geometric ? 0 : 1;
-        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture);
+        RenderModeBox.SelectedIndex = _chaosOnly || state.RenderMode == SerpinskyRenderMode.Chaos ? 1 : 0;
+        int iterations = _chaosOnly && state.RenderMode != SerpinskyRenderMode.Chaos
+            ? 250_000
+            : state.Iterations;
+        IterationsBox.Text = iterations.ToString(CultureInfo.InvariantCulture);
         _zoom = Math.Clamp(state.Zoom, 0.01, 10_000_000);
         _centerX = state.CenterX;
         _centerY = state.CenterY;
@@ -83,6 +108,8 @@ public partial class SerpinskyWindow : Window
             FractalColor = state.FractalColor,
             BackgroundColor = state.BackgroundColor
         };
+        UpdateCanvasBackground();
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
@@ -122,6 +149,7 @@ public partial class SerpinskyWindow : Window
         if (TryReadDouble(ZoomBox.Text, out double zoom))
         {
             _zoom = Math.Clamp(zoom, 0.01, 10_000_000);
+            UpdatePreviewTransform();
             ScheduleRender();
         }
     }
@@ -135,6 +163,7 @@ public partial class SerpinskyWindow : Window
         var dialog = new SerpinskyPaletteWindow(_paletteManager) { Owner = this };
         if (dialog.ShowDialog() == true)
         {
+            UpdateCanvasBackground();
             ScheduleRender();
         }
     }
@@ -229,7 +258,7 @@ public partial class SerpinskyWindow : Window
                 StatusText.Text = "Рендер отменён";
                 return;
             }
-            CanvasImage.Source = bitmap;
+            PresentBitmap(bitmap, state);
             stopwatch.Stop();
             StatusText.Text = $"Готово за {stopwatch.Elapsed.TotalSeconds:F3} сек.";
         }
@@ -348,7 +377,11 @@ public partial class SerpinskyWindow : Window
         }
     }
 
-    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRender();
+    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePreviewTransform();
+        ScheduleRender();
+    }
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) =>
         FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost,
@@ -363,11 +396,13 @@ public partial class SerpinskyWindow : Window
         _centerX += worldBefore.X - worldAfter.X;
         _centerY += worldBefore.Y - worldAfter.Y;
         ZoomBox.Text = _zoom.ToString("0.####", CultureInfo.InvariantCulture);
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _renderCts?.Cancel();
         _isPanning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
         CanvasHost.CaptureMouse();
@@ -387,6 +422,7 @@ public partial class SerpinskyWindow : Window
         _centerX += worldBefore.X - worldAfter.X;
         _centerY += worldBefore.Y - worldAfter.Y;
         _lastPanPoint = current;
+        UpdatePreviewTransform();
     }
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -400,6 +436,38 @@ public partial class SerpinskyWindow : Window
         CanvasHost.ReleaseMouseCapture();
         Mouse.OverrideCursor = null;
         ScheduleRender();
+    }
+
+    private void PresentBitmap(BitmapSource bitmap, SerpinskySaveState state)
+    {
+        CanvasImage.Source = bitmap;
+        _renderedCenterX = state.CenterX;
+        _renderedCenterY = state.CenterY;
+        _renderedZoom = state.Zoom;
+        _hasRenderedFrame = true;
+        UpdatePreviewTransform();
+    }
+
+    private void UpdateCanvasBackground() =>
+        CanvasHost.Background = new SolidColorBrush(_paletteManager.ActivePalette.BackgroundColor);
+
+    private void UpdatePreviewTransform()
+    {
+        if (!_hasRenderedFrame || CanvasHost.ActualWidth <= 0 || CanvasHost.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        double scale = _zoom / Math.Max(1e-12, _renderedZoom);
+        _previewScale.ScaleX = scale;
+        _previewScale.ScaleY = scale;
+        _previewTranslation.X = (_renderedCenterX - _centerX) * _zoom * CanvasHost.ActualHeight;
+        _previewTranslation.Y = (_centerY - _renderedCenterY) * _zoom * CanvasHost.ActualHeight;
+        bool isIdentity = Math.Abs(scale - 1) < 1e-9 &&
+                          Math.Abs(_previewTranslation.X) < 0.01 &&
+                          Math.Abs(_previewTranslation.Y) < 0.01;
+        RenderOptions.SetBitmapScalingMode(CanvasImage,
+            isIdentity ? BitmapScalingMode.HighQuality : BitmapScalingMode.LowQuality);
     }
 
     private Point ScreenToWorld(Point point)

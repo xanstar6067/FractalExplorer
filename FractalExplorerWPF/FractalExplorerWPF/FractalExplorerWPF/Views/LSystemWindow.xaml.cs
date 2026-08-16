@@ -19,6 +19,9 @@ public partial class LSystemWindow : Window
     private readonly DispatcherTimer _redrawTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
     private readonly DispatcherTimer _animationTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly Stopwatch _animationClock = new();
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly TranslateTransform _previewTranslation = new();
     private CancellationTokenSource? _buildCts;
     private CancellationTokenSource? _frameCts;
     private LSystemDefinition _activeDefinition = new();
@@ -37,10 +40,18 @@ public partial class LSystemWindow : Window
     private double _panX;
     private double _panY;
     private double _animationDurationSeconds = 6;
+    private bool _hasRenderedFrame;
+    private double _renderedViewZoom = 1;
+    private double _renderedPanX;
+    private double _renderedPanY;
 
     public LSystemWindow()
     {
         InitializeComponent();
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewTranslation);
+        CanvasImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        CanvasImage.RenderTransform = _previewTransform;
         _redrawTimer.Tick += RedrawTimer_OnTick;
         _animationTimer.Tick += AnimationTimer_OnTick;
         PresetBox.ItemsSource = LSystemPresets.All;
@@ -76,6 +87,7 @@ public partial class LSystemWindow : Window
         {
             LSystemDefinition definition = preset.Definition.Clone();
             _activeDefinition = definition.Clone();
+            CanvasHost.Background = new SolidColorBrush(definition.BackgroundColor);
             PresetDescription.Text = preset.Description;
             AxiomBox.Text = definition.Axiom;
             RulesBox.Text = definition.RulesText;
@@ -124,6 +136,7 @@ public partial class LSystemWindow : Window
         _activeDefinition.StartColor = StartColorSelector.SelectedColor;
         _activeDefinition.EndColor = EndColorSelector.SelectedColor;
         _activeDefinition.BackgroundColor = BackgroundColorSelector.SelectedColor;
+        CanvasHost.Background = new SolidColorBrush(_activeDefinition.BackgroundColor);
         _activeDefinition.StartThickness = startThickness;
         _activeDefinition.EndThickness = endThickness;
         _activeDefinition.StyleMode = style.Mode;
@@ -195,11 +208,14 @@ public partial class LSystemWindow : Window
             {
                 StatusText.Text = "Отрисовка отрезков…";
                 var drawProgress = new Progress<int>(value => RenderProgress.Value = 65 + value * 0.35);
+                double renderZoom = _viewZoom;
+                double renderPanX = _panX;
+                double renderPanY = _panY;
                 BitmapSource bitmap = await RenderBitmapAsync(
                     scene, definition, scene.Segments.Count, CurrentSurface(),
-                    _viewZoom, _panX, _panY, cts.Token, drawProgress);
+                    renderZoom, renderPanX, renderPanY, cts.Token, drawProgress);
                 cts.Token.ThrowIfCancellationRequested();
-                CanvasImage.Source = bitmap;
+                PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
                 stopwatch.Stop();
                 RenderProgress.Value = 100;
                 StatusText.Text = BuildReadyStatus(scene, stopwatch.Elapsed);
@@ -246,9 +262,13 @@ public partial class LSystemWindow : Window
         AnimationBadge.Visibility = Visibility.Visible;
         AnimationBadgeText.Text = "Построено 0%";
         RenderProgress.Value = 0;
-        CanvasImage.Source = await RenderBitmapAsync(
-            _scene, _activeDefinition, 0, CurrentSurface(), _viewZoom, _panX, _panY,
+        double renderZoom = _viewZoom;
+        double renderPanX = _panX;
+        double renderPanY = _panY;
+        BitmapSource bitmap = await RenderBitmapAsync(
+            _scene, _activeDefinition, 0, CurrentSurface(), renderZoom, renderPanX, renderPanY,
             cancellationToken, null);
+        PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
         _animationClock.Restart();
         _animationTimer.Start();
         StatusText.Text = $"Анимация: {_scene.Segments.Count:N0} отрезков за {_animationDurationSeconds:0.#} сек.";
@@ -292,12 +312,15 @@ public partial class LSystemWindow : Window
         _frameCts = cts;
         try
         {
+            double renderZoom = _viewZoom;
+            double renderPanX = _panX;
+            double renderPanY = _panY;
             BitmapSource bitmap = await RenderBitmapAsync(
                 _scene, _activeDefinition, visibleSegments, CurrentSurface(),
-                _viewZoom, _panX, _panY, cts.Token, null);
+                renderZoom, renderPanX, renderPanY, cts.Token, null);
             if (!cts.IsCancellationRequested && ReferenceEquals(_frameCts, cts))
             {
-                CanvasImage.Source = bitmap;
+                PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
             }
         }
         catch (OperationCanceledException)
@@ -358,12 +381,15 @@ public partial class LSystemWindow : Window
         _frameCts = cts;
         try
         {
+            double renderZoom = _viewZoom;
+            double renderPanX = _panX;
+            double renderPanY = _panY;
             BitmapSource bitmap = await RenderBitmapAsync(
                 _scene, _activeDefinition, _scene.Segments.Count, CurrentSurface(),
-                _viewZoom, _panX, _panY, cts.Token, null);
+                renderZoom, renderPanX, renderPanY, cts.Token, null);
             if (!cts.IsCancellationRequested && ReferenceEquals(_frameCts, cts))
             {
-                CanvasImage.Source = bitmap;
+                PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
             }
         }
         catch (OperationCanceledException)
@@ -527,6 +553,35 @@ public partial class LSystemWindow : Window
 
     private RenderSurfaceMetrics CurrentSurface() => RenderSurfaceMetrics.Measure(CanvasHost);
 
+    private void PresentBitmap(BitmapSource bitmap, double viewZoom, double panX, double panY)
+    {
+        CanvasImage.Source = bitmap;
+        _renderedViewZoom = viewZoom;
+        _renderedPanX = panX;
+        _renderedPanY = panY;
+        _hasRenderedFrame = true;
+        UpdatePreviewTransform();
+    }
+
+    private void UpdatePreviewTransform()
+    {
+        if (!_hasRenderedFrame || CanvasHost.ActualWidth <= 0 || CanvasHost.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        double scale = _viewZoom / Math.Max(1e-12, _renderedViewZoom);
+        _previewScale.ScaleX = scale;
+        _previewScale.ScaleY = scale;
+        _previewTranslation.X = (_panX - _renderedPanX * scale) * CanvasHost.ActualWidth;
+        _previewTranslation.Y = (_panY - _renderedPanY * scale) * CanvasHost.ActualHeight;
+        bool isIdentity = Math.Abs(scale - 1) < 1e-9 &&
+                          Math.Abs(_previewTranslation.X) < 0.01 &&
+                          Math.Abs(_previewTranslation.Y) < 0.01;
+        RenderOptions.SetBitmapScalingMode(CanvasImage,
+            isIdentity ? BitmapScalingMode.HighQuality : BitmapScalingMode.LowQuality);
+    }
+
     private void ResetView_OnClick(object sender, RoutedEventArgs e)
     {
         ResetView();
@@ -538,9 +593,14 @@ public partial class LSystemWindow : Window
         _viewZoom = 1;
         _panX = 0;
         _panY = 0;
+        UpdatePreviewTransform();
     }
 
-    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRedraw();
+    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePreviewTransform();
+        ScheduleRedraw();
+    }
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) =>
         FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost,
@@ -548,6 +608,7 @@ public partial class LSystemWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        _frameCts?.Cancel();
         Point mouse = e.GetPosition(CanvasHost);
         double width = Math.Max(1, CanvasHost.ActualWidth);
         double height = Math.Max(1, CanvasHost.ActualHeight);
@@ -559,12 +620,15 @@ public partial class LSystemWindow : Window
         _panX = normalizedX - 0.5 - (normalizedX - 0.5 - _panX) * ratio;
         _panY = normalizedY - 0.5 - (normalizedY - 0.5 - _panY) * ratio;
         _viewZoom = newZoom;
+        UpdatePreviewTransform();
         ScheduleRedraw();
         e.Handled = true;
     }
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _frameCts?.Cancel();
+        _redrawTimer.Stop();
         _isPanning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
         CanvasHost.CaptureMouse();
@@ -582,6 +646,7 @@ public partial class LSystemWindow : Window
         _panX += (current.X - _lastPanPoint.X) / Math.Max(1, CanvasHost.ActualWidth);
         _panY += (current.Y - _lastPanPoint.Y) / Math.Max(1, CanvasHost.ActualHeight);
         _lastPanPoint = current;
+        UpdatePreviewTransform();
         ScheduleRedraw();
     }
 

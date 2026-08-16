@@ -173,6 +173,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_selectedItem?.LaunchKey == "SerpinskyChaos")
+        {
+            new SerpinskyWindow(chaosOnly: true) { Owner = this }.Show();
+            return;
+        }
+
         if (_selectedItem?.LaunchKey == "NewtonPools")
         {
             new NewtonPoolsWindow { Owner = this }.Show();

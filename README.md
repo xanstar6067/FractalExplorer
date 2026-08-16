@@ -16,7 +16,7 @@
 
 ### Возможности
 
-- **27 пунктов каталога:** 25 визуализаций и 2 галереи констант Julia.
+- **28 пунктов каталога:** 26 визуализаций и 2 галереи констант Julia.
 - **Интерактивное исследование:** масштабирование колесом мыши, перемещение холста, сброс вида и полноэкранный режим.
 - **Асинхронный рендеринг на CPU:** настройка числа потоков, отмена вычисления, индикаторы прогресса и восемь схем появления плиток.
 - **Гибкое окрашивание:** встроенные и пользовательские палитры, плавные и дискретные режимы, Histogram, Orbit Trap и Stripe Average для семейства Mandelbrot.
@@ -31,7 +31,7 @@
 | Множество Мандельброта | Mandelbrot, Burning Ship, Tricorn (Mandelbar), Buffalo, Celtic Mandelbrot, Simonobrot, Generalized Mandelbrot |
 | Множество Жюлиа | Julia, Julia Burning Ship и две галереи констант `C` |
 | Итерируемые функции | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame |
-| Геометрические фракталы | L‑системы (Кох, Гильберт, Леви, Dragon Curve, деревья, растения, Серпинский), IFS Барнсли / Хейуэя |
+| Геометрические фракталы | L‑системы (Кох, Гильберт, Леви, Dragon Curve, деревья, растения, Серпинский), Серпинский — игра хаоса, IFS Барнсли / Хейуэя |
 | Динамические системы | Lyapunov, Lorenz, Rössler, Logistic Map, Bifurcation, Hénon, Ikeda |
 
 ### Интерфейс
@@ -61,7 +61,7 @@ Newton Pools+ поддерживает готовые и пользовател�
 
 #### L‑системы
 
-Модуль L‑систем объединяет готовые геометрические фракталы и редактор аксиомы, правил, угла, глубины и рисующих символов. Цвет и толщину можно распределять по поколению, глубине ветвления или ходу построения; построение анимируется и экспортируется в высоком разрешении. Треугольник Серпинского теперь входит в этот общий режим.
+Модуль L‑систем объединяет готовые геометрические фракталы и редактор аксиомы, правил, угла, глубины и рисующих символов. Цвет и толщину можно распределять по поколению, глубине ветвления или ходу построения; построение анимируется и экспортируется в высоком разрешении. Геометрический треугольник Серпинского входит в этот общий режим, а стохастическая «игра хаоса» доступна отдельным пунктом каталога.
 
 #### Стохастические фракталы и динамические системы
 
@@ -153,7 +153,7 @@ An interactive fractal and dynamical-systems laboratory for Windows. The current
 
 ### Features
 
-- **27 catalog entries:** 25 visualizations and 2 Julia constant galleries.
+- **28 catalog entries:** 26 visualizations and 2 Julia constant galleries.
 - **Interactive exploration:** cursor-centered mouse-wheel zoom, canvas panning, view reset, and full-screen mode.
 - **Asynchronous CPU rendering:** configurable thread count, cancellation, progress indicators, and eight tile scheduling patterns.
 - **Flexible coloring:** built-in and custom palettes, smooth and discrete modes, plus Histogram, Orbit Trap, and Stripe Average for the Mandelbrot family.
@@ -168,7 +168,7 @@ An interactive fractal and dynamical-systems laboratory for Windows. The current
 | Mandelbrot set | Mandelbrot, Burning Ship, Tricorn (Mandelbar), Buffalo, Celtic Mandelbrot, Simonobrot, Generalized Mandelbrot |
 | Julia set | Julia, Julia Burning Ship, and two constant-`C` galleries |
 | Iterated functions | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame |
-| Geometric fractals | L‑systems (Koch, Hilbert, Lévy C, Dragon Curve, trees, plants, Sierpiński), Barnsley / Heighway IFS |
+| Geometric fractals | L‑systems (Koch, Hilbert, Lévy C, Dragon Curve, trees, plants, Sierpiński), Sierpiński chaos game, Barnsley / Heighway IFS |
 | Dynamical systems | Lyapunov, Lorenz, Rössler, Logistic Map, Bifurcation, Hénon, Ikeda |
 
 ### Interface
@@ -198,7 +198,7 @@ Newton Pools+ supports presets and custom formulas together with the Newton, Hal
 
 #### L‑systems
 
-The L‑system module combines geometric presets with an editor for the axiom, rewriting rules, angle, depth, and drawing symbols. Color and thickness can follow symbol generation, branch depth, or drawing order; construction can be animated and exported at high resolution. The Sierpiński triangle is now a preset in this shared module.
+The L‑system module combines geometric presets with an editor for the axiom, rewriting rules, angle, depth, and drawing symbols. Color and thickness can follow symbol generation, branch depth, or drawing order; construction can be animated and exported at high resolution. Geometric Sierpiński is a preset in this shared module, while its stochastic chaos game remains a separate catalog entry.
 
 #### Stochastic fractals and dynamical systems
 
