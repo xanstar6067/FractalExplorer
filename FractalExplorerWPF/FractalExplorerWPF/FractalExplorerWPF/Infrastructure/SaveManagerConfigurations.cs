@@ -102,6 +102,24 @@ public static class SaveManagerConfigurations
         PointsOfInterest = PresetManager.GetCollatzPresets()
     };
 
+    public static SaveManagerConfiguration<InverseCollatzState> ForInverseCollatz(
+        InverseCollatzTreeWindow window, InverseCollatzSaveStore store) => new()
+    {
+        WindowTitle = "Сохранение/Загрузка: Обратное дерево Коллатца",
+        FractalIdentifier = "InverseCollatzTree",
+        LoadStates = store.Load,
+        SaveStates = store.Save,
+        CaptureState = window.CaptureState,
+        LoadState = window.LoadState,
+        RenderPreviewAsync = window.RenderStatePreviewAsync,
+        GetName = state => state.SaveName,
+        GetTimestamp = state => state.Timestamp,
+        GetDetails = state => $"{Prefix(state.Timestamp)} · Глубина: {state.Depth} · " +
+                                    $"Узлов до: {state.MaxNodes:N0}\n" +
+                                    $"Раскладка: {(state.Layout == InverseCollatzLayout.Radial ? "радиальная" : "по уровням")} · " +
+                                    $"Фильтр: {DescribeInverseCollatzFilter(state)} · Масштаб: {state.Zoom:G6}"
+    };
+
     public static SaveManagerConfiguration<BuddhabrotState> ForBuddhabrot(
         BuddhabrotWindow window, BuddhabrotSaveStore store) => new()
     {
@@ -232,6 +250,15 @@ public static class SaveManagerConfigurations
         CollatzInteriorFillMode.Custom => $"Внутри: {state.CustomInteriorColor}",
         _ => "Внутри: по режиму"
     };
+
+    private static string DescribeInverseCollatzFilter(InverseCollatzState state)
+    {
+        if (state.Modulus <= 0) return "выключен";
+        string residue = state.Residue < 0 ? "все остатки" : $"r = {state.Residue}";
+        string behavior = state.FilterBehavior == InverseCollatzFilterBehavior.OnlyMatching
+            ? "только совпавшие" : "подсветка";
+        return $"mod {state.Modulus}, {residue}, {behavior}";
+    }
 
     private static string Prefix(DateTime timestamp) => timestamp == DateTime.MinValue ? "Точка интереса" : timestamp.ToString("g");
 
