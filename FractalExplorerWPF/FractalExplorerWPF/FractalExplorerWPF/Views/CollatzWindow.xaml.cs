@@ -67,6 +67,8 @@ public partial class CollatzWindow : Window
         DensityExposureBox.Text = "1";
         DensitySampleStepBox.Text = "2";
         DensityEscapedOnlyBox.IsChecked = true;
+        InteriorFillModeBox.SelectedIndex = 0;
+        CustomInteriorColorSelector.SelectedColor = Colors.Black;
         SsaaBox.SelectedIndex = 0;
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto");
@@ -121,6 +123,9 @@ public partial class CollatzWindow : Window
             OrbitDensityExposure = densityExposure,
             OrbitDensitySampleStep = densitySampleStep,
             OrbitDensityEscapedOnly = DensityEscapedOnlyBox.IsChecked == true,
+            InteriorFillMode = (CollatzInteriorFillMode)Math.Clamp(InteriorFillModeBox.SelectedIndex, 0,
+                (int)CollatzInteriorFillMode.Custom),
+            CustomInteriorColor = CustomInteriorColorSelector.SelectedColor,
             Palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name)
         };
     }
@@ -151,6 +156,9 @@ public partial class CollatzWindow : Window
         DensityExposureBox.Text = Format(state.OrbitDensityExposure);
         DensitySampleStepBox.Text = state.OrbitDensitySampleStep.ToString(CultureInfo.InvariantCulture);
         DensityEscapedOnlyBox.IsChecked = state.OrbitDensityEscapedOnly;
+        InteriorFillModeBox.SelectedIndex = Math.Clamp((int)state.InteriorFillMode, 0,
+            (int)CollatzInteriorFillMode.Custom);
+        CustomInteriorColorSelector.SelectedColor = state.CustomInteriorColor;
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
         UpdateVariationControls();
         UpdateColoringControls();
@@ -189,6 +197,12 @@ public partial class CollatzWindow : Window
         if (!_updatingControls) ScheduleRender();
     }
 
+    private void InteriorFillMode_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateInteriorFillControls();
+        if (!_updatingControls) ScheduleRender();
+    }
+
     private void UpdateColoringControls()
     {
         CollatzColoringMode mode = (CollatzColoringMode)Math.Clamp(ColoringModeBox.SelectedIndex, 0,
@@ -213,6 +227,16 @@ public partial class CollatzWindow : Window
                 ? Visibility.Visible : Visibility.Collapsed;
         if (ColoringDescriptionText is not null)
             ColoringDescriptionText.Text = ColoringModeDescription(mode);
+        UpdateInteriorFillControls();
+    }
+
+    private void UpdateInteriorFillControls()
+    {
+        if (CustomInteriorColorSelector is null) return;
+        CollatzInteriorFillMode mode = (CollatzInteriorFillMode)Math.Clamp(
+            InteriorFillModeBox.SelectedIndex, 0, (int)CollatzInteriorFillMode.Custom);
+        CustomInteriorColorSelector.Visibility = mode == CollatzInteriorFillMode.Custom
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e)

@@ -19,7 +19,8 @@ public static class CollatzRenderer
         double IntegerTrap,
         double RealAxisTrap,
         int DetectedPeriod,
-        double CycleKey);
+        double CycleKey,
+        bool IsInterior);
 
     public static byte[]? RenderTile(CollatzState state, int canvasWidth, int canvasHeight,
         MandelbrotRenderTile tile, CancellationToken token)
@@ -168,8 +169,10 @@ public static class CollatzRenderer
             historyCount++;
         }
 
+        bool isInterior = detectedPeriod > 0 || iteration >= maximum &&
+            IsWithinEscapeRadius(z, thresholdSquared);
         return new OrbitMetrics(iteration, Smooth(iteration, maximum, z), z,
-            integerTrap, realAxisTrap, detectedPeriod, cycleKey);
+            integerTrap, realAxisTrap, detectedPeriod, cycleKey, isInterior);
     }
 
     private static OrbitMetrics IterateDecimal(ComplexDecimal z, CollatzState state, ComplexDecimal q)
@@ -237,9 +240,11 @@ public static class CollatzRenderer
             }
         }
 
+        bool isInterior = detectedPeriod > 0 || iteration >= maximum &&
+            IsWithinEscapeRadius(z, threshold);
         return new OrbitMetrics(iteration, Smooth(iteration, maximum, z),
             new Complex((double)z.Real, (double)z.Imaginary), integerTrap, realAxisTrap,
-            detectedPeriod, cycleKey);
+            detectedPeriod, cycleKey, isInterior);
     }
 
     private static int FindPeriod(Complex z, Span<Complex> history, int historyCount,
@@ -354,6 +359,9 @@ public static class CollatzRenderer
 
         double logMaximum = Math.Log(1 + maximumDensity);
         double exposure = Math.Clamp(state.OrbitDensityExposure, 0.1, 10);
+        Color emptyColor = state.InteriorFillMode == CollatzInteriorFillMode.ByColoringMode
+            ? SamplePalette(state.Palette, 0)
+            : ResolveInteriorFillColor(state);
         int coloredRows = 0;
         Parallel.For(0, height, options, (y, loopState) =>
         {
@@ -365,12 +373,14 @@ public static class CollatzRenderer
                 double normalized = logMaximum <= 0
                     ? 0
                     : Math.Pow(Math.Log(1 + density[densityRow + x]) / logMaximum, 1 / exposure);
-                Color color = SamplePalette(state.Palette, normalized);
+                Color color = density[densityRow + x] == 0
+                    ? emptyColor
+                    : SamplePalette(state.Palette, normalized);
                 int offset = outputRow + x * 4;
                 pixels[offset] = color.B;
                 pixels[offset + 1] = color.G;
                 pixels[offset + 2] = color.R;
-                pixels[offset + 3] = 255;
+                pixels[offset + 3] = color.A;
             }
             int done = Interlocked.Increment(ref coloredRows);
             if (done == height || done % Math.Max(1, height / 100) == 0)
@@ -515,6 +525,13 @@ public static class CollatzRenderer
         return z.Real * z.Real + z.Imaginary * z.Imaginary <= threshold * threshold;
     }
 
+    private static bool IsWithinEscapeRadius(Complex z, double thresholdSquared)
+    {
+        double magnitudeSquared = z.Real * z.Real + z.Imaginary * z.Imaginary;
+        return double.IsFinite(magnitudeSquared) && magnitudeSquared <= thresholdSquared &&
+               Math.Abs(z.Imaginary * Math.PI) <= 700;
+    }
+
     private static ComplexDecimal ComplexCos(ComplexDecimal z)
     {
         double real = (double)z.Real;
@@ -558,6 +575,10 @@ public static class CollatzRenderer
     private static Color ResolveColor(CollatzState state, OrbitMetrics metrics)
     {
         MandelbrotPalette palette = state.Palette;
+        if (metrics.IsInterior && metrics.DetectedPeriod == 0 &&
+            state.InteriorFillMode != CollatzInteriorFillMode.ByColoringMode)
+            return ResolveInteriorFillColor(state);
+
         return state.ColoringMode switch
         {
             CollatzColoringMode.FinalArgument => SamplePalette(palette,
@@ -577,6 +598,15 @@ public static class CollatzRenderer
             _ => ResolveEscapeColor(state, metrics.Iterations, metrics.Smooth)
         };
     }
+
+    private static Color ResolveInteriorFillColor(CollatzState state) => state.InteriorFillMode switch
+    {
+        CollatzInteriorFillMode.Auto => SamplePalette(state.Palette, 0),
+        CollatzInteriorFillMode.Black => Colors.Black,
+        CollatzInteriorFillMode.White => Colors.White,
+        CollatzInteriorFillMode.Custom => state.CustomInteriorColor,
+        _ => state.Palette.InteriorColor
+    };
 
     private static double MapFinalArgument(Complex value, double cycles)
     {

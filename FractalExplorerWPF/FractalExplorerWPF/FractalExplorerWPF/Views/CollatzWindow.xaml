@@ -100,6 +100,18 @@
                                           Content="Только вышедшие орбиты"
                                           Checked="Parameter_OnChanged" Unchecked="Parameter_OnChanged"/>
                             </StackPanel>
+                            <Separator Margin="0,3,0,8"/>
+                            <TextBlock Text="Заполнение внутренней области" TextWrapping="Wrap"/>
+                            <ComboBox x:Name="InteriorFillModeBox"
+                                      SelectionChanged="InteriorFillMode_OnSelectionChanged">
+                                <ComboBoxItem Content="По режиму окрашивания"/>
+                                <ComboBoxItem Content="Авто (фон палитры)"/>
+                                <ComboBoxItem Content="Чёрный"/>
+                                <ComboBoxItem Content="Белый"/>
+                                <ComboBoxItem Content="Свой цвет"/>
+                            </ComboBox>
+                            <controls:ColorSelectorControl x:Name="CustomInteriorColorSelector"
+                                                           SelectedColorChanged="Parameter_OnChanged"/>
                         </StackPanel>
                     </Expander>
                     <Button Content="Запустить рендер" Click="RenderButton_OnClick"/>

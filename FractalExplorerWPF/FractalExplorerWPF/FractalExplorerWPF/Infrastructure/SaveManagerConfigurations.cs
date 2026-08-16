@@ -195,7 +195,7 @@ public static class SaveManagerConfigurations
             details += $" · p: {state.PParameter:G8}";
         if (state.Variation == CollatzVariation.GeneralizedPQ)
             details += $" · q: {Complex(state.QRealParameter, state.QImaginaryParameter)}";
-        return details + $"\n{CollatzColoringDetails(state)}";
+        return details + $"\n{CollatzColoringDetails(state)} · {CollatzInteriorFillDetails(state)}";
     }
 
     private static string CollatzColoringName(CollatzColoringMode mode) => mode switch
@@ -222,6 +222,15 @@ public static class SaveManagerConfigurations
             $"Экспозиция: {state.OrbitDensityExposure:G6} · Шаг: {state.OrbitDensitySampleStep} · " +
             (state.OrbitDensityEscapedOnly ? "только вышедшие" : "все орбиты"),
         _ => state.UseSmoothColoring ? "Плавный Escape Time" : "Дискретный Escape Time"
+    };
+
+    private static string CollatzInteriorFillDetails(CollatzState state) => state.InteriorFillMode switch
+    {
+        CollatzInteriorFillMode.Auto => "Внутри: авто",
+        CollatzInteriorFillMode.Black => "Внутри: чёрный",
+        CollatzInteriorFillMode.White => "Внутри: белый",
+        CollatzInteriorFillMode.Custom => $"Внутри: {state.CustomInteriorColor}",
+        _ => "Внутри: по режиму"
     };
 
     private static string Prefix(DateTime timestamp) => timestamp == DateTime.MinValue ? "Точка интереса" : timestamp.ToString("g");

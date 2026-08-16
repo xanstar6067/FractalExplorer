@@ -1,3 +1,6 @@
+using System.Windows.Media;
+using Color = System.Windows.Media.Color;
+
 namespace FractalExplorerWPF.Models;
 
 public enum CollatzVariation
@@ -24,6 +27,15 @@ public enum CollatzColoringMode
     PeriodDetection = 7
 }
 
+public enum CollatzInteriorFillMode
+{
+    ByColoringMode = 0,
+    Auto = 1,
+    Black = 2,
+    White = 3,
+    Custom = 4
+}
+
 public sealed class CollatzState
 {
     public string SaveName { get; set; } = string.Empty;
@@ -48,5 +60,7 @@ public sealed class CollatzState
     public double OrbitDensityExposure { get; set; } = 1;
     public int OrbitDensitySampleStep { get; set; } = 2;
     public bool OrbitDensityEscapedOnly { get; set; } = true;
+    public CollatzInteriorFillMode InteriorFillMode { get; set; }
+    public Color CustomInteriorColor { get; set; } = Colors.Black;
     public MandelbrotPalette Palette { get; set; } = new();
 }
