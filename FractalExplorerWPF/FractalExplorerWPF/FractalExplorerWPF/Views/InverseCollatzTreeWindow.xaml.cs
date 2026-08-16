@@ -20,6 +20,9 @@ public partial class InverseCollatzTreeWindow : Window
     private readonly DispatcherTimer _animationTimer = new();
     private readonly InverseCollatzPaletteManager _paletteManager = new();
     private readonly InverseCollatzSaveStore _saveStore = new();
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly TranslateTransform _previewTranslation = new();
     private CancellationTokenSource? _renderCts;
     private InverseCollatzTree? _tree;
     private InverseCollatzPoint[]? _layoutPoints;
@@ -30,6 +33,11 @@ public partial class InverseCollatzTreeWindow : Window
     private double _centerX;
     private double _centerY;
     private double _zoom = 1;
+    private double _renderedCenterX;
+    private double _renderedCenterY;
+    private double _renderedZoom = 1;
+    private InverseCollatzLayout _renderedLayout;
+    private bool _hasRenderedFrame;
     private bool _isRendering;
     private bool _renderPending;
     private bool _isAnimating;
@@ -44,6 +52,10 @@ public partial class InverseCollatzTreeWindow : Window
     public InverseCollatzTreeWindow()
     {
         InitializeComponent();
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewTranslation);
+        CanvasImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        CanvasImage.RenderTransform = _previewTransform;
         _updatingControls = true;
         DepthBox.Text = "28";
         MaxNodesBox.Text = "100000";
@@ -118,6 +130,7 @@ public partial class InverseCollatzTreeWindow : Window
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
         InvalidateTree();
         _updatingControls = false;
+        UpdatePreviewTransform();
         UpdateDepthStatus();
         ScheduleRender();
     }
@@ -143,7 +156,11 @@ public partial class InverseCollatzTreeWindow : Window
     private void RenderParameter_OnChanged(object sender, EventArgs e)
     {
         if (_updatingControls) return;
-        if (ReferenceEquals(sender, LayoutBox)) _layoutPoints = null;
+        if (ReferenceEquals(sender, LayoutBox))
+        {
+            _layoutPoints = null;
+            UpdatePreviewTransform();
+        }
         ScheduleRender();
     }
 
@@ -219,6 +236,7 @@ public partial class InverseCollatzTreeWindow : Window
         _centerX = 0;
         _centerY = 0;
         _zoom = 1;
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
@@ -297,6 +315,12 @@ public partial class InverseCollatzTreeWindow : Window
                     surface.PixelWidth, surface.PixelHeight, token));
             if (token.IsCancellationRequested) return;
             CanvasImage.Source = bitmap;
+            _renderedCenterX = state.CenterX;
+            _renderedCenterY = state.CenterY;
+            _renderedZoom = state.Zoom;
+            _renderedLayout = state.Layout;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
             totalWatch.Stop();
             string truncated = output.Tree.Truncated ? "; достигнут лимит узлов" : string.Empty;
             StatusText.Text = $"Узлов: {output.Tree.Nodes.Count:N0}; показано: {output.Render.DrawnNodes:N0}{truncated}. " +
@@ -442,7 +466,11 @@ public partial class InverseCollatzTreeWindow : Window
         Palette = source.Palette.Clone(source.Palette.Name)
     };
 
-    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRender();
+    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePreviewTransform();
+        ScheduleRender();
+    }
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -453,11 +481,14 @@ public partial class InverseCollatzTreeWindow : Window
         (double x, double y) after = ScreenToWorld(mouse, layout);
         _centerX += before.x - after.x;
         _centerY += before.y - after.y;
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        _renderCts?.Cancel();
+        _renderTimer.Stop();
         _isPanning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
         CanvasHost.CaptureMouse();
@@ -474,6 +505,7 @@ public partial class InverseCollatzTreeWindow : Window
         _centerX += before.x - after.x;
         _centerY += before.y - after.y;
         _lastPanPoint = current;
+        UpdatePreviewTransform();
     }
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -497,6 +529,55 @@ public partial class InverseCollatzTreeWindow : Window
         }
         return (_centerX + (point.X - width / 2) / (width * 0.46 * _zoom),
             _centerY + (point.Y - height / 2) / (height * 0.46 * _zoom));
+    }
+
+    private void UpdatePreviewTransform()
+    {
+        if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 ||
+            CanvasHost.ActualWidth <= 0 || CanvasHost.ActualHeight <= 0) return;
+
+        InverseCollatzLayout currentLayout =
+            (InverseCollatzLayout)Math.Clamp(LayoutBox.SelectedIndex, 0, 1);
+        if (_renderedLayout != currentLayout)
+        {
+            ResetPreviewTransform();
+            return;
+        }
+
+        double width = CanvasHost.ActualWidth;
+        double height = CanvasHost.ActualHeight;
+        double scale = _zoom / _renderedZoom;
+        double horizontalPixelsPerUnit;
+        double verticalPixelsPerUnit;
+        if (currentLayout == InverseCollatzLayout.Radial)
+        {
+            horizontalPixelsPerUnit = verticalPixelsPerUnit =
+                Math.Min(width, height) * 0.46 * _zoom;
+        }
+        else
+        {
+            horizontalPixelsPerUnit = width * 0.46 * _zoom;
+            verticalPixelsPerUnit = height * 0.46 * _zoom;
+        }
+
+        _previewScale.ScaleX = scale;
+        _previewScale.ScaleY = scale;
+        _previewTranslation.X = (_renderedCenterX - _centerX) * horizontalPixelsPerUnit;
+        _previewTranslation.Y = (_renderedCenterY - _centerY) * verticalPixelsPerUnit;
+        bool identity = Math.Abs(scale - 1) < 1e-12 &&
+                        Math.Abs(_previewTranslation.X) < 0.01 &&
+                        Math.Abs(_previewTranslation.Y) < 0.01;
+        RenderOptions.SetBitmapScalingMode(CanvasImage,
+            identity ? BitmapScalingMode.HighQuality : BitmapScalingMode.LowQuality);
+    }
+
+    private void ResetPreviewTransform()
+    {
+        _previewScale.ScaleX = 1;
+        _previewScale.ScaleY = 1;
+        _previewTranslation.X = 0;
+        _previewTranslation.Y = 0;
+        RenderOptions.SetBitmapScalingMode(CanvasImage, BitmapScalingMode.HighQuality);
     }
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) =>
