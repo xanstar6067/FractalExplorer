@@ -196,7 +196,7 @@ public partial class DynamicSystemWindow : Window
         DynamicSystemState result = _state.Clone(name); result.Timestamp = DateTime.Now; result.PaletteName = ActivePalette?.Name ?? string.Empty; return result;
     }
 
-    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; _state = state.Clone(); _state.Kind = _kind; _state.Threads = Math.Clamp(_state.Threads, 1, Environment.ProcessorCount); SyncControls(); UpdateAttractorPresentation(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
+    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; int threads = _state.Threads; _state = state.Clone(); _state.Kind = _kind; _state.Threads = threads; SyncControls(); UpdateAttractorPresentation(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
     private void SyncControls()
     {
         _syncing=true;

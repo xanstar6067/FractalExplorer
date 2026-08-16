@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Windows.Media;
 using Color = System.Windows.Media.Color;
 using MediaColors = System.Windows.Media.Colors;
@@ -100,6 +101,7 @@ public sealed class MandelbrotState
     public decimal Zoom { get; set; } = 1;
     public int Iterations { get; set; } = 500;
     public decimal Threshold { get; set; } = 2;
+    [JsonIgnore]
     public int Threads { get; set; }
     public MandelbrotColoringMode ColoringMode { get; set; } = MandelbrotColoringMode.Smooth;
     public string PaletteName { get; set; } = string.Empty;

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Windows.Media;
 using Color = System.Windows.Media.Color;
 
@@ -32,6 +33,7 @@ public sealed class DynamicSystemState
     public double CenterX { get; set; }
     public double CenterY { get; set; }
     public double Zoom { get; set; } = 1;
+    [JsonIgnore]
     public int Threads { get; set; } = Environment.ProcessorCount;
     public int SsaaFactor { get; set; } = 1;
     public Color BackgroundColor { get; set; } = Colors.Black;
