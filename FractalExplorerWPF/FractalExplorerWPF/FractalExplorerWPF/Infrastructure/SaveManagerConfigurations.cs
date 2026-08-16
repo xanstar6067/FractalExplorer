@@ -186,15 +186,43 @@ public static class SaveManagerConfigurations
 
     private static string DescribeCollatz(CollatzState state)
     {
-        string details = $"{Prefix(state.Timestamp)} · Режим: {VariationName(state.Variation)} · Итерации: {state.Iterations}\n" +
+        string details = $"{Prefix(state.Timestamp)} · Режим: {VariationName(state.Variation)} · " +
+                         $"Окрашивание: {CollatzColoringName(state.ColoringMode)}\n" +
+                         $"Итерации: {state.Iterations} · " +
                          $"Порог: {state.Threshold:G8} · Масштаб: {state.Zoom:G8}";
         if (state.Variation is CollatzVariation.ParityBranchVariation or
             CollatzVariation.GeneralizedP or CollatzVariation.GeneralizedPQ)
             details += $" · p: {state.PParameter:G8}";
         if (state.Variation == CollatzVariation.GeneralizedPQ)
             details += $" · q: {Complex(state.QRealParameter, state.QImaginaryParameter)}";
-        return details;
+        return details + $"\n{CollatzColoringDetails(state)}";
     }
+
+    private static string CollatzColoringName(CollatzColoringMode mode) => mode switch
+    {
+        CollatzColoringMode.FinalArgument => "Final Argument",
+        CollatzColoringMode.FinalMagnitude => "Final Magnitude",
+        CollatzColoringMode.CycleBasins => "Cycle Basins",
+        CollatzColoringMode.IntegerTrap => "Integer Trap",
+        CollatzColoringMode.RealAxisTrap => "Real Axis Trap",
+        CollatzColoringMode.OrbitDensity => "Orbit Density",
+        CollatzColoringMode.PeriodDetection => "Period Detection",
+        _ => "Escape Time"
+    };
+
+    private static string CollatzColoringDetails(CollatzState state) => state.ColoringMode switch
+    {
+        CollatzColoringMode.FinalArgument => $"Обороты аргумента: {state.ArgumentCycles:G6}",
+        CollatzColoringMode.FinalMagnitude => $"Масштаб модуля: {state.MagnitudeScale:G6}",
+        CollatzColoringMode.CycleBasins or CollatzColoringMode.PeriodDetection =>
+            $"Допуск цикла: {state.CycleTolerance:G3} · Макс. период: {state.MaximumDetectedPeriod}",
+        CollatzColoringMode.IntegerTrap or CollatzColoringMode.RealAxisTrap =>
+            $"Чувствительность ловушки: {state.TrapScale:G6}",
+        CollatzColoringMode.OrbitDensity =>
+            $"Экспозиция: {state.OrbitDensityExposure:G6} · Шаг: {state.OrbitDensitySampleStep} · " +
+            (state.OrbitDensityEscapedOnly ? "только вышедшие" : "все орбиты"),
+        _ => state.UseSmoothColoring ? "Плавный Escape Time" : "Дискретный Escape Time"
+    };
 
     private static string Prefix(DateTime timestamp) => timestamp == DateTime.MinValue ? "Точка интереса" : timestamp.ToString("g");
 

@@ -52,8 +52,56 @@
                     <ComboBox x:Name="SsaaBox" SelectionChanged="Parameter_OnChanged">
                         <ComboBoxItem Content="Выкл. (1×)" Tag="1"/><ComboBoxItem Content="Низкое (2×)" Tag="2"/><ComboBoxItem Content="Высокое (4×)" Tag="4"/>
                     </ComboBox>
-                    <TextBlock Text="Окрашивание"/>
-                    <ComboBox x:Name="ColoringBox" SelectionChanged="Parameter_OnChanged"><ComboBoxItem Content="Дискретное"/><ComboBoxItem Content="Плавное"/></ComboBox>
+                    <TextBlock Text="Режим окрашивания"/>
+                    <ComboBox x:Name="ColoringModeBox" SelectionChanged="ColoringMode_OnSelectionChanged">
+                        <ComboBoxItem Content="Escape Time"/>
+                        <ComboBoxItem Content="Final Argument"/>
+                        <ComboBoxItem Content="Final Magnitude"/>
+                        <ComboBoxItem Content="Cycle Basins"/>
+                        <ComboBoxItem Content="Integer Trap"/>
+                        <ComboBoxItem Content="Real Axis Trap"/>
+                        <ComboBoxItem Content="Orbit Density"/>
+                        <ComboBoxItem Content="Period Detection"/>
+                    </ComboBox>
+                    <TextBlock x:Name="ColoringDescriptionText" Margin="0,0,0,5"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                    <Expander x:Name="ColoringParametersExpander" Header="Параметры окрашивания" IsExpanded="True" Margin="0,2,0,7">
+                        <StackPanel Margin="12,6,0,2">
+                            <StackPanel x:Name="EscapeColoringPanel">
+                                <TextBlock Text="Расчёт Escape Time"/>
+                                <ComboBox x:Name="EscapeSmoothingBox" SelectionChanged="Parameter_OnChanged">
+                                    <ComboBoxItem Content="Дискретный"/><ComboBoxItem Content="Плавный"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel x:Name="ArgumentColoringPanel">
+                                <TextBlock Text="Обороты палитры по аргументу" TextWrapping="Wrap"/>
+                                <TextBox x:Name="ArgumentCyclesBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="MagnitudeColoringPanel">
+                                <TextBlock Text="Масштаб log(1+|z|)"/>
+                                <TextBox x:Name="MagnitudeScaleBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="TrapColoringPanel">
+                                <TextBlock Text="Чувствительность ловушки"/>
+                                <TextBox x:Name="TrapScaleBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="CycleColoringPanel">
+                                <TextBlock Text="Допуск обнаружения цикла"/>
+                                <TextBox x:Name="CycleToleranceBox" TextChanged="Parameter_OnChanged"/>
+                                <TextBlock Text="Максимальный период"/>
+                                <TextBox x:Name="MaximumPeriodBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="DensityColoringPanel">
+                                <TextBlock Text="Экспозиция плотности"/>
+                                <TextBox x:Name="DensityExposureBox" TextChanged="Parameter_OnChanged"/>
+                                <TextBlock Text="Шаг начальных точек (1–8)" TextWrapping="Wrap"/>
+                                <TextBox x:Name="DensitySampleStepBox" TextChanged="Parameter_OnChanged"/>
+                                <CheckBox x:Name="DensityEscapedOnlyBox" Margin="0,3,0,7"
+                                          Content="Только вышедшие орбиты"
+                                          Checked="Parameter_OnChanged" Unchecked="Parameter_OnChanged"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
                     <Button Content="Запустить рендер" Click="RenderButton_OnClick"/>
                     <Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
                     <Button Content="Настроить палитру" Click="PaletteButton_OnClick"/>

@@ -29,7 +29,8 @@ public partial class CollatzWindow : Window
     private readonly TranslateTransform _previewTranslation = new();
     private CancellationTokenSource? _renderCts;
     private RenderSession? _activeSession;
-    private bool _isRendering, _panning, _isFullscreen, _controlsVisible = true, _hasRenderedFrame;
+    private bool _isRendering, _panning, _isFullscreen, _controlsVisible = true, _hasRenderedFrame,
+        _updatingControls;
     private Point _lastPanPoint;
     private decimal _centerX, _centerY, _zoom = 1;
     private decimal _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
@@ -39,6 +40,7 @@ public partial class CollatzWindow : Window
     public CollatzWindow()
     {
         InitializeComponent();
+        _updatingControls = true;
         _previewTransform.Children.Add(_previewScale);
         _previewTransform.Children.Add(_previewTranslation);
         StablePreviewImage.RenderTransformOrigin = new Point(0.5, 0.5);
@@ -55,12 +57,23 @@ public partial class CollatzWindow : Window
         QRealParameterBox.Text = "0";
         QImaginaryParameterBox.Text = "0";
         VariationBox.SelectedIndex = 0;
-        ColoringBox.SelectedIndex = 1;
+        ColoringModeBox.SelectedIndex = 0;
+        EscapeSmoothingBox.SelectedIndex = 1;
+        ArgumentCyclesBox.Text = "1";
+        MagnitudeScaleBox.Text = "1";
+        TrapScaleBox.Text = "4";
+        CycleToleranceBox.Text = "1e-6";
+        MaximumPeriodBox.Text = "32";
+        DensityExposureBox.Text = "1";
+        DensitySampleStepBox.Text = "2";
+        DensityEscapedOnlyBox.IsChecked = true;
         SsaaBox.SelectedIndex = 0;
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto");
         ThreadsBox.SelectedItem = "Auto";
         UpdateVariationControls();
+        UpdateColoringControls();
+        _updatingControls = false;
         Loaded += (_, _) => ScheduleRender();
     }
 
@@ -76,6 +89,13 @@ public partial class CollatzWindow : Window
             throw new InvalidOperationException("Re(q) должна быть от −100 до 100.");
         if (!TryRead(QImaginaryParameterBox.Text, out decimal qImaginary) || qImaginary is < -100 or > 100)
             throw new InvalidOperationException("Im(q) должна быть от −100 до 100.");
+        double argumentCycles = ReadDouble(ArgumentCyclesBox.Text, "обороты аргумента", 0.1, 20);
+        double magnitudeScale = ReadDouble(MagnitudeScaleBox.Text, "масштаб модуля", 0.01, 20);
+        double trapScale = ReadDouble(TrapScaleBox.Text, "чувствительность ловушки", 0.01, 100);
+        double cycleTolerance = ReadDouble(CycleToleranceBox.Text, "допуск цикла", 1e-12, 0.1);
+        int maximumPeriod = ReadInt(MaximumPeriodBox.Text, "максимальный период", 1, 64);
+        double densityExposure = ReadDouble(DensityExposureBox.Text, "экспозиция плотности", 0.1, 10);
+        int densitySampleStep = ReadInt(DensitySampleStepBox.Text, "шаг начальных точек", 1, 8);
         return new CollatzState
         {
             SaveName = name,
@@ -90,7 +110,17 @@ public partial class CollatzWindow : Window
             PParameter = p,
             QRealParameter = qReal,
             QImaginaryParameter = qImaginary,
-            UseSmoothColoring = ColoringBox.SelectedIndex == 1,
+            ColoringMode = (CollatzColoringMode)Math.Clamp(ColoringModeBox.SelectedIndex, 0,
+                (int)CollatzColoringMode.PeriodDetection),
+            UseSmoothColoring = EscapeSmoothingBox.SelectedIndex == 1,
+            ArgumentCycles = argumentCycles,
+            MagnitudeScale = magnitudeScale,
+            TrapScale = trapScale,
+            CycleTolerance = cycleTolerance,
+            MaximumDetectedPeriod = maximumPeriod,
+            OrbitDensityExposure = densityExposure,
+            OrbitDensitySampleStep = densitySampleStep,
+            OrbitDensityEscapedOnly = DensityEscapedOnlyBox.IsChecked == true,
             Palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name)
         };
     }
@@ -98,6 +128,7 @@ public partial class CollatzWindow : Window
     public void LoadState(CollatzState state)
     {
         _renderCts?.Cancel();
+        _updatingControls = true;
         _centerX = state.CenterX;
         _centerY = state.CenterY;
         _zoom = Math.Max(0.000000000000001m, state.Zoom);
@@ -109,9 +140,21 @@ public partial class CollatzWindow : Window
         QImaginaryParameterBox.Text = Format(state.QImaginaryParameter);
         VariationBox.SelectedIndex = Math.Clamp((int)state.Variation, 0,
             (int)CollatzVariation.GeneralizedPQ);
-        ColoringBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0;
+        ColoringModeBox.SelectedIndex = Math.Clamp((int)state.ColoringMode, 0,
+            (int)CollatzColoringMode.PeriodDetection);
+        EscapeSmoothingBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0;
+        ArgumentCyclesBox.Text = Format(state.ArgumentCycles);
+        MagnitudeScaleBox.Text = Format(state.MagnitudeScale);
+        TrapScaleBox.Text = Format(state.TrapScale);
+        CycleToleranceBox.Text = state.CycleTolerance.ToString("G8", CultureInfo.InvariantCulture);
+        MaximumPeriodBox.Text = state.MaximumDetectedPeriod.ToString(CultureInfo.InvariantCulture);
+        DensityExposureBox.Text = Format(state.OrbitDensityExposure);
+        DensitySampleStepBox.Text = state.OrbitDensitySampleStep.ToString(CultureInfo.InvariantCulture);
+        DensityEscapedOnlyBox.IsChecked = state.OrbitDensityEscapedOnly;
         _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
         UpdateVariationControls();
+        UpdateColoringControls();
+        _updatingControls = false;
         UpdatePreviewTransform();
         ScheduleRender();
     }
@@ -122,7 +165,7 @@ public partial class CollatzWindow : Window
     private void VariationBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         UpdateVariationControls();
-        ScheduleRender();
+        if (!_updatingControls) ScheduleRender();
     }
 
     private void UpdateVariationControls()
@@ -140,14 +183,49 @@ public partial class CollatzWindow : Window
             VariationHintText.Text = VariationDescription(variation);
     }
 
-    private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
+    private void ColoringMode_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateColoringControls();
+        if (!_updatingControls) ScheduleRender();
+    }
+
+    private void UpdateColoringControls()
+    {
+        CollatzColoringMode mode = (CollatzColoringMode)Math.Clamp(ColoringModeBox.SelectedIndex, 0,
+            (int)CollatzColoringMode.PeriodDetection);
+        if (EscapeColoringPanel is not null)
+            EscapeColoringPanel.Visibility = mode == CollatzColoringMode.EscapeTime
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (ArgumentColoringPanel is not null)
+            ArgumentColoringPanel.Visibility = mode == CollatzColoringMode.FinalArgument
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (MagnitudeColoringPanel is not null)
+            MagnitudeColoringPanel.Visibility = mode == CollatzColoringMode.FinalMagnitude
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (TrapColoringPanel is not null)
+            TrapColoringPanel.Visibility = mode is CollatzColoringMode.IntegerTrap or
+                CollatzColoringMode.RealAxisTrap ? Visibility.Visible : Visibility.Collapsed;
+        if (CycleColoringPanel is not null)
+            CycleColoringPanel.Visibility = mode is CollatzColoringMode.CycleBasins or
+                CollatzColoringMode.PeriodDetection ? Visibility.Visible : Visibility.Collapsed;
+        if (DensityColoringPanel is not null)
+            DensityColoringPanel.Visibility = mode == CollatzColoringMode.OrbitDensity
+                ? Visibility.Visible : Visibility.Collapsed;
+        if (ColoringDescriptionText is not null)
+            ColoringDescriptionText.Text = ColoringModeDescription(mode);
+    }
+
+    private void Parameter_OnChanged(object sender, EventArgs e)
+    {
+        if (!_updatingControls) ScheduleRender();
+    }
 
     private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e)
     {
         if (!TryRead(ZoomBox.Text, out decimal zoom)) return;
         _zoom = Math.Clamp(zoom, 0.000000000000001m, 1_000_000_000_000_000m);
         UpdatePreviewTransform();
-        ScheduleRender();
+        if (!_updatingControls) ScheduleRender();
     }
 
     private void RenderButton_OnClick(object sender, RoutedEventArgs e) => _ = RenderPreviewAsync();
@@ -210,7 +288,8 @@ public partial class CollatzWindow : Window
         _renderCts = new CancellationTokenSource();
         CancellationToken token = _renderCts.Token;
         var watch = Stopwatch.StartNew();
-        SetRendering(true, $"Рендеринг: {VariationDisplayName(state.Variation)}...");
+        SetRendering(true, $"Рендеринг: {VariationDisplayName(state.Variation)} · " +
+                           $"{ColoringModeDisplayName(state.ColoringMode)}...");
         try
         {
             int factor = SsaaBox.SelectedItem is ComboBoxItem item ? Convert.ToInt32(item.Tag, CultureInfo.InvariantCulture) : 1;
@@ -220,25 +299,40 @@ public partial class CollatzWindow : Window
             int pixelHeight = surface.PixelHeight;
             int renderWidth = checked(pixelWidth * factor);
             int renderHeight = checked(pixelHeight * factor);
-            TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
-            IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(renderWidth, renderHeight, 16 * factor, strategy);
-            WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
-            var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight);
-            _activeSession = session;
-            CanvasImage.Source = bitmap;
-            RenderOverlay.BeginSession(renderWidth, renderHeight);
-            _visualizationTimer.Start();
+            BitmapSource completed;
+            string renderDetails;
+            if (state.ColoringMode == CollatzColoringMode.OrbitDensity)
+            {
+                CanvasImage.Source = null;
+                completed = await RenderBitmapAsync(state, pixelWidth, pixelHeight, factor, token,
+                    new Progress<int>(value => RenderProgress.Value = value));
+                renderDetails = "глобальное накопление орбит";
+            }
+            else
+            {
+                TileSchedulingStrategy strategy = RenderPatternSettings.SelectedPattern;
+                IReadOnlyList<MandelbrotRenderTile> tiles = MandelbrotTileScheduler.Create(
+                    renderWidth, renderHeight, 16 * factor, strategy);
+                WriteableBitmap bitmap = ProgressiveRenderBitmap.CreateOverlay(
+                    renderWidth, renderHeight, dpi.PixelsPerInchX, dpi.PixelsPerInchY);
+                var session = new RenderSession(bitmap, tiles.Count, renderWidth, renderHeight);
+                _activeSession = session;
+                CanvasImage.Source = bitmap;
+                RenderOverlay.BeginSession(renderWidth, renderHeight);
+                _visualizationTimer.Start();
+                await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
+                FlushVisualizationEvents(session, true);
+                completed = session.Bitmap.Clone();
+                completed.Freeze();
+                renderDetails = $"стратегия: {strategy}";
+            }
 
-            await RenderTilesAsync(state, tiles, session, GetThreadCount(), token);
             if (token.IsCancellationRequested)
             {
                 CanvasImage.Source = null;
                 StatusText.Text = "Рендер отменён";
                 return;
             }
-            FlushVisualizationEvents(session, true);
-            BitmapSource completed = session.Bitmap.Clone();
-            completed.Freeze();
             StablePreviewImage.Source = completed;
             CanvasImage.Source = null;
             _renderedCenterX = state.CenterX;
@@ -246,7 +340,7 @@ public partial class CollatzWindow : Window
             _renderedZoom = state.Zoom;
             _hasRenderedFrame = true;
             UpdatePreviewTransform();
-            StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек. Стратегия: {strategy}.";
+            StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек.; {renderDetails}.";
         }
         catch (OperationCanceledException) { CanvasImage.Source = null; StatusText.Text = "Рендер отменён"; }
         catch (Exception ex) { StatusText.Text = "Ошибка рендера"; MessageBox.Show(this, ex.Message, "Коллатц", MessageBoxButton.OK, MessageBoxImage.Error); }
@@ -448,11 +542,53 @@ public partial class CollatzWindow : Window
         _ => "Классическое продолжение Коллатца (p = 3)."
     };
 
+    private static string ColoringModeDisplayName(CollatzColoringMode mode) => mode switch
+    {
+        CollatzColoringMode.FinalArgument => "Final Argument",
+        CollatzColoringMode.FinalMagnitude => "Final Magnitude",
+        CollatzColoringMode.CycleBasins => "Cycle Basins",
+        CollatzColoringMode.IntegerTrap => "Integer Trap",
+        CollatzColoringMode.RealAxisTrap => "Real Axis Trap",
+        CollatzColoringMode.OrbitDensity => "Orbit Density",
+        CollatzColoringMode.PeriodDetection => "Period Detection",
+        _ => "Escape Time"
+    };
+
+    private static string ColoringModeDescription(CollatzColoringMode mode) => mode switch
+    {
+        CollatzColoringMode.FinalArgument => "Цвет определяется аргументом последнего значения z.",
+        CollatzColoringMode.FinalMagnitude => "Цвет определяется логарифмом модуля последнего значения z.",
+        CollatzColoringMode.CycleBasins => "Одинаковым найденным циклам назначается одинаковый цвет.",
+        CollatzColoringMode.IntegerTrap => "Яркость показывает минимальное расстояние орбиты до вещественного целого.",
+        CollatzColoringMode.RealAxisTrap => "Яркость показывает минимальное расстояние орбиты до вещественной оси.",
+        CollatzColoringMode.OrbitDensity => "Накопление посещений пикселей всеми траекториями, как в Buddhabrot.",
+        CollatzColoringMode.PeriodDetection => "Цвет определяется найденным периодом орбиты.",
+        _ => "Текущий режим: цвет по числу итераций до выхода."
+    };
+
     private static bool TryRead(string text, out decimal value) =>
         decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
         decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
 
+    private static double ReadDouble(string text, string parameterName, double minimum, double maximum)
+    {
+        bool parsed = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ||
+                      double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
+        if (!parsed || !double.IsFinite(value) || value < minimum || value > maximum)
+            throw new InvalidOperationException($"Параметр «{parameterName}» должен быть от {minimum:G8} до {maximum:G8}.");
+        return value;
+    }
+
+    private static int ReadInt(string text, string parameterName, int minimum, int maximum)
+    {
+        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ||
+            value < minimum || value > maximum)
+            throw new InvalidOperationException($"Параметр «{parameterName}» должен быть целым числом от {minimum} до {maximum}.");
+        return value;
+    }
+
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
+    private static string Format(double value) => value.ToString("G15", CultureInfo.InvariantCulture);
 
     private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight)
     {
