@@ -87,7 +87,7 @@ public partial class DynamicSystemWindow : Window
         if (_kind is DynamicSystemKind.Lorenz or DynamicSystemKind.Rossler) AddChoice("Проекция", "ProjectionMode", ["XY", "XZ", "YZ"]);
         if (_kind == DynamicSystemKind.LogisticMap) AddChoice("Режим", "VisualizationMode", ["Orbit", "Bifurcation", "Cobweb"]);
         if (_kind is DynamicSystemKind.Lyapunov or DynamicSystemKind.Attractors2D) AddChoice("Сглаживание", "SsaaFactor", ["1", "2", "4"]);
-        AddField("Потоки ЦП", "Threads");
+        AddThreadChoice();
         PaletteButton.Visibility = _paletteStore is null ? Visibility.Collapsed : Visibility.Visible;
         FractalColorPanel.Visibility = _kind is DynamicSystemKind.Bifurcation or DynamicSystemKind.Attractors2D ? Visibility.Visible : Visibility.Collapsed;
         BackgroundColorPanel.Visibility = _kind is DynamicSystemKind.Lyapunov or DynamicSystemKind.Henon or DynamicSystemKind.Ikeda ? Visibility.Collapsed : Visibility.Visible;
@@ -121,6 +121,17 @@ public partial class DynamicSystemWindow : Window
     private void AddChoice(string label, string key, string[] values)
         => AddChoice(label, key, values.Select(value => new ChoiceOption(value, value)).ToArray());
 
+    private void AddThreadChoice()
+    {
+        ChoiceOption[] values =
+        [
+            .. Enumerable.Range(1, Environment.ProcessorCount)
+                .Select(value => new ChoiceOption(value.ToString(CultureInfo.InvariantCulture), value.ToString(CultureInfo.InvariantCulture))),
+            new("Auto", "Auto")
+        ];
+        AddChoice("Потоки ЦП", "Threads", values);
+    }
+
     private void AddChoice(string label, string key, ChoiceOption[] values)
     {
         var panel = new StackPanel();
@@ -133,7 +144,10 @@ public partial class DynamicSystemWindow : Window
     {
         if (_syncing || sender is not ComboBox { Tag: string key, SelectedItem: ChoiceOption option }) return;
         PropertyInfo? property = typeof(DynamicSystemState).GetProperty(key); if (property is null) return;
-        property.SetValue(_state, property.PropertyType == typeof(int) ? int.Parse(option.Value, CultureInfo.InvariantCulture) : option.Value);
+        object value = key == "Threads" && option.Value == "Auto"
+            ? Environment.ProcessorCount
+            : property.PropertyType == typeof(int) ? int.Parse(option.Value, CultureInfo.InvariantCulture) : option.Value;
+        property.SetValue(_state, value);
         if (key == "Attractor2DMode")
         {
             _state.ApplyAttractor2DPreset(Attractor2DRenderer.ParseKind(option.Value));
@@ -176,13 +190,13 @@ public partial class DynamicSystemWindow : Window
             if (p.PropertyType == typeof(int)) { if (!int.TryParse(box.Text, out int v) || v < 0) throw new InvalidOperationException($"Некорректное значение: {key}"); p.SetValue(_state, v); }
             else { if (!TryDouble(box.Text, out double v) || !double.IsFinite(v)) throw new InvalidOperationException($"Некорректное значение: {key}"); p.SetValue(_state, v); }
         }
-        if (_state.Zoom <= 0 || _state.Threads is < 1 or > 256) throw new InvalidOperationException("Масштаб должен быть положительным, число потоков — от 1 до 256.");
+        if (_state.Zoom <= 0 || _state.Threads < 1 || _state.Threads > Environment.ProcessorCount) throw new InvalidOperationException($"Масштаб должен быть положительным, число потоков — от 1 до {Environment.ProcessorCount}.");
         if (_kind == DynamicSystemKind.Lyapunov && (_state.AMax <= _state.AMin || _state.BMax <= _state.BMin || !_state.Pattern.Any(c => c is 'A' or 'a' or 'B' or 'b'))) throw new InvalidOperationException("Проверьте диапазоны A/B и паттерн.");
         if (_kind == DynamicSystemKind.Attractors2D && (_state.Iterations < 1 || _state.DensityGamma is < .05 or > 8)) throw new InvalidOperationException("Число точек должно быть положительным, гамма плотности — от 0.05 до 8.");
         DynamicSystemState result = _state.Clone(name); result.Timestamp = DateTime.Now; result.PaletteName = ActivePalette?.Name ?? string.Empty; return result;
     }
 
-    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; _state = state.Clone(); _state.Kind = _kind; SyncControls(); UpdateAttractorPresentation(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
+    private void LoadState(DynamicSystemState state) { _cts?.Cancel(); EndVisualization(); CurrentImage.Source=null; _state = state.Clone(); _state.Kind = _kind; _state.Threads = Math.Clamp(_state.Threads, 1, Environment.ProcessorCount); SyncControls(); UpdateAttractorPresentation(); UpdateSwatches(); UpdatePreviewTransform(); Schedule(); }
     private void SyncControls()
     {
         _syncing=true;
@@ -190,6 +204,7 @@ public partial class DynamicSystemWindow : Window
         foreach ((string key,ComboBox combo) in _choices)
         {
             string value = Format(typeof(DynamicSystemState).GetProperty(key)!.GetValue(_state));
+            if (key == "Threads" && _state.Threads == Environment.ProcessorCount) value = "Auto";
             combo.SelectedItem = combo.Items.OfType<ChoiceOption>().FirstOrDefault(option => option.Value == value);
         }
         _syncing=false;
