@@ -264,7 +264,7 @@ public static class LSystemEngine
 
 public static class LSystemRasterizer
 {
-    public static byte[] Render(
+    public static byte[]? Render(
         LSystemScene scene,
         LSystemDefinition definition,
         int width,
@@ -279,6 +279,11 @@ public static class LSystemRasterizer
         if (width <= 0 || height <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(width));
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
         }
 
         int stride = checked(width * 4);
@@ -301,7 +306,11 @@ public static class LSystemRasterizer
         {
             if ((index & 255) == 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
                 reportProgress?.Invoke((int)(100L * index / Math.Max(1, count)));
             }
 
@@ -315,6 +324,11 @@ public static class LSystemRasterizer
             double x2 = centerX + (segment.End.X - scene.Bounds.CenterX) * scale;
             double y2 = centerY - (segment.End.Y - scene.Bounds.CenterY) * scale;
             DrawAntialiasedLine(pixels, width, height, stride, x1, y1, x2, y2, thickness, color);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return null;
         }
 
         reportProgress?.Invoke(100);

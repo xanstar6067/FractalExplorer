@@ -202,7 +202,12 @@ public partial class LSystemWindow : Window
             _animationDurationSeconds = animationDuration;
             if (animate)
             {
-                await StartAnimationAsync(cts.Token);
+                bool animationStarted = await StartAnimationAsync(cts.Token);
+                if (!animationStarted && ReferenceEquals(_buildCts, cts))
+                {
+                    StatusText.Text = "Построение отменено.";
+                    RenderProgress.Value = 0;
+                }
             }
             else
             {
@@ -211,10 +216,20 @@ public partial class LSystemWindow : Window
                 double renderZoom = _viewZoom;
                 double renderPanX = _panX;
                 double renderPanY = _panY;
-                BitmapSource bitmap = await RenderBitmapAsync(
+                BitmapSource? bitmap = await RenderBitmapAsync(
                     scene, definition, scene.Segments.Count, CurrentSurface(),
                     renderZoom, renderPanX, renderPanY, cts.Token, drawProgress);
-                cts.Token.ThrowIfCancellationRequested();
+                if (bitmap is null || cts.IsCancellationRequested || !ReferenceEquals(_buildCts, cts))
+                {
+                    if (ReferenceEquals(_buildCts, cts))
+                    {
+                        StatusText.Text = "Построение отменено.";
+                        RenderProgress.Value = 0;
+                    }
+
+                    return;
+                }
+
                 PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
                 stopwatch.Stop();
                 RenderProgress.Value = 100;
@@ -250,28 +265,35 @@ public partial class LSystemWindow : Window
         }
     }
 
-    private async Task StartAnimationAsync(CancellationToken cancellationToken)
+    private async Task<bool> StartAnimationAsync(CancellationToken cancellationToken)
     {
         if (_scene is null)
         {
-            return;
+            return false;
         }
 
-        _isAnimating = true;
-        UpdateActivityState();
         AnimationBadge.Visibility = Visibility.Visible;
         AnimationBadgeText.Text = "Построено 0%";
         RenderProgress.Value = 0;
         double renderZoom = _viewZoom;
         double renderPanX = _panX;
         double renderPanY = _panY;
-        BitmapSource bitmap = await RenderBitmapAsync(
+        BitmapSource? bitmap = await RenderBitmapAsync(
             _scene, _activeDefinition, 0, CurrentSurface(), renderZoom, renderPanX, renderPanY,
             cancellationToken, null);
+        if (bitmap is null || cancellationToken.IsCancellationRequested)
+        {
+            AnimationBadge.Visibility = Visibility.Collapsed;
+            return false;
+        }
+
+        _isAnimating = true;
+        UpdateActivityState();
         PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
         _animationClock.Restart();
         _animationTimer.Start();
         StatusText.Text = $"Анимация: {_scene.Segments.Count:N0} отрезков за {_animationDurationSeconds:0.#} сек.";
+        return true;
     }
 
     private async void AnimationTimer_OnTick(object? sender, EventArgs e)
@@ -315,10 +337,10 @@ public partial class LSystemWindow : Window
             double renderZoom = _viewZoom;
             double renderPanX = _panX;
             double renderPanY = _panY;
-            BitmapSource bitmap = await RenderBitmapAsync(
+            BitmapSource? bitmap = await RenderBitmapAsync(
                 _scene, _activeDefinition, visibleSegments, CurrentSurface(),
                 renderZoom, renderPanX, renderPanY, cts.Token, null);
-            if (!cts.IsCancellationRequested && ReferenceEquals(_frameCts, cts))
+            if (bitmap is not null && !cts.IsCancellationRequested && ReferenceEquals(_frameCts, cts))
             {
                 PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
             }
@@ -384,10 +406,10 @@ public partial class LSystemWindow : Window
             double renderZoom = _viewZoom;
             double renderPanX = _panX;
             double renderPanY = _panY;
-            BitmapSource bitmap = await RenderBitmapAsync(
+            BitmapSource? bitmap = await RenderBitmapAsync(
                 _scene, _activeDefinition, _scene.Segments.Count, CurrentSurface(),
                 renderZoom, renderPanX, renderPanY, cts.Token, null);
-            if (!cts.IsCancellationRequested && ReferenceEquals(_frameCts, cts))
+            if (bitmap is not null && !cts.IsCancellationRequested && ReferenceEquals(_frameCts, cts))
             {
                 PresentBitmap(bitmap, renderZoom, renderPanX, renderPanY);
             }
@@ -405,7 +427,7 @@ public partial class LSystemWindow : Window
         }
     }
 
-    private static async Task<BitmapSource> RenderBitmapAsync(
+    private static async Task<BitmapSource?> RenderBitmapAsync(
         LSystemScene scene,
         LSystemDefinition definition,
         int visibleSegments,
@@ -416,10 +438,14 @@ public partial class LSystemWindow : Window
         CancellationToken cancellationToken,
         IProgress<int>? progress)
     {
-        byte[] pixels = await Task.Run(() => LSystemRasterizer.Render(
+        byte[]? pixels = await Task.Run(() => LSystemRasterizer.Render(
             scene, definition, surface.PixelWidth, surface.PixelHeight, visibleSegments,
-            viewZoom, panX, panY, cancellationToken, value => progress?.Report(value)), cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+            viewZoom, panX, panY, cancellationToken, value => progress?.Report(value)));
+        if (pixels is null || cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
         int stride = checked(surface.PixelWidth * 4);
         BitmapSource bitmap = BitmapSource.Create(
             surface.PixelWidth, surface.PixelHeight,
@@ -442,8 +468,32 @@ public partial class LSystemWindow : Window
     {
         var surface = new RenderSurfaceMetrics(
             new System.Windows.Controls.Border(), width, height, width, height, new DpiScale(1, 1));
-        return RenderBitmapAsync(scene, definition, scene.Segments.Count, surface,
-            viewZoom, panX, panY, cancellationToken, progress);
+        var completion = new TaskCompletionSource<BitmapSource>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        _ = CompleteExportRenderAsync();
+        return completion.Task;
+
+        async Task CompleteExportRenderAsync()
+        {
+            try
+            {
+                BitmapSource? bitmap = await RenderBitmapAsync(
+                    scene, definition, scene.Segments.Count, surface,
+                    viewZoom, panX, panY, cancellationToken, progress);
+                if (bitmap is null || cancellationToken.IsCancellationRequested)
+                {
+                    completion.TrySetCanceled(cancellationToken);
+                }
+                else
+                {
+                    completion.TrySetResult(bitmap);
+                }
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        }
     }
 
     private void Export_OnClick(object sender, RoutedEventArgs e)
