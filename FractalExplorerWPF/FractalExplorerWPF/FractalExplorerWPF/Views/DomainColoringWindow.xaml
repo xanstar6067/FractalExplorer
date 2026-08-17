@@ -1,0 +1,152 @@
+<Window x:Class="FractalExplorerWPF.Views.DomainColoringWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        Title="Domain Coloring — комплексные функции" Width="1180" Height="760"
+        MinWidth="920" MinHeight="580" WindowStartupLocation="CenterOwner"
+        KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="MinHeight" Value="34"/><Setter Property="Margin" Value="0,4"/>
+        </Style>
+        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="Margin" Value="0,3,0,7"/><Setter Property="Padding" Value="6,3"/>
+        </Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Margin" Value="0,3,0,7"/>
+        </Style>
+    </Window.Resources>
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="ControlsColumn" Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border x:Name="ControlsHost" Margin="10" Padding="14"
+                Background="{DynamicResource Theme.PanelBackgroundBrush}"
+                BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="Domain Coloring"/>
+                    <TextBlock Margin="0,5,0,10" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                               Text="Аргумент f(z) задаёт оттенок, а модуль — яркость и контурные линии."/>
+
+                    <TextBlock Text="Готовая функция"/>
+                    <ComboBox x:Name="PresetBox" SelectionChanged="PresetBox_OnSelectionChanged">
+                        <ComboBoxItem Content="Тождественная — z" Tag="z"/>
+                        <ComboBoxItem Content="Квадрат — z²" Tag="z^2"/>
+                        <ComboBoxItem Content="Обратная — 1/z" Tag="1/z"/>
+                        <ComboBoxItem Content="Синус — sin(z)" Tag="sin(z)"/>
+                        <ComboBoxItem Content="Экспонента — exp(z)" Tag="exp(z)"/>
+                        <ComboBoxItem Content="Рациональная I" Tag="(z^3-1)/(z^3+1)"/>
+                        <ComboBoxItem Content="Рациональная II" Tag="(z^2+1)/(z^2-1)"/>
+                        <ComboBoxItem Content="Корень — sqrt(z)" Tag="sqrt(z)"/>
+                        <ComboBoxItem Content="Пользовательская" Tag="custom"/>
+                    </ComboBox>
+
+                    <TextBlock Text="Функция f(z)"/>
+                    <TextBox x:Name="FormulaBox" FontFamily="Consolas" TextChanged="FormulaBox_OnTextChanged"/>
+                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Theme.DisabledTextBrush}"
+                               Text="Доступны +, −, *, /, ^, i, pi, e, sin, cos, tan, exp, log, sqrt и гиперболические функции."/>
+
+                    <TextBlock Text="Режим окрашивания"/>
+                    <ComboBox x:Name="ColoringModeBox" SelectionChanged="ColoringModeBox_OnSelectionChanged">
+                        <ComboBoxItem Content="Плавный модуль"/>
+                        <ComboBoxItem Content="Логарифмические кольца"/>
+                        <ComboBoxItem Content="Фазовые линии"/>
+                        <ComboBoxItem Content="Полярная сетка"/>
+                        <ComboBoxItem Content="Только аргумент"/>
+                    </ComboBox>
+                    <TextBlock x:Name="ColoringDescriptionText" Margin="0,0,0,7" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+
+                    <Expander Header="Параметры окрашивания" IsExpanded="True" Margin="0,2,0,7">
+                        <StackPanel Margin="12,6,0,2">
+                            <TextBlock Text="Обороты оттенка"/>
+                            <TextBox x:Name="HueCyclesBox" TextChanged="Parameter_OnChanged"/>
+                            <TextBlock Text="Насыщенность (0–1)"/>
+                            <TextBox x:Name="SaturationBox" TextChanged="Parameter_OnChanged"/>
+
+                            <StackPanel x:Name="MagnitudePanel">
+                                <TextBlock Text="Экспозиция модуля"/>
+                                <TextBox x:Name="MagnitudeExposureBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="RingPanel">
+                                <TextBlock Text="Колец на удвоение |f(z)|" TextWrapping="Wrap"/>
+                                <TextBox x:Name="RingDensityBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="PhasePanel">
+                                <TextBlock Text="Число фазовых секторов"/>
+                                <TextBox x:Name="PhaseSectorsBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+                            <StackPanel x:Name="ContourPanel">
+                                <TextBlock Text="Сила контуров (0–1)"/>
+                                <TextBox x:Name="ContourStrengthBox" TextChanged="Parameter_OnChanged"/>
+                            </StackPanel>
+
+                            <CheckBox x:Name="ShowAxesBox" Margin="0,3,0,8" Content="Показывать оси"
+                                      Checked="Parameter_OnChanged" Unchecked="Parameter_OnChanged"/>
+                            <TextBlock Text="Цвет неопределённых значений" TextWrapping="Wrap"/>
+                            <controls:ColorSelectorControl x:Name="InvalidColorSelector"
+                                                           SelectedColorChanged="Parameter_OnChanged"/>
+                        </StackPanel>
+                    </Expander>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Приближение"/>
+                        <TextBox x:Name="ZoomBox" Grid.Column="1" TextChanged="ZoomBox_OnTextChanged"/>
+                    </Grid>
+                    <TextBlock Text="Потоки ЦП"/>
+                    <ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
+                    <TextBlock Text="Сглаживание предпросмотра"/>
+                    <ComboBox x:Name="SsaaBox" SelectionChanged="Parameter_OnChanged">
+                        <ComboBoxItem Content="Выкл. (1×)" Tag="1"/>
+                        <ComboBoxItem Content="Низкое (2×)" Tag="2"/>
+                        <ComboBoxItem Content="Высокое (4×)" Tag="4"/>
+                    </ComboBox>
+
+                    <Button Content="Запустить рендер" Click="RenderButton_OnClick"/>
+                    <Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
+                    <Button Content="Сбросить вид" Click="ResetViewButton_OnClick"/>
+                    <Button Content="Сохранить изображение" Click="ExportButton_OnClick"/>
+
+                    <TextBlock Margin="0,12,0,4" Text="Прогресс"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+                    <ProgressBar x:Name="RenderProgress" Height="20" Minimum="0" Maximum="100"/>
+                    <TextBlock x:Name="CoordinateText" Margin="0,8,0,0" FontFamily="Consolas"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+                    <TextBlock x:Name="StatusText" Margin="0,7,0,0" Text="Готово" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+                    <TextBlock Margin="0,12,0,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Theme.DisabledTextBrush}"
+                               Text="Колесо мыши: масштаб. Левая кнопка: перемещение. F11: полноэкранный режим."/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="Black"
+                ClipToBounds="True" BorderBrush="{DynamicResource Theme.BorderBrush}"
+                BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True"
+                SizeChanged="CanvasHost_OnSizeChanged" MouseWheel="CanvasHost_OnMouseWheel"
+                MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
+                MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
+            <Grid>
+                <Grid ClipToBounds="True">
+                    <Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                </Grid>
+                <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/>
+            </Grid>
+        </Border>
+        <Button x:Name="ToggleControlsButton" Grid.Column="1"
+                Style="{StaticResource FractalPanelToggleButtonStyle}" Content="✕"
+                ToolTip="Скрыть панель параметров" Click="ToggleControlsButton_OnClick"/>
+    </Grid>
+</Window>
+

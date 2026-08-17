@@ -3,16 +3,16 @@ using System.Numerics;
 namespace FractalExplorerWPF.Core.NewtonMath;
 
 /// <summary>
-/// Компактное постфиксное представление выражения для горячего цикла рендера.
+/// Компактное постфиксное представление комплексного выражения для горячего цикла рендера.
 /// Не использует словари, рекурсию AST и выделения памяти для обычных формул.
 /// </summary>
-internal sealed class CompiledNewtonExpression
+internal sealed class CompiledComplexExpression
 {
     private const int StackAllocationLimit = 128;
     private readonly Instruction[] _instructions;
     private readonly int _maxStackDepth;
 
-    private CompiledNewtonExpression(Instruction[] instructions, int maxStackDepth)
+    private CompiledComplexExpression(Instruction[] instructions, int maxStackDepth)
     {
         _instructions = instructions;
         _maxStackDepth = Math.Max(1, maxStackDepth);
@@ -21,13 +21,13 @@ internal sealed class CompiledNewtonExpression
     public int InstructionCount => _instructions.Length;
     public int MaxStackDepth => _maxStackDepth;
 
-    public static CompiledNewtonExpression Compile(ExpressionNode expression)
+    public static CompiledComplexExpression Compile(ExpressionNode expression)
     {
         var compiler = new Compiler();
         compiler.Emit(expression);
         if (compiler.StackDepth != 1)
             throw new InvalidOperationException("Некорректный стек скомпилированного выражения.");
-        return new CompiledNewtonExpression(compiler.Instructions.ToArray(), compiler.MaxStackDepth);
+        return new CompiledComplexExpression(compiler.Instructions.ToArray(), compiler.MaxStackDepth);
     }
 
     public Complex Evaluate(Complex z)

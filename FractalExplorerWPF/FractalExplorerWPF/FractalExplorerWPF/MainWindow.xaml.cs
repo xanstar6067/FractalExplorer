@@ -203,6 +203,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_selectedItem?.LaunchKey == "DomainColoring")
+        {
+            new DomainColoringWindow { Owner = this }.Show();
+            return;
+        }
+
         if (_selectedItem?.LaunchKey == "NovaMandelbrot")
         {
             new NovaWindow(NovaVariant.Mandelbrot) { Owner = this }.Show();

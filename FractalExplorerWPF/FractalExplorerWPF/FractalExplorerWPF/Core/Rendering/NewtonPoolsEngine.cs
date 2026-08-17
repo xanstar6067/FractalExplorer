@@ -14,11 +14,11 @@ public sealed class NewtonPoolsEngine
     private ExpressionNode? _formula;
     private ExpressionNode? _firstDerivative;
     private ExpressionNode? _secondDerivative;
-    private CompiledNewtonExpression? _compiledFormula;
-    private CompiledNewtonExpression? _compiledFirstDerivative;
-    private CompiledNewtonExpression? _compiledSecondDerivative;
+    private CompiledComplexExpression? _compiledFormula;
+    private CompiledComplexExpression? _compiledFirstDerivative;
+    private CompiledComplexExpression? _compiledSecondDerivative;
     private readonly List<ExpressionNode> _inverseDerivatives = [];
-    private readonly List<CompiledNewtonExpression> _compiledInverseDerivatives = [];
+    private readonly List<CompiledComplexExpression> _compiledInverseDerivatives = [];
     private int _householderOrder = 3;
     private NewtonIterationMethod _iterationMethod;
     private double _rootTolerance = 1e-6;
@@ -82,9 +82,9 @@ public sealed class NewtonPoolsEngine
             _formula = new Parser(tokens).Parse().Simplify();
             _firstDerivative = _formula.Differentiate("z").Simplify();
             _secondDerivative = _firstDerivative.Differentiate("z").Simplify();
-            _compiledFormula = CompiledNewtonExpression.Compile(_formula);
-            _compiledFirstDerivative = CompiledNewtonExpression.Compile(_firstDerivative);
-            _compiledSecondDerivative = CompiledNewtonExpression.Compile(_secondDerivative);
+            _compiledFormula = CompiledComplexExpression.Compile(_formula);
+            _compiledFirstDerivative = CompiledComplexExpression.Compile(_firstDerivative);
+            _compiledSecondDerivative = CompiledComplexExpression.Compile(_secondDerivative);
             if (IterationMethod == NewtonIterationMethod.Householder) BuildInverseDerivatives();
             else ClearInverseDerivatives();
             if (discoverRoots) FindRoots();
@@ -562,12 +562,12 @@ public sealed class NewtonPoolsEngine
         if (_formula is null) return;
         ExpressionNode current = new BinaryOpNode(new NumberNode(Complex.One), "/", _formula).Simplify();
         _inverseDerivatives.Add(current);
-        _compiledInverseDerivatives.Add(CompiledNewtonExpression.Compile(current));
+        _compiledInverseDerivatives.Add(CompiledComplexExpression.Compile(current));
         for (int index = 1; index <= Math.Max(2, HouseholderOrder); index++)
         {
             current = current.Differentiate("z").Simplify();
             _inverseDerivatives.Add(current);
-            _compiledInverseDerivatives.Add(CompiledNewtonExpression.Compile(current));
+            _compiledInverseDerivatives.Add(CompiledComplexExpression.Compile(current));
         }
     }
 
