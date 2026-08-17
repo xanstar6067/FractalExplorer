@@ -14,17 +14,20 @@ public enum DomainColoringMode
 
 public sealed class DomainColoringState
 {
-    public string Formula { get; init; } = "z";
-    public double CenterX { get; init; }
-    public double CenterY { get; init; }
-    public double Zoom { get; init; } = 1;
-    public DomainColoringMode ColoringMode { get; init; }
-    public double HueCycles { get; init; } = 1;
-    public double MagnitudeExposure { get; init; } = 1;
-    public double RingDensity { get; init; } = 1;
-    public int PhaseSectors { get; init; } = 12;
-    public double ContourStrength { get; init; } = 0.55;
-    public double Saturation { get; init; } = 0.9;
-    public bool ShowAxes { get; init; }
-    public Color InvalidColor { get; init; } = Colors.White;
+    public string SaveName { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+    public string FractalType { get; set; } = "DomainColoring";
+    public string Formula { get; set; } = "z";
+    public double CenterX { get; set; }
+    public double CenterY { get; set; }
+    public double Zoom { get; set; } = 1;
+    public DomainColoringMode ColoringMode { get; set; }
+    public double HueCycles { get; set; } = 1;
+    public double MagnitudeExposure { get; set; } = 1;
+    public double RingDensity { get; set; } = 1;
+    public int PhaseSectors { get; set; } = 12;
+    public double ContourStrength { get; set; } = 0.55;
+    public double Saturation { get; set; } = 0.9;
+    public bool ShowAxes { get; set; }
+    public Color InvalidColor { get; set; } = Colors.White;
 }

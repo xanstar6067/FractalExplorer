@@ -19,6 +19,7 @@ public partial class DomainColoringWindow : Window
 {
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
     private readonly DispatcherTimer _visualizationTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
+    private readonly DomainColoringSaveStore _saveStore = new();
     private readonly TransformGroup _previewTransform = new();
     private readonly ScaleTransform _previewScale = new(1, 1);
     private readonly TranslateTransform _previewTranslation = new();
@@ -77,10 +78,12 @@ public partial class DomainColoringWindow : Window
         Loaded += (_, _) => ScheduleRender();
     }
 
-    private DomainColoringState CaptureState()
+    public DomainColoringState CaptureState(string name)
     {
         return new DomainColoringState
         {
+            SaveName = name,
+            Timestamp = DateTime.Now,
             Formula = FormulaBox.Text.Trim(),
             CenterX = _centerX,
             CenterY = _centerY,
@@ -96,6 +99,55 @@ public partial class DomainColoringWindow : Window
             ShowAxes = ShowAxesBox.IsChecked == true,
             InvalidColor = InvalidColorSelector.SelectedColor
         };
+    }
+
+    public void LoadState(DomainColoringState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        _renderCts?.Cancel();
+        _renderTimer.Stop();
+        _updatingControls = true;
+
+        _centerX = double.IsFinite(state.CenterX) ? state.CenterX : 0;
+        _centerY = double.IsFinite(state.CenterY) ? state.CenterY : 0;
+        _zoom = double.IsFinite(state.Zoom) ? Math.Clamp(state.Zoom, 1e-12, 1e12) : 1;
+        string formula = string.IsNullOrWhiteSpace(state.Formula) ? "z" : state.Formula.Trim();
+        PresetBox.SelectedIndex = FindPresetIndex(formula);
+        FormulaBox.Text = formula;
+        ColoringModeBox.SelectedIndex = Math.Clamp((int)state.ColoringMode, 0,
+            (int)DomainColoringMode.ArgumentOnly);
+        HueCyclesBox.Text = Format(ClampFinite(state.HueCycles, 0.05, 32, 1));
+        MagnitudeExposureBox.Text = Format(ClampFinite(state.MagnitudeExposure, 0.01, 20, 1));
+        RingDensityBox.Text = Format(ClampFinite(state.RingDensity, 0.05, 32, 1));
+        PhaseSectorsBox.Text = Math.Clamp(state.PhaseSectors, 1, 256).ToString(CultureInfo.InvariantCulture);
+        ContourStrengthBox.Text = Format(ClampFinite(state.ContourStrength, 0, 1, 0.55));
+        SaturationBox.Text = Format(ClampFinite(state.Saturation, 0, 1, 0.9));
+        ShowAxesBox.IsChecked = state.ShowAxes;
+        InvalidColorSelector.SelectedColor = state.InvalidColor;
+        ZoomBox.Text = Format(_zoom);
+
+        UpdateColoringControls();
+        _updatingControls = false;
+        UpdatePreviewTransform();
+        ScheduleRender();
+    }
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        DomainColoringState state,
+        int width,
+        int height,
+        CancellationToken token) =>
+        RenderBitmapAsync(state, width, height, 1, token, null);
+
+    private int FindPresetIndex(string formula)
+    {
+        for (int index = 0; index < PresetBox.Items.Count; index++)
+        {
+            if (PresetBox.Items[index] is ComboBoxItem { Tag: string preset } &&
+                preset != "custom" && string.Equals(preset, formula, StringComparison.OrdinalIgnoreCase))
+                return index;
+        }
+        return PresetBox.Items.Count - 1;
     }
 
     private void PresetBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -170,12 +222,15 @@ public partial class DomainColoringWindow : Window
         ScheduleRender();
     }
 
+    private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
+        SaveManagerWindow.Open(this, SaveManagerConfigurations.ForDomainColoring(this, _saveStore));
+
     private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         DomainColoringState state;
         try
         {
-            state = CaptureState();
+            state = CaptureState("export");
             _ = new DomainColoringRenderer(state);
         }
         catch (Exception ex)
@@ -224,7 +279,7 @@ public partial class DomainColoringWindow : Window
         DomainColoringRenderer renderer;
         try
         {
-            state = CaptureState();
+            state = CaptureState("preview");
             renderer = new DomainColoringRenderer(state);
         }
         catch (Exception ex)
@@ -508,6 +563,11 @@ public partial class DomainColoringWindow : Window
         return value;
     }
 
+    private static double ClampFinite(double value, double minimum, double maximum, double fallback) =>
+        double.IsFinite(value) ? Math.Clamp(value, minimum, maximum) : fallback;
+
+    private static string Format(double value) => value.ToString("G15", CultureInfo.InvariantCulture);
+
     private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight)
     {
         public WriteableBitmap Bitmap { get; } = bitmap;
@@ -520,4 +580,3 @@ public partial class DomainColoringWindow : Window
 
     private readonly record struct TileRenderEvent(bool IsStart, MandelbrotRenderTile Tile, byte[]? Pixels);
 }
-

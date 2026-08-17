@@ -124,6 +124,25 @@ public static class SaveManagerConfigurations
                                         : "растяжение по глубине")
     };
 
+    public static SaveManagerConfiguration<DomainColoringState> ForDomainColoring(
+        DomainColoringWindow window, DomainColoringSaveStore store) => new()
+    {
+        WindowTitle = "Сохранение/Загрузка: Domain Coloring",
+        FractalIdentifier = "DomainColoring",
+        LoadStates = store.Load,
+        SaveStates = store.Save,
+        CaptureState = window.CaptureState,
+        LoadState = window.LoadState,
+        RenderPreviewAsync = window.RenderStatePreviewAsync,
+        GetName = state => state.SaveName,
+        GetTimestamp = state => state.Timestamp,
+        GetDetails = state => $"{Prefix(state.Timestamp)} · {DomainColoringModeName(state.ColoringMode)} · " +
+                                    $"Масштаб: {state.Zoom:G8}\n" +
+                                    $"f(z) = {state.Formula}\n" +
+                                    $"Центр: {state.CenterX:G8}; {state.CenterY:G8} · " +
+                                    $"Оттенок: {state.HueCycles:G6} об. · Насыщенность: {state.Saturation:G6}"
+    };
+
     public static SaveManagerConfiguration<BuddhabrotState> ForBuddhabrot(
         BuddhabrotWindow window, BuddhabrotSaveStore store) => new()
     {
@@ -263,6 +282,15 @@ public static class SaveManagerConfigurations
             ? "только совпавшие" : "подсветка";
         return $"mod {state.Modulus}, {residue}, {behavior}";
     }
+
+    private static string DomainColoringModeName(DomainColoringMode mode) => mode switch
+    {
+        DomainColoringMode.LogarithmicRings => "Логарифмические кольца",
+        DomainColoringMode.PhaseContours => "Фазовые линии",
+        DomainColoringMode.PolarGrid => "Полярная сетка",
+        DomainColoringMode.ArgumentOnly => "Только аргумент",
+        _ => "Плавный модуль"
+    };
 
     private static string Prefix(DateTime timestamp) => timestamp == DateTime.MinValue ? "Точка интереса" : timestamp.ToString("g");
 

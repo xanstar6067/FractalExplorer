@@ -112,6 +112,7 @@
                     <Button Content="Запустить рендер" Click="RenderButton_OnClick"/>
                     <Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
                     <Button Content="Сбросить вид" Click="ResetViewButton_OnClick"/>
+                    <Button Content="Менеджер сохранений" Click="SavesButton_OnClick"/>
                     <Button Content="Сохранить изображение" Click="ExportButton_OnClick"/>
 
                     <TextBlock Margin="0,12,0,4" Text="Прогресс"
@@ -149,4 +150,3 @@
                 ToolTip="Скрыть панель параметров" Click="ToggleControlsButton_OnClick"/>
     </Grid>
 </Window>
-
