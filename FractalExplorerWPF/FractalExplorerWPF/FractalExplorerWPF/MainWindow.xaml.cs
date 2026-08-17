@@ -239,6 +239,18 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_selectedItem?.LaunchKey == "ApollonianGasket")
+        {
+            new ApollonianWindow { Owner = this }.Show();
+            return;
+        }
+
+        if (_selectedItem?.LaunchKey == "DLA")
+        {
+            new DlaWindow { Owner = this }.Show();
+            return;
+        }
+
         if (Enum.TryParse(_selectedItem?.LaunchKey, out DynamicSystemKind dynamicSystem))
         {
             new DynamicSystemWindow(dynamicSystem) { Owner = this }.Show();

@@ -193,6 +193,40 @@ public static class SaveManagerConfigurations
         PointsOfInterest = PresetManager.GetIfsPresets()
     };
 
+    public static SaveManagerConfiguration<ApollonianState> ForApollonian(
+        ApollonianWindow window, ApollonianSaveStore store) => new()
+    {
+        WindowTitle = "Сохранение/Загрузка: Аполлонова прокладка",
+        FractalIdentifier = "ApollonianGasket",
+        LoadStates = store.Load,
+        SaveStates = store.Save,
+        CaptureState = window.CaptureState,
+        LoadState = state => window.LoadState(state.Clone()),
+        RenderPreviewAsync = (state, width, height, token) =>
+            window.RenderStatePreviewAsync(state.Clone(), width, height, token),
+        GetName = state => state.SaveName,
+        GetTimestamp = state => state.Timestamp,
+        GetDetails = state => $"{Prefix(state.Timestamp)} · глубина {state.MaxDepth} · до {state.MaxCircles:N0} окружностей\n" +
+                                    $"Раскраска: {state.ColoringMode} · вид: {state.DrawMode} · ширина: {state.ViewWidth:G6}"
+    };
+
+    public static SaveManagerConfiguration<DlaState> ForDla(
+        DlaWindow window, DlaSaveStore store) => new()
+    {
+        WindowTitle = "Сохранение/Загрузка: DLA",
+        FractalIdentifier = "DLA",
+        LoadStates = store.Load,
+        SaveStates = store.Save,
+        CaptureState = window.CaptureState,
+        LoadState = state => window.LoadState(state.Clone()),
+        RenderPreviewAsync = (state, width, height, token) =>
+            window.RenderStatePreviewAsync(state.Clone(), width, height, token),
+        GetName = state => state.SaveName,
+        GetTimestamp = state => state.Timestamp,
+        GetDetails = state => $"{Prefix(state.Timestamp)} · {state.ParticleCount:N0} частиц · сетка {state.GridSize}×{state.GridSize}\n" +
+                                    $"Затравка: {state.SeedMode} · прилипание: {state.Stickiness:G4} · seed: {state.RandomSeed}"
+    };
+
     private static string DescribeMandelbrot(MandelbrotState state)
     {
         string details = $"{Prefix(state.Timestamp)} · Итерации: {state.Iterations} · Масштаб: {state.Zoom:G6}\n" +

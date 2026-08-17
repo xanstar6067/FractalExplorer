@@ -16,7 +16,7 @@
 
 ### Возможности
 
-- **28 пунктов каталога:** 26 визуализаций и 2 галереи констант Julia.
+- **33 пункта каталога:** 31 визуализация и 2 галереи констант Julia.
 - **Интерактивное исследование:** масштабирование колесом мыши, перемещение холста, сброс вида и полноэкранный режим.
 - **Асинхронный рендеринг на CPU:** настройка числа потоков, отмена вычисления, индикаторы прогресса и восемь схем появления плиток.
 - **Гибкое окрашивание:** встроенные и пользовательские палитры, плавные и дискретные режимы, Histogram, Orbit Trap и Stripe Average для семейства Mandelbrot.
@@ -30,8 +30,8 @@
 | --- | --- |
 | Множество Мандельброта | Mandelbrot, Burning Ship, Tricorn (Mandelbar), Buffalo, Celtic Mandelbrot, Simonobrot, Generalized Mandelbrot |
 | Множество Жюлиа | Julia, Julia Burning Ship и две галереи констант `C` |
-| Итерируемые функции | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame |
-| Геометрические фракталы | L‑системы (Кох, Гильберт, Леви, Dragon Curve, деревья, растения, Серпинский), Серпинский — игра хаоса, IFS Барнсли / Хейуэя |
+| Итерируемые функции | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame, DLA |
+| Геометрические фракталы | L‑системы (Кох, Гильберт, Леви, Dragon Curve, деревья, растения, Серпинский), Серпинский — игра хаоса, IFS Барнсли / Хейуэя, Аполлонова прокладка |
 | Динамические системы | Lyapunov, Lorenz, Rössler, Logistic Map, Bifurcation, Hénon, Ikeda |
 
 ### Интерфейс
@@ -65,7 +65,7 @@ Newton Pools+ поддерживает готовые и пользовател�
 
 #### Стохастические фракталы и динамические системы
 
-Fractal Flame использует накопление HDR-гистограммы и настраиваемые трансформации. Отдельное семейство модулей визуализирует непрерывные и дискретные динамические системы.
+Fractal Flame использует накопление HDR-гистограммы и настраиваемые трансформации. DLA показывает рост диффузионного кластера в реальном времени и включает режимы морозного кристалла, коралла и молнии. Аполлонова прокладка рекурсивно заполняет промежутки касающимися окружностями и поддерживает раскраску по глубине, кривизне и родительской ветви. Отдельное семейство модулей визуализирует непрерывные и дискретные динамические системы.
 
 <table>
   <tr>
@@ -153,7 +153,7 @@ An interactive fractal and dynamical-systems laboratory for Windows. The current
 
 ### Features
 
-- **28 catalog entries:** 26 visualizations and 2 Julia constant galleries.
+- **33 catalog entries:** 31 visualizations and 2 Julia constant galleries.
 - **Interactive exploration:** cursor-centered mouse-wheel zoom, canvas panning, view reset, and full-screen mode.
 - **Asynchronous CPU rendering:** configurable thread count, cancellation, progress indicators, and eight tile scheduling patterns.
 - **Flexible coloring:** built-in and custom palettes, smooth and discrete modes, plus Histogram, Orbit Trap, and Stripe Average for the Mandelbrot family.
@@ -167,8 +167,8 @@ An interactive fractal and dynamical-systems laboratory for Windows. The current
 | --- | --- |
 | Mandelbrot set | Mandelbrot, Burning Ship, Tricorn (Mandelbar), Buffalo, Celtic Mandelbrot, Simonobrot, Generalized Mandelbrot |
 | Julia set | Julia, Julia Burning Ship, and two constant-`C` galleries |
-| Iterated functions | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame |
-| Geometric fractals | L‑systems (Koch, Hilbert, Lévy C, Dragon Curve, trees, plants, Sierpiński), Sierpiński chaos game, Barnsley / Heighway IFS |
+| Iterated functions | Newton Pools+, Phoenix, Collatz, Nova Mandelbrot, Nova Julia, Buddhabrot / Anti-Buddhabrot, Fractal Flame, DLA |
+| Geometric fractals | L‑systems (Koch, Hilbert, Lévy C, Dragon Curve, trees, plants, Sierpiński), Sierpiński chaos game, Barnsley / Heighway IFS, Apollonian gasket |
 | Dynamical systems | Lyapunov, Lorenz, Rössler, Logistic Map, Bifurcation, Hénon, Ikeda |
 
 ### Interface
@@ -202,7 +202,7 @@ The L‑system module combines geometric presets with an editor for the axiom, r
 
 #### Stochastic fractals and dynamical systems
 
-Fractal Flame uses HDR histogram accumulation and configurable transforms. A separate family of modules visualizes continuous and discrete dynamical systems.
+Fractal Flame uses HDR histogram accumulation and configurable transforms. DLA presents diffusion-cluster growth in real time with frost, coral, and lightning presets. The Apollonian gasket recursively fills gaps with tangent circles and can color them by recursion depth, curvature, or parent branch. A separate family of modules visualizes continuous and discrete dynamical systems.
 
 <table>
   <tr>
