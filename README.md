@@ -19,7 +19,7 @@
 - **33 пункта каталога:** 31 визуализация и 2 галереи констант Julia.
 - **Интерактивное исследование:** масштабирование колесом мыши, перемещение холста, сброс вида и полноэкранный режим.
 - **Асинхронный рендеринг на CPU:** настройка числа потоков, отмена вычисления, индикаторы прогресса и восемь схем появления плиток.
-- **Гибкое окрашивание:** встроенные и пользовательские палитры, плавные и дискретные режимы, Histogram, Orbit Trap и Stripe Average для семейства Mandelbrot.
+- **Гибкое окрашивание:** встроенные и пользовательские палитры, плавные и дискретные режимы, Histogram, Orbit Trap, Stripe Average и Distance Estimation с псевдо-3D освещением для семейства Mandelbrot.
 - **Сохранение исследований:** параметры фрактала, превью и точки интереса хранятся в JSON и восстанавливаются через менеджер сохранений.
 - **Экспорт изображений:** произвольное разрешение, пресеты вплоть до 8K, PNG/JPG/BMP, SSAA, Bicubic и Lanczos 3.
 - **Настраиваемый WPF-интерфейс:** встроенные темы, системная тема Windows, редактор цветов и экранная пипетка.
@@ -156,7 +156,7 @@ An interactive fractal and dynamical-systems laboratory for Windows. The current
 - **33 catalog entries:** 31 visualizations and 2 Julia constant galleries.
 - **Interactive exploration:** cursor-centered mouse-wheel zoom, canvas panning, view reset, and full-screen mode.
 - **Asynchronous CPU rendering:** configurable thread count, cancellation, progress indicators, and eight tile scheduling patterns.
-- **Flexible coloring:** built-in and custom palettes, smooth and discrete modes, plus Histogram, Orbit Trap, and Stripe Average for the Mandelbrot family.
+- **Flexible coloring:** built-in and custom palettes, smooth and discrete modes, plus Histogram, Orbit Trap, Stripe Average, and Distance Estimation with pseudo-3D lighting for the Mandelbrot family.
 - **Saved explorations:** fractal parameters, previews, and points of interest are stored as JSON and restored through dedicated save managers.
 - **Image export:** custom resolutions, presets up to 8K, PNG/JPG/BMP, SSAA, Bicubic, and Lanczos 3.
 - **Customizable WPF interface:** built-in themes, the Windows system theme, a color editor, and an on-screen eyedropper.

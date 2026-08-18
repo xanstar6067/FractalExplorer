@@ -93,6 +93,7 @@
                         <ComboBoxItem Content="Орбитальная ловушка" Tag="OrbitTrap"/>
                         <ComboBoxItem Content="Полосатое усреднение" Tag="StripeAverage"/>
                         <ComboBoxItem Content="Smooth Escape (Poly)" Tag="SmoothEscapePolynomial"/>
+                        <ComboBoxItem Content="Distance Estimation (псевдо-3D)" Tag="DistanceEstimation"/>
                     </ComboBox>
 
                     <Expander Header="Параметры окрашивания">
@@ -121,6 +122,38 @@
                             <controls:ColorSelectorControl x:Name="InteriorColorSelector"
                                                            IsEnabled="{Binding IsChecked, ElementName=CustomInteriorBox}"
                                                            SelectedColorChanged="Parameter_OnChanged"/>
+                        </StackPanel>
+                    </Expander>
+
+                    <Expander x:Name="DistanceEstimationExpander" Header="Distance Estimation · свет и рельеф"
+                              Visibility="Collapsed" IsExpanded="True">
+                        <StackPanel Margin="12,6,0,4">
+                            <TextBlock Text="Сила рельефа"/>
+                            <TextBox x:Name="DistanceReliefBox" TextChanged="Parameter_OnChanged"/>
+                            <TextBlock Text="Азимут / высота света (°)" TextWrapping="Wrap"/>
+                            <UniformGrid Columns="2">
+                                <TextBox x:Name="DistanceLightAzimuthBox" Margin="0,2,3,7" TextChanged="Parameter_OnChanged"/>
+                                <TextBox x:Name="DistanceLightElevationBox" Margin="3,2,0,7" TextChanged="Parameter_OnChanged"/>
+                            </UniformGrid>
+                            <TextBlock Text="Ambient / diffuse"/>
+                            <UniformGrid Columns="2">
+                                <TextBox x:Name="DistanceAmbientBox" Margin="0,2,3,7" TextChanged="Parameter_OnChanged"/>
+                                <TextBox x:Name="DistanceDiffuseBox" Margin="3,2,0,7" TextChanged="Parameter_OnChanged"/>
+                            </UniformGrid>
+                            <TextBlock Text="Specular / блеск"/>
+                            <UniformGrid Columns="2">
+                                <TextBox x:Name="DistanceSpecularBox" Margin="0,2,3,7" TextChanged="Parameter_OnChanged"/>
+                                <TextBox x:Name="DistanceShininessBox" Margin="3,2,0,7" TextChanged="Parameter_OnChanged"/>
+                            </UniformGrid>
+                            <CheckBox x:Name="DistanceContoursBox" Content="Контуры одинакового расстояния"
+                                      Checked="Parameter_OnChanged" Unchecked="Parameter_OnChanged"/>
+                            <TextBlock Text="Шаг контуров (пикс.) / сила" TextWrapping="Wrap"/>
+                            <UniformGrid Columns="2">
+                                <TextBox x:Name="DistanceContourSpacingBox" Margin="0,2,3,7" TextChanged="Parameter_OnChanged"/>
+                                <TextBox x:Name="DistanceContourStrengthBox" Margin="3,2,0,7" TextChanged="Parameter_OnChanged"/>
+                            </UniformGrid>
+                            <TextBlock Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"
+                                       Text="Палитра задаёт цвет рельефа; свет и контуры накладываются поверх неё."/>
                         </StackPanel>
                     </Expander>
 

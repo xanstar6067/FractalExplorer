@@ -25,7 +25,8 @@ public enum MandelbrotColoringMode
     Histogram,
     OrbitTrap,
     StripeAverage,
-    SmoothEscapePolynomial
+    SmoothEscapePolynomial,
+    DistanceEstimation
 }
 
 public enum MandelbrotPaletteWrapMode
@@ -131,4 +132,14 @@ public sealed class MandelbrotState
     public double PolynomialGamma { get; set; } = 1;
     public double PolynomialBlend { get; set; } = 1;
     public double PolynomialBias { get; set; }
+    public double DistanceReliefStrength { get; set; } = 1.35;
+    public double DistanceLightAzimuth { get; set; } = 135;
+    public double DistanceLightElevation { get; set; } = 45;
+    public double DistanceAmbient { get; set; } = 0.28;
+    public double DistanceDiffuse { get; set; } = 0.9;
+    public double DistanceSpecular { get; set; } = 0.3;
+    public double DistanceShininess { get; set; } = 32;
+    public bool DistanceContoursEnabled { get; set; } = true;
+    public double DistanceContourSpacing { get; set; } = 12;
+    public double DistanceContourStrength { get; set; } = 0.45;
 }

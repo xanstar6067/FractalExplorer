@@ -8,7 +8,12 @@ namespace FractalExplorerWPF.Core.Rendering;
 
 public static class MandelbrotFamilyRenderer
 {
-    private readonly record struct PixelMetrics(int Iterations, double Smooth, double OrbitTrap, double Stripe);
+    private readonly record struct PixelMetrics(
+        int Iterations,
+        double Smooth,
+        double OrbitTrap,
+        double Stripe,
+        double Distance = 0);
 
     public static byte[]? RenderTile(
         MandelbrotState state,
@@ -17,6 +22,9 @@ public static class MandelbrotFamilyRenderer
         MandelbrotRenderTile tile,
         CancellationToken token)
     {
+        if (state.ColoringMode == MandelbrotColoringMode.DistanceEstimation)
+            return RenderDistanceEstimationTile(state, canvasWidth, canvasHeight, tile, token);
+
         int stride = checked(tile.Width * 4);
         var buffer = new byte[checked(stride * tile.Height)];
         decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
@@ -70,6 +78,13 @@ public static class MandelbrotFamilyRenderer
         decimal viewHeight = viewWidth * height / width;
         int completedRows = 0;
 
+        if (state.ColoringMode == MandelbrotColoringMode.DistanceEstimation)
+        {
+            RenderDistanceEstimation(state, buffer, width, height, stride, viewWidth, viewHeight,
+                options, token, reportProgress);
+            return;
+        }
+
         if (state.ColoringMode == MandelbrotColoringMode.Histogram)
         {
             RenderHistogram(state, buffer, width, height, stride, viewWidth, viewHeight,
@@ -97,6 +112,257 @@ public static class MandelbrotFamilyRenderer
             int done = Interlocked.Increment(ref completedRows);
             reportProgress?.Invoke(done * 100 / height);
         });
+    }
+
+    private static byte[]? RenderDistanceEstimationTile(
+        MandelbrotState state,
+        int canvasWidth,
+        int canvasHeight,
+        MandelbrotRenderTile tile,
+        CancellationToken token)
+    {
+        int stride = checked(tile.Width * 4);
+        var buffer = new byte[checked(stride * tile.Height)];
+        int sampleWidth = checked(tile.Width + 2);
+        int sampleHeight = checked(tile.Height + 2);
+        var distances = new float[checked(sampleWidth * sampleHeight)];
+        decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewHeight = viewWidth * canvasHeight / canvasWidth;
+        double pixelSize = (double)(viewWidth / canvasWidth);
+
+        for (int sampleY = 0; sampleY < sampleHeight; sampleY++)
+        {
+            if (token.IsCancellationRequested) return null;
+            int y = tile.Y + sampleY - 1;
+            decimal im = state.CenterY + (0.5m - (decimal)y / canvasHeight) * viewHeight;
+            for (int sampleX = 0; sampleX < sampleWidth; sampleX++)
+            {
+                int x = tile.X + sampleX - 1;
+                decimal re = state.CenterX + ((decimal)x / canvasWidth - 0.5m) * viewWidth;
+                PixelMetrics metrics = IterateAt(state, re, im);
+                distances[sampleY * sampleWidth + sampleX] = StoreDistance(metrics.Distance);
+
+                if (sampleX is > 0 && sampleX <= tile.Width &&
+                    sampleY is > 0 && sampleY <= tile.Height)
+                {
+                    Color baseColor = ResolveDistanceBaseColor(state, metrics);
+                    WriteColor(buffer, (sampleY - 1) * stride + (sampleX - 1) * 4, baseColor);
+                }
+            }
+        }
+
+        for (int localY = 0; localY < tile.Height; localY++)
+        {
+            int sampleRow = (localY + 1) * sampleWidth;
+            int outputRow = localY * stride;
+            for (int localX = 0; localX < tile.Width; localX++)
+            {
+                int sampleIndex = sampleRow + localX + 1;
+                int outputOffset = outputRow + localX * 4;
+                Color shaded = ApplyDistanceLighting(
+                    state,
+                    ReadColor(buffer, outputOffset),
+                    distances[sampleIndex],
+                    distances[sampleIndex - 1],
+                    distances[sampleIndex + 1],
+                    distances[sampleIndex - sampleWidth],
+                    distances[sampleIndex + sampleWidth],
+                    pixelSize);
+                WriteColor(buffer, outputOffset, shaded);
+            }
+        }
+
+        return buffer;
+    }
+
+    private static void RenderDistanceEstimation(
+        MandelbrotState state,
+        byte[] buffer,
+        int width,
+        int height,
+        int stride,
+        decimal viewWidth,
+        decimal viewHeight,
+        ParallelOptions options,
+        CancellationToken token,
+        Action<int>? progress)
+    {
+        int sampleWidth = checked(width + 2);
+        int sampleHeight = checked(height + 2);
+        var distances = new float[checked(sampleWidth * sampleHeight)];
+        int sampledRows = 0;
+
+        Parallel.For(0, sampleHeight, options, (sampleY, loopState) =>
+        {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
+            int y = sampleY - 1;
+            decimal im = state.CenterY + (0.5m - (decimal)y / height) * viewHeight;
+            int distanceRow = sampleY * sampleWidth;
+            for (int sampleX = 0; sampleX < sampleWidth; sampleX++)
+            {
+                if ((sampleX & 63) == 0 && token.IsCancellationRequested)
+                {
+                    loopState.Stop();
+                    return;
+                }
+
+                int x = sampleX - 1;
+                decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
+                PixelMetrics metrics = IterateAt(state, re, im);
+                distances[distanceRow + sampleX] = StoreDistance(metrics.Distance);
+                if (sampleX is > 0 && sampleX <= width && sampleY is > 0 && sampleY <= height)
+                {
+                    Color baseColor = ResolveDistanceBaseColor(state, metrics);
+                    WriteColor(buffer, (sampleY - 1) * stride + (sampleX - 1) * 4, baseColor);
+                }
+            }
+
+            int done = Interlocked.Increment(ref sampledRows);
+            progress?.Invoke(done * 70 / sampleHeight);
+        });
+
+        if (token.IsCancellationRequested) return;
+
+        int shadedRows = 0;
+        double pixelSize = (double)(viewWidth / width);
+        Parallel.For(0, height, options, (y, loopState) =>
+        {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
+            int sampleRow = (y + 1) * sampleWidth;
+            int outputRow = y * stride;
+            for (int x = 0; x < width; x++)
+            {
+                int sampleIndex = sampleRow + x + 1;
+                int outputOffset = outputRow + x * 4;
+                Color shaded = ApplyDistanceLighting(
+                    state,
+                    ReadColor(buffer, outputOffset),
+                    distances[sampleIndex],
+                    distances[sampleIndex - 1],
+                    distances[sampleIndex + 1],
+                    distances[sampleIndex - sampleWidth],
+                    distances[sampleIndex + sampleWidth],
+                    pixelSize);
+                WriteColor(buffer, outputOffset, shaded);
+            }
+
+            int done = Interlocked.Increment(ref shadedRows);
+            progress?.Invoke(70 + done * 30 / height);
+        });
+    }
+
+    private static Color ResolveDistanceBaseColor(MandelbrotState state, PixelMetrics metrics)
+    {
+        if (metrics.Iterations >= state.Iterations) return ResolveInteriorColor(state);
+        double colorPeriod = state.Palette.AlignWithRenderIterations
+            ? Math.Max(1, state.Iterations)
+            : Math.Max(1, state.Palette.ColorPeriod);
+        return SampleSmoothPalette(state, Math.Min(metrics.Smooth, state.Iterations - 1e-9), colorPeriod);
+    }
+
+    private static Color ApplyDistanceLighting(
+        MandelbrotState state,
+        Color baseColor,
+        double distance,
+        double left,
+        double right,
+        double up,
+        double down,
+        double pixelSize)
+    {
+        if (!(distance > 0) || !double.IsFinite(distance) || !(pixelSize > 0)) return baseColor;
+
+        left = SanitizeNeighborDistance(left, distance);
+        right = SanitizeNeighborDistance(right, distance);
+        up = SanitizeNeighborDistance(up, distance);
+        down = SanitizeNeighborDistance(down, distance);
+        double gradientX = (right - left) / (2 * pixelSize);
+        double gradientY = (up - down) / (2 * pixelSize);
+
+        // The surface height is -distance: the set remains a raised plateau while the
+        // exterior falls away from its boundary.
+        double relief = Math.Max(0, state.DistanceReliefStrength);
+        double nx = gradientX * relief;
+        double ny = gradientY * relief;
+        double nz = 1;
+        double normalLength = Math.Sqrt(nx * nx + ny * ny + nz * nz);
+        nx /= normalLength;
+        ny /= normalLength;
+        nz /= normalLength;
+
+        double azimuth = state.DistanceLightAzimuth * Math.PI / 180;
+        double elevation = Math.Clamp(state.DistanceLightElevation, 0, 90) * Math.PI / 180;
+        double horizontal = Math.Cos(elevation);
+        double lx = horizontal * Math.Cos(azimuth);
+        double ly = horizontal * Math.Sin(azimuth);
+        double lz = Math.Sin(elevation);
+        double diffuse = Math.Max(0, nx * lx + ny * ly + nz * lz);
+
+        double halfX = lx;
+        double halfY = ly;
+        double halfZ = lz + 1;
+        double halfLength = Math.Sqrt(halfX * halfX + halfY * halfY + halfZ * halfZ);
+        halfX /= halfLength;
+        halfY /= halfLength;
+        halfZ /= halfLength;
+        double specular = diffuse <= 0
+            ? 0
+            : Math.Pow(Math.Max(0, nx * halfX + ny * halfY + nz * halfZ),
+                Math.Max(1, state.DistanceShininess)) * Math.Max(0, state.DistanceSpecular);
+
+        double illumination = Math.Max(0, state.DistanceAmbient) +
+                              Math.Max(0, state.DistanceDiffuse) * diffuse;
+        double contourFactor = 1;
+        if (state.DistanceContoursEnabled && state.DistanceContourStrength > 0)
+        {
+            double spacing = Math.Max(2, state.DistanceContourSpacing) * pixelSize;
+            double coordinate = distance / spacing;
+            double fromLine = Math.Abs(coordinate - Math.Round(coordinate));
+            double line = 1 - SmoothStep(0.025, 0.11, fromLine);
+            contourFactor = 1 - Math.Clamp(state.DistanceContourStrength, 0, 1) * line;
+        }
+
+        double red = (SrgbToLinear(baseColor.R / 255.0) * illumination + specular) * contourFactor;
+        double green = (SrgbToLinear(baseColor.G / 255.0) * illumination + specular) * contourFactor;
+        double blue = (SrgbToLinear(baseColor.B / 255.0) * illumination + specular) * contourFactor;
+        return Color.FromRgb(LinearToByte(red), LinearToByte(green), LinearToByte(blue));
+    }
+
+    private static double SanitizeNeighborDistance(double value, double fallback) =>
+        value >= 0 && double.IsFinite(value) ? value : fallback;
+
+    private static float StoreDistance(double distance) =>
+        !(distance > 0) || !double.IsFinite(distance)
+            ? 0
+            : (float)Math.Min(distance, float.MaxValue);
+
+    private static double SmoothStep(double edge0, double edge1, double value)
+    {
+        double t = Math.Clamp((value - edge0) / (edge1 - edge0), 0, 1);
+        return t * t * (3 - 2 * t);
+    }
+
+    private static double SrgbToLinear(double value) =>
+        value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+
+    private static byte LinearToByte(double value)
+    {
+        value = Math.Clamp(value, 0, 1);
+        double srgb = value <= 0.0031308
+            ? 12.92 * value
+            : 1.055 * Math.Pow(value, 1 / 2.4) - 0.055;
+        return (byte)Math.Clamp((int)Math.Round(srgb * 255), 0, 255);
+    }
+
+    private static Color ReadColor(byte[] buffer, int offset) =>
+        Color.FromRgb(buffer[offset + 2], buffer[offset + 1], buffer[offset]);
+
+    private static void WriteColor(byte[] buffer, int offset, Color color)
+    {
+        buffer[offset] = color.B;
+        buffer[offset + 1] = color.G;
+        buffer[offset + 2] = color.R;
+        buffer[offset + 3] = 255;
     }
 
     private static void RenderHistogram(
@@ -192,6 +458,16 @@ public static class MandelbrotFamilyRenderer
         double zr = isJulia ? re : 0;
         double zi = isJulia ? im : 0;
         double thresholdSquared = (double)(state.Threshold * state.Threshold);
+        bool estimateDistance = state.ColoringMode == MandelbrotColoringMode.DistanceEstimation;
+        if (estimateDistance) thresholdSquared = Math.Max(4, thresholdSquared);
+        Jacobian2 derivative = isJulia ? Jacobian2.Identity : Jacobian2.Zero;
+        Jacobian2 parameterDerivative = isJulia
+            ? Jacobian2.Zero
+            : new Jacobian2(
+                state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -1 : 1,
+                0,
+                0,
+                1);
         double minTrap = double.MaxValue;
         double stripe = 0;
         int iterations = 0;
@@ -200,6 +476,9 @@ public static class MandelbrotFamilyRenderer
         {
             minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
             stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(zi, zr));
+            if (estimateDistance)
+                derivative = Jacobian2.Multiply(GetIterationJacobian(state, zr, zi), derivative) +
+                             parameterDerivative;
             IterateOnce(state, ref zr, ref zi, cr, ci);
             iterations++;
         }
@@ -215,11 +494,15 @@ public static class MandelbrotFamilyRenderer
             if (double.IsFinite(nu)) smooth = iterations + 1 - nu;
         }
 
+        double distance = estimateDistance && iterations < state.Iterations
+            ? EstimateDistance(zr, zi, derivative)
+            : 0;
         return new PixelMetrics(
             iterations,
             smooth,
             minTrap == double.MaxValue ? 0 : minTrap,
-            iterations == 0 ? 0 : stripe / iterations);
+            iterations == 0 ? 0 : stripe / iterations,
+            distance);
     }
 
     private static PixelMetrics IterateDecimal(MandelbrotState state, decimal re, decimal im)
@@ -233,6 +516,16 @@ public static class MandelbrotFamilyRenderer
         decimal zr = isJulia ? re : 0;
         decimal zi = isJulia ? im : 0;
         decimal thresholdSquared = state.Threshold * state.Threshold;
+        bool estimateDistance = state.ColoringMode == MandelbrotColoringMode.DistanceEstimation;
+        if (estimateDistance) thresholdSquared = Math.Max(4m, thresholdSquared);
+        Jacobian2 derivative = isJulia ? Jacobian2.Identity : Jacobian2.Zero;
+        Jacobian2 parameterDerivative = isJulia
+            ? Jacobian2.Zero
+            : new Jacobian2(
+                state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -1 : 1,
+                0,
+                0,
+                1);
         decimal minTrap = decimal.MaxValue;
         double stripe = 0;
         int iterations = 0;
@@ -241,6 +534,10 @@ public static class MandelbrotFamilyRenderer
         {
             minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
             stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2((double)zi, (double)zr));
+            if (estimateDistance)
+                derivative = Jacobian2.Multiply(
+                                 GetIterationJacobian(state, (double)zr, (double)zi), derivative) +
+                             parameterDerivative;
             try
             {
                 IterateOnceDecimal(state, ref zr, ref zi, cr, ci);
@@ -265,9 +562,140 @@ public static class MandelbrotFamilyRenderer
             if (double.IsFinite(nu)) smooth = iterations + 1 - nu;
         }
 
+        double distance = estimateDistance && iterations < state.Iterations
+            ? EstimateDistance((double)zr, (double)zi, derivative)
+            : 0;
         return new PixelMetrics(iterations, smooth,
             minTrap == decimal.MaxValue ? 0 : (double)minTrap,
-            iterations == 0 ? 0 : stripe / iterations);
+            iterations == 0 ? 0 : stripe / iterations,
+            distance);
+    }
+
+    private static Jacobian2 GetIterationJacobian(MandelbrotState state, double zr, double zi)
+    {
+        Jacobian2 result;
+        switch (state.Variant)
+        {
+            case MandelbrotVariant.Mandelbrot:
+            case MandelbrotVariant.Julia:
+                result = ComplexJacobian(new Complex(2 * zr, 2 * zi));
+                break;
+            case MandelbrotVariant.BurningShip:
+            case MandelbrotVariant.JuliaBurningShip:
+            {
+                double transformedReal = Math.Abs(zr);
+                double transformedImaginary = -Math.Abs(zi);
+                var absoluteJacobian = new Jacobian2(Math.Sign(zr), 0, 0, -Math.Sign(zi));
+                result = Jacobian2.Multiply(
+                    ComplexJacobian(new Complex(2 * transformedReal, 2 * transformedImaginary)),
+                    absoluteJacobian);
+                break;
+            }
+            case MandelbrotVariant.Tricorn:
+                result = Jacobian2.Multiply(
+                    ComplexJacobian(new Complex(2 * zr, -2 * zi)),
+                    new Jacobian2(1, 0, 0, -1));
+                break;
+            case MandelbrotVariant.Buffalo:
+            {
+                double transformedReal = Math.Abs(zr);
+                double transformedImaginary = Math.Abs(zi);
+                var absoluteJacobian = new Jacobian2(Math.Sign(zr), 0, 0, Math.Sign(zi));
+                result = Jacobian2.Multiply(
+                    ComplexJacobian(new Complex(2 * transformedReal, 2 * transformedImaginary)),
+                    absoluteJacobian);
+                break;
+            }
+            case MandelbrotVariant.Celtic:
+            {
+                double realPart = zr * zr - zi * zi;
+                double sign = Math.Sign(realPart);
+                result = new Jacobian2(
+                    sign * 2 * zr,
+                    -sign * 2 * zi,
+                    2 * zi,
+                    2 * zr);
+                break;
+            }
+            case MandelbrotVariant.Generalized:
+            {
+                double power = (double)state.Power;
+                Complex complexDerivative = power * Complex.Pow(new Complex(zr, zi), power - 1);
+                result = ComplexJacobian(complexDerivative);
+                break;
+            }
+            case MandelbrotVariant.Simonobrot:
+            {
+                double radiusSquared = zr * zr + zi * zi;
+                if (!(radiusSquared > 0)) return Jacobian2.Zero;
+                double power = (double)state.Power;
+                double radius = Math.Sqrt(radiusSquared);
+                Complex z = new(zr, zi);
+                Complex powered = Complex.Pow(z, power);
+                double radialScale = Math.Pow(radius, power);
+                Complex complexDerivative = power * Complex.Pow(z, power - 1);
+                double gradientScale = power * Math.Pow(radius, power - 2);
+                double scaleX = gradientScale * zr;
+                double scaleY = gradientScale * zi;
+                Jacobian2 analyticPart = ComplexJacobian(complexDerivative) * radialScale;
+                Jacobian2 radialPart = new(
+                    powered.Real * scaleX,
+                    powered.Real * scaleY,
+                    powered.Imaginary * scaleX,
+                    powered.Imaginary * scaleY);
+                result = analyticPart + radialPart;
+                break;
+            }
+            default:
+                return Jacobian2.Zero;
+        }
+
+        return result.IsFinite ? result : Jacobian2.Zero;
+    }
+
+    private static Jacobian2 ComplexJacobian(Complex value) =>
+        new(value.Real, -value.Imaginary, value.Imaginary, value.Real);
+
+    private static double EstimateDistance(double zr, double zi, Jacobian2 derivative)
+    {
+        if (!derivative.IsFinite) return 0;
+        double radiusSquared = zr * zr + zi * zi;
+        if (!(radiusSquared > 1) || !double.IsFinite(radiusSquared)) return 0;
+
+        double gradientX = (zr * derivative.M11 + zi * derivative.M21) / radiusSquared;
+        double gradientY = (zr * derivative.M12 + zi * derivative.M22) / radiusSquared;
+        double gradientLength = Math.Sqrt(gradientX * gradientX + gradientY * gradientY);
+        if (!(gradientLength > 0) || !double.IsFinite(gradientLength)) return 0;
+
+        double distance = 0.5 * Math.Log(Math.Sqrt(radiusSquared)) / gradientLength;
+        return distance > 0 && double.IsFinite(distance) ? distance : 0;
+    }
+
+    private readonly record struct Jacobian2(double M11, double M12, double M21, double M22)
+    {
+        public static Jacobian2 Zero => new(0, 0, 0, 0);
+        public static Jacobian2 Identity => new(1, 0, 0, 1);
+        public bool IsFinite =>
+            double.IsFinite(M11) && double.IsFinite(M12) &&
+            double.IsFinite(M21) && double.IsFinite(M22);
+
+        public static Jacobian2 Multiply(Jacobian2 left, Jacobian2 right) => new(
+            left.M11 * right.M11 + left.M12 * right.M21,
+            left.M11 * right.M12 + left.M12 * right.M22,
+            left.M21 * right.M11 + left.M22 * right.M21,
+            left.M21 * right.M12 + left.M22 * right.M22);
+
+        public static Jacobian2 operator +(Jacobian2 left, Jacobian2 right) => new(
+            left.M11 + right.M11,
+            left.M12 + right.M12,
+            left.M21 + right.M21,
+            left.M22 + right.M22);
+
+        public static Jacobian2 operator *(Jacobian2 value, double scale) => new(
+            value.M11 * scale,
+            value.M12 * scale,
+            value.M21 * scale,
+            value.M22 * scale);
     }
 
     private static void IterateOnceDecimal(

@@ -107,6 +107,16 @@ public partial class MandelbrotWindow : Window
         PolyGammaBox.Text = "1";
         PolyBlendBox.Text = "1";
         PolyBiasBox.Text = "0";
+        DistanceReliefBox.Text = "1.35";
+        DistanceLightAzimuthBox.Text = "135";
+        DistanceLightElevationBox.Text = "45";
+        DistanceAmbientBox.Text = "0.28";
+        DistanceDiffuseBox.Text = "0.9";
+        DistanceSpecularBox.Text = "0.3";
+        DistanceShininessBox.Text = "32";
+        DistanceContoursBox.IsChecked = true;
+        DistanceContourSpacingBox.Text = "12";
+        DistanceContourStrengthBox.Text = "0.45";
         PalettePhaseBox.Text = "0";
         PaletteScaleBox.Text = "1";
         PaletteWrapBox.SelectedIndex = 0;
@@ -172,7 +182,17 @@ public partial class MandelbrotWindow : Window
             PolynomialC = ReadDouble(PolyCBox.Text, "коэффициент C", 0, 30),
             PolynomialGamma = ReadDouble(PolyGammaBox.Text, "гамма полинома", 0.1, 5),
             PolynomialBlend = ReadDouble(PolyBlendBox.Text, "смешивание полинома", 0, 1),
-            PolynomialBias = ReadDouble(PolyBiasBox.Text, "смещение полинома", -1, 1)
+            PolynomialBias = ReadDouble(PolyBiasBox.Text, "смещение полинома", -1, 1),
+            DistanceReliefStrength = ReadDouble(DistanceReliefBox.Text, "сила рельефа", 0, 20),
+            DistanceLightAzimuth = ReadDouble(DistanceLightAzimuthBox.Text, "азимут света", -360, 360),
+            DistanceLightElevation = ReadDouble(DistanceLightElevationBox.Text, "высота света", 0, 90),
+            DistanceAmbient = ReadDouble(DistanceAmbientBox.Text, "ambient", 0, 1),
+            DistanceDiffuse = ReadDouble(DistanceDiffuseBox.Text, "diffuse", 0, 2),
+            DistanceSpecular = ReadDouble(DistanceSpecularBox.Text, "specular", 0, 2),
+            DistanceShininess = ReadDouble(DistanceShininessBox.Text, "блеск", 1, 256),
+            DistanceContoursEnabled = DistanceContoursBox.IsChecked == true,
+            DistanceContourSpacing = ReadDouble(DistanceContourSpacingBox.Text, "шаг контуров", 2, 100),
+            DistanceContourStrength = ReadDouble(DistanceContourStrengthBox.Text, "сила контуров", 0, 1)
         };
     }
 
@@ -213,6 +233,16 @@ public partial class MandelbrotWindow : Window
         PolyGammaBox.Text = state.PolynomialGamma.ToString(CultureInfo.InvariantCulture);
         PolyBlendBox.Text = state.PolynomialBlend.ToString(CultureInfo.InvariantCulture);
         PolyBiasBox.Text = state.PolynomialBias.ToString(CultureInfo.InvariantCulture);
+        DistanceReliefBox.Text = state.DistanceReliefStrength.ToString(CultureInfo.InvariantCulture);
+        DistanceLightAzimuthBox.Text = state.DistanceLightAzimuth.ToString(CultureInfo.InvariantCulture);
+        DistanceLightElevationBox.Text = state.DistanceLightElevation.ToString(CultureInfo.InvariantCulture);
+        DistanceAmbientBox.Text = state.DistanceAmbient.ToString(CultureInfo.InvariantCulture);
+        DistanceDiffuseBox.Text = state.DistanceDiffuse.ToString(CultureInfo.InvariantCulture);
+        DistanceSpecularBox.Text = state.DistanceSpecular.ToString(CultureInfo.InvariantCulture);
+        DistanceShininessBox.Text = state.DistanceShininess.ToString(CultureInfo.InvariantCulture);
+        DistanceContoursBox.IsChecked = state.DistanceContoursEnabled;
+        DistanceContourSpacingBox.Text = state.DistanceContourSpacing.ToString(CultureInfo.InvariantCulture);
+        DistanceContourStrengthBox.Text = state.DistanceContourStrength.ToString(CultureInfo.InvariantCulture);
         MandelbrotPalette loadedPalette = state.Palette;
         if (!string.IsNullOrWhiteSpace(state.PaletteName) &&
             (loadedPalette.Colors.Count == 0 || loadedPalette.Name == "Новая палитра"))
@@ -247,7 +277,16 @@ public partial class MandelbrotWindow : Window
         }
     }
 
-    private void ColoringMode_OnChanged(object sender, EventArgs e) => Parameter_OnChanged(sender, e);
+    private void ColoringMode_OnChanged(object sender, EventArgs e)
+    {
+        if (IsInitialized)
+        {
+            DistanceEstimationExpander.Visibility = SelectedColoringMode == MandelbrotColoringMode.DistanceEstimation
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+        Parameter_OnChanged(sender, e);
+    }
 
     private void ZoomBox_OnTextChanged(object sender, EventArgs e)
     {
@@ -930,7 +969,15 @@ public partial class MandelbrotWindow : Window
         StripeBias = source.StripeBias, PolynomialA = source.PolynomialA,
         PolynomialB = source.PolynomialB, PolynomialC = source.PolynomialC,
         PolynomialGamma = source.PolynomialGamma, PolynomialBlend = source.PolynomialBlend,
-        PolynomialBias = source.PolynomialBias
+        PolynomialBias = source.PolynomialBias,
+        DistanceReliefStrength = source.DistanceReliefStrength,
+        DistanceLightAzimuth = source.DistanceLightAzimuth,
+        DistanceLightElevation = source.DistanceLightElevation,
+        DistanceAmbient = source.DistanceAmbient, DistanceDiffuse = source.DistanceDiffuse,
+        DistanceSpecular = source.DistanceSpecular, DistanceShininess = source.DistanceShininess,
+        DistanceContoursEnabled = source.DistanceContoursEnabled,
+        DistanceContourSpacing = source.DistanceContourSpacing,
+        DistanceContourStrength = source.DistanceContourStrength
     };
 
     private sealed class RenderSession(
