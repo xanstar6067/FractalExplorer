@@ -27,7 +27,9 @@ public sealed class DlaRenderer
     public int ParticleCount => _particles.Count;
     public int FailedWalkers { get; private set; }
     public int MaximumDepth { get; private set; }
-    public bool Complete => _particles.Count >= _state.ParticleCount || _failedBatches >= 5;
+    public bool Complete => _state.Stickiness <= 0 ||
+                            _particles.Count >= _state.ParticleCount ||
+                            _failedBatches >= 5;
 
     public DlaRenderer(DlaState state)
     {

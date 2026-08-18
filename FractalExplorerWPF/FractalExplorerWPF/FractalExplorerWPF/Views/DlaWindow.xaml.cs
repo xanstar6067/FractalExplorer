@@ -64,28 +64,59 @@ public partial class DlaWindow : Window
 
     public DlaState CaptureState(string name)
     {
-        if (!int.TryParse(ParticlesBox.Text, out int particles) || particles is < 500 or > 100_000)
-            throw new InvalidOperationException("Число частиц должно быть от 500 до 100 000.");
-        if (!int.TryParse(GridSizeBox.Text, out int gridSize) || gridSize is < 201 or > 1_401 || gridSize % 2 == 0)
-            throw new InvalidOperationException("Размер сетки должен быть нечётным числом от 201 до 1401.");
-        if (!int.TryParse(MaxStepsBox.Text, out int maximumSteps) || maximumSteps is < 100 or > 100_000)
-            throw new InvalidOperationException("Число шагов блуждания должно быть от 100 до 100 000.");
-        if (!int.TryParse(RandomSeedBox.Text, out int randomSeed))
-            throw new InvalidOperationException("Seed генератора должен быть целым числом.");
-        if (!ReadDouble(StickinessBox.Text, out double stickiness) || stickiness is < 0.01 or > 1)
-            throw new InvalidOperationException("Вероятность прилипания должна быть от 0.01 до 1.");
-        if (!ReadDouble(DriftXBox.Text, out double driftX) ||
-            !ReadDouble(DriftYBox.Text, out double driftY) ||
-            driftX is < -2 or > 2 || driftY is < -2 or > 2)
-            throw new InvalidOperationException("Компоненты дрейфа должны быть от −2 до 2.");
-        if (!ReadDouble(ParticleRadiusBox.Text, out double particleRadius) || particleRadius is < 0.25 or > 8)
-            throw new InvalidOperationException("Радиус частицы должен быть от 0.25 до 8.");
-        if (!ReadDouble(CenterXBox.Text, out double centerX) ||
-            !ReadDouble(CenterYBox.Text, out double centerY) ||
-            !ReadDouble(ViewWidthBox.Text, out double viewWidth) || viewWidth is < 0.02 or > 10)
-            throw new InvalidOperationException("Проверьте центр и ширину вида (0.02–10).");
+        if (TryCaptureState(name, out DlaState state, out string error)) return state;
+        throw new InvalidOperationException(error);
+    }
 
-        return new DlaState
+    private bool TryCaptureState(string name, out DlaState state, out string error)
+    {
+        state = new DlaState();
+        if (!int.TryParse(ParticlesBox.Text, out int particles) || particles is < 500 or > 100_000)
+        {
+            error = "Число частиц должно быть от 500 до 100 000.";
+            return false;
+        }
+        if (!int.TryParse(GridSizeBox.Text, out int gridSize) || gridSize is < 201 or > 1_401 || gridSize % 2 == 0)
+        {
+            error = "Размер сетки должен быть нечётным числом от 201 до 1401.";
+            return false;
+        }
+        if (!int.TryParse(MaxStepsBox.Text, out int maximumSteps) || maximumSteps is < 100 or > 100_000)
+        {
+            error = "Число шагов блуждания должно быть от 100 до 100 000.";
+            return false;
+        }
+        if (!int.TryParse(RandomSeedBox.Text, out int randomSeed))
+        {
+            error = "Seed генератора должен быть целым числом.";
+            return false;
+        }
+        if (!ReadFiniteDouble(StickinessBox.Text, out double stickiness) || stickiness is < 0 or > 1)
+        {
+            error = "Вероятность прилипания должна быть от 0 до 1.";
+            return false;
+        }
+        if (!ReadFiniteDouble(DriftXBox.Text, out double driftX) ||
+            !ReadFiniteDouble(DriftYBox.Text, out double driftY) ||
+            driftX is < -2 or > 2 || driftY is < -2 or > 2)
+        {
+            error = "Компоненты дрейфа должны быть от −2 до 2.";
+            return false;
+        }
+        if (!ReadFiniteDouble(ParticleRadiusBox.Text, out double particleRadius) || particleRadius is < 0.25 or > 8)
+        {
+            error = "Радиус частицы должен быть от 0.25 до 8.";
+            return false;
+        }
+        if (!ReadFiniteDouble(CenterXBox.Text, out double centerX) ||
+            !ReadFiniteDouble(CenterYBox.Text, out double centerY) ||
+            !ReadFiniteDouble(ViewWidthBox.Text, out double viewWidth) || viewWidth is < 0.02 or > 10)
+        {
+            error = "Проверьте центр и ширину вида (0.02–10).";
+            return false;
+        }
+
+        state = new DlaState
         {
             SaveName = name,
             Timestamp = DateTime.Now,
@@ -107,6 +138,8 @@ public partial class DlaWindow : Window
             EndColor = _endColor,
             BackgroundColor = _backgroundColor
         };
+        error = string.Empty;
+        return true;
     }
 
     public void LoadState(DlaState state)
@@ -173,9 +206,9 @@ public partial class DlaWindow : Window
     private void Viewport_OnChanged(object sender, EventArgs e)
     {
         if (_syncing) return;
-        if (ReadDouble(CenterXBox.Text, out double x)) _centerX = x;
-        if (ReadDouble(CenterYBox.Text, out double y)) _centerY = y;
-        if (ReadDouble(ViewWidthBox.Text, out double width) && width is >= 0.02 and <= 10) _viewWidth = width;
+        if (ReadFiniteDouble(CenterXBox.Text, out double x)) _centerX = x;
+        if (ReadFiniteDouble(CenterYBox.Text, out double y)) _centerY = y;
+        if (ReadFiniteDouble(ViewWidthBox.Text, out double width) && width is >= 0.02 and <= 10) _viewWidth = width;
         UpdateStableTransform();
         ScheduleRender();
     }
@@ -205,14 +238,10 @@ public partial class DlaWindow : Window
             return;
         }
 
-        DlaState state;
-        try
+        if (!TryCaptureState("preview", out DlaState state, out string validationError))
         {
-            state = CaptureState("preview");
-        }
-        catch (Exception exception)
-        {
-            StatusText.Text = exception.Message;
+            ProgressText.Text = "Проверьте параметры";
+            StatusText.Text = validationError;
             return;
         }
 
@@ -223,16 +252,22 @@ public partial class DlaWindow : Window
         CancelButton.IsEnabled = true;
         GrowthBadge.Visibility = Visibility.Visible;
         var stopwatch = Stopwatch.StartNew();
+        WriteableBitmap? activeBitmap = null;
 
         try
         {
+            ClearDisplayedFrame();
             RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
             int width = surface.PixelWidth;
             int height = surface.PixelHeight;
             var bitmap = new WriteableBitmap(width, height,
                 surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY, PixelFormats.Bgra32, null);
-            CurrentImage.Source = bitmap;
+            activeBitmap = bitmap;
             var renderer = new DlaRenderer(state);
+            byte[] initialFrame = await Task.Run(
+                () => renderer.CreateFrame(width, height, CancellationToken.None));
+            bitmap.WritePixels(new Int32Rect(0, 0, width, height), initialFrame, width * 4, 0);
+            CurrentImage.Source = bitmap;
             int batch = Math.Clamp(state.ParticleCount / 70, 25, 220);
 
             while (!renderer.Complete && !token.IsCancellationRequested)
@@ -249,37 +284,31 @@ public partial class DlaWindow : Window
 
             if (token.IsCancellationRequested)
             {
-                CurrentImage.Source = null;
+                CommitFrame(bitmap, state);
                 StatusText.Text = "Рост остановлен";
                 return;
             }
 
             byte[] finalFrame = await Task.Run(() => renderer.CreateFrame(width, height, token), token);
             bitmap.WritePixels(new Int32Rect(0, 0, width, height), finalFrame, width * 4, 0);
-            BitmapSource completed = bitmap.Clone();
-            completed.Freeze();
-            StableImage.Source = completed;
-            CurrentImage.Source = null;
-            _renderedCenterX = state.CenterX;
-            _renderedCenterY = state.CenterY;
-            _renderedViewWidth = state.ViewWidth;
-            _hasStableFrame = true;
-            UpdateStableTransform();
-            ProgressBar.Value = 100;
-            ProgressText.Text = renderer.ParticleCount >= state.ParticleCount
-                ? "Агрегация завершена"
-                : "Рост остановлен: частицы больше не достигают кластера";
+            CommitFrame(bitmap, state);
+            ProgressBar.Value = state.Stickiness <= 0 ? 0 : 100;
+            ProgressText.Text = state.Stickiness <= 0
+                ? "Прилипание равно 0: рост невозможен"
+                : renderer.ParticleCount >= state.ParticleCount
+                    ? "Агрегация завершена"
+                    : "Рост остановлен: частицы больше не достигают кластера";
             StatusText.Text = $"{renderer.ParticleCount:N0} частиц за {stopwatch.Elapsed.TotalSeconds:F3} сек. · " +
                               $"глубина {renderer.MaximumDepth:N0}";
         }
         catch (OperationCanceledException)
         {
-            CurrentImage.Source = null;
+            if (activeBitmap is not null) CommitFrame(activeBitmap, state);
             StatusText.Text = "Рост остановлен";
         }
         catch (Exception exception)
         {
-            CurrentImage.Source = null;
+            if (activeBitmap is not null) CommitFrame(activeBitmap, state);
             MessageBox.Show(this, exception.Message, "DLA", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -310,6 +339,30 @@ public partial class DlaWindow : Window
         CanvasHost.Background = new SolidColorBrush(_backgroundColor);
     }
 
+    private void ClearDisplayedFrame()
+    {
+        CurrentImage.Source = null;
+        StableImage.Source = null;
+        _hasStableFrame = false;
+        _imageScale.ScaleX = 1;
+        _imageScale.ScaleY = 1;
+        _translation.X = 0;
+        _translation.Y = 0;
+    }
+
+    private void CommitFrame(WriteableBitmap bitmap, DlaState state)
+    {
+        BitmapSource completed = bitmap.Clone();
+        completed.Freeze();
+        StableImage.Source = completed;
+        CurrentImage.Source = null;
+        _renderedCenterX = state.CenterX;
+        _renderedCenterY = state.CenterY;
+        _renderedViewWidth = state.ViewWidth;
+        _hasStableFrame = true;
+        UpdateStableTransform();
+    }
+
     private void ResetView_OnClick(object sender, RoutedEventArgs e)
     {
         _centerX = 0;
@@ -327,13 +380,9 @@ public partial class DlaWindow : Window
     {
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
         _renderCts?.Cancel();
-        try
+        if (!TryCaptureState("export", out DlaState exportState, out string validationError))
         {
-            _ = CaptureState("export");
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(this, exception.Message, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, validationError, "Параметры экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -345,7 +394,7 @@ public partial class DlaWindow : Window
             HasNativeSsaa = false,
             MaxSsaaFactor = 4,
             RenderAsync = (request, token, progress) =>
-                RenderBitmapAsync(CaptureState("export"), request.Width, request.Height, token, progress)
+                RenderBitmapAsync(exportState.Clone(), request.Width, request.Height, token, progress)
         });
     }
 
@@ -477,9 +526,12 @@ public partial class DlaWindow : Window
         _renderCts?.Dispose();
     }
 
-    private static bool ReadDouble(string text, out double value) =>
-        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
-        double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
+    private static bool ReadFiniteDouble(string text, out double value)
+    {
+        bool parsed = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
+                      double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
+        return parsed && double.IsFinite(value);
+    }
 
     private static string Format(double value) => value.ToString("G15", CultureInfo.InvariantCulture);
 }
