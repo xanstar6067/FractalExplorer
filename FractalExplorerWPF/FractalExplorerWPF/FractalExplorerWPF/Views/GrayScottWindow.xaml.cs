@@ -29,7 +29,7 @@ public partial class GrayScottWindow : Window
     private GrayScottState? _activeState;
     private WriteableBitmap? _bitmap;
     private CancellationTokenSource? _simulationCts;
-    private Task? _frameTask;
+    private Task _frameIdleTask = Task.CompletedTask;
     private int _presentedFrames;
     private double _measuredFps;
     private double _nextFrameAtMilliseconds;
@@ -218,11 +218,8 @@ public partial class GrayScottWindow : Window
         _running = false;
         UpdateRunState();
         CancellationTokenSource? previousCts = _simulationCts;
+        await _frameIdleTask;
         previousCts?.Cancel();
-        if (_frameTask is not null)
-        {
-            try { await _frameTask; } catch (OperationCanceledException) { }
-        }
         previousCts?.Dispose();
 
         if (!TryCaptureState("preview", out GrayScottState state, out string error))
@@ -287,6 +284,8 @@ public partial class GrayScottWindow : Window
     {
         if (_frameBusy || _simulation is null || _activeState is null || _simulationCts is null) return;
         _frameBusy = true;
+        var frameIdle = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _frameIdleTask = frameIdle.Task;
         GrayScottSimulation simulation = _simulation;
         GrayScottState state = _activeState;
         state.Palette = _paletteManager.ActivePalette.Clone();
@@ -298,7 +297,7 @@ public partial class GrayScottWindow : Window
 
         try
         {
-            _frameTask = Task.Run(() =>
+            Task<byte[]> workerTask = Task.Run(() =>
             {
                 foreach ((double x, double y) in pendingInjections)
                     simulation.Inject(x, y, state.BrushRadius);
@@ -306,7 +305,7 @@ public partial class GrayScottWindow : Window
                 GrayScottSnapshot snapshot = simulation.CurrentView();
                 return GrayScottRenderer.RenderFrame(snapshot, state, token);
             }, token);
-            byte[] pixels = await (Task<byte[]>)_frameTask;
+            byte[] pixels = await workerTask;
             if (!ReferenceEquals(simulation, _simulation) || token.IsCancellationRequested) return;
             PresentFrame(pixels, simulation.StepCount);
         }
@@ -321,16 +320,14 @@ public partial class GrayScottWindow : Window
         finally
         {
             _frameBusy = false;
+            frameIdle.TrySetResult(true);
         }
     }
 
     private async Task RenderCurrentFieldAsync()
     {
         if (_simulation is null || _activeState is null || _simulationCts is null) return;
-        if (_frameTask is not null && !_frameTask.IsCompleted)
-        {
-            try { await _frameTask; } catch (OperationCanceledException) { }
-        }
+        await _frameIdleTask;
         _activeState.Palette = _paletteManager.ActivePalette.Clone();
         _activeState.ReversePalette = ReversePaletteBox.IsChecked == true;
         await ProduceFrameAsync(0);
@@ -397,10 +394,7 @@ public partial class GrayScottWindow : Window
     {
         bool resume = _running;
         SetRunning(false);
-        if (_frameTask is not null)
-        {
-            try { await _frameTask; } catch (OperationCanceledException) { }
-        }
+        await _frameIdleTask;
         if (_simulation is null)
         {
             MessageBox.Show(this, "Симуляция ещё не инициализирована.", "Gray–Scott",
