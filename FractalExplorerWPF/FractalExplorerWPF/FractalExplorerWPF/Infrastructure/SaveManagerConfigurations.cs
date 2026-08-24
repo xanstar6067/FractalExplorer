@@ -244,6 +244,23 @@ public static class SaveManagerConfigurations
                                     $"Затравка: {state.SeedMode} · прилипание: {state.Stickiness:G4} · seed: {state.RandomSeed}"
     };
 
+    public static SaveManagerConfiguration<GrayScottState> ForGrayScott(
+        GrayScottWindow window, GrayScottSaveStore store) => new()
+    {
+        WindowTitle = "Сохранение/Загрузка: Gray–Scott",
+        FractalIdentifier = "GrayScott",
+        LoadStates = store.Load,
+        SaveStates = store.Save,
+        CaptureState = window.CaptureState,
+        LoadState = state => window.LoadState(state.Clone()),
+        RenderPreviewAsync = (state, width, height, token) =>
+            window.RenderStatePreviewAsync(state.Clone(), width, height, token),
+        GetName = state => state.SaveName,
+        GetTimestamp = state => state.Timestamp,
+        GetDetails = state => $"{Prefix(state.Timestamp)} · сетка {state.GridSize}×{state.GridSize} · {state.StepsPerFrame} шагов/кадр\n" +
+                                    $"F={state.Feed:G6} · K={state.Kill:G6} · Du={state.DiffusionU:G5} · Dv={state.DiffusionV:G5} · палитра: {state.Palette.Name}"
+    };
+
     private static string DescribeMandelbrot(MandelbrotState state)
     {
         string details = $"{Prefix(state.Timestamp)} · Итерации: {state.Iterations} · Масштаб: {state.Zoom:G6}\n" +

@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     private bool _initializingRenderPattern = true;
     private bool _updatingThemes;
     private readonly Dictionary<MathematicalLaboratoryKind, BitmapSource> _laboratoryPreviews = [];
+    private BitmapSource? _grayScottPreview;
     private CancellationTokenSource? _previewCts;
 
     public MainWindow()
@@ -150,11 +151,45 @@ public partial class MainWindow : Window
         {
             _ = LoadLaboratoryPreviewAsync(item, kind);
         }
+        else if (item.LaunchKey == "GrayScott")
+        {
+            _ = LoadGrayScottPreviewAsync(item);
+        }
         else
         {
             _previewCts?.Cancel();
             FractalPreview.Source = new BitmapImage(
                 new Uri($"pack://application:,,,/{item.PreviewResourcePath}", UriKind.Absolute));
+        }
+    }
+
+    private async Task LoadGrayScottPreviewAsync(FractalCatalogItem item)
+    {
+        _previewCts?.Cancel();
+        _previewCts?.Dispose();
+        _previewCts = new CancellationTokenSource();
+        CancellationToken token = _previewCts.Token;
+        if (_grayScottPreview is not null)
+        {
+            if (ReferenceEquals(_selectedItem, item)) FractalPreview.Source = _grayScottPreview;
+            return;
+        }
+        try
+        {
+            GrayScottState state = GrayScottPresets.All[0].State.Clone();
+            BitmapSource preview = await GrayScottRenderer.RenderPreviewAsync(state, 512, 512, token);
+            if (token.IsCancellationRequested || !ReferenceEquals(_selectedItem, item)) return;
+            _grayScottPreview = preview;
+            FractalPreview.Source = preview;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            if (ReferenceEquals(_selectedItem, item))
+                FractalPreview.Source = new BitmapImage(
+                    new Uri($"pack://application:,,,/{item.PreviewResourcePath}", UriKind.Absolute));
         }
     }
 
@@ -330,6 +365,12 @@ public partial class MainWindow : Window
         if (_selectedItem?.LaunchKey == "DLA")
         {
             new DlaWindow { Owner = this }.Show();
+            return;
+        }
+
+        if (_selectedItem?.LaunchKey == "GrayScott")
+        {
+            new GrayScottWindow { Owner = this }.Show();
             return;
         }
 

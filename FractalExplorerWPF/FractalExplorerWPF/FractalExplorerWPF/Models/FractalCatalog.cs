@@ -39,6 +39,7 @@ public static class FractalCatalog
         Item(["Динамические системы и хаос", "Аттракторы"], "Карта Хенона", "Классическое двумерное отображение Хенона.", "henon_preview_sq512.png", "Henon"),
         Item(["Динамические системы и хаос", "Аттракторы"], "Отображение Икэды", "Двумерное нелинейное отображение Икэды.", "ikeda_preview_sq512.png", "Ikeda"),
         Item(["Динамические системы и хаос", "Аттракторы"], "Странные аттракторы", "Облака плотности для аттракторов Клиффорда, Питера де Йонга, Tinkerbell и Gumowski–Mira.", "strange_attractors_preview_sq512.png", "Attractors2D"),
+        Item(["Динамические системы и хаос", "Пространственные системы"], "Gray–Scott reaction–diffusion", "Двухкомпонентная реакционно‑диффузионная среда с живой эволюцией пятен, волн и лабиринтов, интерактивными затравками и собственными палитрами.", "strange_attractors_preview_sq512.png", "GrayScott"),
 
         Item(["Математические лаборатории", "Теория чисел и дискретные структуры"], "Арифметика по модулю", "Отображения x → ax+b mod N и функциональные графы на окружности: кардиоиды, нефроиды и плетёные конечные орбиты.", "inverse_collatz_tree_preview_sq512.png", MathematicalLaboratoryCatalog.LaunchKey(MathematicalLaboratoryKind.ModularArithmetic)),
         Item(["Математические лаборатории", "Теория чисел и дискретные структуры"], "Треугольник Паскаля по модулю N", "Цветовая карта C(n,k) mod m с режимом делимости и направляющими теоремы Люка.", "inverse_collatz_tree_preview_sq512.png", MathematicalLaboratoryCatalog.LaunchKey(MathematicalLaboratoryKind.PascalModulo)),
