@@ -26,6 +26,7 @@ public partial class MathematicalLaboratoryWindow : Window
     private readonly List<LaboratoryPoint> _inputPoints = [];
     private CancellationTokenSource? _renderCts;
     private bool _rendering;
+    private bool _renderPending;
     private bool _syncing;
     private bool _panning;
     private bool _drawing;
@@ -65,6 +66,7 @@ public partial class MathematicalLaboratoryWindow : Window
         _renderTimer.Tick += (_, _) =>
         {
             _renderTimer.Stop();
+            _renderPending = false;
             _ = RenderAsync();
         };
         _animationTimer.Tick += AnimationTimer_OnTick;
@@ -351,6 +353,7 @@ public partial class MathematicalLaboratoryWindow : Window
     private void ScheduleRender()
     {
         if (!IsLoaded || AnimateCheck.IsChecked == true) return;
+        _renderPending = true;
         _renderCts?.Cancel();
         _renderTimer.Stop();
         _renderTimer.Start();
@@ -359,6 +362,7 @@ public partial class MathematicalLaboratoryWindow : Window
     private void Render_OnClick(object sender, RoutedEventArgs e)
     {
         _renderTimer.Stop();
+        _renderPending = false;
         _renderCts?.Cancel();
         _ = RenderAsync();
     }
@@ -367,7 +371,13 @@ public partial class MathematicalLaboratoryWindow : Window
 
     private async Task RenderAsync()
     {
-        if (_rendering) return;
+        if (_rendering)
+        {
+            _renderPending = true;
+            return;
+        }
+
+        _renderPending = false;
         MathematicalLaboratoryState state;
         try
         {
@@ -413,7 +423,8 @@ public partial class MathematicalLaboratoryWindow : Window
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Рендер отменён";
+            if (!_renderPending && !_panning && AnimateCheck.IsChecked != true)
+                StatusText.Text = "Рендер отменён";
         }
         catch (Exception exception)
         {
@@ -425,6 +436,11 @@ public partial class MathematicalLaboratoryWindow : Window
             _rendering = false;
             CancelButton.IsEnabled = false;
             RenderBadge.Visibility = Visibility.Collapsed;
+            if (_renderPending && IsLoaded && AnimateCheck.IsChecked != true)
+            {
+                _renderTimer.Stop();
+                _renderTimer.Start();
+            }
         }
     }
 

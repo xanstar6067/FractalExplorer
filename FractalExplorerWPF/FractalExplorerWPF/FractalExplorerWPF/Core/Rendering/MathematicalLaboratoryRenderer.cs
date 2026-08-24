@@ -810,14 +810,25 @@ public static class MathematicalLaboratoryRenderer
         int reportStep = Math.Max(1, canvas.Height / 24);
         var options = new ParallelOptions
         {
-            CancellationToken = token,
             MaxDegreeOfParallelism = Environment.ProcessorCount
         };
 
-        Parallel.For(0, canvas.Height, options, y =>
+        Parallel.For(0, canvas.Height, options, (y, loopState) =>
         {
+            if (token.IsCancellationRequested)
+            {
+                loopState.Stop();
+                return;
+            }
+
             for (int x = 0; x < canvas.Width; x++)
             {
+                if ((x & 63) == 0 && token.IsCancellationRequested)
+                {
+                    loopState.Stop();
+                    return;
+                }
+
                 (double worldX, double worldY) = canvas.Unmap(x + 0.5, y + 0.5);
                 bool inside;
                 double value;
@@ -871,11 +882,11 @@ public static class MathematicalLaboratoryRenderer
             }
 
             int done = Interlocked.Increment(ref completedRows);
-            if (done % reportStep == 0 || done == canvas.Height)
+            if (!token.IsCancellationRequested && (done % reportStep == 0 || done == canvas.Height))
                 progress?.Report(8 + done * 86 / canvas.Height);
         });
 
-        if (!state.ShowGuides) return;
+        if (token.IsCancellationRequested || !state.ShowGuides) return;
         Color guide = Mix(state.AccentColor, state.PrimaryColor, 0.35);
         if (mode <= 1)
         {
