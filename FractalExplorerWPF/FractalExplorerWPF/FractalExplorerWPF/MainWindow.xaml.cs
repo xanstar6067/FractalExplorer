@@ -7,6 +7,7 @@ using FractalExplorerWPF.Models;
 using FractalExplorerWPF.Views;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Theming;
+using FractalExplorerWPF.Core.Rendering;
 
 namespace FractalExplorerWPF;
 
@@ -16,6 +17,8 @@ public partial class MainWindow : Window
     private FractalCatalogItem? _selectedItem;
     private bool _initializingRenderPattern = true;
     private bool _updatingThemes;
+    private readonly Dictionary<MathematicalLaboratoryKind, BitmapSource> _laboratoryPreviews = [];
+    private CancellationTokenSource? _previewCts;
 
     public MainWindow()
     {
@@ -28,6 +31,8 @@ public partial class MainWindow : Window
         ThemeManager.ThemesChanged += ThemeManager_OnThemesChanged;
         Closed += (_, _) =>
         {
+            _previewCts?.Cancel();
+            _previewCts?.Dispose();
             ThemeManager.ThemeChanged -= ThemeManager_OnThemeChanged;
             ThemeManager.ThemesChanged -= ThemeManager_OnThemesChanged;
         };
@@ -110,8 +115,47 @@ public partial class MainWindow : Window
         LaunchButton.Content = item.LaunchKey is not null
             ? "Запустить"
             : "Запуск будет перенесён позже";
-        FractalPreview.Source = new BitmapImage(
-            new Uri($"pack://application:,,,/{item.PreviewResourcePath}", UriKind.Absolute));
+        if (MathematicalLaboratoryCatalog.TryParseLaunchKey(item.LaunchKey, out MathematicalLaboratoryKind kind))
+        {
+            _ = LoadLaboratoryPreviewAsync(item, kind);
+        }
+        else
+        {
+            _previewCts?.Cancel();
+            FractalPreview.Source = new BitmapImage(
+                new Uri($"pack://application:,,,/{item.PreviewResourcePath}", UriKind.Absolute));
+        }
+    }
+
+    private async Task LoadLaboratoryPreviewAsync(
+        FractalCatalogItem item, MathematicalLaboratoryKind kind)
+    {
+        _previewCts?.Cancel();
+        _previewCts?.Dispose();
+        _previewCts = new CancellationTokenSource();
+        CancellationToken token = _previewCts.Token;
+        if (_laboratoryPreviews.TryGetValue(kind, out BitmapSource? cached))
+        {
+            if (ReferenceEquals(_selectedItem, item)) FractalPreview.Source = cached;
+            return;
+        }
+        try
+        {
+            MathematicalLaboratoryState state = MathematicalLaboratoryCatalog.CreateDefaultState(kind);
+            BitmapSource preview = await MathematicalLaboratoryRenderer.RenderBitmapAsync(state, 512, 512, token);
+            if (token.IsCancellationRequested || !ReferenceEquals(_selectedItem, item)) return;
+            _laboratoryPreviews[kind] = preview;
+            FractalPreview.Source = preview;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            if (ReferenceEquals(_selectedItem, item))
+                FractalPreview.Source = new BitmapImage(
+                    new Uri($"pack://application:,,,/{item.PreviewResourcePath}", UriKind.Absolute));
+        }
     }
 
     private void FractalTree_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -155,6 +199,13 @@ public partial class MainWindow : Window
 
     private void LaunchSelected()
     {
+        if (MathematicalLaboratoryCatalog.TryParseLaunchKey(
+                _selectedItem?.LaunchKey, out MathematicalLaboratoryKind laboratoryKind))
+        {
+            new MathematicalLaboratoryWindow(laboratoryKind) { Owner = this }.Show();
+            return;
+        }
+
         if (_selectedItem?.LaunchKey == "JuliaGallery")
         {
             new JuliaGalleryWindow(MandelbrotVariant.Julia) { Owner = this }.Show();

@@ -5,6 +5,23 @@ namespace FractalExplorerWPF.Infrastructure;
 
 public static class SaveManagerConfigurations
 {
+    public static SaveManagerConfiguration<MathematicalLaboratoryState> ForMathematicalLaboratory(
+        MathematicalLaboratoryWindow window, MathematicalLaboratorySaveStore store) => new()
+    {
+        WindowTitle = $"Сохранение/Загрузка: {window.LaboratoryTitle}",
+        FractalIdentifier = $"MathematicalLaboratory_{window.LaboratoryKind}",
+        LoadStates = store.Load,
+        SaveStates = store.Save,
+        CaptureState = window.CaptureState,
+        LoadState = window.LoadState,
+        RenderPreviewAsync = window.RenderStatePreviewAsync,
+        GetName = state => state.SaveName,
+        GetTimestamp = state => state.Timestamp,
+        GetDetails = state =>
+            $"{Prefix(state.Timestamp)} · Режим: {window.GetModeName(state.Mode)}\n" +
+            $"{window.GetStateDetails(state)} · Масштаб: {state.Zoom:G5} · Поворот: {state.Rotation:G5}°"
+    };
+
     public static SaveManagerConfiguration<MandelbrotState> ForMandelbrot(
         MandelbrotWindow window, MandelbrotSaveStore store) => new()
     {
