@@ -89,10 +89,24 @@ public partial class MathematicalLaboratoryWindow : Window
         ? _definition.Modes[mode]
         : _definition.Modes[0];
 
-    public string GetStateDetails(MathematicalLaboratoryState state) =>
-        $"{_definition.PrimaryLabel}: {state.PrimaryValue:N0} · " +
-        $"{_definition.SecondaryLabel}: {state.SecondaryValue:N0} · " +
-        $"{_definition.ParameterLabel}: {state.Parameter:G7}";
+    public string GetStateDetails(MathematicalLaboratoryState state)
+    {
+        if (state.Kind == MathematicalLaboratoryKind.ChladniWaveInterference && state.Mode >= 3)
+        {
+            string sourceDetails = state.Mode switch
+            {
+                3 => "Источники: 2",
+                4 => $"Источники: {state.PrimaryValue:N0}",
+                _ => $"Щели: {state.PrimaryValue:N0}"
+            };
+            return $"{sourceDetails} · Частота: {state.SecondaryValue:N0} · " +
+                   $"Сдвиг фазы: {state.TertiaryValue:N0}° · Геометрия: {state.Parameter:G7}";
+        }
+
+        return $"{_definition.PrimaryLabel}: {state.PrimaryValue:N0} · " +
+               $"{_definition.SecondaryLabel}: {state.SecondaryValue:N0} · " +
+               $"{_definition.ParameterLabel}: {state.Parameter:G7}";
+    }
 
     public MathematicalLaboratoryState CaptureState(string name)
     {
@@ -224,7 +238,8 @@ public partial class MathematicalLaboratoryWindow : Window
         AnimateCheck.Visibility = LaboratoryKind is MathematicalLaboratoryKind.ModularArithmetic
             or MathematicalLaboratoryKind.Phyllotaxis
             or MathematicalLaboratoryKind.FourierEpicycles
-            or MathematicalLaboratoryKind.HyperbolicGeometry ? Visibility.Visible : Visibility.Collapsed;
+            or MathematicalLaboratoryKind.HyperbolicGeometry
+            or MathematicalLaboratoryKind.ChladniWaveInterference ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e)
@@ -247,11 +262,40 @@ public partial class MathematicalLaboratoryWindow : Window
         FilledCheck.IsEnabled = LaboratoryKind is MathematicalLaboratoryKind.RationalNumbers
             or MathematicalLaboratoryKind.CircleInversion
             or MathematicalLaboratoryKind.AperiodicTilings
-            or MathematicalLaboratoryKind.HyperbolicGeometry;
+            or MathematicalLaboratoryKind.HyperbolicGeometry
+            or MathematicalLaboratoryKind.ChladniWaveInterference;
         if (LaboratoryKind == MathematicalLaboratoryKind.FourierEpicycles)
             ShowGuidesCheck.Content = "Показывать окружности эпициклов";
         else if (LaboratoryKind == MathematicalLaboratoryKind.PascalModulo)
             ShowGuidesCheck.Content = "Показывать границы разрядов";
+        else if (LaboratoryKind == MathematicalLaboratoryKind.ChladniWaveInterference)
+        {
+            int mode = Math.Clamp(ModeBox.SelectedIndex, 0, 5);
+            bool standingWave = mode <= 2;
+            ShowGuidesCheck.Content = standingWave
+                ? "Показывать границу пластины"
+                : "Показывать источники волн";
+            FilledCheck.Content = "Непрерывное волновое поле";
+            if (standingWave)
+            {
+                PrimaryLabel.Text = mode == 2 ? "Угловая мода m" : "Номер моды m";
+                SecondaryLabel.Text = mode == 2 ? "Радиальная мода n" : "Номер моды n";
+                TertiaryLabel.Text = "Контурные полосы";
+                ParameterLabel.Text = "Порог узлов";
+            }
+            else
+            {
+                PrimaryLabel.Text = mode switch
+                {
+                    3 => "Источников (фикс. 2)",
+                    4 => "Число источников",
+                    _ => "Число щелей"
+                };
+                SecondaryLabel.Text = "Частота волны";
+                TertiaryLabel.Text = "Сдвиг фазы, °";
+                ParameterLabel.Text = "Геометрия источников";
+            }
+        }
         else
             ShowGuidesCheck.Content = "Направляющие / связи";
     }
@@ -291,6 +335,9 @@ public partial class MathematicalLaboratoryWindow : Window
                 case MathematicalLaboratoryKind.HyperbolicGeometry:
                     if (ReadDouble(RotationBox.Text, out double rotation))
                         RotationBox.Text = Format(rotation + 0.45);
+                    break;
+                case MathematicalLaboratoryKind.ChladniWaveInterference:
+                    _phase = (_phase + 0.018) % 1;
                     break;
             }
         }

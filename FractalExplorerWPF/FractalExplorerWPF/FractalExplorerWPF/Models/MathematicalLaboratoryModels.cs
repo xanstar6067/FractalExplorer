@@ -13,7 +13,8 @@ public enum MathematicalLaboratoryKind
     CircleInversion,
     AperiodicTilings,
     HyperbolicGeometry,
-    FourierEpicycles
+    FourierEpicycles,
+    ChladniWaveInterference
 }
 
 public readonly record struct LaboratoryPoint(double X, double Y);
@@ -168,6 +169,14 @@ public static class MathematicalLaboratoryCatalog
             "Число гармоник", "Число отсчётов", "Точек траектории", "Скорость анимации",
             "Зажмите ЛКМ и нарисуйте замкнутый контур. Shift+ЛКМ перемещает вид. Анимация ведёт эпициклы по траектории.",
             1, 250, 32, 2_048, 50, 4_000, 0.05, 4),
+        MathematicalLaboratoryKind.ChladniWaveInterference => new(
+            "Фигуры Хладни и интерференция волн",
+            "Узловые линии стоячих волн на пластинах и мембранах, а также интерференция когерентных точечных источников и решёток щелей.",
+            ["Квадратная пластина — симметричная мода", "Квадратная пластина — антисимметричная мода",
+                "Круглая мембрана", "Два когерентных источника", "Кольцо источников", "Дифракционная решётка"],
+            "Номер моды m", "Номер моды n", "Контурные полосы", "Порог узлов",
+            "Колесо: масштаб. ЛКМ: перемещение. Анимация показывает фазу стоячей или бегущей волны.",
+            0, 64, 1, 128, 1, 360, 0.005, 2),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
 
@@ -203,6 +212,10 @@ public static class MathematicalLaboratoryCatalog
                 break;
             case MathematicalLaboratoryKind.FourierEpicycles:
                 state.PrimaryValue = 45; state.SecondaryValue = 512; state.TertiaryValue = 900; state.Parameter = 0.7;
+                break;
+            case MathematicalLaboratoryKind.ChladniWaveInterference:
+                state.PrimaryValue = 5; state.SecondaryValue = 3; state.TertiaryValue = 28; state.Parameter = 0.055;
+                state.Filled = true;
                 break;
         }
         return state;
