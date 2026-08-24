@@ -19,6 +19,10 @@ public partial class MathematicalLaboratoryWindow : Window
     private readonly MathematicalLaboratorySaveStore _saveStore;
     private readonly DispatcherTimer _renderTimer = new() { Interval = TimeSpan.FromMilliseconds(190) };
     private readonly DispatcherTimer _animationTimer = new() { Interval = TimeSpan.FromMilliseconds(70) };
+    private readonly TransformGroup _previewTransform = new();
+    private readonly ScaleTransform _previewScale = new(1, 1);
+    private readonly RotateTransform _previewRotation = new();
+    private readonly TranslateTransform _previewTranslation = new();
     private readonly List<LaboratoryPoint> _inputPoints = [];
     private CancellationTokenSource? _renderCts;
     private bool _rendering;
@@ -35,7 +39,12 @@ public partial class MathematicalLaboratoryWindow : Window
     private double _phase;
     private double _anchorX;
     private double _anchorY;
+    private double _renderedCenterX;
+    private double _renderedCenterY;
+    private double _renderedZoom = 1;
+    private double _renderedRotation;
     private int _animationStep;
+    private bool _hasRenderedFrame;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
 
@@ -45,6 +54,11 @@ public partial class MathematicalLaboratoryWindow : Window
         _definition = MathematicalLaboratoryCatalog.GetDefinition(kind);
         _saveStore = new MathematicalLaboratorySaveStore(kind);
         InitializeComponent();
+        _previewTransform.Children.Add(_previewScale);
+        _previewTransform.Children.Add(_previewRotation);
+        _previewTransform.Children.Add(_previewTranslation);
+        CanvasImage.RenderTransformOrigin = new Point(0.5, 0.5);
+        CanvasImage.RenderTransform = _previewTransform;
         ConfigureWindow();
         LoadState(MathematicalLaboratoryCatalog.CreateDefaultState(kind));
 
@@ -168,6 +182,7 @@ public partial class MathematicalLaboratoryWindow : Window
         }
         UpdateModeUi();
         UpdateAnimation();
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
@@ -216,6 +231,7 @@ public partial class MathematicalLaboratoryWindow : Window
     {
         if (_syncing) return;
         UpdateModeUi();
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
@@ -338,6 +354,12 @@ public partial class MathematicalLaboratoryWindow : Window
                 state, surface.PixelWidth, surface.PixelHeight, token, progress);
             if (token.IsCancellationRequested) return;
             CanvasImage.Source = bitmap;
+            _renderedCenterX = state.ViewCenterX;
+            _renderedCenterY = state.ViewCenterY;
+            _renderedZoom = state.Zoom;
+            _renderedRotation = state.Rotation;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
             ProgressBar.Value = 100;
             ProgressText.Text = "Рендер завершён";
             StatusText.Text = $"Готово за {stopwatch.Elapsed.TotalSeconds:F3} сек.";
@@ -365,6 +387,7 @@ public partial class MathematicalLaboratoryWindow : Window
         _zoom = 1;
         _anchorX = _anchorY = 0;
         _phase = 0;
+        UpdatePreviewTransform();
         ScheduleRender();
     }
 
@@ -404,7 +427,11 @@ public partial class MathematicalLaboratoryWindow : Window
         });
     }
 
-    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) => ScheduleRender();
+    private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePreviewTransform();
+        ScheduleRender();
+    }
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -414,7 +441,9 @@ public partial class MathematicalLaboratoryWindow : Window
         LaboratoryPoint after = ScreenToWorld(point);
         _viewCenterX += before.X - after.X;
         _viewCenterY += before.Y - after.Y;
+        UpdatePreviewTransform();
         ScheduleRender();
+        e.Handled = true;
     }
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -471,6 +500,7 @@ public partial class MathematicalLaboratoryWindow : Window
         _viewCenterY += _worldStart.Y - current.Y;
         _worldStart = ScreenToWorld(point);
         _pointerStart = point;
+        UpdatePreviewTransform();
     }
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -495,9 +525,45 @@ public partial class MathematicalLaboratoryWindow : Window
         return new LaboratoryPoint(_viewCenterX + dx / _zoom, _viewCenterY + dy / _zoom);
     }
 
+    private void UpdatePreviewTransform()
+    {
+        if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 ||
+            CanvasHost.ActualWidth <= 0 || CanvasHost.ActualHeight <= 0 ||
+            !ReadDouble(RotationBox.Text, out double currentRotation)) return;
+
+        double width = CanvasHost.ActualWidth;
+        double height = CanvasHost.ActualHeight;
+        double pixelsPerUnit = Math.Min(width, height) * 0.5 * _zoom;
+        double rotationRadians = currentRotation * Math.PI / 180;
+        double cosine = Math.Cos(rotationRadians);
+        double sine = Math.Sin(rotationRadians);
+        double centerDx = _renderedCenterX - _viewCenterX;
+        double centerDy = _renderedCenterY - _viewCenterY;
+        double rotatedCenterX = centerDx * cosine - centerDy * sine;
+        double rotatedCenterY = centerDx * sine + centerDy * cosine;
+        double scale = _zoom / _renderedZoom;
+
+        _previewScale.ScaleX = scale;
+        _previewScale.ScaleY = scale;
+        _previewRotation.Angle = _renderedRotation - currentRotation;
+        _previewTranslation.X = rotatedCenterX * pixelsPerUnit;
+        _previewTranslation.Y = -rotatedCenterY * pixelsPerUnit;
+
+        bool identity = Math.Abs(scale - 1) < 1e-12 &&
+                        Math.Abs(_previewRotation.Angle) < 1e-10 &&
+                        Math.Abs(_previewTranslation.X) < 0.01 &&
+                        Math.Abs(_previewTranslation.Y) < 0.01;
+        RenderOptions.SetBitmapScalingMode(CanvasImage,
+            identity ? BitmapScalingMode.HighQuality : BitmapScalingMode.LowQuality);
+    }
+
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) =>
         FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost,
-            ToggleControlsButton, 320, ScheduleRender);
+            ToggleControlsButton, 320, () =>
+            {
+                UpdatePreviewTransform();
+                ScheduleRender();
+            });
 
     private void Window_OnKeyDown(object sender, KeyEventArgs e)
     {
