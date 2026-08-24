@@ -72,31 +72,62 @@ public partial class MainWindow : Window
 
     private void PopulateCatalog()
     {
-        foreach (IGrouping<string, FractalCatalogItem> family in _catalog.GroupBy(item => item.Family))
-        {
-            var familyNode = new TreeViewItem
-            {
-                Header = family.Key,
-                IsExpanded = FractalTree.Items.Count == 0
-            };
+        FractalTree.Items.Clear();
+        AddCatalogLevel(FractalTree.Items, _catalog, 0);
 
-            foreach (FractalCatalogItem item in family)
+        if (FractalTree.Items.Count > 0 &&
+            FractalTree.Items[0] is TreeViewItem firstCategory)
+        {
+            TrySelectFirstCatalogItem(firstCategory);
+        }
+    }
+
+    private static void AddCatalogLevel(
+        ItemCollection target,
+        IEnumerable<FractalCatalogItem> items,
+        int depth)
+    {
+        foreach (IGrouping<string?, FractalCatalogItem> branch in items.GroupBy(item =>
+                     depth < item.CategoryPath.Count ? item.CategoryPath[depth] : null))
+        {
+            if (branch.Key is null)
             {
-                familyNode.Items.Add(new TreeViewItem
+                foreach (FractalCatalogItem item in branch)
                 {
-                    Header = item.DisplayName,
-                    Tag = item
-                });
+                    target.Add(new TreeViewItem
+                    {
+                        Header = item.DisplayName,
+                        Tag = item
+                    });
+                }
+
+                continue;
             }
 
-            FractalTree.Items.Add(familyNode);
+            var categoryNode = new TreeViewItem { Header = branch.Key };
+            AddCatalogLevel(categoryNode.Items, branch, depth + 1);
+            target.Add(categoryNode);
+        }
+    }
+
+    private static bool TrySelectFirstCatalogItem(TreeViewItem node)
+    {
+        if (node.Tag is FractalCatalogItem)
+        {
+            node.IsSelected = true;
+            return true;
         }
 
-        if (FractalTree.Items[0] is TreeViewItem firstFamily &&
-            firstFamily.Items[0] is TreeViewItem firstFractal)
+        foreach (object child in node.Items)
         {
-            firstFractal.IsSelected = true;
+            if (child is TreeViewItem childNode && TrySelectFirstCatalogItem(childNode))
+            {
+                node.IsExpanded = true;
+                return true;
+            }
         }
+
+        return false;
     }
 
     private void FractalTree_OnSelectedItemChanged(

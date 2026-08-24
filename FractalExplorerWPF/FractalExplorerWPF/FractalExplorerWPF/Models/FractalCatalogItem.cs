@@ -1,7 +1,7 @@
 namespace FractalExplorerWPF.Models;
 
 public sealed record FractalCatalogItem(
-    string Family,
+    IReadOnlyList<string> CategoryPath,
     string DisplayName,
     string Description,
     string PreviewResourcePath,

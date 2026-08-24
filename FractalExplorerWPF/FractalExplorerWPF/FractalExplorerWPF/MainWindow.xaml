@@ -46,7 +46,7 @@
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Margin="5,3,5,12"
                            FontSize="18" FontWeight="SemiBold"
-                           Text="Каталог фракталов"/>
+                           Text="Каталог"/>
                 <Button DockPanel.Dock="Bottom"
                         Margin="0,10,0,0"
                         Style="{StaticResource AboutButtonStyle}"
@@ -84,7 +84,7 @@
 
                 <TextBlock x:Name="FractalName" Margin="0,0,0,16"
                            FontSize="25" FontWeight="SemiBold"
-                           Text="Выберите фрактал"/>
+                           Text="Выберите элемент каталога"/>
 
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
