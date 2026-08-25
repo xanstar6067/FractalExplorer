@@ -15,6 +15,10 @@ public static class MathematicalLaboratoryRenderer
         CancellationToken token,
         IProgress<int>? progress = null)
     {
+        if (AdvancedMathematicalLaboratoryRenderer.Supports(state.Kind))
+            return await AdvancedMathematicalLaboratoryRenderer.RenderBitmapAsync(
+                state, width, height, token, progress);
+
         width = Math.Clamp(width, 64, 8_192);
         height = Math.Clamp(height, 64, 8_192);
         MathematicalLaboratoryState snapshot = state.Clone();

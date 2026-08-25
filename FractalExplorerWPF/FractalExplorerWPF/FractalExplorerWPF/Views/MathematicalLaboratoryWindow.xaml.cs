@@ -46,6 +46,7 @@ public partial class MathematicalLaboratoryWindow : Window
     private double _renderedRotation;
     private int _animationStep;
     private bool _hasRenderedFrame;
+    private int _lastModeIndex = -1;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
 
@@ -125,6 +126,7 @@ public partial class MathematicalLaboratoryWindow : Window
             throw new InvalidOperationException(
                 $"«{_definition.TertiaryLabel}»: допустимы значения {_definition.TertiaryMinimum:N0}–{_definition.TertiaryMaximum:N0}.");
         if (!ReadDouble(ParameterBox.Text, out double parameter) ||
+            !double.IsFinite(parameter) ||
             parameter < _definition.ParameterMinimum || parameter > _definition.ParameterMaximum)
             throw new InvalidOperationException(
                 $"«{_definition.ParameterLabel}»: допустимы значения {_definition.ParameterMinimum:G7}–{_definition.ParameterMaximum:G7}.");
@@ -171,6 +173,7 @@ public partial class MathematicalLaboratoryWindow : Window
         try
         {
             ModeBox.SelectedIndex = Math.Clamp(state.Mode, 0, _definition.Modes.Length - 1);
+            _lastModeIndex = ModeBox.SelectedIndex;
             PrimaryBox.Text = state.PrimaryValue.ToString(CultureInfo.InvariantCulture);
             SecondaryBox.Text = state.SecondaryValue.ToString(CultureInfo.InvariantCulture);
             TertiaryBox.Text = state.TertiaryValue.ToString(CultureInfo.InvariantCulture);
@@ -214,6 +217,10 @@ public partial class MathematicalLaboratoryWindow : Window
             MathematicalLaboratoryKind.AperiodicTilings => Math.Min(preview.PrimaryValue, 7),
             MathematicalLaboratoryKind.HyperbolicGeometry => Math.Min(preview.PrimaryValue, 6),
             MathematicalLaboratoryKind.FourierEpicycles => Math.Min(preview.PrimaryValue, 90),
+            MathematicalLaboratoryKind.RecamanSequence => Math.Min(preview.PrimaryValue, 1_200),
+            MathematicalLaboratoryKind.KnotStudio => preview.PrimaryValue,
+            MathematicalLaboratoryKind.StochasticMotion => Math.Min(preview.PrimaryValue, 20_000),
+            MathematicalLaboratoryKind.KleinianSchottky => Math.Min(preview.PrimaryValue, 350_000),
             _ => preview.PrimaryValue
         };
         if (preview.Kind == MathematicalLaboratoryKind.FourierEpicycles)
@@ -236,20 +243,52 @@ public partial class MathematicalLaboratoryWindow : Window
         ParameterLabel.Text = _definition.ParameterLabel;
         ModeBox.ItemsSource = _definition.Modes;
         ClearInputButton.Visibility = LaboratoryKind is MathematicalLaboratoryKind.CircleInversion
-            or MathematicalLaboratoryKind.FourierEpicycles ? Visibility.Visible : Visibility.Collapsed;
+            or MathematicalLaboratoryKind.FourierEpicycles
+            or MathematicalLaboratoryKind.VoronoiLloyd ? Visibility.Visible : Visibility.Collapsed;
+        NewVariantButton.Visibility = LaboratoryKind is MathematicalLaboratoryKind.VoronoiLloyd
+            or MathematicalLaboratoryKind.StochasticMotion
+            or MathematicalLaboratoryKind.KleinianSchottky ? Visibility.Visible : Visibility.Collapsed;
         AnimateCheck.Visibility = LaboratoryKind is MathematicalLaboratoryKind.ModularArithmetic
             or MathematicalLaboratoryKind.Phyllotaxis
             or MathematicalLaboratoryKind.FourierEpicycles
             or MathematicalLaboratoryKind.HyperbolicGeometry
-            or MathematicalLaboratoryKind.ChladniWaveInterference ? Visibility.Visible : Visibility.Collapsed;
+            or MathematicalLaboratoryKind.ChladniWaveInterference
+            or MathematicalLaboratoryKind.VoronoiLloyd
+            or MathematicalLaboratoryKind.RecamanSequence
+            or MathematicalLaboratoryKind.KnotStudio
+            or MathematicalLaboratoryKind.StochasticMotion
+            or MathematicalLaboratoryKind.KleinianSchottky ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e)
     {
         if (_syncing) return;
+        if (ReferenceEquals(sender, ModeBox)) ApplyModeDefaults();
         UpdateModeUi();
         UpdatePreviewTransform();
         ScheduleRender();
+    }
+
+    private void ApplyModeDefaults()
+    {
+        int newMode = Math.Clamp(ModeBox.SelectedIndex, 0, _definition.Modes.Length - 1);
+        if (newMode == _lastModeIndex) return;
+        if (LaboratoryKind == MathematicalLaboratoryKind.StochasticMotion)
+        {
+            _syncing = true;
+            try
+            {
+                if (newMode == 3 && _lastModeIndex != 3 && SecondaryBox.Text.Trim() == "12")
+                    SecondaryBox.Text = "400";
+                else if (_lastModeIndex == 3 && newMode != 3 && SecondaryBox.Text.Trim() == "400")
+                    SecondaryBox.Text = "12";
+            }
+            finally
+            {
+                _syncing = false;
+            }
+        }
+        _lastModeIndex = newMode;
     }
 
     private void AnimateCheck_OnChanged(object sender, RoutedEventArgs e)
@@ -261,11 +300,19 @@ public partial class MathematicalLaboratoryWindow : Window
 
     private void UpdateModeUi()
     {
+        PrimaryLabel.Text = _definition.PrimaryLabel;
+        SecondaryLabel.Text = _definition.SecondaryLabel;
+        TertiaryLabel.Text = _definition.TertiaryLabel;
+        ParameterLabel.Text = _definition.ParameterLabel;
+        FilledCheck.Content = "Заливка элементов";
         FilledCheck.IsEnabled = LaboratoryKind is MathematicalLaboratoryKind.RationalNumbers
             or MathematicalLaboratoryKind.CircleInversion
             or MathematicalLaboratoryKind.AperiodicTilings
             or MathematicalLaboratoryKind.HyperbolicGeometry
-            or MathematicalLaboratoryKind.ChladniWaveInterference;
+            or MathematicalLaboratoryKind.ChladniWaveInterference
+            or MathematicalLaboratoryKind.VoronoiLloyd
+            or MathematicalLaboratoryKind.KnotStudio
+            or MathematicalLaboratoryKind.KleinianSchottky;
         if (LaboratoryKind == MathematicalLaboratoryKind.FourierEpicycles)
             ShowGuidesCheck.Content = "Показывать окружности эпициклов";
         else if (LaboratoryKind == MathematicalLaboratoryKind.PascalModulo)
@@ -297,6 +344,34 @@ public partial class MathematicalLaboratoryWindow : Window
                 TertiaryLabel.Text = "Сдвиг фазы, °";
                 ParameterLabel.Text = "Геометрия источников";
             }
+        }
+        else if (LaboratoryKind == MathematicalLaboratoryKind.VoronoiLloyd)
+        {
+            ShowGuidesCheck.Content = ModeBox.SelectedIndex == 4
+                ? "Показывать центры и сеть Делоне"
+                : "Показывать центры ячеек";
+            FilledCheck.Content = "Заливать ячейки";
+            ClearInputButton.Content = "Очистить ручные центры";
+        }
+        else if (LaboratoryKind == MathematicalLaboratoryKind.RecamanSequence)
+            ShowGuidesCheck.Content = "Показывать числовую ось / оболочку";
+        else if (LaboratoryKind == MathematicalLaboratoryKind.KnotStudio)
+        {
+            ShowGuidesCheck.Content = "Показывать опорную геометрию";
+            FilledCheck.Content = "Объёмная нить";
+        }
+        else if (LaboratoryKind == MathematicalLaboratoryKind.StochasticMotion)
+        {
+            ShowGuidesCheck.Content = "Показывать начало и масштаб";
+            int mode = Math.Clamp(ModeBox.SelectedIndex, 0, 4);
+            SecondaryLabel.Text = mode == 3 ? "Число частиц" : "Число траекторий";
+            ParameterLabel.Text = mode == 1 ? "Показатель α Леви" :
+                mode == 4 ? "Инерция направления" : "Коэффициент диффузии";
+        }
+        else if (LaboratoryKind == MathematicalLaboratoryKind.KleinianSchottky)
+        {
+            ShowGuidesCheck.Content = "Показывать окружности генераторов";
+            FilledCheck.Content = "Плотностное свечение";
         }
         else
             ShowGuidesCheck.Content = "Направляющие / связи";
@@ -340,6 +415,15 @@ public partial class MathematicalLaboratoryWindow : Window
                     break;
                 case MathematicalLaboratoryKind.ChladniWaveInterference:
                     _phase = (_phase + 0.018) % 1;
+                    break;
+                case MathematicalLaboratoryKind.VoronoiLloyd:
+                case MathematicalLaboratoryKind.RecamanSequence:
+                case MathematicalLaboratoryKind.StochasticMotion:
+                    _phase = (_phase + 0.025) % 1;
+                    break;
+                case MathematicalLaboratoryKind.KnotStudio:
+                case MathematicalLaboratoryKind.KleinianSchottky:
+                    _phase = (_phase + 0.012) % 1;
                     break;
             }
         }
@@ -460,6 +544,23 @@ public partial class MathematicalLaboratoryWindow : Window
         ScheduleRender();
     }
 
+    private void NewVariantButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _syncing = true;
+        try
+        {
+            TertiaryBox.Text = Random.Shared.Next(1, int.MaxValue).ToString(CultureInfo.InvariantCulture);
+            if (LaboratoryKind == MathematicalLaboratoryKind.VoronoiLloyd)
+                _inputPoints.Clear();
+            _phase = 0;
+        }
+        finally
+        {
+            _syncing = false;
+        }
+        ScheduleRender();
+    }
+
     private void Saves_OnClick(object sender, RoutedEventArgs e) =>
         SaveManagerWindow.Open(this, SaveManagerConfigurations.ForMathematicalLaboratory(this, _saveStore));
 
@@ -514,11 +615,13 @@ public partial class MathematicalLaboratoryWindow : Window
         _renderCts?.Cancel();
         Point point = e.GetPosition(CanvasHost);
         bool interactive = LaboratoryKind is MathematicalLaboratoryKind.CircleInversion
-            or MathematicalLaboratoryKind.FourierEpicycles;
+            or MathematicalLaboratoryKind.FourierEpicycles
+            or MathematicalLaboratoryKind.VoronoiLloyd;
         if (interactive && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) == false)
         {
             LaboratoryPoint world = ScreenToWorld(point);
-            if (LaboratoryKind == MathematicalLaboratoryKind.CircleInversion)
+            if (LaboratoryKind is MathematicalLaboratoryKind.CircleInversion
+                or MathematicalLaboratoryKind.VoronoiLloyd)
             {
                 _inputPoints.Add(world);
                 ScheduleRender();
@@ -539,7 +642,9 @@ public partial class MathematicalLaboratoryWindow : Window
 
     private void CanvasHost_OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (LaboratoryKind != MathematicalLaboratoryKind.CircleInversion) return;
+        if (LaboratoryKind is not (MathematicalLaboratoryKind.CircleInversion
+            or MathematicalLaboratoryKind.StochasticMotion
+            or MathematicalLaboratoryKind.KleinianSchottky)) return;
         LaboratoryPoint point = ScreenToWorld(e.GetPosition(CanvasHost));
         _anchorX = point.X;
         _anchorY = point.Y;

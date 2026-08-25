@@ -14,7 +14,12 @@ public enum MathematicalLaboratoryKind
     AperiodicTilings,
     HyperbolicGeometry,
     FourierEpicycles,
-    ChladniWaveInterference
+    ChladniWaveInterference,
+    VoronoiLloyd,
+    RecamanSequence,
+    KnotStudio,
+    StochasticMotion,
+    KleinianSchottky
 }
 
 public readonly record struct LaboratoryPoint(double X, double Y);
@@ -177,6 +182,43 @@ public static class MathematicalLaboratoryCatalog
             "Номер моды m", "Номер моды n", "Контурные полосы", "Порог узлов",
             "Колесо: масштаб. ЛКМ: перемещение. Анимация показывает фазу стоячей или бегущей волны.",
             0, 64, 1, 128, 1, 360, 0.005, 2),
+        MathematicalLaboratoryKind.VoronoiLloyd => new(
+            "Диаграммы Вороного и релаксация Ллойда",
+            "Ячейки ближайшего центра для разных метрик, power diagram, двойственная сеть Делоне и пошаговое выравнивание центров методом Ллойда.",
+            ["Вороной — евклидова метрика", "Релаксация Ллойда", "Power diagram — взвешенные центры",
+                "Вороной — манхэттенская метрика", "Вороной + двойственная сеть Делоне"],
+            "Число центров", "Итерации Ллойда", "Seed", "Толщина границ",
+            "ЛКМ: добавить собственный центр (при наличии ручных центров случайные не используются). Shift+ЛКМ: перемещение. «Очистить» возвращает случайный набор.",
+            3, 256, 0, 80, int.MinValue, int.MaxValue, 0.25, 8),
+        MathematicalLaboratoryKind.RecamanSequence => new(
+            "Последовательность Рекамана",
+            "Самоизбегающие шаги a(n)=a(n−1)−n, если результат положителен и ещё не встречался; иначе выполняется шаг вперёд. Несколько раскладок показывают дуги и повторные масштабы.",
+            ["Чередующиеся дуги", "Дуги над осью", "Хордовая диаграмма", "Плоское блуждание"],
+            "Число членов", "Начальное значение", "Период цвета", "Толщина линий",
+            "Колесо: масштаб. ЛКМ: перемещение. Анимация последовательно раскрывает члены последовательности.",
+            10, 20_000, 0, 1_000_000, 1, 2_000, 0.25, 10),
+        MathematicalLaboratoryKind.KnotStudio => new(
+            "Лаборатория узлов и кос",
+            "Параметрические торические, Лиссажу- и гармонические узлы, а также замкнутые косы с псевдо‑трёхмерной проекцией и сортировкой сегментов по глубине.",
+            ["Торический узел T(p,q)", "Узел Лиссажу", "Замкнутая коса", "Гармонический узел"],
+            "Параметр p / пряди", "Параметр q / обороты", "Число отсчётов", "Толщина нити",
+            "Колесо: масштаб. ЛКМ: перемещение. Поворот меняет проекцию, анимация вращает узел в пространстве. Для торического узла НОД(p,q) задаёт число компонент.",
+            1, 32, 1, 64, 200, 30_000, 0.4, 20),
+        MathematicalLaboratoryKind.StochasticMotion => new(
+            "Brownian motion и Lévy flights",
+            "Отдельная лаборатория случайных траекторий: броуновское движение, полёты Леви, броуновские мосты, ансамбли частиц и коррелированные блуждания с воспроизводимым seed.",
+            ["Броуновские траектории", "Полёты Леви", "Броуновский мост", "Ансамбль частиц", "Коррелированное блуждание"],
+            "Число шагов", "Траектории / частицы", "Seed", "Диффузия / α Леви",
+            "ПКМ задаёт начальную точку. Колесо: масштаб. ЛКМ: перемещение. Анимация раскрывает траектории во времени; seed позволяет повторить эксперимент.",
+            20, 200_000, 1, 1_000, int.MinValue, int.MaxValue, 0.2, 2),
+        MathematicalLaboratoryKind.KleinianSchottky => new(
+            "Kleinian и Schottky groups",
+            "Предельные множества групп дробно-линейных и круговых преобразований: классические конфигурации Шоттки, деформации, двухпараболические орбиты и инверсионная группа Аполлона.",
+            ["Классическая группа Шоттки", "Спиральная деформация Шоттки", "Двухпараболическая орбита",
+                "Инверсионная группа Аполлона", "Окружности генераторов и предел"],
+            "Число точек", "Прогрев / глубина", "Seed", "Параметр деформации",
+            "Колесо: масштаб. ЛКМ: перемещение. Направляющие показывают порождающие окружности. Seed выбирает воспроизводимую орбиту.",
+            2_000, 2_000_000, 1, 200, int.MinValue, int.MaxValue, 0.05, 3),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
 
@@ -215,6 +257,25 @@ public static class MathematicalLaboratoryCatalog
                 break;
             case MathematicalLaboratoryKind.ChladniWaveInterference:
                 state.PrimaryValue = 5; state.SecondaryValue = 3; state.TertiaryValue = 28; state.Parameter = 0.055;
+                state.Filled = true;
+                break;
+            case MathematicalLaboratoryKind.VoronoiLloyd:
+                state.PrimaryValue = 48; state.SecondaryValue = 8; state.TertiaryValue = 1729; state.Parameter = 1.2;
+                state.Filled = true;
+                break;
+            case MathematicalLaboratoryKind.RecamanSequence:
+                state.PrimaryValue = 420; state.SecondaryValue = 0; state.TertiaryValue = 24; state.Parameter = 1.35;
+                break;
+            case MathematicalLaboratoryKind.KnotStudio:
+                state.PrimaryValue = 3; state.SecondaryValue = 7; state.TertiaryValue = 1_600; state.Parameter = 5.5;
+                state.Rotation = -8;
+                break;
+            case MathematicalLaboratoryKind.StochasticMotion:
+                state.PrimaryValue = 12_000; state.SecondaryValue = 12; state.TertiaryValue = 314159; state.Parameter = 1.25;
+                break;
+            case MathematicalLaboratoryKind.KleinianSchottky:
+                state.PrimaryValue = 280_000; state.SecondaryValue = 24; state.TertiaryValue = 271828; state.Parameter = 1.25;
+                state.Zoom = 0.82;
                 state.Filled = true;
                 break;
         }

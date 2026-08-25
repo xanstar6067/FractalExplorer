@@ -86,6 +86,8 @@
 
                     <Button x:Name="ClearInputButton" Content="Очистить введённые точки"
                             Click="ClearInputButton_OnClick"/>
+                    <Button x:Name="NewVariantButton" Content="Новый случайный вариант"
+                            Click="NewVariantButton_OnClick"/>
                     <UniformGrid Columns="2">
                         <Button Margin="0,4,3,4" Content="Сбросить вид" Click="ResetView_OnClick"/>
                         <Button Margin="3,4,0,4" Content="Перерисовать" Click="Render_OnClick"/>
