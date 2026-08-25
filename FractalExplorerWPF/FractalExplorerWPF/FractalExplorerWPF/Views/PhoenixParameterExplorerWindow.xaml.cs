@@ -80,7 +80,10 @@ public partial class PhoenixParameterExplorerWindow : Window
         if (C1FixedText is null) return;
         C1FixedText.Text = $"C2 фиксировано: {Complex(SelectedC2Real, SelectedC2Imaginary)}";
         C2FixedText.Text = $"C1 фиксировано: {Complex(SelectedC1Real, SelectedC1Imaginary)}";
-        FormulaText.Text = $"{_template.Variant}: zₙ₊₁ = F(zₙ)^{_template.PrimaryPower} + C1·F(zₙ)^{_template.SecondaryPower} + C2·zₙ₋₁";
+        FormulaText.Text = $"{_template.Variant}: zₙ₊₁ = F(zₙ)^{_template.PrimaryPower} + C1·F(zₙ)^{_template.SecondaryPower} + C2·zₙ₋₁" +
+                           (UsesAutomaticParameterStart()
+                               ? " · Для невырожденных карт при b > 0 автоматически используется z₀ = 1, z₋₁ = 0."
+                               : string.Empty);
         StatusText.Text = $"C1 = {Complex(SelectedC1Real, SelectedC1Imaginary)} · C2 = {Complex(SelectedC2Real, SelectedC2Imaginary)}";
     }
 
@@ -173,6 +176,12 @@ public partial class PhoenixParameterExplorerWindow : Window
         MaximumDetectedPeriod = _template.MaximumDetectedPeriod,
         Palette = _template.Palette.Clone(_template.Palette.Name)
     };
+
+    private bool UsesAutomaticParameterStart() => _template.SecondaryPower > 0 &&
+                                                   _template.InitialZReal == 0 &&
+                                                   _template.InitialZImaginary == 0 &&
+                                                   _template.InitialPreviousReal == 0 &&
+                                                   _template.InitialPreviousImaginary == 0;
 
     private static bool IsC1Plane(object sender) => sender is FrameworkElement { Tag: "C1" };
 

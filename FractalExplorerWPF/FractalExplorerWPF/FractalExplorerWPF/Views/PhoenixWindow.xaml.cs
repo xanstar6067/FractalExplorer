@@ -144,9 +144,19 @@ public partial class PhoenixWindow : Window
         if (NavigationHint is null) return;
         bool parameterPlane = GetSelectedEnum(PlaneModeBox, PhoenixPlaneMode.Julia) == PhoenixPlaneMode.ParameterC1;
         NavigationHint.Text = parameterPlane
-            ? "Колесо: масштаб. ЛКМ: перемещение. Двойной щелчок открывает выбранный C1 как динамическую плоскость. F11: полный экран."
+            ? "Колесо: масштаб. ЛКМ: перемещение. Двойной щелчок открывает выбранный C1 как динамическую плоскость. F11: полный экран." +
+              (UsesAutomaticParameterStartFromInputs()
+                  ? " При b > 0 и нулевых z₀/z₋₁ для невырожденной карты автоматически используется z₀ = 1."
+                  : string.Empty)
             : "Колесо: масштаб. ЛКМ: перемещение. F11: полноэкранный режим.";
     }
+
+    private bool UsesAutomaticParameterStartFromInputs() =>
+        int.TryParse(SecondaryPowerBox.Text, out int secondaryPower) && secondaryPower > 0 &&
+        TryRead(InitialZRealBox.Text, out decimal initialZr) && initialZr == 0 &&
+        TryRead(InitialZImaginaryBox.Text, out decimal initialZi) && initialZi == 0 &&
+        TryRead(PreviousRealBox.Text, out decimal previousZr) && previousZr == 0 &&
+        TryRead(PreviousImaginaryBox.Text, out decimal previousZi) && previousZi == 0;
 
     private void UpdateColoringPanels()
     {
@@ -157,7 +167,7 @@ public partial class PhoenixWindow : Window
         PeriodPanel.Visibility = mode == PhoenixColoringMode.Period ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
+    private void Parameter_OnChanged(object sender, EventArgs e) { UpdatePlaneUi(); ScheduleRender(); }
     private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e)
     {
         if (TryRead(ZoomBox.Text, out decimal zoom))

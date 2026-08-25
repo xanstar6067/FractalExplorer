@@ -87,16 +87,18 @@ public static class PhoenixRenderer
         int stride, PhoenixSliceRange range, PhoenixParameterPlane plane, int threadCount,
         CancellationToken token, Action<int>? progress = null)
     {
+        (ComplexValue initial, ComplexValue initialPrevious, _) = ResolveParameterInitialValues(state);
         long completed = 0;
         Parallel.For(0, height,
-            new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token },
-            y =>
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount) },
+            (y, loopState) =>
             {
+                if (token.IsCancellationRequested) { loopState.Stop(); return; }
                 double imaginary = range.MaxY - (y + 0.5) * (range.MaxY - range.MinY) / height;
                 int row = y * stride;
                 for (int x = 0; x < width; x++)
                 {
-                    if ((x & 63) == 0) token.ThrowIfCancellationRequested();
+                    if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                     double real = range.MinX + (x + 0.5) * (range.MaxX - range.MinX) / width;
                     ComplexValue c1 = plane == PhoenixParameterPlane.C1
                         ? new ComplexValue(real, imaginary)
@@ -104,10 +106,7 @@ public static class PhoenixRenderer
                     ComplexValue c2 = plane == PhoenixParameterPlane.C2
                         ? new ComplexValue(real, imaginary)
                         : new ComplexValue((double)state.C2Real, (double)state.C2Imaginary);
-                    PixelMetrics metrics = Iterate(state,
-                        new ComplexValue((double)state.InitialZReal, (double)state.InitialZImaginary),
-                        new ComplexValue((double)state.InitialPreviousReal, (double)state.InitialPreviousImaginary),
-                        c1, c2);
+                    PixelMetrics metrics = Iterate(state, initial, initialPrevious, c1, c2);
                     WritePixel(pixels, row + x * 4, ResolveColor(state, metrics));
                 }
 
@@ -120,15 +119,26 @@ public static class PhoenixRenderer
     private static PixelMetrics IterateMain(PhoenixState state, double pixelReal, double pixelImaginary)
     {
         ComplexValue pixel = new(pixelReal, pixelImaginary);
-        ComplexValue current = state.PlaneMode == PhoenixPlaneMode.Julia
-            ? pixel
-            : new ComplexValue((double)state.InitialZReal, (double)state.InitialZImaginary);
-        ComplexValue previous = new((double)state.InitialPreviousReal, (double)state.InitialPreviousImaginary);
+        (ComplexValue parameterInitial, ComplexValue parameterPrevious, _) = ResolveParameterInitialValues(state);
+        ComplexValue current = state.PlaneMode == PhoenixPlaneMode.Julia ? pixel : parameterInitial;
+        ComplexValue previous = state.PlaneMode == PhoenixPlaneMode.Julia
+            ? new ComplexValue((double)state.InitialPreviousReal, (double)state.InitialPreviousImaginary)
+            : parameterPrevious;
         ComplexValue c1 = state.PlaneMode == PhoenixPlaneMode.ParameterC1
             ? pixel
             : new ComplexValue((double)state.C1Real, (double)state.C1Imaginary);
         ComplexValue c2 = new((double)state.C2Real, (double)state.C2Imaginary);
         return Iterate(state, current, previous, c1, c2);
+    }
+
+    private static (ComplexValue Current, ComplexValue Previous, bool UsedAutomaticStart)
+        ResolveParameterInitialValues(PhoenixState state)
+    {
+        ComplexValue current = new((double)state.InitialZReal, (double)state.InitialZImaginary);
+        ComplexValue previous = new((double)state.InitialPreviousReal, (double)state.InitialPreviousImaginary);
+        bool useAutomaticStart = state.SecondaryPower > 0 &&
+                                 current.MagnitudeSquared == 0 && previous.MagnitudeSquared == 0;
+        return useAutomaticStart ? (new ComplexValue(1, 0), previous, true) : (current, previous, false);
     }
 
     private static PixelMetrics Iterate(PhoenixState state, ComplexValue current, ComplexValue previous,
