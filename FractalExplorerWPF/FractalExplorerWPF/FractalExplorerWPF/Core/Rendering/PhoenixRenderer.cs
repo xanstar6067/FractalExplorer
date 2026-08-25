@@ -323,7 +323,7 @@ public static class PhoenixRenderer
         double period, bool smooth)
     {
         value = Math.Max(0, value);
-        if (palette.Name == "Стандартный серый")
+        if (palette.UsesAlgorithmicGrayscale)
         {
             double normalized = Math.Log(Math.Min(value, iterations) + 1) / Math.Log(iterations + 1);
             byte gray = (byte)Math.Clamp((int)(255 * (1 - normalized)), 0, 255);

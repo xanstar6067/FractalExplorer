@@ -36,6 +36,12 @@ public enum MandelbrotPaletteWrapMode
     Mirror
 }
 
+public enum MandelbrotPaletteKind
+{
+    ColorSequence,
+    AlgorithmicGrayscale
+}
+
 public sealed record MandelbrotVariantDefinition(
     MandelbrotVariant Variant,
     string DisplayName,
@@ -77,6 +83,18 @@ public sealed class MandelbrotPalette
     public double Gamma { get; set; } = 1.0;
     public int ColorPeriod { get; set; } = 500;
     public bool AlignWithRenderIterations { get; set; }
+    public MandelbrotPaletteKind Kind { get; set; }
+
+    [JsonIgnore]
+    public bool UsesAlgorithmicGrayscale => Kind == MandelbrotPaletteKind.AlgorithmicGrayscale ||
+                                               string.Equals(Name, "Стандартный серый", StringComparison.OrdinalIgnoreCase) ||
+                                               LooksLikeLegacyLoadedGrayscale();
+
+    private bool LooksLikeLegacyLoadedGrayscale() =>
+        Kind == MandelbrotPaletteKind.ColorSequence &&
+        Name?.StartsWith("Загружено:", StringComparison.OrdinalIgnoreCase) == true &&
+        IsGradient && ColorPeriod == 800 && Colors.Count == 2 &&
+        Colors[0] == MediaColors.Black && Colors[1] == MediaColors.White;
 
     public MandelbrotPalette Clone(string name) => new()
     {
@@ -86,7 +104,10 @@ public sealed class MandelbrotPalette
         IsGradient = IsGradient,
         Gamma = Gamma,
         ColorPeriod = ColorPeriod,
-        AlignWithRenderIterations = AlignWithRenderIterations
+        AlignWithRenderIterations = AlignWithRenderIterations,
+        Kind = UsesAlgorithmicGrayscale
+            ? MandelbrotPaletteKind.AlgorithmicGrayscale
+            : Kind
     };
 
     public override string ToString() => Name;

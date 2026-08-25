@@ -13,7 +13,8 @@ public class MandelbrotPaletteManager
 
     public List<MandelbrotPalette> Palettes { get; } =
     [
-        BuiltIn("Стандартный серый", [Colors.Black, Colors.White], 800),
+        BuiltIn("Стандартный серый", [Colors.Black, Colors.White], 800,
+            kind: MandelbrotPaletteKind.AlgorithmicGrayscale),
         BuiltIn("Ультрафиолет", [Colors.Black, Colors.DarkViolet, Colors.Violet, Colors.White], 1000, 1.2),
         BuiltIn("Огонь", [Colors.Black, Colors.DarkRed, Colors.Red, Colors.Orange, Colors.Yellow, Colors.White], 400, 0.9),
         BuiltIn("Лёд", [Colors.Black, Colors.DarkBlue, Colors.Blue, Colors.Cyan, Colors.White], 500, 1.2),
@@ -78,7 +79,8 @@ public class MandelbrotPaletteManager
     }
 
     private static MandelbrotPalette BuiltIn(
-        string name, List<Color> colors, int period = 500, double gamma = 1, bool gradient = true) => new()
+        string name, List<Color> colors, int period = 500, double gamma = 1, bool gradient = true,
+        MandelbrotPaletteKind kind = MandelbrotPaletteKind.ColorSequence) => new()
     {
         Name = name,
         Colors = colors,
@@ -86,7 +88,8 @@ public class MandelbrotPaletteManager
         IsGradient = gradient,
         ColorPeriod = period,
         Gamma = gamma,
-        InteriorColor = Colors.Black
+        InteriorColor = Colors.Black,
+        Kind = kind
     };
 
     private static Color Rgb(byte red, byte green, byte blue) => Color.FromRgb(red, green, blue);

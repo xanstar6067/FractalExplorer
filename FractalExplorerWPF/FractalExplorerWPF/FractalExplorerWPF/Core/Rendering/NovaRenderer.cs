@@ -154,7 +154,7 @@ public static class NovaRenderer
     {
         MandelbrotPalette palette = state.Palette;
         double value = state.UseSmoothColoring ? Math.Max(0, smooth) : iteration;
-        if (palette.Name == "Стандартный серый")
+        if (palette.UsesAlgorithmicGrayscale)
         {
             if (iteration >= state.Iterations) return Colors.White;
             double logarithmic = Math.Log(value + 1) / Math.Log(state.Iterations + 1);

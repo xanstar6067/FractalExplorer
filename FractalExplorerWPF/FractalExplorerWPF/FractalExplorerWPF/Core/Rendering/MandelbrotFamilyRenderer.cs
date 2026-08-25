@@ -883,7 +883,7 @@ public static class MandelbrotFamilyRenderer
     private static Color SampleDiscretePalette(MandelbrotState state, int iteration, double colorPeriod)
     {
         MandelbrotPalette palette = state.Palette;
-        if (palette.Name == "Стандартный серый")
+        if (palette.UsesAlgorithmicGrayscale)
         {
             double grayNormalized = Math.Log(Math.Min(iteration, colorPeriod) + 1) /
                                     Math.Log(colorPeriod + 1);
@@ -904,7 +904,7 @@ public static class MandelbrotFamilyRenderer
         smoothIteration = Math.Max(0, smoothIteration);
 
         double normalized;
-        if (palette.Name == "Стандартный серый")
+        if (palette.UsesAlgorithmicGrayscale)
         {
             normalized = Math.Log(smoothIteration + 1) / Math.Log(Math.Max(1, state.Iterations) + 1);
             normalized = Math.Pow(Math.Clamp(normalized, 0, 1), Math.Max(0.01, state.SmoothBlendPower));

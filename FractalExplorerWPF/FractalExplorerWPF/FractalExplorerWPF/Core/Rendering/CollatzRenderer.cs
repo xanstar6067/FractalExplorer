@@ -634,7 +634,7 @@ public static class CollatzRenderer
         if (iteration >= state.Iterations) return palette.InteriorColor;
         double period = palette.AlignWithRenderIterations ? state.Iterations : Math.Max(1, palette.ColorPeriod);
         double value = state.UseSmoothColoring ? smooth : iteration;
-        if (palette.Name == "Стандартный серый")
+        if (palette.UsesAlgorithmicGrayscale)
         {
             double logarithmic = Math.Log(Math.Max(0, value) + 1) / Math.Log(state.Iterations + 1);
             byte gray = (byte)Math.Clamp((int)Math.Round(255 * (1 - logarithmic)), 0, 255);
