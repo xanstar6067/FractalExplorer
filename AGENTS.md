@@ -84,7 +84,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 | `Views/MathematicalLaboratoryWindow.xaml` / `.xaml.cs` | Универсальное окно математических лабораторий: арифметика по модулю, Паскаль modulo N, рациональные числа, геометрия простых, филлотаксис, инверсия окружностей/Мёбиус, апериодические мозаики, гиперболическая геометрия, Fourier Epicycles и фигуры Хладни/интерференция. Связаны `Models/MathematicalLaboratoryModels.cs`, `Core/Rendering/MathematicalLaboratoryRenderer.cs`, `Infrastructure/MathematicalLaboratorySaveStore.cs`. |
 | `Views/NewtonPoolsWindow.xaml` / `.xaml.cs` | Бассейны притяжения корней для методов Newton, Halley и Householder: выражение, параметры итераций, корни, окрашивание, сохранения и экспорт. Связаны `Models/NewtonModels.cs`, `Core/Rendering/NewtonPoolsEngine.cs`, `Core/Rendering/NewtonRootFinder.cs`, `Core/Math/NewtonExpressionParser.cs`, `Infrastructure/NewtonSaveStore.cs`. |
 | `Views/NovaWindow.xaml` / `.xaml.cs` | Семейство Nova в режимах Mandelbrot и Julia: комплексная степень, начальное значение, релаксация, константа `C`, палитра, сохранения и экспорт. Связаны `Models/NovaModels.cs`, `Core/Rendering/NovaRenderer.cs`, `Infrastructure/NovaSaveStore.cs`. |
-| `Views/PhoenixWindow.xaml` / `.xaml.cs` | Фрактал Phoenix с параметрами `C1`/`C2`, вариантами отображения, палитрой, навигацией, сохранениями и экспортом. Связаны `Models/PhoenixModels.cs`, `Core/Rendering/PhoenixRenderer.cs`, `Infrastructure/PhoenixSaveStore.cs`. |
+| `Views/PhoenixWindow.xaml` / `.xaml.cs` | Исследователь семейства Phoenix: динамическая и параметрическая плоскости, комплексные `C1`/`C2`, обобщённые степени, классические и экспериментальные варианты формулы, расширенные окраски, навигация, сохранения и экспорт. Связаны `Models/PhoenixModels.cs`, `Core/Rendering/PhoenixRenderer.cs`, `Infrastructure/PhoenixSaveStore.cs`. |
 | `Views/SerpinskyWindow.xaml` / `.xaml.cs` | Треугольник Серпинского и режим игры хаоса: параметры построения, анимация/рендер, палитра, сохранения и экспорт. Связаны `Models/SerpinskySaveState.cs`, `Models/SerpinskyPalette.cs`, `Core/Rendering/FractalSerpinskyEngine.cs`, `Infrastructure/SerpinskySaveStore.cs`. |
 
 ### Редакторы параметров и палитр
@@ -102,7 +102,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 | `Views/MandelbrotPaletteWindow.xaml` / `.xaml.cs` | Менеджер палитр семейства Мандельброта; также переиспользуется окном `NovaWindow`. |
 | `Views/NewtonPaletteWindow.xaml` / `.xaml.cs` | Настройка цветов корней и палитр бассейнов Ньютона; вызывается из `NewtonPoolsWindow`. |
 | `Views/NovaParameterSelectorWindow.xaml` / `.xaml.cs` | Выбор точки/константы `C` для Nova Mandelbrot на интерактивной карте; вызывается из `NovaWindow`. |
-| `Views/PhoenixParameterSelectorWindow.xaml` / `.xaml.cs` | Интерактивный выбор комплексных параметров `C1` и `C2` для Phoenix; вызывается из `PhoenixWindow`. |
+| `Views/PhoenixParameterExplorerWindow.xaml` / `.xaml.cs` | Двухпанельный исследователь комплексных параметрических плоскостей `C1` и `C2` для Phoenix с масштабированием, навигацией и переходом выбранного `C1` в динамическую плоскость; вызывается из `PhoenixWindow`. |
 | `Views/SerpinskyPaletteWindow.xaml` / `.xaml.cs` | Менеджер палитр треугольника Серпинского; вызывается из `SerpinskyWindow`. |
 
 ### Общие служебные окна

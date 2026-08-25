@@ -1,8 +1,10 @@
 <Window x:Class="FractalExplorerWPF.Views.PhoenixWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
-        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls" Title="Фрактал Феникс"
-        Width="1120" Height="700" MinWidth="900" MinHeight="560" WindowStartupLocation="CenterOwner"
+        xmlns:controls="clr-namespace:FractalExplorerWPF.Controls"
+        Title="Исследователь фрактала Феникс"
+        Width="1180" Height="760" MinWidth="940" MinHeight="600" WindowStartupLocation="CenterOwner"
         Icon="../Assets/Icons/Phoenix.ico" KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
     <Window.Resources>
         <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="MinHeight" Value="34"/><Setter Property="Margin" Value="0,4"/></Style>
@@ -10,38 +12,113 @@
         <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}"><Setter Property="Margin" Value="0,3,0,7"/></Style>
     </Window.Resources>
     <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}">
-        <Grid.ColumnDefinitions><ColumnDefinition x:Name="ControlsColumn" Width="280"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition x:Name="ControlsColumn" Width="310"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border x:Name="ControlsHost" Margin="10" Padding="14" Background="{DynamicResource Theme.PanelBackgroundBrush}"
                 BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
-                <TextBlock FontSize="18" FontWeight="SemiBold" Text="Параметры Феникса"/>
-                <Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <StackPanel Margin="0,0,5,0"><TextBlock Text="C1 Re (P)"/><TextBox x:Name="C1RealBox" TextChanged="Parameter_OnChanged"/></StackPanel>
-                    <StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="C1 Im (Q)"/><TextBox x:Name="C1ImaginaryBox" TextChanged="Parameter_OnChanged"/></StackPanel>
-                </Grid>
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <StackPanel Margin="0,0,5,0"><TextBlock Text="C2 Re"/><TextBox x:Name="C2RealBox" TextChanged="Parameter_OnChanged"/></StackPanel>
-                    <StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="C2 Im"/><TextBox x:Name="C2ImaginaryBox" TextChanged="Parameter_OnChanged"/></StackPanel>
-                </Grid>
-                <Button Content="Исследовать C1/C2…" Click="ParameterSelector_OnClick"/>
-                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
-                    <TextBlock VerticalAlignment="Center" Text="Итерации"/><TextBox x:Name="IterationsBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
-                    <TextBlock VerticalAlignment="Center" Text="Порог выхода"/><TextBox x:Name="ThresholdBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
-                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
-                    <TextBlock VerticalAlignment="Center" Text="Приближение"/><TextBox x:Name="ZoomBox" Grid.Column="1" TextChanged="ZoomBox_OnChanged"/></Grid>
-                <TextBlock Text="Потоки ЦП"/><ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
-                <TextBlock Text="Сглаживание предпросмотра"/><ComboBox x:Name="SsaaBox" SelectionChanged="Parameter_OnChanged"><ComboBoxItem Content="Выкл. (1×)" Tag="1"/><ComboBoxItem Content="Низкое (2×)" Tag="2"/><ComboBoxItem Content="Высокое (4×)" Tag="4"/></ComboBox>
-                <TextBlock Text="Окрашивание"/><ComboBox x:Name="ColoringBox" SelectionChanged="Parameter_OnChanged"><ComboBoxItem Content="Дискретное"/><ComboBoxItem Content="Плавное"/></ComboBox>
-                <Button Content="Запустить рендер" Click="RenderButton_OnClick"/><Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
-                <Button Content="Настроить палитру" Click="PaletteButton_OnClick"/><Button Content="Менеджер сохранений" Click="SavesButton_OnClick"/>
-                <Button Content="Сохранить изображение" Click="ExportButton_OnClick"/>
-                <TextBlock Margin="0,12,0,4" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Прогресс"/>
-                <ProgressBar x:Name="RenderProgress" Height="20" Minimum="0" Maximum="100"/>
-                <TextBlock x:Name="StatusText" Margin="0,8,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap" Text="Готово"/>
-                <TextBlock Margin="0,12,0,0" Foreground="{DynamicResource Theme.DisabledTextBrush}" TextWrapping="Wrap"
-                           Text="Колесо мыши: масштаб. Левая кнопка: перемещение. F11: полноэкранный режим."/>
-            </StackPanel></ScrollViewer>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="Формула Феникса"/>
+                    <TextBlock Margin="0,5,0,9" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"
+                               Text="zₙ₊₁ = F(zₙ)ᵃ + C1·F(zₙ)ᵇ + C2·zₙ₋₁"/>
+
+                    <TextBlock Text="Плоскость"/>
+                    <ComboBox x:Name="PlaneModeBox" SelectionChanged="PlaneModeBox_OnChanged">
+                        <ComboBoxItem Content="Динамическая (Julia)" Tag="Julia"/>
+                        <ComboBoxItem Content="Параметрическая C1" Tag="ParameterC1"/>
+                    </ComboBox>
+                    <TextBlock Text="Вариант F(z)"/>
+                    <ComboBox x:Name="VariantBox" SelectionChanged="Parameter_OnChanged">
+                        <ComboBoxItem Content="Классический" Tag="Classic"/>
+                        <ComboBoxItem Content="Трикорн" Tag="Tricorn"/>
+                        <ComboBoxItem Content="Горящий Феникс" Tag="BurningShip"/>
+                        <ComboBoxItem Content="Кельтский Феникс" Tag="Celtic"/>
+                        <ComboBoxItem Content="Буффало Феникс" Tag="Buffalo"/>
+                    </ComboBox>
+
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,5,0"><TextBlock Text="C1 Re (seed)"/><TextBox x:Name="C1RealBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                        <StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="C1 Im"/><TextBox x:Name="C1ImaginaryBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                    </Grid>
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,5,0"><TextBlock Text="C2 Re (память)"/><TextBox x:Name="C2RealBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                        <StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="C2 Im"/><TextBox x:Name="C2ImaginaryBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                    </Grid>
+                    <Button Content="Исследовать плоскости C1/C2…" Click="ParameterSelector_OnClick"/>
+
+                    <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="82"/><ColumnDefinition Width="12"/><ColumnDefinition Width="82"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Степени a / b"/>
+                        <TextBox x:Name="PrimaryPowerBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/>
+                        <TextBox x:Name="SecondaryPowerBox" Grid.Column="3" TextChanged="Parameter_OnChanged"/>
+                    </Grid>
+
+                    <Expander Header="Начальные значения параметрических плоскостей" Margin="0,3,0,7">
+                        <StackPanel Margin="0,7,0,0">
+                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,5,0"><TextBlock Text="z₀ Re"/><TextBox x:Name="InitialZRealBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="z₀ Im"/><TextBox x:Name="InitialZImaginaryBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                            </Grid>
+                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,5,0"><TextBlock Text="z₋₁ Re"/><TextBox x:Name="PreviousRealBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                                <StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="z₋₁ Im"/><TextBox x:Name="PreviousImaginaryBox" TextChanged="Parameter_OnChanged"/></StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Expander>
+
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Итерации"/><TextBox x:Name="IterationsBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Радиус выхода"/><TextBox x:Name="ThresholdBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Приближение"/><TextBox x:Name="ZoomBox" Grid.Column="1" TextChanged="ZoomBox_OnChanged"/></Grid>
+
+                    <TextBlock Text="Окрашивание"/>
+                    <ComboBox x:Name="ColoringBox" SelectionChanged="ColoringBox_OnChanged">
+                        <ComboBoxItem Content="Дискретное время выхода" Tag="Discrete"/>
+                        <ComboBoxItem Content="Плавное время выхода" Tag="Smooth"/>
+                        <ComboBoxItem Content="Ловушка орбиты" Tag="OrbitTrap"/>
+                        <ComboBoxItem Content="Полосы по аргументу" Tag="StripeAverage"/>
+                        <ComboBoxItem Content="Среднее неравенства треугольника" Tag="TriangleInequalityAverage"/>
+                        <ComboBoxItem Content="Финальный аргумент" Tag="FinalArgument"/>
+                        <ComboBoxItem Content="Периодические бассейны" Tag="Period"/>
+                    </ComboBox>
+
+                    <StackPanel x:Name="OrbitTrapPanel">
+                        <TextBlock Text="Форма ловушки"/>
+                        <ComboBox x:Name="OrbitTrapBox" SelectionChanged="Parameter_OnChanged">
+                            <ComboBoxItem Content="Оси" Tag="Axes"/>
+                            <ComboBoxItem Content="Окружность" Tag="Circle"/>
+                            <ComboBoxItem Content="Точка в начале координат" Tag="Point"/>
+                        </ComboBox>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="Радиус"/><TextBox x:Name="OrbitTrapRadiusBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="Сила"/><TextBox x:Name="OrbitTrapStrengthBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                    </StackPanel>
+                    <StackPanel x:Name="StripePanel">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="Частота полос"/><TextBox x:Name="StripeFrequencyBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="Сила полос"/><TextBox x:Name="StripeStrengthBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                    </StackPanel>
+                    <StackPanel x:Name="PeriodPanel">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="Допуск цикла"/><TextBox x:Name="CycleToleranceBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="Макс. период"/><TextBox x:Name="MaximumPeriodBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
+                    </StackPanel>
+
+                    <TextBlock Text="Потоки ЦП"/><ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
+                    <TextBlock Text="Сглаживание предпросмотра"/>
+                    <ComboBox x:Name="SsaaBox" SelectionChanged="Parameter_OnChanged"><ComboBoxItem Content="Выкл. (1×)" Tag="1"/><ComboBoxItem Content="Низкое (2×)" Tag="2"/><ComboBoxItem Content="Высокое (4×)" Tag="4"/></ComboBox>
+                    <Button Content="Запустить рендер" Click="RenderButton_OnClick"/><Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="CancelButton_OnClick"/>
+                    <Button Content="Настроить палитру" Click="PaletteButton_OnClick"/><Button Content="Менеджер сохранений" Click="SavesButton_OnClick"/>
+                    <Button Content="Сохранить изображение" Click="ExportButton_OnClick"/>
+                    <TextBlock Margin="0,12,0,4" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Прогресс"/>
+                    <ProgressBar x:Name="RenderProgress" Height="20" Minimum="0" Maximum="100"/>
+                    <TextBlock x:Name="StatusText" Margin="0,8,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap" Text="Готово"/>
+                    <TextBlock x:Name="NavigationHint" Margin="0,12,0,0" Foreground="{DynamicResource Theme.DisabledTextBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </ScrollViewer>
         </Border>
         <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="Black" BorderBrush="{DynamicResource Theme.BorderBrush}"
                 BorderThickness="1" CornerRadius="7" ClipToBounds="True" theme:ThemeContract.IgnoreAudit="True" SizeChanged="CanvasHost_OnSizeChanged"

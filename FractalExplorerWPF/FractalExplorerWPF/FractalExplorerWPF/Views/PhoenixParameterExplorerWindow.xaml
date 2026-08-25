@@ -1,0 +1,68 @@
+<Window x:Class="FractalExplorerWPF.Views.PhoenixParameterExplorerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:theme="clr-namespace:FractalExplorerWPF.Theming"
+        Title="Исследователь параметрических плоскостей Phoenix"
+        Width="1100" Height="740" MinWidth="820" MinHeight="580" WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/Phoenix.ico" Closing="Window_OnClosing">
+    <Grid Margin="12">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/><ColumnDefinition Width="150"/><ColumnDefinition Width="150"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,12,0">
+                <TextBlock FontSize="20" FontWeight="SemiBold" Text="Плоскости параметров Феникса"/>
+                <TextBlock Margin="0,3,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"
+                           Text="ЛКМ выбирает комплексное значение. Колесо масштабирует, средняя кнопка перемещает карту."/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="4,0"><TextBlock Text="C1 Re"/><TextBox x:Name="C1RealBox" Padding="7" TextChanged="ParameterText_OnChanged"/></StackPanel>
+            <StackPanel Grid.Column="2" Margin="4,0"><TextBlock Text="C1 Im"/><TextBox x:Name="C1ImaginaryBox" Padding="7" TextChanged="ParameterText_OnChanged"/></StackPanel>
+            <StackPanel Grid.Column="3" Margin="4,0"><TextBlock Text="C2 Re"/><TextBox x:Name="C2RealBox" Padding="7" TextChanged="ParameterText_OnChanged"/></StackPanel>
+            <StackPanel Grid.Column="4" Margin="4,0"><TextBlock Text="C2 Im"/><TextBox x:Name="C2ImaginaryBox" Padding="7" TextChanged="ParameterText_OnChanged"/></StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,12,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <GroupBox Header="Плоскость C1 — seed">
+                <Grid Margin="7"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="C1FixedText" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                    <Border x:Name="C1PlaneHost" Grid.Row="1" Tag="C1" Margin="0,6" Background="Black" BorderBrush="{DynamicResource Theme.InteractiveBorderBrush}"
+                            BorderThickness="1" CornerRadius="6" ClipToBounds="True" theme:ThemeContract.IgnoreAudit="True"
+                            SizeChanged="PlaneHost_OnSizeChanged" MouseWheel="PlaneHost_OnMouseWheel" MouseLeftButtonUp="PlaneHost_OnMouseLeftButtonUp"
+                            MouseDown="PlaneHost_OnMouseDown" MouseMove="PlaneHost_OnMouseMove" MouseUp="PlaneHost_OnMouseUp">
+                        <Grid><Image x:Name="C1PlaneImage" Stretch="Fill"/><Canvas x:Name="C1MarkerLayer" IsHitTestVisible="False">
+                            <Line x:Name="C1MarkerHorizontal" Stroke="LimeGreen" StrokeThickness="1.5"/><Line x:Name="C1MarkerVertical" Stroke="LimeGreen" StrokeThickness="1.5"/>
+                        </Canvas></Grid>
+                    </Border>
+                    <ProgressBar x:Name="C1Progress" Grid.Row="2" Height="16" Minimum="0" Maximum="100"/>
+                </Grid>
+            </GroupBox>
+            <GroupBox Grid.Column="2" Header="Плоскость C2 — память zₙ₋₁">
+                <Grid Margin="7"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="C2FixedText" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                    <Border x:Name="C2PlaneHost" Grid.Row="1" Tag="C2" Margin="0,6" Background="Black" BorderBrush="{DynamicResource Theme.InteractiveBorderBrush}"
+                            BorderThickness="1" CornerRadius="6" ClipToBounds="True" theme:ThemeContract.IgnoreAudit="True"
+                            SizeChanged="PlaneHost_OnSizeChanged" MouseWheel="PlaneHost_OnMouseWheel" MouseLeftButtonUp="PlaneHost_OnMouseLeftButtonUp"
+                            MouseDown="PlaneHost_OnMouseDown" MouseMove="PlaneHost_OnMouseMove" MouseUp="PlaneHost_OnMouseUp">
+                        <Grid><Image x:Name="C2PlaneImage" Stretch="Fill"/><Canvas x:Name="C2MarkerLayer" IsHitTestVisible="False">
+                            <Line x:Name="C2MarkerHorizontal" Stroke="LimeGreen" StrokeThickness="1.5"/><Line x:Name="C2MarkerVertical" Stroke="LimeGreen" StrokeThickness="1.5"/>
+                        </Canvas></Grid>
+                    </Border>
+                    <ProgressBar x:Name="C2Progress" Grid.Row="2" Height="16" Minimum="0" Maximum="100"/>
+                </Grid>
+            </GroupBox>
+        </Grid>
+
+        <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock x:Name="FormulaText"/>
+                <TextBlock x:Name="StatusText" Margin="0,3,0,0" Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Width="110" Margin="4" Content="Сбросить вид" Click="Reset_OnClick"/>
+                <Button Width="170" Margin="4" Content="Открыть C1 как Julia" Click="OpenJulia_OnClick"/>
+                <Button Width="110" Margin="4" Content="Применить" IsDefault="True" Click="Apply_OnClick"/>
+                <Button Width="110" Margin="4" Content="Отмена" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

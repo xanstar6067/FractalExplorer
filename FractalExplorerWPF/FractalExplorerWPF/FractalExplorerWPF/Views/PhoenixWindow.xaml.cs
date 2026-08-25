@@ -46,11 +46,19 @@ public partial class PhoenixWindow : Window
         StablePreviewImage.RenderTransformOrigin = new Point(0.5, 0.5);
         StablePreviewImage.RenderTransform = _previewTransform;
         _renderTimer.Tick += RenderTimer_OnTick;
-        C1RealBox.Text = "0.566666666666667"; C1ImaginaryBox.Text = "-0.5"; C2RealBox.Text = "0"; C2ImaginaryBox.Text = "0";
-        IterationsBox.Text = "100"; ThresholdBox.Text = "4"; ZoomBox.Text = "1";
+        C1RealBox.Text = "0.56667"; C1ImaginaryBox.Text = "0"; C2RealBox.Text = "-0.5"; C2ImaginaryBox.Text = "0";
+        PrimaryPowerBox.Text = "2"; SecondaryPowerBox.Text = "0";
+        InitialZRealBox.Text = "0"; InitialZImaginaryBox.Text = "0";
+        PreviousRealBox.Text = "0"; PreviousImaginaryBox.Text = "0";
+        IterationsBox.Text = "300"; ThresholdBox.Text = "4"; ZoomBox.Text = "1";
+        OrbitTrapRadiusBox.Text = "0.5"; OrbitTrapStrengthBox.Text = "1.5";
+        StripeFrequencyBox.Text = "3"; StripeStrengthBox.Text = "0.65";
+        CycleToleranceBox.Text = "0.0000001"; MaximumPeriodBox.Text = "32";
         for (int count = 1; count <= Environment.ProcessorCount; count++) ThreadsBox.Items.Add(count);
         ThreadsBox.Items.Add("Auto"); ThreadsBox.SelectedItem = "Auto";
-        SsaaBox.SelectedIndex = 0; ColoringBox.SelectedIndex = 1;
+        PlaneModeBox.SelectedIndex = 0; VariantBox.SelectedIndex = 0; ColoringBox.SelectedIndex = 1;
+        OrbitTrapBox.SelectedIndex = 0; SsaaBox.SelectedIndex = 0;
+        UpdatePlaneUi(); UpdateColoringPanels();
         Loaded += (_, _) => ScheduleRender();
     }
 
@@ -58,14 +66,34 @@ public partial class PhoenixWindow : Window
     {
         if (!TryRead(C1RealBox.Text, out decimal c1r) || !TryRead(C1ImaginaryBox.Text, out decimal c1i) ||
             !TryRead(C2RealBox.Text, out decimal c2r) || !TryRead(C2ImaginaryBox.Text, out decimal c2i) ||
+            !TryRead(InitialZRealBox.Text, out decimal initialZr) || !TryRead(InitialZImaginaryBox.Text, out decimal initialZi) ||
+            !TryRead(PreviousRealBox.Text, out decimal previousZr) || !TryRead(PreviousImaginaryBox.Text, out decimal previousZi) ||
             !TryRead(ThresholdBox.Text, out decimal threshold) || threshold is < 2 or > 1000 ||
-            !int.TryParse(IterationsBox.Text, out int iterations) || iterations is < 10 or > 100_000)
-            throw new InvalidOperationException("Проверьте C1/C2, итерации (10–100000) и порог выхода (2–1000).");
+            !int.TryParse(IterationsBox.Text, out int iterations) || iterations is < 10 or > 100_000 ||
+            !int.TryParse(PrimaryPowerBox.Text, out int primaryPower) || primaryPower is < 2 or > 12 ||
+            !int.TryParse(SecondaryPowerBox.Text, out int secondaryPower) || secondaryPower is < 0 or > 12 ||
+            !TryRead(OrbitTrapRadiusBox.Text, out decimal trapRadius) || trapRadius is < 0 or > 1000 ||
+            !TryRead(OrbitTrapStrengthBox.Text, out decimal trapStrength) || trapStrength is <= 0 or > 1000 ||
+            !TryRead(StripeFrequencyBox.Text, out decimal stripeFrequency) || stripeFrequency is < 0 or > 1000 ||
+            !TryRead(StripeStrengthBox.Text, out decimal stripeStrength) || stripeStrength is < 0 or > 1 ||
+            !TryRead(CycleToleranceBox.Text, out decimal cycleTolerance) || cycleTolerance is <= 0 or > 0.1m ||
+            !int.TryParse(MaximumPeriodBox.Text, out int maximumPeriod) || maximumPeriod is < 1 or > 64)
+            throw new InvalidOperationException("Проверьте C1/C2, степени a (2–12) и b (0–12), итерации, радиус выхода и параметры окраски.");
         return new PhoenixState
         {
             SaveName = name, Timestamp = DateTime.Now, CenterX = _centerX, CenterY = _centerY, Zoom = _zoom,
             Threshold = threshold, Iterations = iterations, C1Real = c1r, C1Imaginary = c1i, C2Real = c2r, C2Imaginary = c2i,
-            UseSmoothColoring = ColoringBox.SelectedIndex == 1, Palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name)
+            PlaneMode = GetSelectedEnum(PlaneModeBox, PhoenixPlaneMode.Julia),
+            Variant = GetSelectedEnum(VariantBox, PhoenixVariant.Classic),
+            PrimaryPower = primaryPower, SecondaryPower = secondaryPower,
+            InitialZReal = initialZr, InitialZImaginary = initialZi,
+            InitialPreviousReal = previousZr, InitialPreviousImaginary = previousZi,
+            ColoringMode = GetSelectedEnum(ColoringBox, PhoenixColoringMode.Smooth),
+            OrbitTrapMode = GetSelectedEnum(OrbitTrapBox, PhoenixOrbitTrapMode.Axes),
+            OrbitTrapRadius = (double)trapRadius, OrbitTrapStrength = (double)trapStrength,
+            StripeFrequency = (double)stripeFrequency, StripeStrength = (double)stripeStrength,
+            CycleTolerance = (double)cycleTolerance, MaximumDetectedPeriod = maximumPeriod,
+            Palette = _paletteManager.ActivePalette.Clone(_paletteManager.ActivePalette.Name)
         };
     }
 
@@ -73,8 +101,20 @@ public partial class PhoenixWindow : Window
     {
         _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Max(0.000001m, state.Zoom);
         C1RealBox.Text = Format(state.C1Real); C1ImaginaryBox.Text = Format(state.C1Imaginary); C2RealBox.Text = Format(state.C2Real); C2ImaginaryBox.Text = Format(state.C2Imaginary);
+        PrimaryPowerBox.Text = state.PrimaryPower.ToString(CultureInfo.InvariantCulture); SecondaryPowerBox.Text = state.SecondaryPower.ToString(CultureInfo.InvariantCulture);
+        InitialZRealBox.Text = Format(state.InitialZReal); InitialZImaginaryBox.Text = Format(state.InitialZImaginary);
+        PreviousRealBox.Text = Format(state.InitialPreviousReal); PreviousImaginaryBox.Text = Format(state.InitialPreviousImaginary);
         IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = Format(_zoom);
-        ColoringBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0; _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
+        OrbitTrapRadiusBox.Text = state.OrbitTrapRadius.ToString("G15", CultureInfo.InvariantCulture);
+        OrbitTrapStrengthBox.Text = state.OrbitTrapStrength.ToString("G15", CultureInfo.InvariantCulture);
+        StripeFrequencyBox.Text = state.StripeFrequency.ToString("G15", CultureInfo.InvariantCulture);
+        StripeStrengthBox.Text = state.StripeStrength.ToString("G15", CultureInfo.InvariantCulture);
+        CycleToleranceBox.Text = state.CycleTolerance.ToString("G15", CultureInfo.InvariantCulture);
+        MaximumPeriodBox.Text = state.MaximumDetectedPeriod.ToString(CultureInfo.InvariantCulture);
+        SelectByTag(PlaneModeBox, state.PlaneMode); SelectByTag(VariantBox, state.Variant);
+        SelectByTag(ColoringBox, state.ColoringMode); SelectByTag(OrbitTrapBox, state.OrbitTrapMode);
+        _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
+        UpdatePlaneUi(); UpdateColoringPanels();
         UpdatePreviewTransform(); ScheduleRender();
     }
 
@@ -82,12 +122,39 @@ public partial class PhoenixWindow : Window
 
     private void ParameterSelector_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!TryRead(C1RealBox.Text, out decimal c1r) || !TryRead(C1ImaginaryBox.Text, out decimal c1i) || !TryRead(C2RealBox.Text, out decimal c2r) || !TryRead(C2ImaginaryBox.Text, out decimal c2i))
-        { MessageBox.Show(this, "Сначала введите корректные C1 и C2.", "Параметры Phoenix", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
-        var dialog = new PhoenixParameterSelectorWindow(c1r, c1i, c2r, c2i) { Owner = this };
+        PhoenixState state;
+        try { state = CaptureState("parameter-explorer"); }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Параметры Phoenix", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        var dialog = new PhoenixParameterExplorerWindow(state) { Owner = this };
         if (dialog.ShowDialog() != true) return;
         C1RealBox.Text = Format(dialog.SelectedC1Real); C1ImaginaryBox.Text = Format(dialog.SelectedC1Imaginary);
-        C2RealBox.Text = Format(dialog.FixedC2Real); C2ImaginaryBox.Text = Format(dialog.FixedC2Imaginary); ScheduleRender();
+        C2RealBox.Text = Format(dialog.SelectedC2Real); C2ImaginaryBox.Text = Format(dialog.SelectedC2Imaginary);
+        if (dialog.OpenC1AsJulia)
+        {
+            SelectByTag(PlaneModeBox, PhoenixPlaneMode.Julia);
+            _centerX = 0; _centerY = 0; _zoom = 1; ZoomBox.Text = "1"; UpdatePlaneUi();
+        }
+        ScheduleRender();
+    }
+
+    private void PlaneModeBox_OnChanged(object sender, SelectionChangedEventArgs e) { UpdatePlaneUi(); ScheduleRender(); }
+    private void ColoringBox_OnChanged(object sender, SelectionChangedEventArgs e) { UpdateColoringPanels(); ScheduleRender(); }
+    private void UpdatePlaneUi()
+    {
+        if (NavigationHint is null) return;
+        bool parameterPlane = GetSelectedEnum(PlaneModeBox, PhoenixPlaneMode.Julia) == PhoenixPlaneMode.ParameterC1;
+        NavigationHint.Text = parameterPlane
+            ? "Колесо: масштаб. ЛКМ: перемещение. Двойной щелчок открывает выбранный C1 как динамическую плоскость. F11: полный экран."
+            : "Колесо: масштаб. ЛКМ: перемещение. F11: полноэкранный режим.";
+    }
+
+    private void UpdateColoringPanels()
+    {
+        if (OrbitTrapPanel is null) return;
+        PhoenixColoringMode mode = GetSelectedEnum(ColoringBox, PhoenixColoringMode.Smooth);
+        OrbitTrapPanel.Visibility = mode == PhoenixColoringMode.OrbitTrap ? Visibility.Visible : Visibility.Collapsed;
+        StripePanel.Visibility = mode == PhoenixColoringMode.StripeAverage ? Visibility.Visible : Visibility.Collapsed;
+        PeriodPanel.Visibility = mode == PhoenixColoringMode.Period ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
@@ -142,7 +209,9 @@ public partial class PhoenixWindow : Window
         if (_isRendering) { ScheduleRender(); return; }
         PhoenixState state; try { state = CaptureState("preview"); } catch (Exception ex) { StatusText.Text = ex.Message; return; }
         _renderCts?.Dispose(); _renderCts = new CancellationTokenSource(); CancellationToken token = _renderCts.Token;
-        var watch = Stopwatch.StartNew(); SetRendering(true, "Рендеринг Феникса...");
+        var watch = Stopwatch.StartNew();
+        string planeName = state.PlaneMode == PhoenixPlaneMode.Julia ? "динамической плоскости" : "параметрической плоскости C1";
+        SetRendering(true, $"Рендеринг {planeName}...");
         try
         {
             int factor = SsaaBox.SelectedItem is ComboBoxItem item ? Convert.ToInt32(item.Tag, CultureInfo.InvariantCulture) : 1;
@@ -174,7 +243,7 @@ public partial class PhoenixWindow : Window
             UpdatePreviewTransform();
             RenderOverlay.EndSession();
             _activeSession = null;
-            StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек. Стратегия: {strategy}.";
+            StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек. {state.PlaneMode}, {state.Variant}, a={state.PrimaryPower}, b={state.SecondaryPower}. Стратегия: {strategy}.";
         }
         catch (OperationCanceledException) { CanvasImage.Source = null; StatusText.Text = "Рендер отменён"; }
         catch (Exception ex) { StatusText.Text = "Ошибка рендера"; MessageBox.Show(this, ex.Message, "Phoenix", MessageBoxButton.OK, MessageBoxImage.Error); }
@@ -242,7 +311,20 @@ public partial class PhoenixWindow : Window
         (decimal X, decimal Y) after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y;
         UpdatePreviewTransform(); ZoomBox.Text = Format(_zoom); ScheduleRender();
     }
-    private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) { _panning = true; _lastPanPoint = e.GetPosition(CanvasHost); CanvasHost.CaptureMouse(); Mouse.OverrideCursor = Cursors.SizeAll; }
+    private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        Point point = e.GetPosition(CanvasHost);
+        if (e.ClickCount >= 2 && GetSelectedEnum(PlaneModeBox, PhoenixPlaneMode.Julia) == PhoenixPlaneMode.ParameterC1)
+        {
+            (decimal X, decimal Y) selected = ScreenToWorld(point);
+            C1RealBox.Text = Format(selected.X); C1ImaginaryBox.Text = Format(selected.Y);
+            SelectByTag(PlaneModeBox, PhoenixPlaneMode.Julia);
+            _centerX = 0; _centerY = 0; _zoom = 1; ZoomBox.Text = "1";
+            UpdatePlaneUi(); UpdatePreviewTransform(); ScheduleRender(); e.Handled = true;
+            return;
+        }
+        _panning = true; _lastPanPoint = point; CanvasHost.CaptureMouse(); Mouse.OverrideCursor = Cursors.SizeAll;
+    }
     private void CanvasHost_OnMouseMove(object sender, MouseEventArgs e)
     {
         if (!_panning) return; Point current = e.GetPosition(CanvasHost); (decimal X, decimal Y) before = ScreenToWorld(_lastPanPoint); (decimal X, decimal Y) after = ScreenToWorld(current);
@@ -267,12 +349,31 @@ public partial class PhoenixWindow : Window
         _previewTranslation.X = dx;
         _previewTranslation.Y = dy;
     }
-    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) => FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost, ToggleControlsButton, 280, ScheduleRender);
+    private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) => FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost, ToggleControlsButton, 310, ScheduleRender);
     private void Window_OnKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.F11 || e.Key == Key.Escape && _isFullscreen) ToggleFullscreen(); }
     private void ToggleFullscreen() { if (!_isFullscreen) { _previousWindowStyle = WindowStyle; _previousWindowState = WindowState; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; } else { WindowStyle = _previousWindowStyle; WindowState = _previousWindowState; } _isFullscreen = !_isFullscreen; }
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _renderCts?.Dispose(); }
     private static bool TryRead(string text, out decimal value) => decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
+
+    private static TEnum GetSelectedEnum<TEnum>(ComboBox comboBox, TEnum fallback) where TEnum : struct, Enum
+    {
+        string? tag = (comboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+        return Enum.TryParse(tag, out TEnum result) ? result : fallback;
+    }
+
+    private static void SelectByTag<TEnum>(ComboBox comboBox, TEnum value) where TEnum : struct, Enum
+    {
+        string expected = value.ToString();
+        foreach (object item in comboBox.Items)
+        {
+            if (item is ComboBoxItem comboItem && string.Equals(comboItem.Tag?.ToString(), expected, StringComparison.Ordinal))
+            {
+                comboBox.SelectedItem = comboItem;
+                return;
+            }
+        }
+    }
 
     private sealed class RenderSession(WriteableBitmap bitmap, int tileCount, int renderWidth, int renderHeight)
     {

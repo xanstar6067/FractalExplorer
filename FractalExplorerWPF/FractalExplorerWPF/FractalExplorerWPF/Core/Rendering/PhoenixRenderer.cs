@@ -7,6 +7,30 @@ namespace FractalExplorerWPF.Core.Rendering;
 public static class PhoenixRenderer
 {
     private const decimal BaseScale = 4m;
+    private const int MaximumSupportedPeriod = 64;
+
+    private readonly record struct ComplexValue(double Real, double Imaginary)
+    {
+        public double MagnitudeSquared => Real * Real + Imaginary * Imaginary;
+        public double Magnitude => Math.Sqrt(MagnitudeSquared);
+
+        public static ComplexValue operator +(ComplexValue left, ComplexValue right) =>
+            new(left.Real + right.Real, left.Imaginary + right.Imaginary);
+
+        public static ComplexValue operator *(ComplexValue left, ComplexValue right) =>
+            new(left.Real * right.Real - left.Imaginary * right.Imaginary,
+                left.Real * right.Imaginary + left.Imaginary * right.Real);
+    }
+
+    private readonly record struct PixelMetrics(
+        int Iterations,
+        double Smooth,
+        double OrbitTrap,
+        double Stripe,
+        double Triangle,
+        double FinalArgument,
+        int DetectedPeriod,
+        bool IsInterior);
 
     public static void Render(PhoenixState state, byte[] pixels, int width, int height, int stride,
         int threadCount, CancellationToken token, Action<int>? progress = null)
@@ -14,28 +38,25 @@ public static class PhoenixRenderer
         double centerX = (double)state.CenterX;
         double centerY = (double)state.CenterY;
         double scale = (double)(BaseScale / Math.Max(0.000000000001m, state.Zoom));
-        double thresholdSquared = (double)(state.Threshold * state.Threshold);
-        double p = (double)state.C1Real;
-        double q = (double)state.C1Imaginary;
         long completed = 0;
-        Parallel.For(0, height, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount) }, (y, loopState) =>
-        {
-            if (token.IsCancellationRequested) { loopState.Stop(); return; }
-            int row = y * stride;
-            double imaginary = centerY + (height / 2.0 - y) * scale / width;
-            for (int x = 0; x < width; x++)
+        Parallel.For(0, height,
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token },
+            y =>
             {
-                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
-                double real = centerX + (x - width / 2.0) * scale / width;
-                int iterations = Iterate(real, imaginary, p, q, state.Iterations, thresholdSquared, out double finalMagnitudeSquared);
-                double smooth = Smooth(iterations, state.Iterations, finalMagnitudeSquared);
-                Color color = ResolveColor(state, iterations, smooth);
-                int offset = row + x * 4;
-                pixels[offset] = color.B; pixels[offset + 1] = color.G; pixels[offset + 2] = color.R; pixels[offset + 3] = color.A;
-            }
-            int rows = (int)Interlocked.Increment(ref completed);
-            if (rows == height || rows % Math.Max(1, height / 100) == 0) progress?.Invoke(rows * 100 / height);
-        });
+                int row = y * stride;
+                double imaginary = centerY + (height / 2.0 - y) * scale / width;
+                for (int x = 0; x < width; x++)
+                {
+                    if ((x & 63) == 0) token.ThrowIfCancellationRequested();
+                    double real = centerX + (x - width / 2.0) * scale / width;
+                    PixelMetrics metrics = IterateMain(state, real, imaginary);
+                    WritePixel(pixels, row + x * 4, ResolveColor(state, metrics));
+                }
+
+                int rows = (int)Interlocked.Increment(ref completed);
+                if (rows == height || rows % Math.Max(1, height / 100) == 0)
+                    progress?.Invoke(rows * 100 / height);
+            });
     }
 
     public static byte[]? RenderTile(PhoenixState state, int canvasWidth, int canvasHeight,
@@ -45,9 +66,6 @@ public static class PhoenixRenderer
         double centerX = (double)state.CenterX;
         double centerY = (double)state.CenterY;
         double scale = (double)(BaseScale / Math.Max(0.000000000001m, state.Zoom));
-        double thresholdSquared = (double)(state.Threshold * state.Threshold);
-        double p = (double)state.C1Real;
-        double q = (double)state.C1Imaginary;
         for (int localY = 0; localY < tile.Height; localY++)
         {
             if (token.IsCancellationRequested) return null;
@@ -58,81 +76,252 @@ public static class PhoenixRenderer
                 if ((localX & 31) == 0 && token.IsCancellationRequested) return null;
                 int canvasX = tile.X + localX;
                 double real = centerX + (canvasX - canvasWidth / 2.0) * scale / canvasWidth;
-                int iterations = Iterate(real, imaginary, p, q, state.Iterations, thresholdSquared, out double magnitudeSquared);
-                Color color = ResolveColor(state, iterations, Smooth(iterations, state.Iterations, magnitudeSquared));
-                int offset = (localY * tile.Width + localX) * 4;
-                pixels[offset] = color.B; pixels[offset + 1] = color.G; pixels[offset + 2] = color.R; pixels[offset + 3] = color.A;
+                PixelMetrics metrics = IterateMain(state, real, imaginary);
+                WritePixel(pixels, (localY * tile.Width + localX) * 4, ResolveColor(state, metrics));
             }
         }
         return pixels;
     }
 
-    public static void RenderSlice(byte[] pixels, int width, int height, int stride, PhoenixSliceRange range,
-        bool pSlice, decimal fixedParameter, int iterations, decimal threshold, int threadCount,
+    public static void RenderParameterPlane(PhoenixState state, byte[] pixels, int width, int height,
+        int stride, PhoenixSliceRange range, PhoenixParameterPlane plane, int threadCount,
         CancellationToken token, Action<int>? progress = null)
     {
-        double fixedValue = (double)fixedParameter;
-        double thresholdSquared = (double)(threshold * threshold);
         long completed = 0;
-        Parallel.For(0, height, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount) }, (y, loopState) =>
-        {
-            if (token.IsCancellationRequested) { loopState.Stop(); return; }
-            double z0Imaginary = range.MaxY - y * (range.MaxY - range.MinY) / height;
-            int row = y * stride;
-            for (int x = 0; x < width; x++)
+        Parallel.For(0, height,
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token },
+            y =>
             {
-                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
-                double axis = range.MinX + x * (range.MaxX - range.MinX) / width;
-                double p = pSlice ? axis : fixedValue;
-                double q = pSlice ? fixedValue : axis;
-                int count = Iterate(0, z0Imaginary, p, q, iterations, thresholdSquared, out _);
-                byte gray = count >= iterations ? (byte)0 : (byte)Math.Clamp((int)(255 * (1 - Math.Log(count + 1) / Math.Log(iterations + 1))), 0, 255);
-                int offset = row + x * 4;
-                pixels[offset] = gray; pixels[offset + 1] = gray; pixels[offset + 2] = gray; pixels[offset + 3] = 255;
-            }
-            int rows = (int)Interlocked.Increment(ref completed);
-            if (rows == height || rows % Math.Max(1, height / 100) == 0) progress?.Invoke(rows * 100 / height);
-        });
+                double imaginary = range.MaxY - (y + 0.5) * (range.MaxY - range.MinY) / height;
+                int row = y * stride;
+                for (int x = 0; x < width; x++)
+                {
+                    if ((x & 63) == 0) token.ThrowIfCancellationRequested();
+                    double real = range.MinX + (x + 0.5) * (range.MaxX - range.MinX) / width;
+                    ComplexValue c1 = plane == PhoenixParameterPlane.C1
+                        ? new ComplexValue(real, imaginary)
+                        : new ComplexValue((double)state.C1Real, (double)state.C1Imaginary);
+                    ComplexValue c2 = plane == PhoenixParameterPlane.C2
+                        ? new ComplexValue(real, imaginary)
+                        : new ComplexValue((double)state.C2Real, (double)state.C2Imaginary);
+                    PixelMetrics metrics = Iterate(state,
+                        new ComplexValue((double)state.InitialZReal, (double)state.InitialZImaginary),
+                        new ComplexValue((double)state.InitialPreviousReal, (double)state.InitialPreviousImaginary),
+                        c1, c2);
+                    WritePixel(pixels, row + x * 4, ResolveColor(state, metrics));
+                }
+
+                int rows = (int)Interlocked.Increment(ref completed);
+                if (rows == height || rows % Math.Max(1, height / 100) == 0)
+                    progress?.Invoke(rows * 100 / height);
+            });
     }
 
-    private static int Iterate(double zr, double zi, double p, double q, int maximum, double thresholdSquared, out double magnitudeSquared)
+    private static PixelMetrics IterateMain(PhoenixState state, double pixelReal, double pixelImaginary)
     {
-        double previousReal = 0, previousImaginary = 0;
+        ComplexValue pixel = new(pixelReal, pixelImaginary);
+        ComplexValue current = state.PlaneMode == PhoenixPlaneMode.Julia
+            ? pixel
+            : new ComplexValue((double)state.InitialZReal, (double)state.InitialZImaginary);
+        ComplexValue previous = new((double)state.InitialPreviousReal, (double)state.InitialPreviousImaginary);
+        ComplexValue c1 = state.PlaneMode == PhoenixPlaneMode.ParameterC1
+            ? pixel
+            : new ComplexValue((double)state.C1Real, (double)state.C1Imaginary);
+        ComplexValue c2 = new((double)state.C2Real, (double)state.C2Imaginary);
+        return Iterate(state, current, previous, c1, c2);
+    }
+
+    private static PixelMetrics Iterate(PhoenixState state, ComplexValue current, ComplexValue previous,
+        ComplexValue c1, ComplexValue c2)
+    {
+        int maximum = state.Iterations;
+        double thresholdSquared = (double)(state.Threshold * state.Threshold);
+        bool detectPeriods = state.ColoringMode == PhoenixColoringMode.Period;
+        int maximumPeriod = Math.Clamp(state.MaximumDetectedPeriod, 1, MaximumSupportedPeriod);
+        int historyCapacity = maximumPeriod + 1;
+        Span<ComplexValue> currentHistory = detectPeriods
+            ? stackalloc ComplexValue[MaximumSupportedPeriod + 1]
+            : Span<ComplexValue>.Empty;
+        Span<ComplexValue> previousHistory = detectPeriods
+            ? stackalloc ComplexValue[MaximumSupportedPeriod + 1]
+            : Span<ComplexValue>.Empty;
+
+        double minimumTrap = double.MaxValue;
+        double stripeSum = 0;
+        double triangleSum = 0;
         int iteration = 0;
-        magnitudeSquared = zr * zr + zi * zi;
-        while (iteration < maximum && magnitudeSquared <= thresholdSquared)
+        int detectedPeriod = 0;
+
+        while (iteration < maximum && current.MagnitudeSquared <= thresholdSquared)
         {
-            double nextReal = zr * zr - zi * zi + p + q * previousReal;
-            double nextImaginary = 2 * zr * zi + q * previousImaginary;
-            previousReal = zr; previousImaginary = zi; zr = nextReal; zi = nextImaginary;
-            magnitudeSquared = zr * zr + zi * zi;
+            minimumTrap = Math.Min(minimumTrap, OrbitTrapDistance(state, current));
+            stripeSum += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(current.Imaginary, current.Real));
+
+            if (detectPeriods)
+            {
+                int historyIndex = iteration % historyCapacity;
+                currentHistory[historyIndex] = current;
+                previousHistory[historyIndex] = previous;
+            }
+
+            ComplexValue primary = VariantPower(current, state.PrimaryPower, state.Variant);
+            ComplexValue secondary = VariantPower(current, state.SecondaryPower, state.Variant);
+            ComplexValue next = primary + c1 * secondary + c2 * previous;
+
+            double edgeLength = Distance(next, current);
+            if (double.IsFinite(edgeLength) && edgeLength > 1e-300)
+            {
+                double triangleRatio = (next.Magnitude - current.Magnitude) / edgeLength;
+                triangleSum += 0.5 + 0.5 * Math.Clamp(triangleRatio, -1, 1);
+            }
+
+            previous = current;
+            current = next;
             iteration++;
+
+            if (detectPeriods && iteration >= 4)
+            {
+                int available = Math.Min(maximumPeriod, iteration - 1);
+                double toleranceSquared = Math.Pow(Math.Max(1e-14, state.CycleTolerance), 2);
+                for (int period = 1; period <= available; period++)
+                {
+                    if (iteration < period * 2) continue;
+                    int pastIndex = (iteration - period) % historyCapacity;
+                    if (!Close(current, currentHistory[pastIndex], toleranceSquared) ||
+                        !Close(previous, previousHistory[pastIndex], toleranceSquared)) continue;
+                    detectedPeriod = period;
+                    break;
+                }
+                if (detectedPeriod > 0) break;
+            }
         }
-        return iteration;
+
+        bool isInterior = detectedPeriod > 0 || iteration >= maximum;
+        double smooth = Smooth(iteration, maximum, current.MagnitudeSquared,
+            Math.Max(state.PrimaryPower, state.SecondaryPower));
+        double argument = double.IsFinite(current.Real) && double.IsFinite(current.Imaginary)
+            ? PositiveModulo(Math.Atan2(current.Imaginary, current.Real) / (2 * Math.PI) + 0.5, 1)
+            : 0;
+        return new PixelMetrics(
+            iteration,
+            smooth,
+            minimumTrap == double.MaxValue ? 0 : minimumTrap,
+            iteration == 0 ? 0 : stripeSum / iteration,
+            iteration == 0 ? 0 : triangleSum / iteration,
+            argument,
+            detectedPeriod,
+            isInterior);
     }
 
-    private static double Smooth(int iteration, int maximum, double magnitudeSquared)
+    private static ComplexValue VariantPower(ComplexValue value, int power, PhoenixVariant variant)
     {
-        if (iteration >= maximum || !double.IsFinite(magnitudeSquared) || magnitudeSquared <= 1) return iteration;
-        double log = Math.Log(magnitudeSquared);
-        if (log <= 0) return iteration;
-        double nu = Math.Log(log / (2 * Math.Log(2))) / Math.Log(2);
-        return double.IsFinite(nu) ? iteration + 1 - nu : iteration;
+        ComplexValue transformed = variant switch
+        {
+            PhoenixVariant.Tricorn => new ComplexValue(value.Real, -value.Imaginary),
+            PhoenixVariant.BurningShip => new ComplexValue(Math.Abs(value.Real), -Math.Abs(value.Imaginary)),
+            PhoenixVariant.Buffalo => new ComplexValue(Math.Abs(value.Real), Math.Abs(value.Imaginary)),
+            _ => value
+        };
+        ComplexValue result = IntegerPower(transformed, power);
+        return variant == PhoenixVariant.Celtic ? new ComplexValue(Math.Abs(result.Real), result.Imaginary) : result;
     }
 
-    private static Color ResolveColor(PhoenixState state, int iteration, double smooth)
+    private static ComplexValue IntegerPower(ComplexValue value, int power)
+    {
+        if (power == 0) return new ComplexValue(1, 0);
+        ComplexValue result = new(1, 0);
+        ComplexValue factor = value;
+        int exponent = power;
+        while (exponent > 0)
+        {
+            if ((exponent & 1) != 0) result *= factor;
+            exponent >>= 1;
+            if (exponent > 0) factor *= factor;
+        }
+        return result;
+    }
+
+    private static bool Close(ComplexValue left, ComplexValue right, double toleranceSquared)
+    {
+        double dr = left.Real - right.Real;
+        double di = left.Imaginary - right.Imaginary;
+        double scale = 1 + left.MagnitudeSquared + right.MagnitudeSquared;
+        return dr * dr + di * di <= toleranceSquared * scale;
+    }
+
+    private static double OrbitTrapDistance(PhoenixState state, ComplexValue value) => state.OrbitTrapMode switch
+    {
+        PhoenixOrbitTrapMode.Circle => Math.Abs(value.Magnitude - Math.Max(0, state.OrbitTrapRadius)),
+        PhoenixOrbitTrapMode.Point => value.Magnitude,
+        _ => Math.Min(Math.Abs(value.Real), Math.Abs(value.Imaginary))
+    };
+
+    private static double Distance(ComplexValue left, ComplexValue right)
+    {
+        double dr = left.Real - right.Real;
+        double di = left.Imaginary - right.Imaginary;
+        return Math.Sqrt(dr * dr + di * di);
+    }
+
+    private static double Smooth(int iteration, int maximum, double magnitudeSquared, int dominantPower)
+    {
+        if (iteration >= maximum || !double.IsFinite(magnitudeSquared) || magnitudeSquared <= 1)
+            return iteration;
+        double magnitude = Math.Sqrt(magnitudeSquared);
+        double degree = Math.Max(2, dominantPower);
+        double nu = Math.Log(Math.Max(Math.Log(magnitude), 1e-300)) / Math.Log(degree);
+        double result = iteration + 1 - nu;
+        return double.IsFinite(result) ? result : iteration;
+    }
+
+    private static Color ResolveColor(PhoenixState state, PixelMetrics metrics)
     {
         MandelbrotPalette palette = state.Palette;
-        if (iteration >= state.Iterations) return palette.InteriorColor;
-        double period = palette.AlignWithRenderIterations ? state.Iterations : Math.Max(1, palette.ColorPeriod);
-        double value = state.UseSmoothColoring ? Math.Max(0, smooth) : iteration;
+        if (metrics.IsInterior)
+        {
+            if (state.ColoringMode == PhoenixColoringMode.Period && metrics.DetectedPeriod > 0)
+                return SamplePalette(palette, PositiveModulo(metrics.DetectedPeriod * 0.6180339887498949, 1));
+            if (state.ColoringMode == PhoenixColoringMode.FinalArgument)
+                return SamplePalette(palette, metrics.FinalArgument);
+            return palette.InteriorColor;
+        }
+
+        double period = palette.AlignWithRenderIterations
+            ? Math.Max(1, state.Iterations)
+            : Math.Max(1, palette.ColorPeriod);
+        if (state.ColoringMode == PhoenixColoringMode.Discrete)
+            return SampleIterationColor(palette, metrics.Iterations, state.Iterations, period, false);
+        if (state.ColoringMode == PhoenixColoringMode.Smooth)
+            return SampleIterationColor(palette, metrics.Smooth, state.Iterations, period, true);
+
+        double normalized = state.ColoringMode switch
+        {
+            PhoenixColoringMode.OrbitTrap => Math.Clamp(
+                1 / (1 + metrics.OrbitTrap * Math.Max(0.01, state.OrbitTrapStrength)), 0, 1),
+            PhoenixColoringMode.StripeAverage => Math.Clamp(
+                metrics.Smooth / Math.Max(1, state.Iterations) * (1 - Math.Clamp(state.StripeStrength, 0, 1)) +
+                metrics.Stripe * Math.Clamp(state.StripeStrength, 0, 1), 0, 1),
+            PhoenixColoringMode.TriangleInequalityAverage => Math.Clamp(metrics.Triangle, 0, 1),
+            PhoenixColoringMode.FinalArgument => metrics.FinalArgument,
+            PhoenixColoringMode.Period => PositiveModulo(metrics.Smooth, period) / period,
+            _ => 0
+        };
+        return SamplePalette(palette, normalized);
+    }
+
+    private static Color SampleIterationColor(MandelbrotPalette palette, double value, int iterations,
+        double period, bool smooth)
+    {
+        value = Math.Max(0, value);
         if (palette.Name == "Стандартный серый")
         {
-            double normalized = Math.Log(value + 1) / Math.Log(state.Iterations + 1);
+            double normalized = Math.Log(Math.Min(value, iterations) + 1) / Math.Log(iterations + 1);
             byte gray = (byte)Math.Clamp((int)(255 * (1 - normalized)), 0, 255);
             return ApplyGamma(Color.FromRgb(gray, gray, gray), palette.Gamma);
         }
-        double normalizedValue = state.UseSmoothColoring ? (value % period + period) % period / period : Math.Min(value, period) / period;
+        double normalizedValue = smooth
+            ? PositiveModulo(value, period) / period
+            : Math.Min(value, period) / period;
         return SamplePalette(palette, normalizedValue);
     }
 
@@ -143,28 +332,52 @@ public static class PhoenixRenderer
         normalized = Math.Clamp(normalized, 0, 1);
         Color result;
         if (!palette.IsGradient)
+        {
             result = palette.Colors[Math.Min((int)(normalized * palette.Colors.Count), palette.Colors.Count - 1)];
+        }
         else
         {
             double position = normalized * (palette.Colors.Count - 1);
             int left = Math.Min((int)position, palette.Colors.Count - 1);
-            if (left == palette.Colors.Count - 1) result = palette.Colors[left];
+            if (left == palette.Colors.Count - 1)
+            {
+                result = palette.Colors[left];
+            }
             else
             {
-                Color a = palette.Colors[left], b = palette.Colors[left + 1];
+                Color a = palette.Colors[left];
+                Color b = palette.Colors[left + 1];
                 double amount = position - left;
-                result = Color.FromArgb(Lerp(a.A, b.A, amount), Lerp(a.R, b.R, amount), Lerp(a.G, b.G, amount), Lerp(a.B, b.B, amount));
+                result = Color.FromArgb(Lerp(a.A, b.A, amount), Lerp(a.R, b.R, amount),
+                    Lerp(a.G, b.G, amount), Lerp(a.B, b.B, amount));
             }
         }
         return ApplyGamma(result, palette.Gamma);
     }
 
+    private static void WritePixel(byte[] pixels, int offset, Color color)
+    {
+        pixels[offset] = color.B;
+        pixels[offset + 1] = color.G;
+        pixels[offset + 2] = color.R;
+        pixels[offset + 3] = color.A;
+    }
+
     private static Color ApplyGamma(Color color, double gamma)
     {
         double correction = 1 / Math.Max(0.01, gamma);
-        return Color.FromArgb(color.A, (byte)(255 * Math.Pow(color.R / 255d, correction)),
-            (byte)(255 * Math.Pow(color.G / 255d, correction)), (byte)(255 * Math.Pow(color.B / 255d, correction)));
+        return Color.FromArgb(color.A,
+            (byte)(255 * Math.Pow(color.R / 255d, correction)),
+            (byte)(255 * Math.Pow(color.G / 255d, correction)),
+            (byte)(255 * Math.Pow(color.B / 255d, correction)));
     }
 
-    private static byte Lerp(byte start, byte end, double amount) => (byte)Math.Round(start + (end - start) * amount);
+    private static double PositiveModulo(double value, double modulus)
+    {
+        double result = value % modulus;
+        return result < 0 ? result + modulus : result;
+    }
+
+    private static byte Lerp(byte start, byte end, double amount) =>
+        (byte)Math.Round(start + (end - start) * amount);
 }

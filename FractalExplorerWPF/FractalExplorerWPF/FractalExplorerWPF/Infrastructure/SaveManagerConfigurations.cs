@@ -98,8 +98,8 @@ public static class SaveManagerConfigurations
         RenderPreviewAsync = window.RenderStatePreviewAsync,
         GetName = state => state.SaveName,
         GetTimestamp = state => state.Timestamp,
-        GetDetails = state => $"{Prefix(state.Timestamp)} · Итерации: {state.Iterations} · Масштаб: {state.Zoom:G8}\n" +
-                                    $"C1: {Complex(state.C1Real, state.C1Imaginary)}",
+        GetDetails = state => $"{Prefix(state.Timestamp)} · {state.PlaneMode} · {state.Variant} · a={state.PrimaryPower}, b={state.SecondaryPower}\n" +
+                                    $"C1: {Complex(state.C1Real, state.C1Imaginary)} · C2: {Complex(state.C2Real, state.C2Imaginary)}",
         PointsOfInterest = PresetManager.GetPhoenixPresets()
     };
 

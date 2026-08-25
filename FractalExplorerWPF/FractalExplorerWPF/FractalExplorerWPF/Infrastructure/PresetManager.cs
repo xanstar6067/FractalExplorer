@@ -71,9 +71,18 @@ public static class PresetManager
 
     public static IReadOnlyList<PhoenixState> GetPhoenixPresets() =>
     [
-        Phoenix("Стандартный Феникс", 0.56m, -0.5m, 0m, 0m, 0m, 0m, 1m, 200, "Психоделика"),
-        Phoenix("Вихрь Феникса", 0.35m, -0.62m, -0.01m, 0.005m, 0.1m, -0.2m, 1.2m, 250, "Психоделика"),
-        Phoenix("Хвост Павлина", 0.56667m, -0.5m, 0.001m, 0.001m, 0m, 0m, 0.8m, 300, "Лёд")
+        Phoenix("Классический Феникс", 0.56667m, 0m, -0.5m, 0m, 0m, 0m, 1m, 300, "Психоделика"),
+        Phoenix("Вихрь комплексной памяти", 0.35m, -0.01m, -0.62m, 0.005m, 0.1m, -0.2m, 1.2m, 350, "Психоделика"),
+        Phoenix("Хвост павлина", 0.56667m, 0.001m, -0.5m, 0.001m, 0m, 0m, 0.8m, 400, "Лёд",
+            coloring: PhoenixColoringMode.TriangleInequalityAverage),
+        Phoenix("Кубическая корона", 0.42m, 0m, -0.36m, 0m, 0m, 0m, 0.85m, 450, "Ультрафиолет",
+            primaryPower: 3),
+        Phoenix("Параметрическая плоскость C1", 0.56667m, 0m, -0.5m, 0m, -0.25m, 0m, 0.9m, 350, "Огонь",
+            planeMode: PhoenixPlaneMode.ParameterC1),
+        Phoenix("Трикорн Феникса", 0.24m, 0.08m, -0.46m, 0m, 0m, 0m, 0.9m, 400, "Ультрафиолет",
+            variant: PhoenixVariant.Tricorn, coloring: PhoenixColoringMode.StripeAverage),
+        Phoenix("Горящий Феникс", -0.35m, -0.05m, -0.42m, 0.03m, 0m, 0m, 0.8m, 400, "Огонь",
+            variant: PhoenixVariant.BurningShip, coloring: PhoenixColoringMode.OrbitTrap)
     ];
 
     public static IReadOnlyList<SerpinskySaveState> GetSerpinskyPresets() =>
@@ -194,11 +203,15 @@ public static class PresetManager
     }
 
     private static PhoenixState Phoenix(string name, decimal c1Real, decimal c1Imaginary, decimal c2Real,
-        decimal c2Imaginary, decimal centerX, decimal centerY, decimal zoom, int iterations, string paletteName) => new()
+        decimal c2Imaginary, decimal centerX, decimal centerY, decimal zoom, int iterations, string paletteName,
+        PhoenixPlaneMode planeMode = PhoenixPlaneMode.Julia, PhoenixVariant variant = PhoenixVariant.Classic,
+        int primaryPower = 2, int secondaryPower = 0,
+        PhoenixColoringMode coloring = PhoenixColoringMode.Smooth) => new()
     {
         SaveName = name, Timestamp = DateTime.MinValue, C1Real = c1Real, C1Imaginary = c1Imaginary,
         C2Real = c2Real, C2Imaginary = c2Imaginary, CenterX = centerX, CenterY = centerY,
-        Zoom = zoom, Iterations = iterations, Threshold = 4m, UseSmoothColoring = true,
+        Zoom = zoom, Iterations = iterations, Threshold = 4m, PlaneMode = planeMode, Variant = variant,
+        PrimaryPower = primaryPower, SecondaryPower = secondaryPower, ColoringMode = coloring,
         Palette = MandelbrotPalette(paletteName)
     };
 
