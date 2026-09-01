@@ -18,6 +18,8 @@ namespace FractalExplorerWPF.Views;
 public partial class FlameWindow : Window
 {
     private readonly DispatcherTimer _timer = new() { Interval=TimeSpan.FromMilliseconds(350) };
+    private readonly DispatcherTimer _memoryReliefTimer = new() { Interval=TimeSpan.FromSeconds(2) };
+    private const long MemoryReliefThresholdBytes = 512L*1024*1024;
     private readonly FlameSaveStore _saves = new(); private readonly List<FlameTransform> _transforms = FlameState.CreateDefaults();
     private readonly TransformGroup _transform = new(); private readonly ScaleTransform _imageScale = new(1,1); private readonly TranslateTransform _translation = new();
     private readonly TransformGroup _coverageTransform = new(); private readonly ScaleTransform _coverageScale = new(1,1); private readonly TranslateTransform _coverageTranslation = new();
@@ -31,6 +33,7 @@ public partial class FlameWindow : Window
         SamplesBox.Text="1000000";IterationsBox.Text="20";WarmupBox.Text="20";ScaleBox.Text="4";CenterXBox.Text="0";CenterYBox.Text="0";ExposureBox.Text="1.35";GammaBox.Text="2.2";
         ThreadsBox.Items.Add("Auto");for(int i=1;i<=Environment.ProcessorCount;i++)ThreadsBox.Items.Add(i);ThreadsBox.SelectedIndex=0;
         _timer.Tick+=(_,_)=>{_timer.Stop();_ = RenderAsync();};Loaded+=(_,_)=>Schedule();
+        _memoryReliefTimer.Tick+=(_,_)=>{_memoryReliefTimer.Stop();_ = ReleaseMemoryIfIdleAsync();};
     }
     public FlameState CaptureState(string name)
     {
@@ -50,10 +53,17 @@ public partial class FlameWindow : Window
     private void Parameter_OnChanged(object sender,EventArgs e){if(!_syncing)Schedule();}
     private void Viewport_OnChanged(object sender,EventArgs e){if(_syncing)return;if(Read(CenterXBox.Text,out double x))_centerX=x;if(Read(CenterYBox.Text,out double y))_centerY=y;if(Read(ScaleBox.Text,out double scale)&&Math.Abs(scale)>=1e-9)_worldScale=Math.Abs(scale);UpdateTransform();Schedule();}
     private void Coverage_OnChanged(object sender,RoutedEventArgs e){if(!IsInitialized||CoverageImage is null)return;if(CoverageCheck.IsChecked!=true)CoverageImage.Source=null;}
-    private void Schedule(){if(!IsLoaded)return;_cts?.Cancel();_timer.Stop();_timer.Start();}
+    private void Schedule(){if(!IsLoaded)return;_cts?.Cancel();_memoryReliefTimer.Stop();_timer.Stop();_timer.Start();}
+    private async Task ReleaseMemoryIfIdleAsync()
+    {
+        if(_rendering||MemorySaverCheck.IsChecked!=true)return;
+        if(GC.GetTotalMemory(false)<MemoryReliefThresholdBytes)return;
+        await MemoryPressureRelief.CompactAsync();
+    }
     private void Render_OnClick(object sender,RoutedEventArgs e){_timer.Stop();_cts?.Cancel();_ = RenderAsync();} private void Cancel_OnClick(object sender,RoutedEventArgs e)=>_cts?.Cancel();
     private async Task RenderAsync()
     {
+        _memoryReliefTimer.Stop();
         if(_rendering){Schedule();return;}FlameState state;try{state=CaptureState("preview");}catch(Exception ex){StatusText.Text=ex.Message;return;}
         _cts?.Dispose();_cts=new CancellationTokenSource();CancellationToken token=_cts.Token;_rendering=true;CancelButton.IsEnabled=true;RenderBadge.Visibility=Visibility.Visible;var watch=Stopwatch.StartNew();
         FlameRenderer? renderer=null;WriteableBitmap? coverage=null;byte[]? coveragePixels=null;byte[]? pixels=null;BitmapSource? done=null;
@@ -73,9 +83,11 @@ public partial class FlameWindow : Window
         finally
         {
             CoverageImage.Source=null;renderer?.Dispose();renderer=null;coverage=null;coveragePixels=null;pixels=null;done=null;
-            await Dispatcher.Yield(DispatcherPriority.Background);
-            await MemoryPressureRelief.ReleaseAsync();
             _rendering=false;CancelButton.IsEnabled=false;RenderBadge.Visibility=Visibility.Collapsed;
+            // Тяжёлый MemoryPressureRelief убран с интерактивного пути: он выполнялся на
+            // каждый дебаунс-предпросмотр и давал просадку без нагрузки на ЦП. Вместо этого
+            // лёгкая компакция откладывается на паузу в навигации (см. _memoryReliefTimer).
+            if(MemorySaverCheck.IsChecked==true){_memoryReliefTimer.Stop();_memoryReliefTimer.Start();}
         }
     }
     private void Transforms_OnClick(object sender,RoutedEventArgs e){var editor=new FlameTransformEditorWindow(_transforms){Owner=this};editor.TransformsApplied+=ApplyTransforms;editor.ShowDialog();}
@@ -105,6 +117,6 @@ public partial class FlameWindow : Window
     private void Toggle_OnClick(object sender,RoutedEventArgs e)=>FractalControlPanel.Toggle(ref _controls,ControlsColumn,ControlsHost,ToggleButton,300,Schedule);
     private void Window_OnKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.F11||e.Key==Key.Escape&&_fullscreen)ToggleFull();}
     private void ToggleFull(){if(!_fullscreen){_oldStyle=WindowStyle;_oldState=WindowState;WindowStyle=WindowStyle.None;WindowState=WindowState.Maximized;}else{WindowStyle=_oldStyle;WindowState=_oldState;}_fullscreen=!_fullscreen;}
-    private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();_cts?.Cancel();_cts?.Dispose();}
+    private void Window_OnClosing(object? sender,System.ComponentModel.CancelEventArgs e){_timer.Stop();_memoryReliefTimer.Stop();_cts?.Cancel();_cts?.Dispose();}
     private static bool Read(string text,out double value)=>double.TryParse(text,NumberStyles.Float,CultureInfo.InvariantCulture,out value)||double.TryParse(text,NumberStyles.Float,CultureInfo.CurrentCulture,out value);private static string F(double value)=>value.ToString("G15",CultureInfo.InvariantCulture);
 }

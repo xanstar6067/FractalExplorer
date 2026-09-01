@@ -14,6 +14,7 @@
                 <Grid Margin="0,5"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="115"/></Grid.ColumnDefinitions><TextBlock VerticalAlignment="Center" Text="Гамма"/><TextBox x:Name="GammaBox" Grid.Column="1" TextChanged="Parameter_OnChanged"/></Grid>
                 <TextBlock Margin="0,4,0,0" Text="Потоки ЦП"/><ComboBox x:Name="ThreadsBox" SelectionChanged="Parameter_OnChanged"/>
                 <CheckBox x:Name="CoverageCheck" Margin="0,9,0,5" IsChecked="True" Content="Показывать карту покрытия" Checked="Coverage_OnChanged" Unchecked="Coverage_OnChanged"/>
+                <CheckBox x:Name="MemorySaverCheck" Margin="0,0,0,5" IsChecked="True" Content="Освобождать память в простое" ToolTip="После паузы в навигации уплотняет кучу и возвращает ОЗУ ОС. Не влияет на скорость активного зума. Отключите на мощных машинах."/>
                 <Button Content="Трансформации" Click="Transforms_OnClick"/><Button Content="Запустить рендер" Click="Render_OnClick"/><Button x:Name="CancelButton" Content="Отмена" IsEnabled="False" Click="Cancel_OnClick"/>
                 <Button Content="Менеджер сохранений" Click="Saves_OnClick"/><Button Content="Сохранить изображение" Click="Export_OnClick"/>
                 <TextBlock x:Name="ProgressText" Margin="0,12,0,4" Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Ожидание"/><ProgressBar x:Name="ProgressBar" Height="20" Maximum="100"/>

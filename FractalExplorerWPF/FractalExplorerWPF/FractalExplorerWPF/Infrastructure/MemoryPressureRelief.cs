@@ -7,6 +7,9 @@ internal static class MemoryPressureRelief
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
 
+    // Полное освобождение: двойная блокирующая уплотняющая сборка (вторая — Aggressive)
+    // и принудительное обрезание рабочего набора процесса. Тяжёлая операция, оправдана
+    // только после разовых крупных задач (экспорт больших изображений).
     public static async Task ReleaseAsync()
     {
         await Gate.WaitAsync().ConfigureAwait(false);
@@ -18,6 +21,28 @@ internal static class MemoryPressureRelief
         {
             Gate.Release();
         }
+    }
+
+    // Лёгкое освобождение для пауз в интерактивной работе: один блокирующий уплотняющий
+    // сбор gen2 + компакция LOH. Без Aggressive и без SetProcessWorkingSetSize, поэтому
+    // не провоцирует жёсткие page fault'ы при следующем взаимодействии.
+    public static async Task CompactAsync()
+    {
+        await Gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await Task.Run(CompactCore).ConfigureAwait(false);
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    private static void CompactCore()
+    {
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
     }
 
     private static void ReleaseCore()
