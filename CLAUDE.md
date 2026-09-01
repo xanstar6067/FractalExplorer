@@ -110,6 +110,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 | Окно и файлы | Назначение |
 |---|---|
 | `Views/AboutWindow.xaml` / `.xaml.cs` | Диалог «О программе»: название, версия и справочная информация. |
+| `Views/CrashDialogWindow.xaml` / `.xaml.cs` | Диалог восстановления после необработанного исключения: краткое описание, разворачиваемые подробности, копирование, открытие журнала и выбор «продолжить работу» / «закрыть приложение». Показывается из `Infrastructure/GlobalExceptionHandler.cs`; журнал пишет `Infrastructure/CrashLogger.cs`. |
 | `Views/ColorPickerWindow.xaml` / `.xaml.cs` | Полноразмерный общий диалог выбора цвета, построенный вокруг `Controls/ColorPickerPanel`. |
 | `Views/ImageExportManagerWindow.xaml` / `.xaml.cs` | Универсальный менеджер экспорта изображения: размеры, SSAA, формат/путь, прогресс, отмена и вызов переданного render callback. Конфигурация находится в `Infrastructure/ImageExportConfiguration.cs`. |
 | `Views/SaveManagerWindow.xaml` / `.xaml.cs` | Универсальная оболочка менеджера состояний: открыть, назвать, просмотреть, загрузить и удалить сохранение. Использует `Controls/SaveManagerControl` и конфигурации из `Infrastructure/SaveManagerConfigurations.cs`. |

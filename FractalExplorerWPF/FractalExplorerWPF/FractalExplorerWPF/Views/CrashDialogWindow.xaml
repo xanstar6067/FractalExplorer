@@ -1,0 +1,82 @@
+<Window x:Class="FractalExplorerWPF.Views.CrashDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Непредвиденная ошибка"
+        Width="620"
+        Height="460"
+        MinWidth="520"
+        MinHeight="360"
+        ResizeMode="CanResize"
+        ShowInTaskbar="True"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        Icon="../Assets/Icons/FractalExplorer.ico">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="HeaderText"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   Text="Произошла непредвиденная ошибка."/>
+
+        <TextBlock x:Name="SummaryText"
+                   Grid.Row="1"
+                   Margin="0,10,0,0"
+                   LineHeight="20"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+
+        <Expander Grid.Row="2"
+                  Margin="0,16,0,0"
+                  Header="Подробности">
+            <TextBox x:Name="DetailsText"
+                     Margin="0,8,0,0"
+                     MinHeight="120"
+                     FontFamily="Consolas, Courier New, monospace"
+                     FontSize="12"
+                     IsReadOnly="True"
+                     TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"/>
+        </Expander>
+
+        <TextBlock x:Name="LogPathText"
+                   Grid.Row="3"
+                   Margin="0,16,0,0"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+
+        <StackPanel Grid.Row="4"
+                    Margin="0,20,0,0"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+            <Button x:Name="CopyButton"
+                    MinWidth="96"
+                    Margin="0,0,8,0"
+                    Content="Копировать"
+                    Click="CopyButton_OnClick"/>
+            <Button x:Name="OpenLogButton"
+                    MinWidth="128"
+                    Margin="0,0,8,0"
+                    Content="Открыть журнал"
+                    Click="OpenLogButton_OnClick"/>
+            <Button x:Name="ShutdownButton"
+                    MinWidth="150"
+                    Margin="0,0,8,0"
+                    Content="Закрыть приложение"
+                    Click="ShutdownButton_OnClick"/>
+            <Button x:Name="ContinueButton"
+                    MinWidth="150"
+                    IsDefault="True"
+                    Content="Продолжить работу"
+                    Click="ContinueButton_OnClick"/>
+        </StackPanel>
+    </Grid>
+</Window>
