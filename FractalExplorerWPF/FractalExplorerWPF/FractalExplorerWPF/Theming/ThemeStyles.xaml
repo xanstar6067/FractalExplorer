@@ -355,7 +355,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="HasItems" Value="False"><Setter TargetName="Expander" Property="Visibility" Value="Hidden"/></Trigger>
                         <Trigger Property="IsExpanded" Value="False"><Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/></Trigger>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource Theme.HoverBackgroundBrush}"/></Trigger>
+                        <Trigger Property="IsMouseOver" SourceName="HeaderBorder" Value="True"><Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource Theme.HoverBackgroundBrush}"/></Trigger>
                         <Trigger Property="IsSelected" Value="True"><Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource Theme.AccentPrimaryBrush}"/><Setter Property="Foreground" Value="{DynamicResource Theme.AccentForegroundBrush}"/></Trigger>
                         <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Theme.DisabledTextBrush}"/></Trigger>
                     </ControlTemplate.Triggers>
