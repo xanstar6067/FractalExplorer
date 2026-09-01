@@ -350,7 +350,6 @@ public partial class MandelbrotWindow : Window
             JuliaMapPreviewHost.ActualHeight < 1) return;
 
         _juliaMapPreviewCts?.Cancel();
-        _juliaMapPreviewCts?.Dispose();
         var cts = new CancellationTokenSource();
         _juliaMapPreviewCts = cts;
         RenderSurfaceMetrics mapSurface = RenderSurfaceMetrics.Measure(JuliaMapPreviewHost);
@@ -392,6 +391,11 @@ public partial class MandelbrotWindow : Window
             UpdateJuliaMapMarker();
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(_juliaMapPreviewCts, cts))
+                CrashLogger.Log("MandelbrotWindow.RenderJuliaMapPreviewAsync", ex);
+        }
         finally
         {
             if (ReferenceEquals(_juliaMapPreviewCts, cts)) _juliaMapPreviewCts = null;
@@ -507,7 +511,7 @@ public partial class MandelbrotWindow : Window
         int logicalHeight = Math.Max(1, (int)Math.Round(surface.LogicalHeight));
         int pixelWidth = surface.PixelWidth;
         int pixelHeight = surface.PixelHeight;
-        _renderCts?.Dispose();
+        _renderCts?.Cancel();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
         CancellationToken token = cts.Token;
@@ -597,7 +601,16 @@ public partial class MandelbrotWindow : Window
 
     private void VisualizationTimer_OnTick(object? sender, EventArgs e)
     {
-        if (_activeSession is not null) FlushVisualizationEvents(_activeSession, false);
+        try
+        {
+            if (_activeSession is not null) FlushVisualizationEvents(_activeSession, false);
+        }
+        catch (Exception ex)
+        {
+            _visualizationTimer.Stop();
+            StatusText.Text = "Ошибка визуализации прогресса рендера.";
+            CrashLogger.Log("MandelbrotWindow.VisualizationTimer_OnTick", ex);
+        }
     }
 
     private void FlushVisualizationEvents(RenderSession session, bool drainAll)

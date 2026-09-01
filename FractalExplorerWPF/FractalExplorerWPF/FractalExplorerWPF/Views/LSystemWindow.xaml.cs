@@ -348,6 +348,15 @@ public partial class LSystemWindow : Window
         catch (OperationCanceledException)
         {
         }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(_frameCts, cts))
+            {
+                StopAnimation();
+                StatusText.Text = "Ошибка отрисовки кадра анимации.";
+                CrashLogger.Log("LSystemWindow.RenderAnimationFrameAsync", ex);
+            }
+        }
         finally
         {
             if (ReferenceEquals(_frameCts, cts))
@@ -416,6 +425,14 @@ public partial class LSystemWindow : Window
         }
         catch (OperationCanceledException)
         {
+        }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(_frameCts, cts))
+            {
+                StatusText.Text = "Не удалось перерисовать сцену.";
+                CrashLogger.Log("LSystemWindow.RedrawSceneAsync", ex);
+            }
         }
         finally
         {

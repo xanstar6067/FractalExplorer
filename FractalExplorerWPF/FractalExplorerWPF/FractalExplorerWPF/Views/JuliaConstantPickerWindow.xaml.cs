@@ -81,7 +81,6 @@ public partial class JuliaConstantPickerWindow : Window
     {
         _renderTimer.Stop();
         _renderCts?.Cancel();
-        _renderCts?.Dispose();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(MapHost);

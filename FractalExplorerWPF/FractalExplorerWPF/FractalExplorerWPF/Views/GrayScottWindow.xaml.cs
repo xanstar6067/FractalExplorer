@@ -186,9 +186,16 @@ public partial class GrayScottWindow : Window
     private async void Preset_OnChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncing || PresetBox.SelectedItem is not GrayScottPreset preset) return;
-        ApplyState(preset.State.Clone());
-        PresetBox.SelectedItem = preset;
-        await ResetSimulationAsync(startAfterReset: true);
+        try
+        {
+            ApplyState(preset.State.Clone());
+            PresetBox.SelectedItem = preset;
+            await ResetSimulationAsync(startAfterReset: true);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = $"Не удалось применить пресет: {exception.Message}";
+        }
     }
 
     private void Parameter_OnChanged(object sender, EventArgs e)
@@ -217,27 +224,38 @@ public partial class GrayScottWindow : Window
         _frameTimer.Stop();
         _running = false;
         UpdateRunState();
-        CancellationTokenSource? previousCts = _simulationCts;
-        await _frameIdleTask;
-        previousCts?.Cancel();
-        previousCts?.Dispose();
-
-        if (!TryCaptureState("preview", out GrayScottState state, out string error))
+        try
         {
-            StatusText.Text = error;
-            return;
-        }
+            CancellationTokenSource? previousCts = _simulationCts;
+            await _frameIdleTask;
+            previousCts?.Cancel();
+            previousCts?.Dispose();
 
-        _activeState = state;
-        _simulation = new GrayScottSimulation(state);
-        _simulationCts = new CancellationTokenSource();
-        _bitmap = new WriteableBitmap(state.GridSize, state.GridSize, 96, 96, PixelFormats.Bgra32, null);
-        FrameImage.Source = _bitmap;
-        while (_injections.TryDequeue(out _)) { }
-        await RenderCurrentFieldAsync();
-        PendingText.Visibility = Visibility.Collapsed;
-        StatusText.Text = $"Сетка {state.GridSize}×{state.GridSize} · F={state.Feed:G5} · K={state.Kill:G5}";
-        SetRunning(startAfterReset);
+            if (!TryCaptureState("preview", out GrayScottState state, out string error))
+            {
+                StatusText.Text = error;
+                return;
+            }
+
+            _activeState = state;
+            _simulation = new GrayScottSimulation(state);
+            _simulationCts = new CancellationTokenSource();
+            _bitmap = new WriteableBitmap(state.GridSize, state.GridSize, 96, 96, PixelFormats.Bgra32, null);
+            FrameImage.Source = _bitmap;
+            while (_injections.TryDequeue(out _)) { }
+            await RenderCurrentFieldAsync();
+            PendingText.Visibility = Visibility.Collapsed;
+            StatusText.Text = $"Сетка {state.GridSize}×{state.GridSize} · F={state.Feed:G5} · K={state.Kill:G5}";
+            SetRunning(startAfterReset);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            SetRunning(false);
+            StatusText.Text = $"Не удалось пересоздать симуляцию: {exception.Message}";
+        }
     }
 
     private void RunPause_OnClick(object sender, RoutedEventArgs e) => SetRunning(!_running);
@@ -327,10 +345,21 @@ public partial class GrayScottWindow : Window
     private async Task RenderCurrentFieldAsync()
     {
         if (_simulation is null || _activeState is null || _simulationCts is null) return;
-        await _frameIdleTask;
-        _activeState.Palette = _paletteManager.ActivePalette.Clone();
-        _activeState.ReversePalette = ReversePaletteBox.IsChecked == true;
-        await ProduceFrameAsync(0);
+        try
+        {
+            await _frameIdleTask;
+            _activeState.Palette = _paletteManager.ActivePalette.Clone();
+            _activeState.ReversePalette = ReversePaletteBox.IsChecked == true;
+            await ProduceFrameAsync(0);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            SetRunning(false);
+            StatusText.Text = $"Не удалось обновить изображение: {exception.Message}";
+        }
     }
 
     private void PresentFrame(byte[] pixels, long stepCount)

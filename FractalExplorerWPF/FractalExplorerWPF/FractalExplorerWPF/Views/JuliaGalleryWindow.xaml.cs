@@ -86,7 +86,6 @@ public partial class JuliaGalleryWindow : Window
         }
 
         _renderCts?.Cancel();
-        _renderCts?.Dispose();
         var cts = new CancellationTokenSource();
         _renderCts = cts;
         CancelButton.IsEnabled = true;

@@ -52,7 +52,16 @@ public partial class DomainColoringWindow : Window
 
         _visualizationTimer.Tick += (_, _) =>
         {
-            if (_activeSession is not null) FlushVisualizationEvents(_activeSession, false);
+            try
+            {
+                if (_activeSession is not null) FlushVisualizationEvents(_activeSession, false);
+            }
+            catch (Exception ex)
+            {
+                _visualizationTimer.Stop();
+                StatusText.Text = "Ошибка визуализации прогресса рендера.";
+                CrashLogger.Log("DomainColoringWindow.VisualizationTimer", ex);
+            }
         };
         _renderTimer.Tick += RenderTimer_OnTick;
 
@@ -288,9 +297,10 @@ public partial class DomainColoringWindow : Window
             return;
         }
 
-        _renderCts?.Dispose();
-        _renderCts = new CancellationTokenSource();
-        CancellationToken token = _renderCts.Token;
+        _renderCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _renderCts = cts;
+        CancellationToken token = cts.Token;
         var watch = Stopwatch.StartNew();
         SetRendering(true, $"Рендеринг f(z) = {renderer.ParsedFormula}...");
 
@@ -343,6 +353,8 @@ public partial class DomainColoringWindow : Window
             _visualizationTimer.Stop();
             RenderOverlay.EndSession();
             _activeSession = null;
+            if (ReferenceEquals(_renderCts, cts)) _renderCts = null;
+            cts.Dispose();
             SetRendering(false);
         }
     }

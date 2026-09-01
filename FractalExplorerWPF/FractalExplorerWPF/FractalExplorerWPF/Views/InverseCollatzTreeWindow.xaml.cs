@@ -266,9 +266,10 @@ public partial class InverseCollatzTreeWindow : Window
         try { state = CaptureState("preview"); }
         catch (Exception ex) { StatusText.Text = ex.Message; return; }
 
-        _renderCts?.Dispose();
-        _renderCts = new CancellationTokenSource();
-        CancellationToken token = _renderCts.Token;
+        _renderCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _renderCts = cts;
+        CancellationToken token = cts.Token;
         _isRendering = true;
         CancelButton.IsEnabled = true;
         StatusText.Text = "Построение точного обратного дерева...";
@@ -341,6 +342,8 @@ public partial class InverseCollatzTreeWindow : Window
             _isRendering = false;
             CancelButton.IsEnabled = false;
             RenderProgress.Value = 0;
+            if (ReferenceEquals(_renderCts, cts)) _renderCts = null;
+            cts.Dispose();
             if (_renderPending)
             {
                 _renderPending = false;
@@ -351,23 +354,31 @@ public partial class InverseCollatzTreeWindow : Window
 
     private async void AnimationButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (_isAnimating)
+        try
+        {
+            if (_isAnimating)
+            {
+                StopAnimation();
+                return;
+            }
+            if (_tree is null)
+            {
+                _visibleDepth = 0;
+                await RenderCurrentAsync();
+            }
+            int maximum = _tree?.MaximumDepth ?? ReadInt(DepthBox.Text, "максимальная глубина", 1, 500);
+            if (_visibleDepth >= maximum) _visibleDepth = 0;
+            _isAnimating = true;
+            AnimationButton.Content = "Пауза";
+            _animationTimer.Start();
+            UpdateDepthStatus();
+            if (!_isRendering) await RenderCurrentAsync();
+        }
+        catch (Exception exception)
         {
             StopAnimation();
-            return;
+            StatusText.Text = exception.Message;
         }
-        if (_tree is null)
-        {
-            _visibleDepth = 0;
-            await RenderCurrentAsync();
-        }
-        int maximum = _tree?.MaximumDepth ?? ReadInt(DepthBox.Text, "максимальная глубина", 1, 500);
-        if (_visibleDepth >= maximum) _visibleDepth = 0;
-        _isAnimating = true;
-        AnimationButton.Content = "Пауза";
-        _animationTimer.Start();
-        UpdateDepthStatus();
-        if (!_isRendering) await RenderCurrentAsync();
     }
 
     private void RestartAnimationButton_OnClick(object sender, RoutedEventArgs e)
