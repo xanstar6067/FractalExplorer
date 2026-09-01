@@ -55,11 +55,12 @@
 
             decimal sum = d;
             decimal term = d;
+            decimal dSquared = d * d;
             int n = 1;
 
             while (Math.Abs(term) > Epsilon)
             {
-                term *= -1m * d * d / ((2 * n + 1) * (2 * n));
+                term *= -1m * dSquared / ((2 * n + 1) * (2 * n));
                 if (term == 0m) break;
                 sum += term;
                 n++;
@@ -77,11 +78,12 @@
 
             decimal sum = 1m;
             decimal term = 1m;
+            decimal dSquared = d * d;
             int n = 1;
 
             while (Math.Abs(term) > Epsilon)
             {
-                term *= -1m * d * d / ((2 * n - 1) * (2 * n));
+                term *= -1m * dSquared / ((2 * n - 1) * (2 * n));
                 if (term == 0m) break;
                 sum += term;
                 n++;
@@ -103,11 +105,12 @@
             decimal x = (d - 1m) / (d + 1m);
             decimal sum = x;
             decimal term = x;
+            decimal xSquared = x * x;
             int n = 1;
 
             while (Math.Abs(term) > Epsilon)
             {
-                term *= x * x * (2 * n - 1) / (2 * n + 1);
+                term *= xSquared * (2 * n - 1) / (2 * n + 1);
                 if (term == 0m) break;
                 sum += term;
                 n++;
@@ -128,11 +131,12 @@
 
             decimal sum = d;
             decimal term = d;
+            decimal dSquared = d * d;
             int n = 1;
 
             while (Math.Abs(term) > Epsilon)
             {
-                term *= -1m * d * d * (2 * n - 1) / (2 * n + 1);
+                term *= -1m * dSquared * (2 * n - 1) / (2 * n + 1);
                 if (term == 0m) break;
                 sum += term;
                 n++;

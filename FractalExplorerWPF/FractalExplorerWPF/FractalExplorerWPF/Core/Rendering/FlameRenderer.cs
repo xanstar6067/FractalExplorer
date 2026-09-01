@@ -72,7 +72,7 @@ public sealed class FlameRenderer : IDisposable
 
     public byte[] CreateCoverageFrame()
     {
-        byte[] pixels = new byte[_hit.Length * 4]; double max = _hit.Max(); if (max <= 0) return pixels;
+        byte[] pixels = new byte[_hit.Length * 4]; double max = MaxHit(); if (max <= 0) return pixels;
         double denominator = Math.Log(1 + max);
         for (int i = 0; i < _hit.Length; i++)
         {
@@ -84,7 +84,7 @@ public sealed class FlameRenderer : IDisposable
 
     public byte[] CreateFinalFrame()
     {
-        byte[] pixels = new byte[_hit.Length * 4]; double max = _hit.Max(), denominator = Math.Log(1 + max);
+        byte[] pixels = new byte[_hit.Length * 4]; double max = MaxHit(), denominator = Math.Log(1 + max);
         double exposure = Math.Max(.0001, _state.Exposure), invGamma = 1 / Math.Max(.1, _state.Gamma);
         for (int i = 0; i < _hit.Length; i++)
         {
@@ -105,6 +105,15 @@ public sealed class FlameRenderer : IDisposable
         _blue = [];
         _weights = [];
         _transforms.Clear();
+    }
+
+    // Ручной проход вместо LINQ Max: тот же максимум по массиву без накладных расходов
+    // перечислителя (значения _hit неотрицательны).
+    private double MaxHit()
+    {
+        double max = _hit[0];
+        for (int i = 1; i < _hit.Length; i++) if (_hit[i] > max) max = _hit[i];
+        return max;
     }
 
     private FlameTransform Select(double value) { int i = Array.BinarySearch(_weights, value); if (i < 0) i = ~i; return _transforms[Math.Min(i, _transforms.Count - 1)]; }

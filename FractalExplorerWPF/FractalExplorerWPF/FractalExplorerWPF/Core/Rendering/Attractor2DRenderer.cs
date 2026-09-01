@@ -55,6 +55,7 @@ public static class Attractor2DRenderer
         int pointCount = Math.Max(1, state.Iterations);
         int workerCount = Math.Min(Math.Max(1, state.Threads), Math.Max(1, pointCount / 16_384));
         int completedWorkers = 0;
+        object mergeLock = new();
 
         double spanX = GetBaseSpan(kind) / Math.Max(1e-9, state.Zoom);
         double spanY = spanX * Math.Max(1, height) / Math.Max(1, width);
@@ -63,11 +64,17 @@ public static class Attractor2DRenderer
         double minY = state.CenterY - spanY * .5;
         double maxY = state.CenterY + spanY * .5;
 
+        // Каждый воркер копит плотность в собственный буфер и сливает его в общий один
+        // раз в конце. Раньше на каждую точку орбиты был Interlocked по общему массиву —
+        // конкуренция кэш-линий не давала линейного ускорения. Сумма тех же целых
+        // приращений не зависит от порядка, поле плотности идентично.
         Parallel.For(0, workerCount, new ParallelOptions
         {
             MaxDegreeOfParallelism = Math.Max(1, state.Threads),
             CancellationToken = token
-        }, workerIndex =>
+        },
+        () => new int[density.Length],
+        (workerIndex, _, localDensity) =>
         {
             int localPointCount = pointCount / workerCount + (workerIndex < pointCount % workerCount ? 1 : 0);
             double jitter = workerIndex == 0 ? 0 : (workerIndex + 1) * 1e-9;
@@ -95,11 +102,19 @@ public static class Attractor2DRenderer
                 int px = (int)((x - minX) / spanX * (width - 1));
                 int py = (int)((maxY - y) / spanY * (height - 1));
                 if ((uint)px >= (uint)width || (uint)py >= (uint)height) continue;
-                Interlocked.Increment(ref density[py * width + px]);
+                localDensity[py * width + px]++;
             }
 
             int done = Interlocked.Increment(ref completedWorkers);
             progress?.Report(Math.Min(94, done * 94 / workerCount));
+            return localDensity;
+        },
+        localDensity =>
+        {
+            lock (mergeLock)
+            {
+                for (int i = 0; i < density.Length; i++) density[i] += localDensity[i];
+            }
         });
 
         return density;

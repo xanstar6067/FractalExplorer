@@ -58,10 +58,13 @@ namespace FractalExplorer.Engines
             double bValue = (double)b;
             int total = Math.Max(1, transient + iterations);
             double sum = 0.0;
+            int patternLength = pattern.Length;
+            int phase = 0;
 
             for (int i = 0; i < total; i++)
             {
-                char token = pattern[i % pattern.Length];
+                char token = pattern[phase];
+                if (++phase == patternLength) phase = 0;
                 double r = token == 'A' ? aValue : bValue;
                 x = Logistic(x, r);
 
@@ -89,10 +92,17 @@ namespace FractalExplorer.Engines
             int total = Math.Max(1, transient + iterations);
             double sum = 0.0d;
             double compensation = 0.0d; // Kahan compensation
+            int patternLength = pattern.Length;
+            int phase = 0;
+            // r принимает лишь два значения, поэтому ln|r| можно посчитать один раз, а не
+            // на каждой итерации. Значения те же — результат серии не меняется.
+            double logAbsA = Math.Log(Math.Max(Math.Abs(aValue), MinLogArgument));
+            double logAbsB = Math.Log(Math.Max(Math.Abs(bValue), MinLogArgument));
 
             for (int i = 0; i < total; i++)
             {
-                char token = pattern[i % pattern.Length];
+                char token = pattern[phase];
+                if (++phase == patternLength) phase = 0;
                 double r = token == 'A' ? aValue : bValue;
                 x = Logistic(x, r);
 
@@ -108,7 +118,7 @@ namespace FractalExplorer.Engines
                 {
                     // Устойчивый вариант ln|r(1-2x)| = ln|r| + ln|1-2x|
                     // Позволяет избежать переполнения/денормалов при прямом умножении.
-                    double logAbsR = Math.Log(Math.Max(Math.Abs(r), MinLogArgument));
+                    double logAbsR = token == 'A' ? logAbsA : logAbsB;
                     double logAbsTerm = Math.Log(Math.Max(Math.Abs(1d - (2d * x)), MinLogArgument));
                     double value = logAbsR + logAbsTerm;
 

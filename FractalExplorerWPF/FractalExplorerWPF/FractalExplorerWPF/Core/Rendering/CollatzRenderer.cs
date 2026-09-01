@@ -322,16 +322,23 @@ public static class CollatzRenderer
         int completedRows = 0;
         int sampleWeight = sampleStep * sampleStep;
         var options = new ParallelOptions { MaxDegreeOfParallelism = threadCount };
+        object mergeLock = new();
 
+        // На поток — буфер орбиты (как и раньше) и собственный буфер плотности. Прежде
+        // на каждую точку каждой орбиты вызывался Interlocked.Add по общему массиву;
+        // теперь общий массив трогается один раз на поток. Сумма одних и тех же целых
+        // приращений от порядка не зависит — поле плотности идентично.
         Parallel.For(0, sourceRows, options,
-            () => new int[Math.Max(1, state.Iterations)],
-            (sourceRow, loopState, path) =>
+            () => new OrbitDensityScratch(new int[Math.Max(1, state.Iterations)], new long[density.Length]),
+            (sourceRow, loopState, scratch) =>
             {
-                if (token.IsCancellationRequested) { loopState.Stop(); return path; }
+                int[] path = scratch.Path;
+                long[] localDensity = scratch.Density;
+                if (token.IsCancellationRequested) { loopState.Stop(); return scratch; }
                 int y = sourceRow * sampleStep;
                 for (int x = 0; x < width; x += sampleStep)
                 {
-                    if (token.IsCancellationRequested) { loopState.Stop(); return path; }
+                    if (token.IsCancellationRequested) { loopState.Stop(); return scratch; }
                     bool escaped;
                     int pathLength = scale < DecimalScaleThreshold
                         ? TraceDensityOrbitDecimal(state, x, y, width, height, scale, path, token,
@@ -340,14 +347,21 @@ public static class CollatzRenderer
                             out escaped);
                     if (state.OrbitDensityEscapedOnly && !escaped) continue;
                     for (int index = 0; index < pathLength; index++)
-                        Interlocked.Add(ref density[path[index]], sampleWeight);
+                        localDensity[path[index]] += sampleWeight;
                 }
                 int done = Interlocked.Increment(ref completedRows);
                 if (done == sourceRows || done % Math.Max(1, sourceRows / 100) == 0)
                     progress?.Invoke(done * 75 / sourceRows);
-                return path;
+                return scratch;
             },
-            _ => { });
+            scratch =>
+            {
+                lock (mergeLock)
+                {
+                    long[] shared = density, local = scratch.Density;
+                    for (int i = 0; i < shared.Length; i++) shared[i] += local[i];
+                }
+            });
 
         if (token.IsCancellationRequested) return;
         long maximumDensity = 0;
@@ -672,13 +686,24 @@ public static class CollatzRenderer
         return ApplyGamma(result, palette.Gamma);
     }
 
+    // Таблица гаммы на 256 значений, кэш на поток (гамма постоянна в пределах рендера).
+    // Бит-в-бит совпадает с прямым Math.Pow.
+    [ThreadStatic] private static double _gammaLutKey;
+    [ThreadStatic] private static byte[]? _gammaLut;
+
     private static Color ApplyGamma(Color color, double gamma)
     {
-        double correction = 1 / Math.Max(0.01, gamma);
-        return Color.FromArgb(color.A,
-            (byte)(255 * Math.Pow(color.R / 255d, correction)),
-            (byte)(255 * Math.Pow(color.G / 255d, correction)),
-            (byte)(255 * Math.Pow(color.B / 255d, correction)));
+        byte[]? lut = _gammaLut;
+        if (lut is null || _gammaLutKey != gamma)
+        {
+            lut = new byte[256];
+            double correction = 1 / Math.Max(0.01, gamma);
+            for (int value = 0; value < 256; value++)
+                lut[value] = (byte)(255 * Math.Pow(value / 255d, correction));
+            _gammaLut = lut;
+            _gammaLutKey = gamma;
+        }
+        return Color.FromArgb(color.A, lut[color.R], lut[color.G], lut[color.B]);
     }
 
     private static byte Lerp(byte start, byte end, double amount) =>
@@ -686,4 +711,11 @@ public static class CollatzRenderer
 
     private static double PositiveModulo(double value, double period) =>
         (value % period + period) % period;
+
+    // Пер-поточные буферы для режима Orbit Density: путь орбиты и локальная плотность.
+    private sealed class OrbitDensityScratch(int[] path, long[] density)
+    {
+        public readonly int[] Path = path;
+        public readonly long[] Density = density;
+    }
 }

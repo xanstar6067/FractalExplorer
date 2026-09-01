@@ -38,6 +38,7 @@ public sealed class DomainColoringRenderer
             return null;
 
         byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
+        PixelTransform transform = CreateTransform(canvasWidth, canvasHeight);
         int offset = 0;
         for (int localY = 0; localY < tile.Height; localY++)
         {
@@ -46,7 +47,7 @@ public sealed class DomainColoringRenderer
             for (int localX = 0; localX < tile.Width; localX++)
             {
                 int x = tile.X + localX;
-                WritePixel(pixels, offset, x, y, canvasWidth, canvasHeight);
+                WritePixel(pixels, offset, x, y, transform);
                 offset += 4;
             }
         }
@@ -72,12 +73,13 @@ public sealed class DomainColoringRenderer
             CancellationToken = token,
             MaxDegreeOfParallelism = Math.Clamp(threadCount, 1, Environment.ProcessorCount)
         };
+        PixelTransform transform = CreateTransform(width, height);
         Parallel.For(0, height, options, y =>
         {
             int offset = y * stride;
             for (int x = 0; x < width; x++)
             {
-                WritePixel(buffer, offset, x, y, width, height);
+                WritePixel(buffer, offset, x, y, transform);
                 offset += 4;
             }
             int done = Interlocked.Increment(ref completedRows);
@@ -86,13 +88,26 @@ public sealed class DomainColoringRenderer
         });
     }
 
-    private void WritePixel(byte[] pixels, int offset, int x, int y, int width, int height)
+    // Масштаб и половины размеров холста не зависят от пикселя. Выносим их из
+    // внутреннего цикла; сами пиксельные выражения ниже сохранены дословно
+    // (тот же порядок операций), поэтому результат бит-в-бит прежний.
+    private readonly record struct PixelTransform(
+        double Scale, double HalfWidth, double HalfHeight, double UnitsPerPixel, int Width);
+
+    private PixelTransform CreateTransform(int width, int height)
     {
         double zoom = Math.Clamp(_state.Zoom, 1e-12, 1e12);
         double scale = BaseScale / zoom;
-        double worldX = _state.CenterX + (x + 0.5 - width / 2.0) * scale / width;
-        double worldY = _state.CenterY + (height / 2.0 - y - 0.5) * scale / width;
-        double unitsPerPixel = scale / width;
+        return new PixelTransform(scale, width / 2.0, height / 2.0, scale / width, width);
+    }
+
+    private void WritePixel(byte[] pixels, int offset, int x, int y, in PixelTransform transform)
+    {
+        double scale = transform.Scale;
+        int width = transform.Width;
+        double worldX = _state.CenterX + (x + 0.5 - transform.HalfWidth) * scale / width;
+        double worldY = _state.CenterY + (transform.HalfHeight - y - 0.5) * scale / width;
+        double unitsPerPixel = transform.UnitsPerPixel;
 
         Complex value = _formula.Evaluate(new Complex(worldX, worldY));
         Color color = Colorize(value);

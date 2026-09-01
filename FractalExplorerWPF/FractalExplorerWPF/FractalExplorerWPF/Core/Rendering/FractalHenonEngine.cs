@@ -34,12 +34,19 @@ namespace FractalExplorer.Engines
             double a = (double)settings.A;
             double b = (double)settings.B;
 
+            // Каждый seed-воркер копит попадания в собственный буфер и один раз сливает
+            // его в общий. Прежний Interlocked на каждую точку по общему массиву мешал
+            // масштабированию по ядрам. Порядок суммирования целых не влияет на итог —
+            // гистограмма попаданий и картинка идентичны.
+            object mergeLock = new();
             Parallel.For(0, seeds, new ParallelOptions
             {
                 MaxDegreeOfParallelism = Math.Max(1, settings.Threads)
-            }, (seedIndex, loopState) =>
+            },
+            () => new int[hits.Length],
+            (seedIndex, loopState, localHits) =>
             {
-                if (token.IsCancellationRequested) { loopState.Stop(); return; }
+                if (token.IsCancellationRequested) { loopState.Stop(); return localHits; }
                 double x = (double)settings.X0 + seedIndex * 0.000137;
                 double y = (double)settings.Y0 - seedIndex * 0.000073;
                 int localSteps = seedIndex == seeds - 1 ? settings.Iterations - pointsPerSeed * (seeds - 1) : pointsPerSeed;
@@ -55,7 +62,7 @@ namespace FractalExplorer.Engines
 
                 for (int i = 0; i < localSteps; i++)
                 {
-                    if ((i & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
+                    if ((i & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return localHits; }
 
                     double xNext = 1.0 - a * x * x + y;
                     double yNext = b * x;
@@ -68,10 +75,18 @@ namespace FractalExplorer.Engines
                     int py = (int)((maxY - y) / (maxY - minY) * (height - 1));
 
                     if ((uint)px >= (uint)width || (uint)py >= (uint)height) continue;
-                    Interlocked.Increment(ref hits[py * width + px]);
+                    localHits[py * width + px]++;
                 }
 
                 progress?.Report(Math.Min(99, (int)((seedIndex + 1) * 100.0 / seeds)));
+                return localHits;
+            },
+            localHits =>
+            {
+                lock (mergeLock)
+                {
+                    for (int i = 0; i < hits.Length; i++) hits[i] += localHits[i];
+                }
             });
 
             if (token.IsCancellationRequested) return new byte[width * height * 4];

@@ -10,7 +10,19 @@ public sealed class BuddhabrotRenderer(BuddhabrotState state, int width, int hei
 {
     private readonly int[] _density = new int[checked(width * height)];
     private readonly ConcurrentBag<List<(double Re, double Im)>> _pool = new();
+    private readonly ConcurrentBag<int[]> _densityPool = new();
+    private readonly object _mergeLock = new();
     public int ProcessedSamples { get; private set; }
+
+    // Оркестрируем на поток список орбиты и собственный буфер плотности: так внутренний
+    // цикл инкрементирует обычный массив, а не атомарный общий (Interlocked на каждую
+    // точку орбиты был узким местом из-за конкуренции кэш-линий). Итог — сумма тех же
+    // целочисленных приращений, то есть плотность и кадр не меняются.
+    private sealed class AccumulationScratch(List<(double Re, double Im)> orbit, int[] density)
+    {
+        public readonly List<(double Re, double Im)> Orbit = orbit;
+        public readonly int[] Density = density;
+    }
 
     public void Accumulate(int count, CancellationToken token)
     {
@@ -20,8 +32,11 @@ public sealed class BuddhabrotRenderer(BuddhabrotState state, int width, int hei
         double minIm = (double)state.SampleMinIm, maxIm = (double)state.SampleMaxIm;
         double viewScale = 4d / Math.Max(0.0000001, (double)state.Zoom), viewScaleY = viewScale * height / width;
         Parallel.For(start, end, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threads) },
-            () => Rent(state.MaxIterations), (sample, loopState, orbit) =>
+            () => new AccumulationScratch(Rent(state.MaxIterations), RentDensity()),
+            (sample, loopState, scratch) =>
             {
+                List<(double Re, double Im)> orbit = scratch.Orbit;
+                int[] density = scratch.Density;
                 orbit.Clear(); ulong random = Mix((ulong)sample + 0x9E3779B97F4A7C15UL);
                 double cr = minRe + Next(ref random) * (maxRe - minRe), ci = minIm + Next(ref random) * (maxIm - minIm);
                 double zr = 0, zi = 0; bool escaped = false;
@@ -30,7 +45,7 @@ public sealed class BuddhabrotRenderer(BuddhabrotState state, int width, int hei
                     if ((i & 63) == 0 && token.IsCancellationRequested)
                     {
                         loopState.Stop();
-                        return orbit;
+                        return scratch;
                     }
                     (zr, zi) = (zr * zr - zi * zi + cr, 2 * zr * zi + ci);
                     if (i >= 2) orbit.Add((zr, zi));
@@ -44,18 +59,34 @@ public sealed class BuddhabrotRenderer(BuddhabrotState state, int width, int hei
                     {
                         int x = (int)(((im - (double)state.CenterY) / viewScale + .5) * width);
                         int y = (int)(((re - (double)state.CenterX) / viewScaleY + .5) * height);
-                        if ((uint)x < (uint)width && (uint)y < (uint)height) Interlocked.Increment(ref _density[y * width + x]);
+                        if ((uint)x < (uint)width && (uint)y < (uint)height) density[y * width + x]++;
                         if (mirror)
                         {
                             int mx = (int)(((-im - (double)state.CenterY) / viewScale + .5) * width);
-                            if ((uint)mx < (uint)width && (uint)y < (uint)height) Interlocked.Increment(ref _density[y * width + mx]);
+                            if ((uint)mx < (uint)width && (uint)y < (uint)height) density[y * width + mx]++;
                         }
                     }
                 }
-                return orbit;
-            }, Return);
+                return scratch;
+            },
+            scratch =>
+            {
+                Return(scratch.Orbit);
+                lock (_mergeLock)
+                {
+                    int[] shared = _density, local = scratch.Density;
+                    for (int i = 0; i < shared.Length; i++) shared[i] += local[i];
+                }
+                _densityPool.Add(scratch.Density);
+            });
         if (token.IsCancellationRequested) return;
         ProcessedSamples = end;
+    }
+
+    private int[] RentDensity()
+    {
+        if (_densityPool.TryTake(out int[]? buffer)) { Array.Clear(buffer); return buffer; }
+        return new int[_density.Length];
     }
 
     public byte[] CreateFrame()

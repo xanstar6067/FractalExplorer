@@ -39,7 +39,7 @@ internal sealed class CompiledComplexExpression
 
         for (int index = 0; index < _instructions.Length; index++)
         {
-            Instruction instruction = _instructions[index];
+            ref readonly Instruction instruction = ref _instructions[index];
             switch (instruction.OpCode)
             {
                 case OpCode.PushConstant:

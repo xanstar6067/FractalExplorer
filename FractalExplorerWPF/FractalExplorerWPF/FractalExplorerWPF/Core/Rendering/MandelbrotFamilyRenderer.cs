@@ -8,6 +8,11 @@ namespace FractalExplorerWPF.Core.Rendering;
 
 public static class MandelbrotFamilyRenderer
 {
+    // Порог зума, начиная с которого итерация ведётся в decimal (режим высокой
+    // глубины/точности); ниже порога используется double. Вынесено из IterateAt
+    // как именованная константа — поведение не меняет.
+    private const decimal DecimalIterationZoomThreshold = 1_500_000_000m;
+
     private readonly record struct PixelMetrics(
         int Iterations,
         double Smooth,
@@ -110,7 +115,8 @@ public static class MandelbrotFamilyRenderer
                 buffer[offset + 3] = 255;
             }
             int done = Interlocked.Increment(ref completedRows);
-            reportProgress?.Invoke(done * 100 / height);
+            if (done == height || done % Math.Max(1, height / 100) == 0)
+                reportProgress?.Invoke(done * 100 / height);
         });
     }
 
@@ -372,7 +378,11 @@ public static class MandelbrotFamilyRenderer
     {
         completedRows = 0;
         int scanRows = 0;
-        var metrics = new PixelMetrics[checked(width * height)];
+        // Между проходами храним только два поля, которые реально нужны второму проходу
+        // (сглаженное значение в double — точность бинирования обязана совпадать —
+        // и счётчик итераций), а не весь PixelMetrics: это втрое меньше памяти.
+        var smoothValues = new double[checked(width * height)];
+        var iterationValues = new int[smoothValues.Length];
         var bins = new int[state.Iterations + 1];
         object histogramLock = new();
 
@@ -387,7 +397,8 @@ public static class MandelbrotFamilyRenderer
                 if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
                 PixelMetrics value = IterateAt(state, re, im);
-                metrics[row + x] = value;
+                smoothValues[row + x] = value.Smooth;
+                iterationValues[row + x] = value.Iterations;
                 int bin = state.HistogramInputUseSmooth
                     ? Math.Clamp((int)Math.Floor(value.Smooth), 0, state.Iterations)
                     : Math.Clamp(value.Iterations, 0, state.Iterations);
@@ -421,7 +432,7 @@ public static class MandelbrotFamilyRenderer
             for (int x = 0; x < width; x++)
             {
                 if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
-                PixelMetrics value = metrics[metricRow + x];
+                PixelMetrics value = new(iterationValues[metricRow + x], smoothValues[metricRow + x], 0, 0);
                 int bin = state.HistogramInputUseSmooth
                     ? Math.Clamp((int)Math.Floor(value.Smooth), 0, state.Iterations)
                     : Math.Clamp(value.Iterations, 0, state.Iterations);
@@ -443,7 +454,7 @@ public static class MandelbrotFamilyRenderer
     }
 
     private static PixelMetrics IterateAt(MandelbrotState state, decimal re, decimal im) =>
-        state.Zoom > 1_500_000_000m
+        state.Zoom > DecimalIterationZoomThreshold
             ? IterateDecimal(state, re, im)
             : Iterate(state, (double)re, (double)im);
 
@@ -471,11 +482,18 @@ public static class MandelbrotFamilyRenderer
         double minTrap = double.MaxValue;
         double stripe = 0;
         int iterations = 0;
+        // Орбитальную ловушку и полосовую сумму держим только для их режимов окраски —
+        // в остальных режимах эти поля PixelMetrics не читаются, а Atan2/Sin на каждой
+        // итерации стоят дорого. Результат для прочих режимов бит-в-бит идентичен.
+        bool trackTrap = state.ColoringMode == MandelbrotColoringMode.OrbitTrap;
+        bool trackStripe = state.ColoringMode == MandelbrotColoringMode.StripeAverage;
 
         while (iterations < state.Iterations && zr * zr + zi * zi <= thresholdSquared)
         {
-            minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
-            stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(zi, zr));
+            if (trackTrap)
+                minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
+            if (trackStripe)
+                stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(zi, zr));
             if (estimateDistance)
                 derivative = Jacobian2.Multiply(GetIterationJacobian(state, zr, zi), derivative) +
                              parameterDerivative;
@@ -529,11 +547,15 @@ public static class MandelbrotFamilyRenderer
         decimal minTrap = decimal.MaxValue;
         double stripe = 0;
         int iterations = 0;
+        bool trackTrap = state.ColoringMode == MandelbrotColoringMode.OrbitTrap;
+        bool trackStripe = state.ColoringMode == MandelbrotColoringMode.StripeAverage;
 
         while (iterations < state.Iterations && zr * zr + zi * zi <= thresholdSquared)
         {
-            minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
-            stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2((double)zi, (double)zr));
+            if (trackTrap)
+                minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
+            if (trackStripe)
+                stripe += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2((double)zi, (double)zr));
             if (estimateDistance)
                 derivative = Jacobian2.Multiply(
                                  GetIterationJacobian(state, (double)zr, (double)zi), derivative) +
@@ -963,13 +985,26 @@ public static class MandelbrotFamilyRenderer
         return ApplyGamma(result, palette.Gamma);
     }
 
+    // Гамма-коррекция всегда получает цвет с 8-битными каналами и применяет одну и ту
+    // же формулу к значениям 0..255, поэтому кэшируем таблицу из 256 значений на поток
+    // (гамма постоянна в пределах рендера). Результат бит-в-бит совпадает с прямым
+    // вызовом Math.Pow, но вместо миллионов вызовов их всего 256 на поток.
+    [ThreadStatic] private static double _gammaLutKey;
+    [ThreadStatic] private static byte[]? _gammaLut;
+
     private static Color ApplyGamma(Color color, double gamma)
     {
-        double correction = 1 / Math.Max(0.01, gamma);
-        return Color.FromArgb(color.A,
-            (byte)(255 * Math.Pow(color.R / 255.0, correction)),
-            (byte)(255 * Math.Pow(color.G / 255.0, correction)),
-            (byte)(255 * Math.Pow(color.B / 255.0, correction)));
+        byte[]? lut = _gammaLut;
+        if (lut is null || _gammaLutKey != gamma)
+        {
+            lut = new byte[256];
+            double correction = 1 / Math.Max(0.01, gamma);
+            for (int value = 0; value < 256; value++)
+                lut[value] = (byte)(255 * Math.Pow(value / 255.0, correction));
+            _gammaLut = lut;
+            _gammaLutKey = gamma;
+        }
+        return Color.FromArgb(color.A, lut[color.R], lut[color.G], lut[color.B]);
     }
 
     private static byte Lerp(byte a, byte b, double t) => (byte)Math.Round(a + (b - a) * t);

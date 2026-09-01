@@ -161,11 +161,19 @@ public static class PhoenixRenderer
         double triangleSum = 0;
         int iteration = 0;
         int detectedPeriod = 0;
+        // Ловушку, полосовую и треугольную суммы считаем только в их режимах окраски.
+        // В прочих режимах эти поля PixelMetrics не читаются, а Atan2/Sin/Sqrt на
+        // каждой итерации дороги. Результат для прочих режимов бит-в-бит идентичен.
+        bool trackTrap = state.ColoringMode == PhoenixColoringMode.OrbitTrap;
+        bool trackStripe = state.ColoringMode == PhoenixColoringMode.StripeAverage;
+        bool trackTriangle = state.ColoringMode == PhoenixColoringMode.TriangleInequalityAverage;
 
         while (iteration < maximum && current.MagnitudeSquared <= thresholdSquared)
         {
-            minimumTrap = Math.Min(minimumTrap, OrbitTrapDistance(state, current));
-            stripeSum += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(current.Imaginary, current.Real));
+            if (trackTrap)
+                minimumTrap = Math.Min(minimumTrap, OrbitTrapDistance(state, current));
+            if (trackStripe)
+                stripeSum += 0.5 + 0.5 * Math.Sin(state.StripeFrequency * Math.Atan2(current.Imaginary, current.Real));
 
             if (detectPeriods)
             {
@@ -178,11 +186,14 @@ public static class PhoenixRenderer
             ComplexValue secondary = VariantPower(current, state.SecondaryPower, state.Variant);
             ComplexValue next = primary + c1 * secondary + c2 * previous;
 
-            double edgeLength = Distance(next, current);
-            if (double.IsFinite(edgeLength) && edgeLength > 1e-300)
+            if (trackTriangle)
             {
-                double triangleRatio = (next.Magnitude - current.Magnitude) / edgeLength;
-                triangleSum += 0.5 + 0.5 * Math.Clamp(triangleRatio, -1, 1);
+                double edgeLength = Distance(next, current);
+                if (double.IsFinite(edgeLength) && edgeLength > 1e-300)
+                {
+                    double triangleRatio = (next.Magnitude - current.Magnitude) / edgeLength;
+                    triangleSum += 0.5 + 0.5 * Math.Clamp(triangleRatio, -1, 1);
+                }
             }
 
             previous = current;
@@ -373,13 +384,25 @@ public static class PhoenixRenderer
         pixels[offset + 3] = color.A;
     }
 
+    // Таблица гаммы на 256 значений, кэшируется на поток (гамма постоянна в пределах
+    // рендера). Бит-в-бит совпадает с прямым Math.Pow, но вызовов Math.Pow — 256 на
+    // поток вместо трёх на пиксель.
+    [ThreadStatic] private static double _gammaLutKey;
+    [ThreadStatic] private static byte[]? _gammaLut;
+
     private static Color ApplyGamma(Color color, double gamma)
     {
-        double correction = 1 / Math.Max(0.01, gamma);
-        return Color.FromArgb(color.A,
-            (byte)(255 * Math.Pow(color.R / 255d, correction)),
-            (byte)(255 * Math.Pow(color.G / 255d, correction)),
-            (byte)(255 * Math.Pow(color.B / 255d, correction)));
+        byte[]? lut = _gammaLut;
+        if (lut is null || _gammaLutKey != gamma)
+        {
+            lut = new byte[256];
+            double correction = 1 / Math.Max(0.01, gamma);
+            for (int value = 0; value < 256; value++)
+                lut[value] = (byte)(255 * Math.Pow(value / 255d, correction));
+            _gammaLut = lut;
+            _gammaLutKey = gamma;
+        }
+        return Color.FromArgb(color.A, lut[color.R], lut[color.G], lut[color.B]);
     }
 
     private static double PositiveModulo(double value, double modulus)

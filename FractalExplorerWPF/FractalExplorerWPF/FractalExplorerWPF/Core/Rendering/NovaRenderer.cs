@@ -197,11 +197,24 @@ public static class NovaRenderer
         return ApplyGamma(result, palette.Gamma);
     }
 
+    // Таблица гаммы на 256 значений, кэш на поток (гамма постоянна в пределах рендера).
+    // Бит-в-бит совпадает с прямым Math.Pow.
+    [ThreadStatic] private static double _gammaLutKey;
+    [ThreadStatic] private static byte[]? _gammaLut;
+
     private static Color ApplyGamma(Color color, double gamma)
     {
-        double correction = 1 / Math.Max(0.01, gamma);
-        return Color.FromArgb(color.A, (byte)(255 * Math.Pow(color.R / 255d, correction)),
-            (byte)(255 * Math.Pow(color.G / 255d, correction)), (byte)(255 * Math.Pow(color.B / 255d, correction)));
+        byte[]? lut = _gammaLut;
+        if (lut is null || _gammaLutKey != gamma)
+        {
+            lut = new byte[256];
+            double correction = 1 / Math.Max(0.01, gamma);
+            for (int value = 0; value < 256; value++)
+                lut[value] = (byte)(255 * Math.Pow(value / 255d, correction));
+            _gammaLut = lut;
+            _gammaLutKey = gamma;
+        }
+        return Color.FromArgb(color.A, lut[color.R], lut[color.G], lut[color.B]);
     }
 
     private static bool IsFinite(Complex value) => double.IsFinite(value.Real) && double.IsFinite(value.Imaginary);
