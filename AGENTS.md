@@ -128,6 +128,16 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 
 При добавлении, удалении, переименовании или изменении назначения WPF-окна либо общего контрола обязательно обновляй этот каталог в том же изменении.
 
+## Отдельный эксперимент perturbation theory
+
+По отдельному запросу пользователя создан самостоятельный WPF / .NET 10 эксперимент в `perturbation theory/`. Он не заменяет основную WPF-версию; обычные задачи по-прежнему относятся к `FractalExplorerWPF/`.
+
+| Окно и файлы | Назначение |
+|---|---|
+| `perturbation theory/perturbation theory/perturbation theory/MainWindow.xaml` / `.xaml.cs` | Упрощённый исследователь классического Мандельброта: perturbation-рендер, три режима точности double/decimal, быстрые масштабирование и перемещение полотна, фиксированные палитры, плавная и дискретная окраска. Сохранений и редактора палитр нет. |
+
+Движок находится в `perturbation theory/perturbation theory/perturbation theory/Core/Rendering/PerturbationRenderer.cs`. Описание, ограничения точности и команды запуска — в `perturbation theory/README.md`. Численная проверка — отдельный консольный проект `perturbation theory/Verification/Verification.csproj`.
+
 ## Сборка и проверка
 
 Запускай команды из корня репозитория:
