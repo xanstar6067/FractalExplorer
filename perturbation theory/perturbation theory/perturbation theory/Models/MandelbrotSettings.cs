@@ -8,6 +8,7 @@ public enum PrecisionMode
 }
 
 public enum ColoringMode { Discrete, Smooth }
+public enum RenderEngine { Perturbation, Classic }
 
 public sealed record MandelbrotSettings
 {
@@ -17,6 +18,7 @@ public sealed record MandelbrotSettings
     public int Iterations { get; init; } = 500;
     public decimal EscapeRadius { get; init; } = 2m;
     public int Threads { get; init; }
+    public RenderEngine Engine { get; init; } = RenderEngine.Perturbation;
     public PrecisionMode Precision { get; init; } = PrecisionMode.DecimalReference;
     public ColoringMode Coloring { get; init; } = ColoringMode.Smooth;
     public BuiltInPalette Palette { get; init; } = BuiltInPalette.All[0];
@@ -41,7 +43,7 @@ public sealed record MandelbrotSettings
             throw new ArgumentException("Недопустимое число потоков.");
         if (ColorPeriod is < 1 or > 1_000_000)
             throw new ArgumentException("Период палитры должен быть от 1 до 1000000.");
-        if (!Enum.IsDefined(Precision) || !Enum.IsDefined(Coloring) || Palette is null)
+        if (!Enum.IsDefined(Engine) || !Enum.IsDefined(Precision) || !Enum.IsDefined(Coloring) || Palette is null)
             throw new ArgumentException("Не выбран режим рендера или палитра.");
     }
 

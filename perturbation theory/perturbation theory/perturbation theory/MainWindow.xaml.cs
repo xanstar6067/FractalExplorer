@@ -79,6 +79,7 @@ public partial class MainWindow : Window
         {
             (_centerX, _centerY, _zoom) = (x, y, zoom);
             UpdateCoarsePreviewTransform();
+            UpdatePrecisionHint();
         }
         ScheduleRender();
     }
@@ -104,6 +105,7 @@ public partial class MainWindow : Window
             Iterations = ReadInt(IterationsBox.Text, "Итерации"),
             EscapeRadius = ReadDecimal(ThresholdBox.Text, "Порог выхода"),
             Threads = ThreadsBox.SelectedItem is int count ? count : 0,
+            Engine = (RenderEngine)EngineBox.SelectedIndex,
             Precision = (PrecisionMode)PrecisionBox.SelectedIndex,
             Coloring = (ColoringMode)ColoringBox.SelectedIndex,
             Palette = (BuiltInPalette)PaletteBox.SelectedItem,
@@ -133,7 +135,8 @@ public partial class MainWindow : Window
             CanvasImage.Source = bitmap;
             RenderProgress.Value = 0;
             CancelButton.IsEnabled = true;
-            StatusText.Text = "Вычисление опорной орбиты…";
+            StatusText.Text = settings.Engine == RenderEngine.Classic
+                ? "Классический рендер…" : "Вычисление опорной орбиты…";
             StatisticsText.Text = "";
             UpdateCanvasStatus();
             _displayTimer.Start();
@@ -141,6 +144,14 @@ public partial class MainWindow : Window
             RenderSession current = session;
             RenderStatistics stats = await Task.Run(() =>
             {
+                if (settings.Engine == RenderEngine.Classic)
+                {
+                    var classic = new ClassicMandelbrotRenderer(settings);
+                    Volatile.Write(ref current.ReferenceReady, 1);
+                    return classic.Render(surface.PixelWidth, surface.PixelHeight, current.Cancellation.Token,
+                        tile => current.Tiles.Enqueue(tile),
+                        progress => Interlocked.Exchange(ref current.Progress, progress));
+                }
                 var renderer = new PerturbationRenderer(settings, current.Cancellation.Token);
                 Volatile.Write(ref current.ReferenceReady, 1);
                 return renderer.Render(surface.PixelWidth, surface.PixelHeight, current.Cancellation.Token,
@@ -158,8 +169,11 @@ public partial class MainWindow : Window
             _displayTimer.Stop();
             RenderProgress.Value = 100;
             StatusText.Text = $"Готово · {stats.Elapsed.TotalSeconds:N2} с · {surface.PixelWidth} × {surface.PixelHeight}";
-            StatisticsText.Text = $"Опорная орбита: {stats.ReferenceIterations:N0} ит., {stats.ReferenceTime.TotalMilliseconds:N1} мс\n" +
-                $"Переустановок базы: {stats.Rebases:N0}\nПрямой пересчёт: {stats.FallbackPixels:N0} / {stats.Pixels:N0} пикс.";
+            string engineDescription = DescribeEngine(settings.Engine, settings.Zoom, settings.Precision);
+            StatisticsText.Text = settings.Engine == RenderEngine.Classic
+                ? $"{engineDescription}\nПрямой расчёт: {stats.Pixels:N0} пикс."
+                : $"{engineDescription}\nОпорная орбита: {stats.ReferenceIterations:N0} ит., {stats.ReferenceTime.TotalMilliseconds:N1} мс\n" +
+                  $"Переустановок базы: {stats.Rebases:N0}\nПрямой пересчёт: {stats.FallbackPixels:N0} / {stats.Pixels:N0} пикс.";
             CancelButton.IsEnabled = false;
         }
         catch (OperationCanceledException)
@@ -349,13 +363,34 @@ public partial class MainWindow : Window
         ZoomBox.Text = _zoom.ToString("G29", CultureInfo.InvariantCulture);
         _updatingControls = false;
         UpdateCanvasStatus();
+        UpdatePrecisionHint();
     }
 
     private void UpdateCanvasStatus() =>
-        CanvasStatusText.Text = $"×{_zoom:G5} · {((ComboBoxItem)PrecisionBox.SelectedItem).Content}";
+        CanvasStatusText.Text = $"×{_zoom:G5} · {DescribeEngine((RenderEngine)EngineBox.SelectedIndex, _zoom, (PrecisionMode)PrecisionBox.SelectedIndex)}";
+
+    private static string DescribeEngine(RenderEngine engine, decimal zoom, PrecisionMode precision) =>
+        engine == RenderEngine.Classic
+            ? $"Классический · {(ClassicMandelbrotRenderer.UsesDecimal(zoom) ? "decimal" : "double")} (авто)"
+            : $"Perturbation · {precision switch
+            {
+                PrecisionMode.Double => "double → double",
+                PrecisionMode.DecimalReference => "decimal → double",
+                _ => "decimal → decimal"
+            }}";
 
     private void UpdatePrecisionHint()
     {
+        bool classic = EngineBox.SelectedIndex == (int)RenderEngine.Classic;
+        PrecisionBox.Visibility = classic ? Visibility.Collapsed : Visibility.Visible;
+        PrecisionLabel.Text = classic
+            ? $"Точность: {(ClassicMandelbrotRenderer.UsesDecimal(_zoom) ? "decimal" : "double")} (авто)"
+            : "Опорная орбита → отклонения";
+        if (classic)
+        {
+            PrecisionHint.Text = "Как в оригинале: double до зума 1,5×10⁹, decimal — выше.";
+            return;
+        }
         PrecisionHint.Text = PrecisionBox.SelectedIndex switch
         {
             0 => "Быстрая опорная орбита. Точность ограничена double.",

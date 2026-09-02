@@ -32,8 +32,13 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock Text="Множество Мандельброта" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                    <TextBlock Text="Perturbation · z² + c" Margin="0,4,0,14" Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
-                    <TextBlock Text="Опорная орбита → отклонения"/>
+                    <TextBlock Text="Сравнение движков · z² + c" Margin="0,4,0,14" Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+                    <TextBlock Text="Движок"/>
+                    <ComboBox x:Name="EngineBox" SelectedIndex="0" SelectionChanged="Parameter_OnChanged">
+                        <ComboBoxItem Content="Perturbation"/>
+                        <ComboBoxItem Content="Классический (из WPF)"/>
+                    </ComboBox>
+                    <TextBlock x:Name="PrecisionLabel" Text="Опорная орбита → отклонения"/>
                     <ComboBox x:Name="PrecisionBox" SelectedIndex="1" SelectionChanged="Parameter_OnChanged">
                         <ComboBoxItem Content="double → double"/>
                         <ComboBoxItem Content="decimal → double"/>
