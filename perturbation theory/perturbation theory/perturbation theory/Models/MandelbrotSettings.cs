@@ -24,17 +24,21 @@ public sealed record MandelbrotSettings
     public BuiltInPalette Palette { get; init; } = BuiltInPalette.All[0];
     public int ColorPeriod { get; init; } = 800;
 
-    // decimal is fixed precision, not arbitrary precision. Keep guard digits for navigation.
+    // decimal is fixed precision (~28 significant digits), not arbitrary precision.
+    // This experimental build deliberately lets navigation run past the point where the
+    // pixel step underflows the decimal grid, so the breakdown ("crumbling" pixels near
+    // 1e-26 … 1e-28) can be observed instead of being blocked by validation.
     public const decimal MinZoom = 0.01m;
-    public const decimal MaxZoom = 1_000_000_000_000_000_000_000_000m;
-    public const decimal MinPixelStep = 0.000000000000000000000000001m;
+    public const decimal MaxZoom = 1_000_000_000_000_000_000_000_000_000m;
+    // 1e-28 is the smallest positive value decimal can represent.
+    public const decimal MinPixelStep = 0.0000000000000000000000000001m;
 
     public void Validate()
     {
         if (CenterX is < -1000m or > 1000m || CenterY is < -1000m or > 1000m)
             throw new ArgumentException("Координаты центра должны быть от −1000 до 1000.");
         if (Zoom < MinZoom || Zoom > MaxZoom)
-            throw new ArgumentException("Приближение должно быть от 0.01 до 1e24.");
+            throw new ArgumentException("Приближение должно быть от 0.01 до 1e27.");
         if (Iterations is < 1 or > 1_000_000)
             throw new ArgumentException("Число итераций должно быть от 1 до 1000000.");
         if (EscapeRadius is < 2m or > 1000m)
@@ -60,8 +64,12 @@ public sealed record MandelbrotSettings
         ArgumentOutOfRangeException.ThrowIfLessThan(height, 1);
         if ((long)width * height > 64_000_000)
             throw new ArgumentException("Полотно слишком велико (максимум 64 млн пикселей).");
+        decimal viewWidth = 3m / Zoom;
         decimal step = PixelStep(width);
-        if (step < MinPixelStep || CenterX + step == CenterX || CenterY + step == CenterY)
+        // Only a frame that has fully collapsed (its width or pixel step underflowed decimal
+        // to zero) is unrenderable. The softer "center + step == center" precision wall is left
+        // open on purpose so the pixel breakdown can be tested past 1e-27.
+        if (viewWidth <= 0m || step <= 0m || step < MinPixelStep)
             throw new ArgumentException("Достигнут предел координат decimal для этого размера полотна. Уменьшите приближение.");
     }
 }

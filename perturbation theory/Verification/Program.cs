@@ -95,7 +95,10 @@ Run("Parameter and decimal resolution limits", () =>
     Expect<ArgumentException>(() => new MandelbrotSettings { Zoom = 0 }.Validate());
     Expect<ArgumentException>(() => new MandelbrotSettings { EscapeRadius = 1 }.Validate());
     Expect<ArgumentException>(() => new MandelbrotSettings { Iterations = 0 }.Validate());
-    Expect<ArgumentException>(() => new MandelbrotSettings { Zoom = 1e24m }.ValidateSurface(8000, 100));
+    // The frame is rejected only once the pixel step underflows decimal (< 1e-28); the
+    // softer "center + step == center" precision wall is intentionally left open now.
+    Expect<ArgumentException>(() => new MandelbrotSettings { Zoom = 1e26m }.ValidateSurface(8000, 100));
+    new MandelbrotSettings { Zoom = 1e24m }.ValidateSurface(1920, 1080);
     new MandelbrotSettings { Zoom = 1e18m }.ValidateSurface(1920, 1080);
 });
 

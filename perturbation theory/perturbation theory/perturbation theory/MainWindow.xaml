@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Мандельброт · Perturbation theory"
         Width="1180" Height="820" MinWidth="920" MinHeight="580"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="CenterScreen" Icon="Assets/Icons/PerturbationTheory.ico"
         Loaded="Window_OnLoaded" KeyDown="Window_OnKeyDown" Closing="Window_OnClosing">
     <!-- Simplified copy of the main WPF Views/MandelbrotWindow.xaml. -->
     <Window.Resources>
