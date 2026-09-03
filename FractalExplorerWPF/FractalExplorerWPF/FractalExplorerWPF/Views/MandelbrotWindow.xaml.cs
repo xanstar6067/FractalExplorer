@@ -51,8 +51,11 @@ public partial class MandelbrotWindow : Window
     private const decimal MaxZoom = 5e28m;
 
     private BitmapSource? _stableBitmap;
-    private decimal _renderedCenterX;
-    private decimal _renderedCenterY;
+    // Центр последнего готового кадра — в произвольной точности: на глубоком зуме разность
+    // «текущий центр − отрисованный центр» тонет в 28 цифрах decimal, и грубый предпросмотр
+    // (UpdateCoarsePreviewTransform) переставал двигаться. BigFloat-вычитание её сохраняет.
+    private BigFloat _renderedCenterXExact;
+    private BigFloat _renderedCenterYExact;
     private decimal _renderedZoom;
     private int _stablePixelWidth;
     private int _stablePixelHeight;
@@ -580,7 +583,13 @@ public partial class MandelbrotWindow : Window
             FlushVisualizationEvents(session, true);
             BitmapSource completed = session.Bitmap.Clone();
             completed.Freeze();
-            SetStableBitmap(completed, state.CenterX, state.CenterY, state.Zoom, logicalWidth, logicalHeight);
+            BigFloat renderedCenterX = state.CenterXExact is { Length: > 0 } exactX
+                ? BigFloat.Parse(exactX)
+                : BigFloat.FromDecimal(state.CenterX);
+            BigFloat renderedCenterY = state.CenterYExact is { Length: > 0 } exactY
+                ? BigFloat.Parse(exactY)
+                : BigFloat.FromDecimal(state.CenterY);
+            SetStableBitmap(completed, renderedCenterX, renderedCenterY, state.Zoom, logicalWidth, logicalHeight);
             CanvasImage.Source = null;
             RenderOverlay.EndSession();
             if (ReferenceEquals(_activeSession, session)) _activeSession = null;
@@ -683,15 +692,15 @@ public partial class MandelbrotWindow : Window
 
     private void SetStableBitmap(
         BitmapSource bitmap,
-        decimal centerX,
-        decimal centerY,
+        BigFloat centerXExact,
+        BigFloat centerYExact,
         decimal zoom,
         int pixelWidth,
         int pixelHeight)
     {
         _stableBitmap = bitmap;
-        _renderedCenterX = centerX;
-        _renderedCenterY = centerY;
+        _renderedCenterXExact = centerXExact;
+        _renderedCenterYExact = centerYExact;
         _renderedZoom = zoom;
         _stablePixelWidth = Math.Max(1, pixelWidth);
         _stablePixelHeight = Math.Max(1, pixelHeight);
@@ -719,7 +728,10 @@ public partial class MandelbrotWindow : Window
                 dpi.PixelsPerInchY, PixelFormats.Pbgra32);
             baked.Render(ImageLayer);
             baked.Freeze();
-            SetStableBitmap(baked, _centerX, _centerY, _zoom, logicalWidth, logicalHeight);
+            SetStableBitmap(baked,
+                _deepZoomEngaged ? _centerXExact : BigFloat.FromDecimal(_centerX),
+                _deepZoomEngaged ? _centerYExact : BigFloat.FromDecimal(_centerY),
+                _zoom, logicalWidth, logicalHeight);
         }
         catch (InvalidOperationException)
         {
@@ -735,27 +747,38 @@ public partial class MandelbrotWindow : Window
         if (_stableBitmap is null || _renderedZoom <= 0 || _zoom <= 0 ||
             _stablePixelWidth <= 0 || _stablePixelHeight <= 0) return;
 
-        decimal width = (decimal)Math.Max(1, ImageLayer.ActualWidth);
-        decimal height = (decimal)Math.Max(1, ImageLayer.ActualHeight);
-        decimal renderedViewWidth = 3m / _renderedZoom;
-        decimal currentViewWidth = 3m / _zoom;
-        decimal renderedUnitsPerPixel = renderedViewWidth / _stablePixelWidth;
-        decimal currentUnitsPerPixel = currentViewWidth / width;
-        if (renderedUnitsPerPixel <= 0 || currentUnitsPerPixel <= 0) return;
+        // Всё считается в double: на зуме > ~1e25 шаг вида (3/zoom) уходит ниже нижней
+        // границы decimal (1e-28) и прежняя decimal-версия просто выходила по guard'у, не
+        // трогая трансформацию. double держит масштаб до ~1e300, а разность центров берётся
+        // из BigFloat — единственного места, где она не съедается 28 цифрами decimal.
+        double width = Math.Max(1, ImageLayer.ActualWidth);
+        double height = Math.Max(1, ImageLayer.ActualHeight);
+        double renderedViewWidth = 3.0 / (double)_renderedZoom;
+        double currentViewWidth = 3.0 / (double)_zoom;
+        if (!double.IsFinite(renderedViewWidth) || !double.IsFinite(currentViewWidth) ||
+            renderedViewWidth <= 0 || currentViewWidth <= 0) return;
 
-        decimal renderedLeft = _renderedCenterX - renderedViewWidth / 2m;
-        decimal renderedTop = _renderedCenterY + _stablePixelHeight * renderedUnitsPerPixel / 2m;
-        decimal currentLeft = _centerX - currentViewWidth / 2m;
-        decimal currentTop = _centerY + height * currentUnitsPerPixel / 2m;
-        decimal offsetX = (renderedLeft - currentLeft) / currentUnitsPerPixel;
-        decimal offsetY = (currentTop - renderedTop) / currentUnitsPerPixel;
-        decimal destinationWidth = _stablePixelWidth * renderedUnitsPerPixel / currentUnitsPerPixel;
-        decimal destinationHeight = _stablePixelHeight * renderedUnitsPerPixel / currentUnitsPerPixel;
+        double stableAspect = (double)_stablePixelHeight / _stablePixelWidth;
+        double renderedViewHeight = renderedViewWidth * stableAspect;
+        double currentViewHeight = currentViewWidth * height / width;
+
+        double scaleX = renderedViewWidth / currentViewWidth;
+        double scaleY = renderedViewHeight / currentViewHeight;
+
+        BigFloat currentCenterX = _deepZoomEngaged ? _centerXExact : BigFloat.FromDecimal(_centerX);
+        BigFloat currentCenterY = _deepZoomEngaged ? _centerYExact : BigFloat.FromDecimal(_centerY);
+        double centerDeltaX = (_renderedCenterXExact - currentCenterX).ToDouble();
+        double centerDeltaY = (currentCenterY - _renderedCenterYExact).ToDouble();
+
+        double offsetX = centerDeltaX * width / currentViewWidth + width / 2.0 * (1 - scaleX);
+        double offsetY = centerDeltaY * height / currentViewHeight + height / 2.0 * (1 - scaleY);
+        if (!double.IsFinite(scaleX) || !double.IsFinite(scaleY) ||
+            !double.IsFinite(offsetX) || !double.IsFinite(offsetY)) return;
 
         StablePreviewImage.RenderTransform = new MatrixTransform(new Matrix(
-            (double)(destinationWidth / width), 0,
-            0, (double)(destinationHeight / height),
-            (double)offsetX, (double)offsetY));
+            scaleX, 0,
+            0, scaleY,
+            offsetX, offsetY));
         RenderOptions.SetBitmapScalingMode(StablePreviewImage, BitmapScalingMode.LowQuality);
     }
 
