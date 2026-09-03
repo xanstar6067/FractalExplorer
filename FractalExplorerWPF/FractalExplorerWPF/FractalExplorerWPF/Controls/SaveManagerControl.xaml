@@ -1,7 +1,11 @@
 <UserControl x:Class="FractalExplorerWPF.Controls.SaveManagerControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:theme="clr-namespace:FractalExplorerWPF.Theming">
+    <UserControl.Resources>
+        <sys:Double x:Key="RightActionButtonWidth">110</sys:Double>
+    </UserControl.Resources>
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280"/>
@@ -65,7 +69,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="SaveNameBox" VerticalContentAlignment="Center"/>
-                <Button x:Name="SaveButton" Grid.Column="1" Width="110" Margin="7,0,0,0"
+                <Button x:Name="SaveButton" Grid.Column="1" Width="{StaticResource RightActionButtonWidth}" Margin="7,0,0,0"
                         Content="Сохранить" Click="SaveButton_OnClick"/>
             </Grid>
         </Grid>
@@ -87,21 +91,21 @@
             </Grid.ColumnDefinitions>
             <Button x:Name="RenderPreviewButton" Width="135" Content="Рендер превью"
                     Click="RenderPreviewButton_OnClick"/>
-            <Button x:Name="LoadButton" Grid.Column="2" Width="105" Margin="0,0,7,0"
+            <Button x:Name="LoadButton" Grid.Column="2" Width="{StaticResource RightActionButtonWidth}" Margin="0,0,7,0"
                     Content="Загрузить" IsDefault="True" Click="LoadButton_OnClick"/>
-            <Button Grid.Column="3" Width="90" Content="Закрыть" IsCancel="True" Click="CloseButton_OnClick"/>
+            <Button Grid.Column="3" Width="{StaticResource RightActionButtonWidth}" Content="Закрыть" IsCancel="True" Click="CloseButton_OnClick"/>
         </Grid>
         <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Margin="0,8,0,0">
             <Grid x:Name="RenderProgressPanel" Visibility="Collapsed" Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="180"/>
-                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ProgressBar x:Name="PreviewProgress" Height="12" Minimum="0" Maximum="100"
                              VerticalAlignment="Center" IsIndeterminate="True"/>
                 <TextBlock x:Name="ProgressText" Grid.Column="1" Margin="10,0" VerticalAlignment="Center"/>
-                <Button x:Name="CancelPreviewButton" Grid.Column="2" Content="Отмена"
+                <Button x:Name="CancelPreviewButton" Grid.Column="2" Width="{StaticResource RightActionButtonWidth}" Content="Отмена"
                         Click="CancelPreviewButton_OnClick"/>
             </Grid>
             <TextBlock x:Name="StatusText" MinHeight="18" TextWrapping="Wrap"
