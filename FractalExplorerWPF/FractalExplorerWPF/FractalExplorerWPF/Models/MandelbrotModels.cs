@@ -48,7 +48,7 @@ public sealed record MandelbrotVariantDefinition(
     string Identifier,
     decimal InitialCenterX,
     decimal InitialCenterY,
-    decimal InitialZoom,
+    double InitialZoom,
     bool HasPower = false,
     bool HasInversion = false,
     decimal DefaultPower = 2.0m,
@@ -58,16 +58,16 @@ public sealed record MandelbrotVariantDefinition(
 {
     public static MandelbrotVariantDefinition For(MandelbrotVariant variant) => variant switch
     {
-        MandelbrotVariant.Mandelbrot => new(variant, "Множество Мандельброта", "Mandelbrot", -0.5m, 0, 0.75m),
-        MandelbrotVariant.BurningShip => new(variant, "Множество «Горящий корабль»", "MandelbrotBurningShip", 0, 0.5m, 0.75m),
-        MandelbrotVariant.Tricorn => new(variant, "Трикорн (Mandelbar)", "Tricorn", 0, 0, 0.75m),
-        MandelbrotVariant.Buffalo => new(variant, "Фрактал Буффало", "Buffalo", 0, 0, 0.75m),
-        MandelbrotVariant.Celtic => new(variant, "Кельтский Мандельброт", "CelticMandelbrot", 0, 0, 0.75m),
-        MandelbrotVariant.Simonobrot => new(variant, "Симоноброт", "Simonobrot", 0, 0, 0.75m, true, true, 2),
-        MandelbrotVariant.Generalized => new(variant, "Обобщённый Мандельброт", "GeneralizedMandelbrot", 0, 0, 0.75m, true, false, 3),
-        MandelbrotVariant.Julia => new(variant, "Классическое множество Жюлиа", "Julia", 0, 0, 0.75m,
+        MandelbrotVariant.Mandelbrot => new(variant, "Множество Мандельброта", "Mandelbrot", -0.5m, 0, 0.75),
+        MandelbrotVariant.BurningShip => new(variant, "Множество «Горящий корабль»", "MandelbrotBurningShip", 0, 0.5m, 0.75),
+        MandelbrotVariant.Tricorn => new(variant, "Трикорн (Mandelbar)", "Tricorn", 0, 0, 0.75),
+        MandelbrotVariant.Buffalo => new(variant, "Фрактал Буффало", "Buffalo", 0, 0, 0.75),
+        MandelbrotVariant.Celtic => new(variant, "Кельтский Мандельброт", "CelticMandelbrot", 0, 0, 0.75),
+        MandelbrotVariant.Simonobrot => new(variant, "Симоноброт", "Simonobrot", 0, 0, 0.75, true, true, 2),
+        MandelbrotVariant.Generalized => new(variant, "Обобщённый Мандельброт", "GeneralizedMandelbrot", 0, 0, 0.75, true, false, 3),
+        MandelbrotVariant.Julia => new(variant, "Классическое множество Жюлиа", "Julia", 0, 0, 0.75,
             HasJuliaConstant: true, DefaultJuliaReal: -0.800m, DefaultJuliaImaginary: 0.156m),
-        MandelbrotVariant.JuliaBurningShip => new(variant, "Горящий Корабль (Жюлиа)", "JuliaBurningShip", 0, 0, 0.75m,
+        MandelbrotVariant.JuliaBurningShip => new(variant, "Горящий Корабль (Жюлиа)", "JuliaBurningShip", 0, 0, 0.75,
             HasJuliaConstant: true, DefaultJuliaReal: -1.7551867961883m, DefaultJuliaImaginary: 0.01068m),
         _ => throw new ArgumentOutOfRangeException(nameof(variant))
     };
@@ -132,7 +132,13 @@ public sealed class MandelbrotState
     /// <summary>Точная координата центра по Y. См. <see cref="CenterXExact"/>.</summary>
     public string? CenterYExact { get; set; }
 
-    public decimal Zoom { get; set; } = 1;
+    /// <summary>
+    /// Коэффициент масштабирования. <see cref="double"/>, а не <see cref="decimal"/>: сам зум —
+    /// это множитель, 15–16 значащих цифр которого с запасом хватает, а верхняя граница
+    /// decimal (~7.9e28) была единственным, что мешало «второму двигателю» уходить глубже.
+    /// Точность позиции обеспечивают <see cref="CenterXExact"/>/<see cref="CenterYExact"/>.
+    /// </summary>
+    public double Zoom { get; set; } = 1;
     public int Iterations { get; set; } = 500;
     public decimal Threshold { get; set; } = 2;
     [JsonIgnore]

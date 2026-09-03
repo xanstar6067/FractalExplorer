@@ -121,7 +121,7 @@ public partial class JuliaConstantPickerWindow : Window
         Variant = _sourceVariant,
         CenterX = _centerX,
         CenterY = _centerY,
-        Zoom = _zoom,
+        Zoom = (double)_zoom,
         Iterations = 110,
         Threshold = 2,
         Threads = 0,

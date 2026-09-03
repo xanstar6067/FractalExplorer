@@ -38,7 +38,7 @@ public partial class MandelbrotWindow : Window
     private Point _lastPanPoint;
     private decimal _centerX;
     private decimal _centerY;
-    private decimal _zoom;
+    private double _zoom;
 
     // «Второй двигатель»: при _zoom >= DeepZoomThreshold центр ведётся здесь, в
     // произвольной точности, а _centerX/_centerY держатся как ближайшее decimal-приближение
@@ -47,8 +47,21 @@ public partial class MandelbrotWindow : Window
     private BigFloat _centerYExact;
     private bool _deepZoomEngaged;
 
-    private const decimal DeepZoomThreshold = 1e25m;
-    private const decimal MaxZoom = 5e28m;
+    // Порог включения «второго двигателя» (пертурбация + BigFloat-центр).
+    private const double DeepZoomThreshold = 1e25;
+
+    // Верхняя граница зума. Раньше 5e28 — упор в тип decimal. Теперь зум — double, а
+    // пертурбационный движок с BigFloat-опорной орбитой и double-δ уверенно работает
+    // далеко за 1e28; 1e50 берётся с большим запасом (за ним для чистоты картинки уже
+    // нужна масштабированная δ — это следующий шаг, см. заметку в памяти проекта).
+    private const double MaxZoom = 1e50;
+
+    // Пертурбационный «второй двигатель» работает только для Mandelbrot и Julia. Остальные
+    // варианты по-прежнему обслуживает decimal-ступень, для них потолок остаётся прежним —
+    // иначе зум «уезжал» бы за предел decimal, а картинка стояла бы на месте.
+    private double EffectiveMaxZoom => _definition.Variant is MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia
+        ? MaxZoom
+        : 5e28;
 
     private BitmapSource? _stableBitmap;
     // Центр последнего готового кадра — в произвольной точности: на глубоком зуме разность
@@ -56,7 +69,7 @@ public partial class MandelbrotWindow : Window
     // (UpdateCoarsePreviewTransform) переставал двигаться. BigFloat-вычитание её сохраняет.
     private BigFloat _renderedCenterXExact;
     private BigFloat _renderedCenterYExact;
-    private decimal _renderedZoom;
+    private double _renderedZoom;
     private int _stablePixelWidth;
     private int _stablePixelHeight;
     private RenderSession? _activeSession;
@@ -142,7 +155,7 @@ public partial class MandelbrotWindow : Window
 
     public MandelbrotState CaptureState(string saveName)
     {
-        int iterations = ReadInt(IterationsBox.Text, "итерации", 50, 100_000);
+        int iterations = ReadInt(IterationsBox.Text, "итерации", 50, 1_000_000);
         decimal threshold = ReadDecimal(ThresholdBox.Text, "порог выхода", 0.1m, 1_000m);
         decimal power = _definition.HasPower
             ? ReadDecimal(PowerBox.Text, "степень", _definition.Variant == MandelbrotVariant.Simonobrot ? -12m : 0.1m, 12m)
@@ -220,7 +233,7 @@ public partial class MandelbrotWindow : Window
         _updatingControls = true;
         _centerX = state.CenterX;
         _centerY = state.CenterY;
-        _zoom = Math.Clamp(state.Zoom, 0.01m, MaxZoom);
+        _zoom = Math.Clamp(state.Zoom, 0.01, EffectiveMaxZoom);
         _deepZoomEngaged = false;
         if (state.CenterXExact is { Length: > 0 } exactX && state.CenterYExact is { Length: > 0 } exactY)
         {
@@ -328,9 +341,9 @@ public partial class MandelbrotWindow : Window
 
     private void ZoomBox_OnTextChanged(object sender, EventArgs e)
     {
-        if (!_updatingControls && TryReadDecimal(ZoomBox.Text, out decimal zoom) && zoom > 0)
+        if (!_updatingControls && TryReadDouble(ZoomBox.Text, out double zoom) && double.IsFinite(zoom) && zoom > 0)
         {
-            _zoom = Math.Clamp(zoom, 0.01m, MaxZoom);
+            _zoom = Math.Clamp(zoom, 0.01, EffectiveMaxZoom);
             SyncDeepZoomState();
             ScheduleRender();
         }
@@ -400,7 +413,7 @@ public partial class MandelbrotWindow : Window
             Variant = variant,
             CenterX = centerX,
             CenterY = centerY,
-            Zoom = zoom,
+            Zoom = (double)zoom,
             Iterations = 110,
             Threshold = 2,
             Threads = 0,
@@ -694,7 +707,7 @@ public partial class MandelbrotWindow : Window
         BitmapSource bitmap,
         BigFloat centerXExact,
         BigFloat centerYExact,
-        decimal zoom,
+        double zoom,
         int pixelWidth,
         int pixelHeight)
     {
@@ -753,8 +766,8 @@ public partial class MandelbrotWindow : Window
         // из BigFloat — единственного места, где она не съедается 28 цифрами decimal.
         double width = Math.Max(1, ImageLayer.ActualWidth);
         double height = Math.Max(1, ImageLayer.ActualHeight);
-        double renderedViewWidth = 3.0 / (double)_renderedZoom;
-        double currentViewWidth = 3.0 / (double)_zoom;
+        double renderedViewWidth = 3.0 / _renderedZoom;
+        double currentViewWidth = 3.0 / _zoom;
         if (!double.IsFinite(renderedViewWidth) || !double.IsFinite(currentViewWidth) ||
             renderedViewWidth <= 0 || currentViewWidth <= 0) return;
 
@@ -905,14 +918,14 @@ public partial class MandelbrotWindow : Window
         double fractionX = mouse.X / width - 0.5;
         double fractionY = 0.5 - mouse.Y / height;
 
-        decimal previousZoom = _zoom;
-        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.5m : 1m / 1.5m), 0.01m, MaxZoom);
+        double previousZoom = _zoom;
+        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.5 : 1.0 / 1.5), 0.01, EffectiveMaxZoom);
 
         // Точка под курсором остаётся на месте: сдвиг центра = f · (viewOld − viewNew).
         // Сам сдвиг мал и укладывается в double; ApplyCenterShift кладёт его в BigFloat-центр
         // в глубоком режиме и в decimal — как раньше — в обычном.
-        double previousViewWidth = 3.0 / (double)previousZoom;
-        double currentViewWidth = 3.0 / (double)_zoom;
+        double previousViewWidth = 3.0 / previousZoom;
+        double currentViewWidth = 3.0 / _zoom;
         double previousViewHeight = previousViewWidth * height / width;
         double currentViewHeight = currentViewWidth * height / width;
         double shiftX = fractionX * (previousViewWidth - currentViewWidth);
@@ -942,7 +955,7 @@ public partial class MandelbrotWindow : Window
         Point current = e.GetPosition(CanvasHost);
         double width = Math.Max(1, CanvasHost.ActualWidth);
         double height = Math.Max(1, CanvasHost.ActualHeight);
-        double viewWidth = 3.0 / (double)_zoom;
+        double viewWidth = 3.0 / _zoom;
         double viewHeight = viewWidth * height / width;
         double shiftX = (_lastPanPoint.X - current.X) / width * viewWidth;
         double shiftY = (current.Y - _lastPanPoint.Y) / height * viewHeight;

@@ -65,7 +65,7 @@ public static partial class MandelbrotFamilyRenderer
 
         bool isJulia = state.Variant == MandelbrotVariant.Julia;
         double escapeSquared = (double)(state.Threshold * state.Threshold);
-        double viewWidth = 3.0 / (double)state.Zoom;
+        double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * canvasHeight / canvasWidth;
 
         int stride = checked(tile.Width * 4);
@@ -113,7 +113,7 @@ public static partial class MandelbrotFamilyRenderer
 
         bool isJulia = state.Variant == MandelbrotVariant.Julia;
         double escapeSquared = (double)(state.Threshold * state.Threshold);
-        double viewWidth = 3.0 / (double)state.Zoom;
+        double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * height / width;
 
         int threads = state.Threads <= 0 ? Environment.ProcessorCount : state.Threads;
@@ -346,7 +346,7 @@ public static partial class MandelbrotFamilyRenderer
     {
         int stride = checked(tile.Width * 4);
         var buffer = new byte[checked(stride * tile.Height)];
-        decimal viewWidth = 3m / System.Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewWidth = DecimalViewWidth(state.Zoom);
         decimal viewHeight = viewWidth * canvasHeight / canvasWidth;
 
         for (int localY = 0; localY < tile.Height; localY++)
@@ -386,7 +386,7 @@ public static partial class MandelbrotFamilyRenderer
         {
             MaxDegreeOfParallelism = System.Math.Clamp(threads, 1, Environment.ProcessorCount)
         };
-        decimal viewWidth = 3m / System.Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewWidth = DecimalViewWidth(state.Zoom);
         decimal viewHeight = viewWidth * height / width;
         int completedRows = 0;
 

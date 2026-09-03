@@ -166,7 +166,7 @@ internal static class Program
         {
             CenterX = -1.2628848671045503000020782246m,
             CenterY = 0.0409687601493310685285376264m,
-            Zoom = 57607143988620998798774543.776m,
+            Zoom = 5.7607143988620999e25,
             Iterations = 4500, Threads = 2,
             Palette = new MandelbrotPalette { Colors = [Colors.White, Colors.White], InteriorColor = Colors.Black }
         };

@@ -196,7 +196,7 @@ public static class PresetManager
         return new MandelbrotState
         {
             SaveName = name, Timestamp = DateTime.MinValue, Variant = variant, CenterX = centerX, CenterY = centerY,
-            Zoom = zoom, Iterations = iterations, Threshold = 2m, ColoringMode = MandelbrotColoringMode.Smooth,
+            Zoom = (double)zoom, Iterations = iterations, Threshold = 2m, ColoringMode = MandelbrotColoringMode.Smooth,
             PaletteName = paletteName, Palette = palette, Power = power, UseInversion = useInversion,
             JuliaCReal = juliaReal, JuliaCImaginary = juliaImaginary, InteriorColor = palette.InteriorColor
         };

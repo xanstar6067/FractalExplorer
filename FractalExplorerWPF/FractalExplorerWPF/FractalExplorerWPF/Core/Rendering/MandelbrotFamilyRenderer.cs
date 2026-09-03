@@ -11,12 +11,24 @@ public static partial class MandelbrotFamilyRenderer
     // Порог зума, начиная с которого итерация ведётся в decimal (режим высокой
     // глубины/точности); ниже порога используется double. Вынесено из IterateAt
     // как именованная константа — поведение не меняет.
-    private const decimal DecimalIterationZoomThreshold = 1_500_000_000m;
+    private const double DecimalIterationZoomThreshold = 1_500_000_000d;
 
     // Третья ступень: начиная с этого зума (переход e+24 → e+25) плоский brute-force
     // в decimal уступает место «второму двигателю» — пертурбационному рендеру с
     // опорной орбитой в BigFloat. Две ступени ниже (double и decimal) не затрагиваются.
-    private const decimal PerturbationZoomThreshold = 1e25m;
+    private const double PerturbationZoomThreshold = 1e25;
+
+    // Ширина области в decimal для «плоских» ступеней (double- и decimal-итерация, а также
+    // запасной brute-force при вырожденной опорной орбите). Зум зажимается по верхней
+    // границе decimal: всё, что выше 1e25, обслуживает пертурбационный движок, а этот путь
+    // на таком зуме и раньше упирался в старый MaxZoom, так что ничего не теряется.
+    private const decimal DecimalViewWidthMinimum = 0.000000000000001m;
+
+    private static decimal DecimalViewWidth(double zoom)
+    {
+        double clamped = double.IsFinite(zoom) ? Math.Min(zoom, 7.9e28) : 7.9e28;
+        return 3m / Math.Max((decimal)clamped, DecimalViewWidthMinimum);
+    }
 
     private readonly record struct PixelMetrics(
         int Iterations,
@@ -40,7 +52,7 @@ public static partial class MandelbrotFamilyRenderer
 
         int stride = checked(tile.Width * 4);
         var buffer = new byte[checked(stride * tile.Height)];
-        decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewWidth = DecimalViewWidth(state.Zoom);
         decimal viewHeight = viewWidth * canvasHeight / canvasWidth;
 
         for (int localY = 0; localY < tile.Height; localY++)
@@ -93,7 +105,7 @@ public static partial class MandelbrotFamilyRenderer
         {
             MaxDegreeOfParallelism = Math.Clamp(threads, 1, Environment.ProcessorCount)
         };
-        decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewWidth = DecimalViewWidth(state.Zoom);
         decimal viewHeight = viewWidth * height / width;
         int completedRows = 0;
 
@@ -146,7 +158,7 @@ public static partial class MandelbrotFamilyRenderer
         int sampleWidth = checked(tile.Width + 2);
         int sampleHeight = checked(tile.Height + 2);
         var distances = new float[checked(sampleWidth * sampleHeight)];
-        decimal viewWidth = 3m / Math.Max(state.Zoom, 0.000000000000001m);
+        decimal viewWidth = DecimalViewWidth(state.Zoom);
         decimal viewHeight = viewWidth * canvasHeight / canvasWidth;
         double pixelSize = (double)(viewWidth / canvasWidth);
 

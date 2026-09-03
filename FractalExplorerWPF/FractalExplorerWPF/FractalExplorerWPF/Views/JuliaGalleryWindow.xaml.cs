@@ -138,7 +138,7 @@ public partial class JuliaGalleryWindow : Window
                         Variant = _variant,
                         CenterX = 0,
                         CenterY = 0,
-                        Zoom = 0.75m,
+                        Zoom = 0.75,
                         JuliaCReal = cell.Real,
                         JuliaCImaginary = cell.Imaginary,
                         Iterations = parameters.Iterations,
