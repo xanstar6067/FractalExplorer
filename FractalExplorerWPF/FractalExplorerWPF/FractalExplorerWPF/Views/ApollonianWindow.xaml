@@ -55,8 +55,8 @@
                 MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
                 MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
             <Grid>
-                <Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/>
-                <Image x:Name="CurrentImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Image x:Name="CurrentImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/></Grid>
                 <Border x:Name="RenderBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000" Visibility="Collapsed"><TextBlock x:Name="RenderBadgeText" Foreground="White"/></Border>
             </Grid>
         </Border>

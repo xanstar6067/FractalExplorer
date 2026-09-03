@@ -257,13 +257,12 @@ public partial class MandelbrotWindow : Window
         ScheduleRender();
     }
 
-    public Task<BitmapSource> RenderStatePreviewAsync(MandelbrotState state, int width, int height, CancellationToken token)
-    {
-        MandelbrotState preview = CloneState(state);
-        preview.Iterations = Math.Min(preview.Iterations, 600);
-        preview.Threads = 0;
-        return RenderBitmapAsync(preview, width, height, 1, token, null);
-    }
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StablePreviewImage, CanvasImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        MandelbrotState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(CloneState(state), width, height, 1, token, progress);
 
     private MandelbrotColoringMode SelectedColoringMode =>
         ColoringModeBox.SelectedIndex < 0 ? MandelbrotColoringMode.Smooth : (MandelbrotColoringMode)ColoringModeBox.SelectedIndex;

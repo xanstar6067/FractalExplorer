@@ -13,6 +13,7 @@ public partial class SaveManagerControl : UserControl
     public event EventHandler? DeleteRequested;
     public event EventHandler? LoadRequested;
     public event EventHandler? RenderPreviewRequested;
+    public event EventHandler? CancelPreviewRequested;
     public event EventHandler? PointsOfInterestModeChanged;
     public event EventHandler? CloseRequested;
 
@@ -47,20 +48,35 @@ public partial class SaveManagerControl : UserControl
         if (!available) PointsOfInterestCheckBox.IsChecked = false;
     }
 
-    public void SetPreview(ImageSource? image)
+    public void SetPreview(ImageSource? image, string emptyText = "Выберите сохранение")
     {
         PreviewImage.Source = image;
+        EmptyPreviewText.Text = emptyText;
         EmptyPreviewText.Visibility = image is null ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public void SetDetails(string text) => DetailsText.Text = text;
 
-    public void SetStatus(string text) => StatusText.Text = text;
+    public void SetStatus(string text)
+    {
+        StatusText.Text = text;
+        StatusText.ToolTip = text;
+    }
 
     public void SetBusy(bool busy)
     {
-        PreviewProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        RenderProgressPanel.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        if (busy) SetRenderProgress(null, TimeSpan.Zero);
     }
+
+    public void SetRenderProgress(int? percent, TimeSpan elapsed)
+    {
+        PreviewProgress.IsIndeterminate = !percent.HasValue;
+        PreviewProgress.Value = percent ?? 0;
+        ProgressText.Text = $"{(percent.HasValue ? $"{percent}%" : "Вычисление...")} · {elapsed.TotalSeconds:F1} сек.";
+    }
+
+    public void SetCancelling() => CancelPreviewButton.IsEnabled = false;
 
     public void SetButtonStates(bool hasSelection, bool canEdit, bool isRendering)
     {
@@ -68,7 +84,8 @@ public partial class SaveManagerControl : UserControl
         DeleteButton.IsEnabled = hasSelection && canEdit;
         SaveButton.IsEnabled = canEdit;
         SaveNameBox.IsEnabled = canEdit;
-        RenderPreviewButton.IsEnabled = hasSelection && canEdit && !isRendering;
+        RenderPreviewButton.IsEnabled = hasSelection && !isRendering;
+        CancelPreviewButton.IsEnabled = isRendering;
     }
 
     private void SavesList_OnSelectionChanged(object sender, SelectionChangedEventArgs e) =>
@@ -81,6 +98,7 @@ public partial class SaveManagerControl : UserControl
     private void DeleteButton_OnClick(object sender, RoutedEventArgs e) => DeleteRequested?.Invoke(this, EventArgs.Empty);
     private void LoadButton_OnClick(object sender, RoutedEventArgs e) => LoadRequested?.Invoke(this, EventArgs.Empty);
     private void RenderPreviewButton_OnClick(object sender, RoutedEventArgs e) => RenderPreviewRequested?.Invoke(this, EventArgs.Empty);
+    private void CancelPreviewButton_OnClick(object sender, RoutedEventArgs e) => CancelPreviewRequested?.Invoke(this, EventArgs.Empty);
     private void PointsOfInterestCheckBox_OnChanged(object sender, RoutedEventArgs e) => PointsOfInterestModeChanged?.Invoke(this, EventArgs.Empty);
     private void CloseButton_OnClick(object sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
 }

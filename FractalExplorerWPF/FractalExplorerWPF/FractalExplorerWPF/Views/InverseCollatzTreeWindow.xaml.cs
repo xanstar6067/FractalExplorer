@@ -135,14 +135,12 @@ public partial class InverseCollatzTreeWindow : Window
         ScheduleRender();
     }
 
-    public Task<BitmapSource> RenderStatePreviewAsync(InverseCollatzState state, int width, int height,
-        CancellationToken token)
-    {
-        InverseCollatzState preview = CloneState(state);
-        preview.MaxNodes = Math.Min(preview.MaxNodes, 120_000);
-        preview.VisibleDepth = Math.Min(preview.VisibleDepth, preview.Depth);
-        return RenderIndependentBitmapAsync(preview, width, height, 1, token, null);
-    }
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, CanvasImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        InverseCollatzState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderIndependentBitmapAsync(CloneState(state), width, height, 1, token, progress);
 
     private void TreeParameter_OnChanged(object sender, EventArgs e)
     {

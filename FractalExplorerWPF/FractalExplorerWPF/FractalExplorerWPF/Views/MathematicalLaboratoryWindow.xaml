@@ -115,8 +115,8 @@
                 MouseRightButtonDown="CanvasHost_OnMouseRightButtonDown"
                 MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
             <Grid>
-                <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"
-                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"
+                       RenderOptions.BitmapScalingMode="HighQuality"/></Grid>
                 <Border x:Name="RenderBadge" HorizontalAlignment="Right" VerticalAlignment="Top"
                         Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000"
                         Visibility="Collapsed">

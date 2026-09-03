@@ -141,12 +141,12 @@ public partial class DomainColoringWindow : Window
         ScheduleRender();
     }
 
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StablePreviewImage, CanvasImage);
+
     public Task<BitmapSource> RenderStatePreviewAsync(
-        DomainColoringState state,
-        int width,
-        int height,
-        CancellationToken token) =>
-        RenderBitmapAsync(state, width, height, 1, token, null);
+        DomainColoringState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state, width, height, 1, token, progress);
 
     private int FindPresetIndex(string formula)
     {

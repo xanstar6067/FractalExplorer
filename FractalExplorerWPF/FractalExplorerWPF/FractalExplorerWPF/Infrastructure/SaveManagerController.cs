@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using FractalExplorerWPF.Controls;
 
 namespace FractalExplorerWPF.Infrastructure;
@@ -13,8 +15,9 @@ public sealed class SaveManagerConfiguration<TState> where TState : class
     public required Func<List<TState>> LoadStates { get; init; }
     public required Action<IReadOnlyCollection<TState>> SaveStates { get; init; }
     public required Func<string, TState> CaptureState { get; init; }
+    public required Func<int, int, BitmapSource?> CapturePreview { get; init; }
     public required Action<TState> LoadState { get; init; }
-    public required Func<TState, int, int, CancellationToken, Task<BitmapSource>> RenderPreviewAsync { get; init; }
+    public required Func<TState, int, int, CancellationToken, IProgress<int>?, Task<BitmapSource>> RenderPreviewAsync { get; init; }
     public required Func<TState, string> GetName { get; init; }
     public required Func<TState, DateTime> GetTimestamp { get; init; }
     public required Func<TState, string> GetDetails { get; init; }
@@ -50,6 +53,7 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         _view.DeleteRequested += View_OnDeleteRequested;
         _view.LoadRequested += View_OnLoadRequested;
         _view.RenderPreviewRequested += View_OnRenderPreviewRequested;
+        _view.CancelPreviewRequested += View_OnCancelPreviewRequested;
         _view.PointsOfInterestModeChanged += View_OnPointsOfInterestModeChanged;
         _view.CloseRequested += View_OnCloseRequested;
         _view.SetPointsOfInterestAvailable(configuration.PointsOfInterest.Count > 0);
@@ -96,8 +100,9 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         UpdateButtonStates();
     }
 
-    private async void View_OnSelectionChanged(object? sender, EventArgs e)
+    private void View_OnSelectionChanged(object? sender, EventArgs e)
     {
+        bool wasRendering = _isRendering;
         CancelPreview();
         if (SelectedEntry is not { } entry)
         {
@@ -108,16 +113,16 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
 
         _view.SaveName = _configuration.GetName(entry.State);
         _view.SetDetails(_configuration.GetDetails(entry.State));
-        _view.SetStatus(string.Empty);
+        _view.SetStatus(wasRendering ? "Рендер отменён при смене сохранения." : string.Empty);
         UpdateButtonStates();
 
-        if (!entry.IsPointOfInterest && TryLoadCachedPreview(entry.State, out BitmapSource? cached))
+        if (TryLoadCachedPreview(entry, out BitmapSource? cached))
         {
             _view.SetPreview(cached);
             return;
         }
 
-        await RenderSelectedPreviewAsync(manual: false);
+        _view.SetPreview(null, "Превью отсутствует. Нажмите «Рендер превью».");
     }
 
     private void View_OnItemDoubleClicked(object? sender, EventArgs e) => LoadSelected();
@@ -143,19 +148,38 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
 
         try
         {
+            CancelPreview();
+            UpdateButtonStates();
             TState state = _configuration.CaptureState(name);
-            if (existingIndex >= 0)
+            BitmapSource? snapshot = null;
+            string? captureError = null;
+            try
             {
-                DeleteCachedPreview(_states[existingIndex]);
-                _states[existingIndex] = state;
+                snapshot = _configuration.CapturePreview(_configuration.PreviewWidth, _configuration.PreviewHeight);
             }
-            else
+            catch (Exception ex)
             {
-                _states.Add(state);
+                captureError = ex.Message;
             }
 
-            _configuration.SaveStates(_states);
+            TState? previous = existingIndex >= 0 ? _states[existingIndex] : null;
+            var updated = new List<TState>(_states);
+            if (existingIndex >= 0) updated[existingIndex] = state;
+            else updated.Add(state);
+            _configuration.SaveStates(updated);
+            _states = updated;
+            var savedEntry = new SaveManagerEntry<TState>(state, name, false);
+            bool previewSaved = snapshot is not null && SaveCachedPreview(savedEntry, snapshot);
+            if (previous is not null && GetPreviewPath(new(previous, name, false)) != GetPreviewPath(savedEntry))
+                DeleteCachedPreview(new(previous, name, false));
+            // A failed capture must not leave an unrelated image when overwriting the same key.
+            if (!previewSaved) DeleteCachedPreview(savedEntry);
             RefreshStates(name);
+            if (snapshot is not null) _view.SetPreview(snapshot);
+            _view.SetStatus(previewSaved ? "Сохранено с текущим кадром."
+                : captureError is not null ? $"Сохранено без превью: {captureError}"
+                : snapshot is null ? "Сохранено без превью: на полотне нет кадра."
+                : "Состояние сохранено, но PNG-превью записать не удалось.");
         }
         catch (Exception ex)
         {
@@ -175,9 +199,12 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
 
         try
         {
-            _states.Remove(entry.State);
-            _configuration.SaveStates(_states);
-            DeleteCachedPreview(entry.State);
+            CancelPreview();
+            UpdateButtonStates();
+            var updated = _states.Where(state => !ReferenceEquals(state, entry.State)).ToList();
+            _configuration.SaveStates(updated);
+            _states = updated;
+            DeleteCachedPreview(entry);
             RefreshStates();
         }
         catch (Exception ex)
@@ -203,19 +230,26 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
     }
 
     private async void View_OnRenderPreviewRequested(object? sender, EventArgs e) =>
-        await RenderSelectedPreviewAsync(manual: true);
+        await RenderSelectedPreviewAsync();
+
+    private void View_OnCancelPreviewRequested(object? sender, EventArgs e)
+    {
+        if (_previewCts is not { } cts || cts.IsCancellationRequested) return;
+        cts.Cancel();
+        _view.SetCancelling();
+        _view.SetStatus("Отмена рендера...");
+    }
 
     private void View_OnPointsOfInterestModeChanged(object? sender, EventArgs e)
     {
-        CancelPreview();
         PopulateEntries();
     }
 
     private void View_OnCloseRequested(object? sender, EventArgs e) => _window.Close();
 
-    private async Task RenderSelectedPreviewAsync(bool manual)
+    private async Task RenderSelectedPreviewAsync()
     {
-        if (SelectedEntry is not { } entry || manual && entry.IsPointOfInterest) return;
+        if (_disposed || _isRendering || SelectedEntry is not { } entry) return;
 
         CancelPreview();
         var cts = new CancellationTokenSource();
@@ -224,39 +258,50 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         _view.SetBusy(true);
         _view.SetStatus("Рендер превью...");
         UpdateButtonStates();
+        var stopwatch = Stopwatch.StartNew();
+        int? percent = null;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        timer.Tick += (_, _) =>
+        {
+            if (ReferenceEquals(_previewCts, cts)) _view.SetRenderProgress(percent, stopwatch.Elapsed);
+        };
+        var progress = new Progress<int>(value =>
+        {
+            if (!ReferenceEquals(_previewCts, cts) || cts.IsCancellationRequested) return;
+            percent = Math.Max(percent ?? 0, Math.Clamp(value, 0, 100));
+            _view.SetRenderProgress(percent, stopwatch.Elapsed);
+        });
+        timer.Start();
 
         try
         {
             BitmapSource preview = await _configuration.RenderPreviewAsync(
-                entry.State, _configuration.PreviewWidth, _configuration.PreviewHeight, cts.Token);
-            if (cts.Token.IsCancellationRequested)
-            {
-                if (ReferenceEquals(_previewCts, cts) && manual) _view.SetStatus("Рендер отменён.");
-                return;
-            }
+                entry.State, _configuration.PreviewWidth, _configuration.PreviewHeight, cts.Token, progress);
+            cts.Token.ThrowIfCancellationRequested();
             if (!ReferenceEquals(_previewCts, cts)) return;
 
             if (!preview.IsFrozen && preview.CanFreeze) preview.Freeze();
             _view.SetPreview(preview);
-            bool cacheSaved = entry.IsPointOfInterest || SaveCachedPreview(entry.State, preview);
+            bool cacheSaved = SaveCachedPreview(entry, preview);
             _view.SetStatus(cacheSaved
-                ? manual ? "Превью обновлено." : string.Empty
-                : "Превью показано, но не удалось сохранить его кэш.");
+                ? $"Превью обновлено за {stopwatch.Elapsed.TotalSeconds:F1} сек."
+                : "Превью показано, но PNG записать не удалось.");
         }
         catch (OperationCanceledException)
         {
-            if (ReferenceEquals(_previewCts, cts) && manual) _view.SetStatus("Рендер отменён.");
+            if (ReferenceEquals(_previewCts, cts)) _view.SetStatus("Рендер отменён. Превью не изменено.");
         }
         catch (Exception ex)
         {
             if (ReferenceEquals(_previewCts, cts))
             {
-                _view.SetStatus("Ошибка рендера превью.");
-                MessageBox.Show(_window, ex.Message, "Ошибка превью", MessageBoxButton.OK, MessageBoxImage.Error);
+                _view.SetStatus($"Ошибка рендера превью: {ex.Message}. Прежнее превью сохранено.");
             }
         }
         finally
         {
+            timer.Stop();
+            stopwatch.Stop();
             if (ReferenceEquals(_previewCts, cts))
             {
                 _previewCts = null;
@@ -295,18 +340,20 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         _view.SetBusy(false);
     }
 
-    private string GetPreviewPath(TState state)
+    private string GetPreviewPath(SaveManagerEntry<TState> entry)
     {
+        TState state = entry.State;
         string directory = Path.Combine(AppPaths.SavesDirectory, "SavePrevData", MakeSafeFileName(_configuration.FractalIdentifier));
+        if (entry.IsPointOfInterest) directory = Path.Combine(directory, "PointsOfInterest");
         string name = MakeSafeFileName(_configuration.GetName(state));
         string timestamp = _configuration.GetTimestamp(state).ToString("yyyyMMdd_HHmmss_fffffff", CultureInfo.InvariantCulture);
         return Path.Combine(directory, $"{name}_{timestamp}.png");
     }
 
-    private bool TryLoadCachedPreview(TState state, out BitmapSource? preview)
+    private bool TryLoadCachedPreview(SaveManagerEntry<TState> entry, out BitmapSource? preview)
     {
         preview = null;
-        string path = GetPreviewPath(state);
+        string path = GetPreviewPath(entry);
         if (!File.Exists(path)) return false;
 
         try
@@ -327,9 +374,9 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         }
     }
 
-    private bool SaveCachedPreview(TState state, BitmapSource preview)
+    private bool SaveCachedPreview(SaveManagerEntry<TState> entry, BitmapSource preview)
     {
-        string path = GetPreviewPath(state);
+        string path = GetPreviewPath(entry);
         string? directory = Path.GetDirectoryName(path);
         if (directory is null) return false;
 
@@ -356,11 +403,11 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         }
     }
 
-    private void DeleteCachedPreview(TState state)
+    private void DeleteCachedPreview(SaveManagerEntry<TState> entry)
     {
         try
         {
-            string path = GetPreviewPath(state);
+            string path = GetPreviewPath(entry);
             if (File.Exists(path)) File.Delete(path);
         }
         catch (Exception)
@@ -388,6 +435,7 @@ public sealed class SaveManagerController<TState> : IDisposable where TState : c
         _view.DeleteRequested -= View_OnDeleteRequested;
         _view.LoadRequested -= View_OnLoadRequested;
         _view.RenderPreviewRequested -= View_OnRenderPreviewRequested;
+        _view.CancelPreviewRequested -= View_OnCancelPreviewRequested;
         _view.PointsOfInterestModeChanged -= View_OnPointsOfInterestModeChanged;
         _view.CloseRequested -= View_OnCloseRequested;
     }

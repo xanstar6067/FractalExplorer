@@ -243,7 +243,6 @@ public static class GrayScottRenderer
         IProgress<int>? progress = null)
     {
         GrayScottState previewState = state.Clone();
-        previewState.GridSize = Math.Clamp(Math.Min(state.GridSize, 192), 96, 192);
         var simulation = new GrayScottSimulation(previewState);
         const int totalSteps = 900;
         const int batch = 30;

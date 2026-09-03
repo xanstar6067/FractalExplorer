@@ -77,7 +77,7 @@
                 BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True"
                 MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown" MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
             <Grid>
-                <Image x:Name="FrameImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="FrameImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/></Grid>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000">
                     <TextBlock x:Name="FrameBadgeText" Foreground="White" Text="0 FPS · шаг 0"/>
                 </Border>

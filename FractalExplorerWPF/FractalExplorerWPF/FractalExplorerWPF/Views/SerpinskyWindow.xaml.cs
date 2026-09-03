@@ -113,17 +113,12 @@ public partial class SerpinskyWindow : Window
         ScheduleRender();
     }
 
-    public async Task<BitmapSource> RenderStatePreviewAsync(
-        SerpinskySaveState state,
-        int width,
-        int height,
-        CancellationToken cancellationToken)
-    {
-        int iterations = state.RenderMode == SerpinskyRenderMode.Geometric
-            ? Math.Min(state.Iterations, 6)
-            : Math.Min(state.Iterations, 20_000);
-        return await RenderBitmapAsync(state, width, height, iterations, 1, cancellationToken, null);
-    }
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, CanvasImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        SerpinskySaveState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state, width, height, state.Iterations, 1, token, progress);
 
     private SerpinskyRenderMode SelectedRenderMode =>
         RenderModeBox.SelectedIndex == 1

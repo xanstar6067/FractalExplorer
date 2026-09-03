@@ -205,31 +205,12 @@ public partial class MathematicalLaboratoryWindow : Window
         ScheduleRender();
     }
 
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, CanvasImage);
+
     public Task<BitmapSource> RenderStatePreviewAsync(
-        MathematicalLaboratoryState state, int width, int height, CancellationToken token)
-    {
-        MathematicalLaboratoryState preview = state.Clone();
-        preview.PrimaryValue = state.Kind switch
-        {
-            MathematicalLaboratoryKind.PascalModulo => Math.Min(preview.PrimaryValue, 750),
-            MathematicalLaboratoryKind.PrimeGeometry => Math.Min(preview.PrimaryValue, 150),
-            MathematicalLaboratoryKind.Phyllotaxis => Math.Min(preview.PrimaryValue, 12_000),
-            MathematicalLaboratoryKind.AperiodicTilings => Math.Min(preview.PrimaryValue, 7),
-            MathematicalLaboratoryKind.HyperbolicGeometry => Math.Min(preview.PrimaryValue, 6),
-            MathematicalLaboratoryKind.FourierEpicycles => Math.Min(preview.PrimaryValue, 90),
-            MathematicalLaboratoryKind.RecamanSequence => Math.Min(preview.PrimaryValue, 1_200),
-            MathematicalLaboratoryKind.KnotStudio => preview.PrimaryValue,
-            MathematicalLaboratoryKind.StochasticMotion => Math.Min(preview.PrimaryValue, 20_000),
-            MathematicalLaboratoryKind.KleinianSchottky => Math.Min(preview.PrimaryValue, 350_000),
-            _ => preview.PrimaryValue
-        };
-        if (preview.Kind == MathematicalLaboratoryKind.FourierEpicycles)
-        {
-            preview.SecondaryValue = Math.Min(preview.SecondaryValue, 600);
-            preview.TertiaryValue = Math.Min(preview.TertiaryValue, 1_200);
-        }
-        return MathematicalLaboratoryRenderer.RenderBitmapAsync(preview, width, height, token);
-    }
+        MathematicalLaboratoryState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        MathematicalLaboratoryRenderer.RenderBitmapAsync(state.Clone(), width, height, token, progress);
 
     private void ConfigureWindow()
     {

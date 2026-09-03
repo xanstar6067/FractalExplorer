@@ -100,8 +100,8 @@
                 SizeChanged="CanvasHost_OnSizeChanged" MouseWheel="CanvasHost_OnMouseWheel"
                 MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown"
                 MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
-            <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
+            <Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True"
+                   RenderOptions.BitmapScalingMode="HighQuality"/></Grid>
         </Border>
         <Button x:Name="ToggleControlsButton" Grid.Column="1"
                 Style="{StaticResource FractalPanelToggleButtonStyle}" Content="✕"

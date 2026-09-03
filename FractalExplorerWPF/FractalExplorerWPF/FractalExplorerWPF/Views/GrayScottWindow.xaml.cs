@@ -64,9 +64,12 @@ public partial class GrayScottWindow : Window
         _ = ResetSimulationAsync(startAfterReset: true);
     }
 
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, FrameImage);
+
     public Task<BitmapSource> RenderStatePreviewAsync(
-        GrayScottState state, int width, int height, CancellationToken token) =>
-        GrayScottRenderer.RenderPreviewAsync(state.Clone(), width, height, token);
+        GrayScottState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        GrayScottRenderer.RenderPreviewAsync(state.Clone(), width, height, token, progress);
 
     private bool TryCaptureState(string name, out GrayScottState state, out string error)
     {

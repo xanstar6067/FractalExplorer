@@ -13,14 +13,12 @@ public partial class BuddhabrotWindow:Window
         if(!Read(MinReBox.Text,out decimal minRe)||!Read(MaxReBox.Text,out decimal maxRe)||!Read(MinImBox.Text,out decimal minIm)||!Read(MaxImBox.Text,out decimal maxIm)||minRe>=maxRe||minIm>=maxIm)throw new InvalidOperationException("Проверьте границы области выборки.");
         return new BuddhabrotState{SaveName=name,Timestamp=DateTime.Now,CenterX=_centerX,CenterY=_centerY,Zoom=_zoom,SampleCount=samples,MaxIterations=iterations,RenderMode=(BuddhabrotRenderMode)Math.Clamp(ModeBox.SelectedIndex,0,2),SampleMinRe=minRe,SampleMaxRe=maxRe,SampleMinIm=minIm,SampleMaxIm=maxIm,Palette=_palettes.ActivePalette.Clone(_palettes.ActivePalette.Name,_palettes.ActivePalette.IsBuiltIn)};}
     public void LoadState(BuddhabrotState s){_cts?.Cancel();_centerX=s.CenterX;_centerY=s.CenterY;_zoom=s.Zoom;SamplesBox.Text=s.SampleCount.ToString();IterationsBox.Text=s.MaxIterations.ToString();ModeBox.SelectedIndex=(int)s.RenderMode;MinReBox.Text=F(s.SampleMinRe);MaxReBox.Text=F(s.SampleMaxRe);MinImBox.Text=F(s.SampleMinIm);MaxImBox.Text=F(s.SampleMaxIm);ZoomBox.Text=F(_zoom);var p=_palettes.Palettes.FirstOrDefault(x=>x.Name==s.Palette.Name);if(p is null){p=s.Palette.Clone(s.Palette.Name);_palettes.Palettes.Add(p);}_palettes.ActivePalette=p;UpdateTransform();Schedule();}
-    public async Task<BitmapSource> RenderStatePreviewAsync(BuddhabrotState state,int width,int height,CancellationToken token)
-    {
-        var previewState=new BuddhabrotState{SaveName=state.SaveName,Timestamp=state.Timestamp,CenterX=state.CenterX,CenterY=state.CenterY,Zoom=state.Zoom,
-            SampleCount=Math.Max(25000,state.SampleCount/6),MaxIterations=state.MaxIterations,RenderMode=state.RenderMode,
-            SampleMinRe=state.SampleMinRe,SampleMaxRe=state.SampleMaxRe,SampleMinIm=state.SampleMinIm,SampleMaxIm=state.SampleMaxIm,
-            Palette=state.Palette.Clone(state.Palette.Name,state.Palette.IsBuiltIn)};
-        return await RenderBitmapAsync(previewState,width,height,token,null);
-    }
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StableImage, CurrentImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        BuddhabrotState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state, width, height, token, progress);
     private void Parameter_OnChanged(object s,EventArgs e)=>Schedule();private void ZoomBox_OnChanged(object s,System.Windows.Controls.TextChangedEventArgs e){if(Read(ZoomBox.Text,out decimal z)){_zoom=Math.Clamp(z,.0000001m,100000m);UpdateTransform();Schedule();}}
     private void Schedule(){if(!IsLoaded)return;_cts?.Cancel();_timer.Stop();_timer.Start();} private void Render_OnClick(object s,RoutedEventArgs e){_timer.Stop();_cts?.Cancel();_ = RenderAsync();}private void Cancel_OnClick(object s,RoutedEventArgs e)=>_cts?.Cancel();
     private async Task RenderAsync(){if(_rendering){Schedule();return;}BuddhabrotState state;try{state=CaptureState("preview");}catch(Exception ex){StatusText.Text=ex.Message;return;}_cts?.Dispose();_cts=new CancellationTokenSource();CancellationToken token=_cts.Token;_rendering=true;CancelButton.IsEnabled=true;AccumulationBadge.Visibility=Visibility.Visible;var watch=Stopwatch.StartNew();

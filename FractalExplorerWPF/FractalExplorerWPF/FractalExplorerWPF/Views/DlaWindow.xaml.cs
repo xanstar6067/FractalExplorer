@@ -150,13 +150,12 @@ public partial class DlaWindow : Window
         ScheduleRender();
     }
 
-    public Task<BitmapSource> RenderStatePreviewAsync(DlaState state, int width, int height, CancellationToken token)
-    {
-        DlaState preview = state.Clone();
-        preview.ParticleCount = Math.Min(preview.ParticleCount, 2_500);
-        preview.MaxStepsPerWalker = Math.Min(preview.MaxStepsPerWalker, 4_000);
-        return RenderBitmapAsync(preview, width, height, token, null);
-    }
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StableImage, CurrentImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        DlaState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state.Clone(), width, height, token, progress);
 
     private void ApplyState(DlaState state, DlaPreset? preset)
     {

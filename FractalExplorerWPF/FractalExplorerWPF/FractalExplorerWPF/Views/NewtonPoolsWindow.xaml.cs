@@ -178,8 +178,12 @@ public partial class NewtonPoolsWindow : Window
         if (ApplyFormula(showMessage: true, savedRoots)) ScheduleRender();
     }
 
-    public Task<BitmapSource> RenderStatePreviewAsync(NewtonState state, int width, int height, CancellationToken token) =>
-        RenderBitmapAsync(state, width, height, 1, token, null);
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StablePreviewImage, CanvasImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        NewtonState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state, width, height, 1, token, progress);
 
     private NewtonIterationMethod SelectedMethod => MethodBox.SelectedIndex switch
     {

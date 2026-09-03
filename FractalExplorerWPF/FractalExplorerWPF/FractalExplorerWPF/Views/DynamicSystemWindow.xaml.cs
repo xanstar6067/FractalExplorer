@@ -249,8 +249,12 @@ public partial class DynamicSystemWindow : Window
         }
     }
 
-    public async Task<BitmapSource> RenderStatePreviewAsync(DynamicSystemState state,int width,int height,CancellationToken token)
-    { DynamicSystemState copy=state.Clone(); copy.SsaaFactor=1; copy.Iterations=Math.Min(copy.Iterations,_kind==DynamicSystemKind.Lyapunov?220:200_000); copy.Steps=Math.Min(copy.Steps,100_000); return await DynamicSystemRenderer.RenderAsync(copy,width,height,FindPalette(copy.PaletteName),token,null,null,false); }
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StableImage, CurrentImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        DynamicSystemState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        DynamicSystemRenderer.RenderAsync(state.Clone(), width, height, FindPalette(state.PaletteName), token, progress, null, false);
     private DynamicPalette? FindPalette(string name)=>_palettes.FirstOrDefault(p=>p.Name==name)??_palettes.FirstOrDefault();
 
     private void Schedule(){if(!IsLoaded)return;_timer.Stop();_timer.Start();}
@@ -300,7 +304,7 @@ public partial class DynamicSystemWindow : Window
             DynamicSystemKind.Attractors2D => Attractor2DPointsOfInterest(),
             _ => []
         };
-        SaveManagerWindow.Open(this,new SaveManagerConfiguration<DynamicSystemState>{WindowTitle=$"Сохранение/Загрузка: {DisplayName(_kind)}",FractalIdentifier=_kind.ToString(),LoadStates=_saves.Load,SaveStates=s=>_saves.Save(s),CaptureState=CaptureState,LoadState=LoadState,RenderPreviewAsync=RenderStatePreviewAsync,GetName=s=>s.SaveName,GetTimestamp=s=>s.Timestamp,GetDetails=s=>$"{s.Timestamp:g} · {Details(s)}",PointsOfInterest=presets});
+        SaveManagerWindow.Open(this,new SaveManagerConfiguration<DynamicSystemState>{WindowTitle=$"Сохранение/Загрузка: {DisplayName(_kind)}",FractalIdentifier=_kind.ToString(),LoadStates=_saves.Load,SaveStates=s=>_saves.Save(s),CaptureState=CaptureState,CapturePreview=CaptureCurrentPreview,LoadState=LoadState,RenderPreviewAsync=RenderStatePreviewAsync,GetName=s=>s.SaveName,GetTimestamp=s=>s.Timestamp,GetDetails=s=>$"{s.Timestamp:g} · {Details(s)}",PointsOfInterest=presets});
     }
 
     private static IReadOnlyList<DynamicSystemState> Attractor2DPointsOfInterest() =>

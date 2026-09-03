@@ -133,13 +133,12 @@ public partial class ApollonianWindow : Window
         ScheduleRender();
     }
 
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StableImage, CurrentImage);
+
     public Task<BitmapSource> RenderStatePreviewAsync(
-        ApollonianState state, int width, int height, CancellationToken token)
-    {
-        ApollonianState preview = state.Clone();
-        preview.MaxCircles = Math.Min(preview.MaxCircles, 8_000);
-        return RenderBitmapAsync(preview, width, height, token, null);
-    }
+        ApollonianState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state.Clone(), width, height, token, progress);
 
     private void Parameter_OnChanged(object sender, EventArgs e)
     {

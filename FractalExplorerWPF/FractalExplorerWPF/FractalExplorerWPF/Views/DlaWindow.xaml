@@ -43,7 +43,7 @@
         </Border>
         <Border x:Name="CanvasHost" Grid.Column="1" Margin="0,10,10,10" Background="Black" ClipToBounds="True" BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1" CornerRadius="7" theme:ThemeContract.IgnoreAudit="True"
                 SizeChanged="CanvasHost_OnSizeChanged" MouseWheel="CanvasHost_OnMouseWheel" MouseLeftButtonDown="CanvasHost_OnMouseLeftButtonDown" MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
-            <Grid><Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><Image x:Name="CurrentImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><Border x:Name="GrowthBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000" Visibility="Collapsed"><TextBlock x:Name="GrowthBadgeText" Foreground="White"/></Border></Grid>
+            <Grid><Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="StableImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/><Image x:Name="CurrentImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/></Grid><Border x:Name="GrowthBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="10,6" CornerRadius="5" Background="#B0000000" Visibility="Collapsed"><TextBlock x:Name="GrowthBadgeText" Foreground="White"/></Border></Grid>
         </Border>
         <Button x:Name="ToggleButton" Grid.Column="1" Style="{StaticResource FractalPanelToggleButtonStyle}" Content="✕" ToolTip="Скрыть панель параметров" Click="Toggle_OnClick"/>
     </Grid>

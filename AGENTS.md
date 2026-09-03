@@ -112,7 +112,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 | `Views/AboutWindow.xaml` / `.xaml.cs` | Диалог «О программе»: название, версия и справочная информация. |
 | `Views/ColorPickerWindow.xaml` / `.xaml.cs` | Полноразмерный общий диалог выбора цвета, построенный вокруг `Controls/ColorPickerPanel`. |
 | `Views/ImageExportManagerWindow.xaml` / `.xaml.cs` | Универсальный менеджер экспорта изображения: размеры, SSAA, формат/путь, прогресс, отмена и вызов переданного render callback. Конфигурация находится в `Infrastructure/ImageExportConfiguration.cs`. |
-| `Views/SaveManagerWindow.xaml` / `.xaml.cs` | Универсальная оболочка менеджера состояний: открыть, назвать, просмотреть, загрузить и удалить сохранение. Использует `Controls/SaveManagerControl` и конфигурации из `Infrastructure/SaveManagerConfigurations.cs`. |
+| `Views/SaveManagerWindow.xaml` / `.xaml.cs` | Универсальная оболочка менеджера состояний: сохраняет текущий кадр полотна как PNG-превью, открывает, загружает и удаляет сохранения; пересчёт превью запускается только вручную с прогрессом и отменой. Использует `Controls/SaveManagerControl` и конфигурации из `Infrastructure/SaveManagerConfigurations.cs`. |
 | `Views/ThemeColorPickerWindow.xaml` / `.xaml.cs` | Компактный выбор одного цвета специально для редактора темы. |
 | `Views/ThemeEditorWindow.xaml` / `.xaml.cs` | Создание, редактирование, импорт, выбор и сохранение тем оформления приложения. Основная логика тем находится в `Theming/`. |
 
@@ -122,7 +122,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 |---|---|
 | `Controls/ColorPickerPanel.xaml` / `.xaml.cs` | Общая панель выбора цвета: каналы, ввод значения, предпросмотр и экранная пипетка. |
 | `Controls/ColorSelectorControl.xaml` / `.xaml.cs` | Компактный переиспользуемый селектор цвета для панелей параметров. |
-| `Controls/SaveManagerControl.xaml` / `.xaml.cs` | Переиспользуемое содержимое менеджера сохранений со списком и операциями над состояниями. |
+| `Controls/SaveManagerControl.xaml` / `.xaml.cs` | Переиспользуемое содержимое менеджера сохранений: список, PNG-превью текущего кадра, ручной пересчёт с прогрессом, временем и отменой; выбор записи не запускает вычислений. |
 | `Controls/FractalControlPanel.cs` | Программно создаваемая общая панель параметров фрактала. |
 | `Controls/RenderProgressOverlay.cs` | Общий оверлей состояния и прогресса рендера. |
 
@@ -147,4 +147,10 @@ dotnet build .\FractalExplorerWPF\FractalExplorerWPF\FractalExplorerWPF.slnx
 dotnet run --project .\FractalExplorerWPF\FractalExplorerWPF\FractalExplorerWPF\FractalExplorerWPF.csproj
 ```
 
-Отдельного тестового проекта сейчас нет, поэтому минимальная обязательная автоматическая проверка изменений — успешная сборка WPF-решения. Не редактируй `bin/` и `obj/` и не добавляй их содержимое в репозиторий.
+Минимальная обязательная автоматическая проверка изменений — успешная сборка WPF-решения. Для менеджера сохранений и глубокого зума есть отдельная проверка без показа окон и без захвата экрана:
+
+```powershell
+dotnet run --project .\FractalExplorerWPF\Verification\SavePreviewVerification.csproj
+```
+
+Сценарии ручной проверки описаны в `FractalExplorerWPF/Verification/README.md`. Не редактируй `bin/` и `obj/` и не добавляй их содержимое в репозиторий.

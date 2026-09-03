@@ -95,7 +95,12 @@ public partial class NovaWindow : Window
         UpdatePreviewTransform(); ScheduleRender(); ScheduleMapRender();
     }
 
-    public Task<BitmapSource> RenderStatePreviewAsync(NovaState state, int width, int height, CancellationToken token) => RenderBitmapAsync(state, width, height, 1, token, null);
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StablePreviewImage, CanvasImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        NovaState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state, width, height, 1, token, progress);
     private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
     private void MapFormulaParameter_OnChanged(object sender, EventArgs e) { ScheduleRender(); ScheduleMapRender(); }
     private void JuliaMapParameter_OnChanged(object sender, EventArgs e) { ScheduleRender(); DrawMapMarker(); }

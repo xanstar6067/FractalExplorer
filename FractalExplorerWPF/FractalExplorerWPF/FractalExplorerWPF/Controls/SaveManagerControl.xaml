@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Column="0">
@@ -33,8 +34,7 @@
                  DisplayMemberPath="DisplayName" SelectionChanged="SavesList_OnSelectionChanged"
                  MouseDoubleClick="SavesList_OnMouseDoubleClick"/>
 
-        <!-- 431x288 minus the 1-DIP border gives a 429x286 (3:2) image area,
-             matching the shared 480x320 preview render size without letterboxing. -->
+        <!-- Snapshots keep the aspect ratio of the source canvas. -->
         <Border x:Name="PreviewHost" Grid.Row="1" Grid.Column="2" Margin="0,7,0,0"
                 Width="431" Height="288" HorizontalAlignment="Left" VerticalAlignment="Top"
                 Background="Black"
@@ -43,6 +43,7 @@
             <Grid>
                 <Image x:Name="PreviewImage" Stretch="Uniform"/>
                 <TextBlock x:Name="EmptyPreviewText" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="16" TextWrapping="Wrap" TextAlignment="Center"
                            Foreground="{DynamicResource Theme.SecondaryTextBrush}" Text="Выберите сохранение"
                            IsHitTestVisible="False"/>
             </Grid>
@@ -75,8 +76,6 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Button x:Name="DeleteButton" Width="90" Content="Удалить" Click="DeleteButton_OnClick"/>
-            <TextBlock x:Name="StatusText" Grid.Column="1" Margin="9,0,0,0" VerticalAlignment="Center"
-                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
         </Grid>
 
         <Grid Grid.Row="4" Grid.Column="2">
@@ -88,11 +87,25 @@
             </Grid.ColumnDefinitions>
             <Button x:Name="RenderPreviewButton" Width="135" Content="Рендер превью"
                     Click="RenderPreviewButton_OnClick"/>
-            <ProgressBar x:Name="PreviewProgress" Grid.Column="1" Width="90" Height="5" Margin="10,0"
-                         VerticalAlignment="Center" IsIndeterminate="True" Visibility="Collapsed"/>
             <Button x:Name="LoadButton" Grid.Column="2" Width="105" Margin="0,0,7,0"
                     Content="Загрузить" IsDefault="True" Click="LoadButton_OnClick"/>
             <Button Grid.Column="3" Width="90" Content="Закрыть" IsCancel="True" Click="CloseButton_OnClick"/>
         </Grid>
+        <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Margin="0,8,0,0">
+            <Grid x:Name="RenderProgressPanel" Visibility="Collapsed" Margin="0,0,0,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <ProgressBar x:Name="PreviewProgress" Height="12" Minimum="0" Maximum="100"
+                             VerticalAlignment="Center" IsIndeterminate="True"/>
+                <TextBlock x:Name="ProgressText" Grid.Column="1" Margin="10,0" VerticalAlignment="Center"/>
+                <Button x:Name="CancelPreviewButton" Grid.Column="2" Content="Отмена"
+                        Click="CancelPreviewButton_OnClick"/>
+            </Grid>
+            <TextBlock x:Name="StatusText" MinHeight="18" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Theme.SecondaryTextBrush}"/>
+        </StackPanel>
     </Grid>
 </UserControl>

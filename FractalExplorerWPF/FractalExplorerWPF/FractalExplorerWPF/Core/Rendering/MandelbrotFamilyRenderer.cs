@@ -45,7 +45,7 @@ public static class MandelbrotFamilyRenderer
             {
                 int x = tile.X + localX;
                 decimal re = state.CenterX + ((decimal)x / canvasWidth - 0.5m) * viewWidth;
-                PixelMetrics metrics = IterateAt(state, re, im);
+                PixelMetrics metrics = IterateAt(state, re, im, token);
                 double histogramValue = state.ColoringMode == MandelbrotColoringMode.Histogram
                     ? Math.Clamp((state.HistogramInputUseSmooth ? metrics.Smooth : metrics.Iterations) /
                                  Math.Max(1, state.Iterations), 0, 1)
@@ -106,7 +106,7 @@ public static class MandelbrotFamilyRenderer
             {
                 if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
-                PixelMetrics metrics = IterateAt(state, re, im);
+                PixelMetrics metrics = IterateAt(state, re, im, token);
                 Color color = ResolveColor(state, metrics, 0);
                 int offset = row + x * 4;
                 buffer[offset] = color.B;
@@ -145,7 +145,7 @@ public static class MandelbrotFamilyRenderer
             {
                 int x = tile.X + sampleX - 1;
                 decimal re = state.CenterX + ((decimal)x / canvasWidth - 0.5m) * viewWidth;
-                PixelMetrics metrics = IterateAt(state, re, im);
+                PixelMetrics metrics = IterateAt(state, re, im, token);
                 distances[sampleY * sampleWidth + sampleX] = StoreDistance(metrics.Distance);
 
                 if (sampleX is > 0 && sampleX <= tile.Width &&
@@ -214,7 +214,7 @@ public static class MandelbrotFamilyRenderer
 
                 int x = sampleX - 1;
                 decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
-                PixelMetrics metrics = IterateAt(state, re, im);
+                PixelMetrics metrics = IterateAt(state, re, im, token);
                 distances[distanceRow + sampleX] = StoreDistance(metrics.Distance);
                 if (sampleX is > 0 && sampleX <= width && sampleY is > 0 && sampleY <= height)
                 {
@@ -396,7 +396,7 @@ public static class MandelbrotFamilyRenderer
             {
                 if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 decimal re = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
-                PixelMetrics value = IterateAt(state, re, im);
+                PixelMetrics value = IterateAt(state, re, im, token);
                 smoothValues[row + x] = value.Smooth;
                 iterationValues[row + x] = value.Iterations;
                 int bin = state.HistogramInputUseSmooth
@@ -453,12 +453,12 @@ public static class MandelbrotFamilyRenderer
         });
     }
 
-    private static PixelMetrics IterateAt(MandelbrotState state, decimal re, decimal im) =>
+    private static PixelMetrics IterateAt(MandelbrotState state, decimal re, decimal im, CancellationToken token) =>
         state.Zoom > DecimalIterationZoomThreshold
-            ? IterateDecimal(state, re, im)
-            : Iterate(state, (double)re, (double)im);
+            ? IterateDecimal(state, re, im, token)
+            : Iterate(state, (double)re, (double)im, token);
 
-    private static PixelMetrics Iterate(MandelbrotState state, double re, double im)
+    private static PixelMetrics Iterate(MandelbrotState state, double re, double im, CancellationToken token)
     {
         if (state.Variant == MandelbrotVariant.Mandelbrot && IsInsideMandelbrot(re, im))
             return new PixelMetrics(state.Iterations, state.Iterations, 0, 0);
@@ -490,6 +490,7 @@ public static class MandelbrotFamilyRenderer
 
         while (iterations < state.Iterations && zr * zr + zi * zi <= thresholdSquared)
         {
+            if ((iterations & 63) == 0 && token.IsCancellationRequested) return default;
             if (trackTrap)
                 minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
             if (trackStripe)
@@ -523,7 +524,7 @@ public static class MandelbrotFamilyRenderer
             distance);
     }
 
-    private static PixelMetrics IterateDecimal(MandelbrotState state, decimal re, decimal im)
+    private static PixelMetrics IterateDecimal(MandelbrotState state, decimal re, decimal im, CancellationToken token)
     {
         if (state.Variant == MandelbrotVariant.Mandelbrot && IsInsideMandelbrot(re, im))
             return new PixelMetrics(state.Iterations, state.Iterations, 0, 0);
@@ -552,6 +553,7 @@ public static class MandelbrotFamilyRenderer
 
         while (iterations < state.Iterations && zr * zr + zi * zi <= thresholdSquared)
         {
+            if ((iterations & 63) == 0 && token.IsCancellationRequested) return default;
             if (trackTrap)
                 minTrap = Math.Min(minTrap, Math.Min(Math.Abs(zr), Math.Abs(zi)));
             if (trackStripe)

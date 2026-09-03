@@ -218,8 +218,8 @@
                 MouseMove="CanvasHost_OnMouseMove" MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp">
             <Grid>
                 <Grid x:Name="ImageLayer" ClipToBounds="True">
-                    <Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="StablePreviewImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Image x:Name="CanvasImage" Stretch="Fill" SnapsToDevicePixels="True" RenderOptions.BitmapScalingMode="HighQuality"/></Grid>
                 </Grid>
                 <Canvas x:Name="RootOverlay" ClipToBounds="True" IsHitTestVisible="False"/>
                 <controls:RenderProgressOverlay x:Name="RenderOverlay" IsHitTestVisible="False"/>

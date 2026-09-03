@@ -49,7 +49,12 @@ public partial class FlameWindow : Window
     {
         _cts?.Cancel();_syncing=true;try{_centerX=state.CenterX;_centerY=state.CenterY;_worldScale=Math.Max(1e-9,Math.Abs(state.Scale));CenterXBox.Text=F(_centerX);CenterYBox.Text=F(_centerY);ScaleBox.Text=F(_worldScale);SamplesBox.Text=state.Samples.ToString();IterationsBox.Text=state.IterationsPerSample.ToString();WarmupBox.Text=state.WarmupIterations.ToString();ExposureBox.Text=F(state.Exposure);GammaBox.Text=F(state.Gamma);_transforms.Clear();_transforms.AddRange(state.Transforms.Select(t=>t.Clone()));}finally{_syncing=false;}UpdateTransform();Schedule();
     }
-    public async Task<BitmapSource> RenderStatePreviewAsync(FlameState state,int width,int height,CancellationToken token){FlameState copy=state.Clone();copy.Samples=Math.Max(50_000,state.Samples/10);return await RenderBitmapAsync(copy,width,height,token,null);}
+    public BitmapSource? CaptureCurrentPreview(int width, int height) =>
+        SavePreviewCapture.Capture(SavePreviewLayer, CanvasHost.Background, width, height, StableImage, CoverageImage);
+
+    public Task<BitmapSource> RenderStatePreviewAsync(
+        FlameState state, int width, int height, CancellationToken token, IProgress<int>? progress = null) =>
+        RenderBitmapAsync(state.Clone(), width, height, token, progress);
     private void Parameter_OnChanged(object sender,EventArgs e){if(!_syncing)Schedule();}
     private void Viewport_OnChanged(object sender,EventArgs e){if(_syncing)return;if(Read(CenterXBox.Text,out double x))_centerX=x;if(Read(CenterYBox.Text,out double y))_centerY=y;if(Read(ScaleBox.Text,out double scale)&&Math.Abs(scale)>=1e-9)_worldScale=Math.Abs(scale);UpdateTransform();Schedule();}
     private void Coverage_OnChanged(object sender,RoutedEventArgs e){if(!IsInitialized||CoverageImage is null)return;if(CoverageCheck.IsChecked!=true)CoverageImage.Source=null;}

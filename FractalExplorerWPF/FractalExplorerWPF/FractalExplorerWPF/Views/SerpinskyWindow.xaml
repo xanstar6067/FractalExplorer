@@ -104,9 +104,9 @@
                 MouseMove="CanvasHost_OnMouseMove"
                 MouseLeftButtonUp="CanvasHost_OnMouseLeftButtonUp"
                 LostMouseCapture="CanvasHost_OnLostMouseCapture">
-            <Image x:Name="CanvasImage"
+            <Grid x:Name="SavePreviewLayer" ClipToBounds="True"><Image x:Name="CanvasImage"
                    Stretch="Fill"
-                   SnapsToDevicePixels="True"/>
+                   SnapsToDevicePixels="True"/></Grid>
         </Border>
 
         <Button x:Name="ToggleControlsButton" Grid.Column="1"
