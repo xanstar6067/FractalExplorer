@@ -120,6 +120,18 @@ public sealed class MandelbrotState
     public MandelbrotVariant Variant { get; set; }
     public decimal CenterX { get; set; }
     public decimal CenterY { get; set; }
+
+    /// <summary>
+    /// Точная (за пределами ~28 цифр <see cref="decimal"/>) координата центра по X в виде
+    /// десятичной строки инвариантной культуры. Заполняется только «вторым двигателем»
+    /// глубокого зума; для всех обычных сохранений остаётся <c>null</c>, и источником
+    /// истины служит <see cref="CenterX"/>.
+    /// </summary>
+    public string? CenterXExact { get; set; }
+
+    /// <summary>Точная координата центра по Y. См. <see cref="CenterXExact"/>.</summary>
+    public string? CenterYExact { get; set; }
+
     public decimal Zoom { get; set; } = 1;
     public int Iterations { get; set; } = 500;
     public decimal Threshold { get; set; } = 2;

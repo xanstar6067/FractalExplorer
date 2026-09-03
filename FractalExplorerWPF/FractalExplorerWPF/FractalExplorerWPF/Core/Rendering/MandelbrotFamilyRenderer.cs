@@ -6,12 +6,17 @@ using Color = System.Windows.Media.Color;
 
 namespace FractalExplorerWPF.Core.Rendering;
 
-public static class MandelbrotFamilyRenderer
+public static partial class MandelbrotFamilyRenderer
 {
     // Порог зума, начиная с которого итерация ведётся в decimal (режим высокой
     // глубины/точности); ниже порога используется double. Вынесено из IterateAt
     // как именованная константа — поведение не меняет.
     private const decimal DecimalIterationZoomThreshold = 1_500_000_000m;
+
+    // Третья ступень: начиная с этого зума (переход e+24 → e+25) плоский brute-force
+    // в decimal уступает место «второму двигателю» — пертурбационному рендеру с
+    // опорной орбитой в BigFloat. Две ступени ниже (double и decimal) не затрагиваются.
+    private const decimal PerturbationZoomThreshold = 1e25m;
 
     private readonly record struct PixelMetrics(
         int Iterations,
@@ -27,6 +32,9 @@ public static class MandelbrotFamilyRenderer
         MandelbrotRenderTile tile,
         CancellationToken token)
     {
+        if (ShouldUseDeepZoom(state))
+            return RenderDeepZoomTile(state, canvasWidth, canvasHeight, tile, token);
+
         if (state.ColoringMode == MandelbrotColoringMode.DistanceEstimation)
             return RenderDistanceEstimationTile(state, canvasWidth, canvasHeight, tile, token);
 
@@ -73,6 +81,12 @@ public static class MandelbrotFamilyRenderer
         ArgumentOutOfRangeException.ThrowIfLessThan(width, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(height, 1);
         if (buffer.Length < stride * height) throw new ArgumentException("Буфер изображения слишком мал.", nameof(buffer));
+
+        if (ShouldUseDeepZoom(state))
+        {
+            RenderDeepZoom(state, buffer, width, height, stride, token, reportProgress);
+            return;
+        }
 
         int threads = state.Threads <= 0 ? Environment.ProcessorCount : state.Threads;
         var options = new ParallelOptions

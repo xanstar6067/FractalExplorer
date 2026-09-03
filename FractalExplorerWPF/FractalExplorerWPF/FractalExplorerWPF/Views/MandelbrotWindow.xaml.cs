@@ -15,6 +15,7 @@ using FractalExplorerWPF.Models;
 using Microsoft.Win32;
 using Point = System.Windows.Point;
 using MediaColor = System.Windows.Media.Color;
+using BigFloat = FractalExplorerWPF.Core.NewtonMath.BigFloat;
 
 namespace FractalExplorerWPF.Views;
 
@@ -38,6 +39,17 @@ public partial class MandelbrotWindow : Window
     private decimal _centerX;
     private decimal _centerY;
     private decimal _zoom;
+
+    // «Второй двигатель»: при _zoom >= DeepZoomThreshold центр ведётся здесь, в
+    // произвольной точности, а _centerX/_centerY держатся как ближайшее decimal-приближение
+    // для отображения и грубой предпросмотровой трансформации.
+    private BigFloat _centerXExact;
+    private BigFloat _centerYExact;
+    private bool _deepZoomEngaged;
+
+    private const decimal DeepZoomThreshold = 1e25m;
+    private const decimal MaxZoom = 5e28m;
+
     private BitmapSource? _stableBitmap;
     private decimal _renderedCenterX;
     private decimal _renderedCenterY;
@@ -141,8 +153,10 @@ public partial class MandelbrotWindow : Window
             SaveName = saveName,
             Timestamp = DateTime.Now,
             Variant = _definition.Variant,
-            CenterX = _centerX,
-            CenterY = _centerY,
+            CenterX = _deepZoomEngaged ? _centerXExact.ToDecimalClamped() : _centerX,
+            CenterY = _deepZoomEngaged ? _centerYExact.ToDecimalClamped() : _centerY,
+            CenterXExact = _deepZoomEngaged ? _centerXExact.ToInvariantString() : null,
+            CenterYExact = _deepZoomEngaged ? _centerYExact.ToInvariantString() : null,
             Zoom = _zoom,
             Iterations = iterations,
             Threshold = threshold,
@@ -203,7 +217,29 @@ public partial class MandelbrotWindow : Window
         _updatingControls = true;
         _centerX = state.CenterX;
         _centerY = state.CenterY;
-        _zoom = Math.Clamp(state.Zoom, 0.01m, 1000000000000000000000000000m);
+        _zoom = Math.Clamp(state.Zoom, 0.01m, MaxZoom);
+        _deepZoomEngaged = false;
+        if (state.CenterXExact is { Length: > 0 } exactX && state.CenterYExact is { Length: > 0 } exactY)
+        {
+            try
+            {
+                _centerXExact = BigFloat.Parse(exactX);
+                _centerYExact = BigFloat.Parse(exactY);
+                _deepZoomEngaged = _zoom >= DeepZoomThreshold;
+                if (_deepZoomEngaged)
+                {
+                    _centerX = _centerXExact.ToDecimalClamped();
+                    _centerY = _centerYExact.ToDecimalClamped();
+                }
+            }
+            catch (FormatException)
+            {
+                _deepZoomEngaged = false;
+            }
+        }
+        // Старое глубокое сохранение без точных координат: заводим «второй двигатель»
+        // из decimal-центра, если один только зум уже перешёл порог.
+        if (!_deepZoomEngaged) SyncDeepZoomState();
         IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture);
         ThresholdBox.Text = state.Threshold.ToString(CultureInfo.InvariantCulture);
         ZoomBox.Text = _zoom.ToString("G8", CultureInfo.InvariantCulture);
@@ -291,7 +327,8 @@ public partial class MandelbrotWindow : Window
     {
         if (!_updatingControls && TryReadDecimal(ZoomBox.Text, out decimal zoom) && zoom > 0)
         {
-            _zoom = Math.Clamp(zoom, 0.01m, 1000000000000000000000000000m);
+            _zoom = Math.Clamp(zoom, 0.01m, MaxZoom);
+            SyncDeepZoomState();
             ScheduleRender();
         }
     }
@@ -477,6 +514,7 @@ public partial class MandelbrotWindow : Window
         _centerX = _definition.InitialCenterX;
         _centerY = _definition.InitialCenterY;
         _zoom = _definition.InitialZoom;
+        _deepZoomEngaged = false;
         _updatingControls = true;
         ZoomBox.Text = _zoom.ToString(CultureInfo.InvariantCulture);
         _updatingControls = false;
@@ -839,12 +877,27 @@ public partial class MandelbrotWindow : Window
     {
         CommitAndBakePreview();
         Point mouse = e.GetPosition(CanvasHost);
-        (decimal X, decimal Y) before = ScreenToWorld(mouse);
-        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.5m : 1m / 1.5m),
-            0.01m, 1000000000000000000000000000m);
-        (decimal X, decimal Y) after = ScreenToWorld(mouse);
-        _centerX += before.X - after.X;
-        _centerY += before.Y - after.Y;
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double height = Math.Max(1, CanvasHost.ActualHeight);
+        double fractionX = mouse.X / width - 0.5;
+        double fractionY = 0.5 - mouse.Y / height;
+
+        decimal previousZoom = _zoom;
+        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.5m : 1m / 1.5m), 0.01m, MaxZoom);
+
+        // Точка под курсором остаётся на месте: сдвиг центра = f · (viewOld − viewNew).
+        // Сам сдвиг мал и укладывается в double; ApplyCenterShift кладёт его в BigFloat-центр
+        // в глубоком режиме и в decimal — как раньше — в обычном.
+        double previousViewWidth = 3.0 / (double)previousZoom;
+        double currentViewWidth = 3.0 / (double)_zoom;
+        double previousViewHeight = previousViewWidth * height / width;
+        double currentViewHeight = currentViewWidth * height / width;
+        double shiftX = fractionX * (previousViewWidth - currentViewWidth);
+        double shiftY = fractionY * (previousViewHeight - currentViewHeight);
+
+        SyncDeepZoomState();
+        ApplyCenterShift(shiftX, shiftY);
+
         SetZoomText();
         UpdateCoarsePreviewTransform();
         ScheduleRender();
@@ -864,12 +917,36 @@ public partial class MandelbrotWindow : Window
     {
         if (!_isPanning) return;
         Point current = e.GetPosition(CanvasHost);
-        (decimal X, decimal Y) before = ScreenToWorld(_lastPanPoint);
-        (decimal X, decimal Y) after = ScreenToWorld(current);
-        _centerX += before.X - after.X;
-        _centerY += before.Y - after.Y;
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double height = Math.Max(1, CanvasHost.ActualHeight);
+        double viewWidth = 3.0 / (double)_zoom;
+        double viewHeight = viewWidth * height / width;
+        double shiftX = (_lastPanPoint.X - current.X) / width * viewWidth;
+        double shiftY = (current.Y - _lastPanPoint.Y) / height * viewHeight;
+        ApplyCenterShift(shiftX, shiftY);
         _lastPanPoint = current;
         UpdateCoarsePreviewTransform();
+    }
+
+    /// <summary>
+    /// Прибавляет к центру небольшой сдвиг в мировых координатах. В глубоком режиме сдвиг
+    /// уходит в <see cref="BigFloat"/>-центр (decimal-приближение обновляется следом),
+    /// в обычном — в decimal-центр по старой схеме.
+    /// </summary>
+    private void ApplyCenterShift(double shiftX, double shiftY)
+    {
+        if (_deepZoomEngaged)
+        {
+            _centerXExact += BigFloat.FromDouble(shiftX);
+            _centerYExact += BigFloat.FromDouble(shiftY);
+            _centerX = _centerXExact.ToDecimalClamped();
+            _centerY = _centerYExact.ToDecimalClamped();
+        }
+        else
+        {
+            _centerX += (decimal)shiftX;
+            _centerY += (decimal)shiftY;
+        }
     }
 
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -881,21 +958,34 @@ public partial class MandelbrotWindow : Window
         ScheduleRender();
     }
 
-    private (decimal X, decimal Y) ScreenToWorld(Point point)
-    {
-        decimal width = (decimal)Math.Max(1, CanvasHost.ActualWidth);
-        decimal height = (decimal)Math.Max(1, CanvasHost.ActualHeight);
-        decimal viewWidth = 3m / _zoom;
-        decimal viewHeight = viewWidth * height / width;
-        return (_centerX + ((decimal)point.X / width - 0.5m) * viewWidth,
-            _centerY + (0.5m - (decimal)point.Y / height) * viewHeight);
-    }
-
     private void SetZoomText()
     {
         _updatingControls = true;
         ZoomBox.Text = _zoom.ToString("G8", CultureInfo.InvariantCulture);
         _updatingControls = false;
+    }
+
+    /// <summary>
+    /// Заводит или глушит «второй двигатель» в зависимости от текущего зума. При переходе
+    /// через <see cref="DeepZoomThreshold"/> вверх центр переносится из decimal в
+    /// <see cref="BigFloat"/> (безопасный «костыль» — старая математика не трогается), при
+    /// возврате вниз decimal снова становится источником истины.
+    /// </summary>
+    private void SyncDeepZoomState()
+    {
+        bool shouldEngage = _zoom >= DeepZoomThreshold;
+        if (shouldEngage && !_deepZoomEngaged)
+        {
+            _centerXExact = BigFloat.FromDecimal(_centerX);
+            _centerYExact = BigFloat.FromDecimal(_centerY);
+            _deepZoomEngaged = true;
+        }
+        else if (!shouldEngage && _deepZoomEngaged)
+        {
+            _centerX = _centerXExact.ToDecimalClamped();
+            _centerY = _centerYExact.ToDecimalClamped();
+            _deepZoomEngaged = false;
+        }
     }
 
     private void Window_OnKeyDown(object sender, KeyEventArgs e)
@@ -965,6 +1055,7 @@ public partial class MandelbrotWindow : Window
     {
         SaveName = source.SaveName, Timestamp = source.Timestamp, Variant = source.Variant,
         CenterX = source.CenterX, CenterY = source.CenterY, Zoom = source.Zoom,
+        CenterXExact = source.CenterXExact, CenterYExact = source.CenterYExact,
         Iterations = source.Iterations, Threshold = source.Threshold, Threads = source.Threads,
         ColoringMode = source.ColoringMode, PaletteName = source.PaletteName,
         Palette = source.Palette.Clone(source.Palette.Name), Power = source.Power,

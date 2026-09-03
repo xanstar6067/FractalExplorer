@@ -1,0 +1,322 @@
+using System.Globalization;
+using System.Numerics;
+using System.Text;
+
+namespace FractalExplorerWPF.Core.NewtonMath;
+
+/// <summary>
+/// Компактное число с плавающей запятой произвольной (фиксированной) точности:
+/// значение = <see cref="Mantissa"/> · 2^<see cref="Exponent"/>. Мантисса — знаковый
+/// <see cref="BigInteger"/>, после каждой операции округляется до
+/// <see cref="PrecisionBits"/> значащих бит.
+///
+/// Тип нужен только «второму двигателю» глубокого зума Мандельброта: он хранит
+/// центр области и опорную точку с точностью, недостижимой для <see cref="decimal"/>
+/// (≈28 десятичных цифр). Набор операций намеренно минимален — сложение, вычитание,
+/// умножение, сравнение и конвертации, которых достаточно для навигации и построения
+/// опорной орбиты.
+/// </summary>
+public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
+{
+    /// <summary>
+    /// Рабочая точность в битах. 384 бита ≈ 115 десятичных цифр — с большим запасом
+    /// перекрывает зум вплоть до предела <see cref="decimal"/>-зума (~1e28) и оставляет
+    /// место для последующего расширения диапазона зума.
+    /// </summary>
+    public const int PrecisionBits = 384;
+
+    /// <summary>Число десятичных цифр после запятой при round-trip сериализации.</summary>
+    private const int SerializationFractionDigits = 130;
+
+    public BigInteger Mantissa { get; }
+    public int Exponent { get; }
+
+    private BigFloat(BigInteger mantissa, int exponent)
+    {
+        if (mantissa.IsZero)
+        {
+            Mantissa = BigInteger.Zero;
+            Exponent = 0;
+            return;
+        }
+
+        int bitLength = (int)mantissa.GetBitLength();
+        if (bitLength > PrecisionBits)
+        {
+            int shift = bitLength - PrecisionBits;
+            int sign = mantissa.Sign;
+            BigInteger magnitude = BigInteger.Abs(mantissa);
+            // Округление к ближайшему (half-up по модулю).
+            magnitude = (magnitude + (BigInteger.One << (shift - 1))) >> shift;
+            mantissa = sign < 0 ? -magnitude : magnitude;
+            exponent += shift;
+        }
+
+        // Убираем младшие нулевые биты — держит мантиссу компактной и канонизирует значение.
+        int trailing = (int)BigInteger.TrailingZeroCount(mantissa);
+        if (trailing > 0)
+        {
+            mantissa >>= trailing;
+            exponent += trailing;
+        }
+
+        Mantissa = mantissa;
+        Exponent = exponent;
+    }
+
+    public static BigFloat Zero => default;
+
+    public bool IsZero => Mantissa.IsZero;
+    public int Sign => Mantissa.Sign;
+
+    private static BigFloat FromRawRounded(BigInteger mantissa, int exponent) => new(mantissa, exponent);
+
+    public static BigFloat FromInt(long value) => new(value, 0);
+
+    public static BigFloat FromDouble(double value)
+    {
+        if (value == 0 || !double.IsFinite(value)) return Zero;
+
+        long bits = BitConverter.DoubleToInt64Bits(value);
+        bool negative = bits < 0;
+        int exponentField = (int)((bits >> 52) & 0x7FF);
+        long fraction = bits & 0xF_FFFF_FFFF_FFFF;
+
+        BigInteger mantissa;
+        int exponent;
+        if (exponentField == 0)
+        {
+            // Субнормальное число.
+            mantissa = fraction;
+            exponent = -1022 - 52;
+        }
+        else
+        {
+            mantissa = fraction | (1L << 52);
+            exponent = exponentField - 1023 - 52;
+        }
+
+        if (negative) mantissa = -mantissa;
+        return new BigFloat(mantissa, exponent);
+    }
+
+    public static BigFloat FromDecimal(decimal value)
+    {
+        if (value == 0m) return Zero;
+
+        int[] parts = decimal.GetBits(value);
+        int scale = (parts[3] >> 16) & 0xFF;
+        bool negative = (parts[3] & int.MinValue) != 0;
+
+        BigInteger magnitude = (uint)parts[2];
+        magnitude = (magnitude << 32) | (uint)parts[1];
+        magnitude = (magnitude << 32) | (uint)parts[0];
+
+        BigInteger numerator = negative ? -magnitude : magnitude;
+        if (scale == 0) return new BigFloat(numerator, 0);
+        return FromRatio(numerator, BigInteger.Pow(10, scale));
+    }
+
+    /// <summary>Разбор десятичной строки (инвариантная культура), в т.ч. в научной нотации.</summary>
+    public static BigFloat Parse(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return Zero;
+        text = text.Trim();
+
+        bool negative = false;
+        int index = 0;
+        if (text[0] is '+' or '-')
+        {
+            negative = text[0] == '-';
+            index = 1;
+        }
+
+        var digits = new StringBuilder();
+        int fractionDigits = 0;
+        bool seenPoint = false;
+        int exponentPart = 0;
+
+        for (; index < text.Length; index++)
+        {
+            char c = text[index];
+            if (c is >= '0' and <= '9')
+            {
+                digits.Append(c);
+                if (seenPoint) fractionDigits++;
+            }
+            else if (c == '.' && !seenPoint)
+            {
+                seenPoint = true;
+            }
+            else if (c is 'e' or 'E')
+            {
+                exponentPart = int.Parse(text[(index + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture);
+                break;
+            }
+            else
+            {
+                throw new FormatException($"Недопустимый символ '{c}' в числе «{text}».");
+            }
+        }
+
+        BigInteger mantissa = digits.Length == 0 ? BigInteger.Zero : BigInteger.Parse(digits.ToString(), CultureInfo.InvariantCulture);
+        if (negative) mantissa = -mantissa;
+        if (mantissa.IsZero) return Zero;
+
+        int decimalExponent = exponentPart - fractionDigits;
+        if (decimalExponent >= 0)
+            return new BigFloat(mantissa * BigInteger.Pow(10, decimalExponent), 0);
+        return FromRatio(mantissa, BigInteger.Pow(10, -decimalExponent));
+    }
+
+    /// <summary>Округлённое значение num / den с рабочей точностью.</summary>
+    private static BigFloat FromRatio(BigInteger numerator, BigInteger denominator)
+    {
+        if (numerator.IsZero) return Zero;
+        int sign = numerator.Sign * denominator.Sign;
+        BigInteger absNumerator = BigInteger.Abs(numerator);
+        BigInteger absDenominator = BigInteger.Abs(denominator);
+
+        // Масштабируем так, чтобы получить хотя бы PrecisionBits + 2 значащих бита.
+        int numeratorBits = (int)absNumerator.GetBitLength();
+        int denominatorBits = (int)absDenominator.GetBitLength();
+        int shift = PrecisionBits + 2 - (numeratorBits - denominatorBits);
+        if (shift < 0) shift = 0;
+
+        BigInteger scaled = (absNumerator << shift);
+        BigInteger quotient = BigInteger.DivRem(scaled, absDenominator, out BigInteger remainder);
+        // Округление к ближайшему по остатку.
+        if ((remainder << 1) >= absDenominator) quotient += 1;
+        if (sign < 0) quotient = -quotient;
+        return new BigFloat(quotient, -shift);
+    }
+
+    public static BigFloat operator -(BigFloat value) => FromRawRounded(-value.Mantissa, value.Exponent);
+
+    public static BigFloat operator +(BigFloat left, BigFloat right)
+    {
+        if (left.IsZero) return right;
+        if (right.IsZero) return left;
+
+        if (left.Exponent == right.Exponent)
+            return new BigFloat(left.Mantissa + right.Mantissa, left.Exponent);
+
+        if (left.Exponent > right.Exponent)
+        {
+            BigInteger aligned = left.Mantissa << (left.Exponent - right.Exponent);
+            return new BigFloat(aligned + right.Mantissa, right.Exponent);
+        }
+        else
+        {
+            BigInteger aligned = right.Mantissa << (right.Exponent - left.Exponent);
+            return new BigFloat(left.Mantissa + aligned, left.Exponent);
+        }
+    }
+
+    public static BigFloat operator -(BigFloat left, BigFloat right) => left + (-right);
+
+    public static BigFloat operator *(BigFloat left, BigFloat right)
+    {
+        if (left.IsZero || right.IsZero) return Zero;
+        return new BigFloat(left.Mantissa * right.Mantissa, left.Exponent + right.Exponent);
+    }
+
+    public double ToDouble()
+    {
+        if (IsZero) return 0;
+        int bitLength = (int)Mantissa.GetBitLength();
+        if (bitLength <= 53)
+            return (double)Mantissa * System.Math.ScaleB(1.0, Exponent);
+
+        int shift = bitLength - 53;
+        BigInteger reduced = Mantissa >> shift;
+        return (double)reduced * System.Math.ScaleB(1.0, Exponent + shift);
+    }
+
+    /// <summary>Ближайшее <see cref="decimal"/>; при выходе за диапазон — насыщение к границе.</summary>
+    public decimal ToDecimalClamped()
+    {
+        try
+        {
+            return decimal.Parse(ToInvariantString(29), NumberStyles.Float, CultureInfo.InvariantCulture);
+        }
+        catch (OverflowException)
+        {
+            return Sign < 0 ? decimal.MinValue : decimal.MaxValue;
+        }
+    }
+
+    public string ToInvariantString() => ToInvariantString(SerializationFractionDigits);
+
+    public string ToInvariantString(int maxFractionDigits)
+    {
+        if (IsZero) return "0";
+
+        bool negative = Mantissa.Sign < 0;
+        BigInteger magnitude = BigInteger.Abs(Mantissa);
+
+        if (Exponent >= 0)
+        {
+            BigInteger integer = magnitude << Exponent;
+            return negative ? "-" + integer.ToString(CultureInfo.InvariantCulture)
+                            : integer.ToString(CultureInfo.InvariantCulture);
+        }
+
+        int fractionBits = -Exponent;
+        BigInteger denominator = BigInteger.One << fractionBits;
+        BigInteger integerPart = BigInteger.DivRem(magnitude, denominator, out BigInteger remainder);
+
+        var fraction = new StringBuilder();
+        int produced = 0;
+        while (!remainder.IsZero && produced < maxFractionDigits)
+        {
+            remainder *= 10;
+            BigInteger digit = BigInteger.DivRem(remainder, denominator, out remainder);
+            fraction.Append((char)('0' + (int)digit));
+            produced++;
+        }
+
+        // Округление последней выводимой цифры по остатку.
+        if (!remainder.IsZero && (remainder << 1) >= denominator)
+            RoundUpDecimalString(fraction, ref integerPart);
+
+        while (fraction.Length > 0 && fraction[^1] == '0') fraction.Length--;
+
+        var builder = new StringBuilder();
+        if (negative) builder.Append('-');
+        builder.Append(integerPart.ToString(CultureInfo.InvariantCulture));
+        if (fraction.Length > 0) builder.Append('.').Append(fraction);
+        return builder.ToString();
+    }
+
+    private static void RoundUpDecimalString(StringBuilder fraction, ref BigInteger integerPart)
+    {
+        int position = fraction.Length - 1;
+        while (position >= 0)
+        {
+            if (fraction[position] == '9')
+            {
+                fraction[position] = '0';
+                position--;
+            }
+            else
+            {
+                fraction[position]++;
+                return;
+            }
+        }
+
+        integerPart += 1;
+    }
+
+    public int CompareTo(BigFloat other)
+    {
+        BigFloat difference = this - other;
+        return difference.Mantissa.Sign;
+    }
+
+    public bool Equals(BigFloat other) => Mantissa == other.Mantissa && Exponent == other.Exponent;
+    public override bool Equals(object? obj) => obj is BigFloat other && Equals(other);
+    public override int GetHashCode() => HashCode.Combine(Mantissa, Exponent);
+    public override string ToString() => ToInvariantString(40);
+}
