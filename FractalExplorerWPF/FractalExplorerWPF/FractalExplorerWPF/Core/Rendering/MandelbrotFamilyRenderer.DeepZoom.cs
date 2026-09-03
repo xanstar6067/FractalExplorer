@@ -37,6 +37,10 @@ public static partial class MandelbrotFamilyRenderer
         public required bool Escaped;
     }
 
+    // Критерий Pauldelbrot для rebasing: если |z|² падает ниже этой доли от |Zref|²,
+    // опорная точка считается ненадёжной. 1e-6 — общепринятое значение.
+    private const double GlitchToleranceSquared = 1e-6;
+
     private static readonly object _orbitLock = new();
     private static string? _orbitKey;
     private static ReferenceOrbit? _orbitCache;
@@ -146,8 +150,10 @@ public static partial class MandelbrotFamilyRenderer
 
     // ------------------------------------------------------------------ reference orbit
 
-    private static bool IsDegenerateOrbit(ReferenceOrbit orbit, int iterations) =>
-        orbit.Length < 8 || (orbit.Escaped && orbit.Length < iterations / 2);
+    // Короткая опорная орбита (центр ушёл за радиус почти сразу) — единственный случай,
+    // когда пертурбации нечем оперировать. Рано вышедшая, но не мгновенно, орбита
+    // отлично обслуживается rebasing'ом — это обычный случай для глубокого «внешнего» вида.
+    private static bool IsDegenerateOrbit(ReferenceOrbit orbit, int iterations) => orbit.Length < 4;
 
     private static ReferenceOrbit GetReferenceOrbit(MandelbrotState state)
     {
@@ -293,9 +299,14 @@ public static partial class MandelbrotFamilyRenderer
             }
 
             double deltaMagnitudeSquared = deltaReal * deltaReal + deltaImaginary * deltaImaginary;
-            if (referenceIndex >= orbit.Length - 1 || magnitudeSquared < deltaMagnitudeSquared)
+            double referenceMagnitudeSquared =
+                nextReferenceReal * nextReferenceReal + nextReferenceImaginary * nextReferenceImaginary;
+            // Rebasing по Zhuoran (|z| < |δ|) плюс критерий Pauldelbrot (|z|² ≪ |Zref|²):
+            // и то и другое означает, что опорная точка перестала быть хорошим приближением.
+            if (referenceIndex >= orbit.Length - 1 ||
+                magnitudeSquared < deltaMagnitudeSquared ||
+                magnitudeSquared < GlitchToleranceSquared * referenceMagnitudeSquared)
             {
-                // Rebasing: δ становится полным z, опорная орбита начинается заново.
                 deltaReal = fullReal;
                 deltaImaginary = fullImaginary;
                 referenceIndex = 0;
