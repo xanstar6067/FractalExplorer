@@ -8,10 +8,15 @@ namespace FractalExplorerWPF.Core.Rendering;
 /// <summary>
 /// «Второй двигатель» рендера семейства Мандельброта — пертурбационный метод.
 ///
-/// Для Mandelbrot/Julia лестница точности схлопнута до двух ступеней: плоский double
-/// (<see cref="Iterate"/>) до <see cref="PerturbationZoomThreshold"/> (~1.5e9), выше —
-/// этот движок. Ступень <see cref="decimal"/> (<see cref="IterateDecimal"/>) осталась
-/// только для 7 «неглубоких» вариантов и режимов Histogram/DistanceEstimation.
+/// Для каждого поддерживаемого варианта (<see cref="SupportsDeepZoom"/>: Mandelbrot/Julia,
+/// 5 отражённых, целая степень Multibrot/Simonobrot) лестница точности схлопнута до двух
+/// ступеней: плоский double (<see cref="Iterate"/>) до <see cref="PerturbationZoomThreshold"/>
+/// (~1.5e9), выше — этот движок, для любого режима окраски, кроме DistanceEstimation
+/// (нужна производная, которую пертурбация пока не даёт ни для одной формулы семейства).
+/// Histogram — тоже здесь (<see cref="RenderDeepZoomHistogram"/>), двухпроходный, как и
+/// decimal-версия. Ступень <see cref="decimal"/> (<see cref="IterateDecimal"/>) осталась
+/// только для вариантов/степеней вне <see cref="SupportsDeepZoom"/>, для DistanceEstimation
+/// и как запасной путь при вырожденной опорной орбите в Histogram.
 ///
 /// 1. Один раз на кадр считается опорная орбита <c>Zₙ</c> в центре области — в
 ///    <see cref="BigFloat"/> с адаптивной точностью (<see cref="PlanDeepZoom"/>),
@@ -97,7 +102,11 @@ public static partial class MandelbrotFamilyRenderer
     {
         if (!SupportsDeepZoom(state))
             return false;
-        if (state.ColoringMode is MandelbrotColoringMode.Histogram or MandelbrotColoringMode.DistanceEstimation)
+        // Histogram переехал на глубокий движок (см. RenderDeepZoomHistogram) — читает те
+        // же Iterations/Smooth, что и остальные режимы, просто в два прохода. Distance
+        // Estimation остаётся на decimal: нужна производная, которую пертурбация пока не
+        // тянет ни для одной формулы семейства (см. память проекта).
+        if (state.ColoringMode == MandelbrotColoringMode.DistanceEstimation)
             return false;
         return ForceDeepZoomForTests ?? (state.Zoom > PerturbationZoomThreshold);
     }
@@ -230,6 +239,7 @@ public static partial class MandelbrotFamilyRenderer
             return RenderBruteForceTile(state, canvasWidth, canvasHeight, tile, token);
 
         bool isJulia = IsJuliaVariant(state.Variant);
+        bool trackHistogram = state.ColoringMode == MandelbrotColoringMode.Histogram;
         double escapeSquared = (double)(state.Threshold * state.Threshold);
         double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * canvasHeight / canvasWidth;
@@ -249,7 +259,14 @@ public static partial class MandelbrotFamilyRenderer
                 double deltaReal = ((double)x / canvasWidth - 0.5) * viewWidth;
                 PixelMetrics metrics = DeepZoomPixelDispatch(
                     plan, state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
-                Color color = ResolveColor(state, metrics, 0);
+                // Тайловый предпросмотр (и Histogram здесь) — та же дешёвая локальная
+                // нормализация, что и в обычном RenderTile: полноценное выравнивание по
+                // CDF по кадру требует полного кадра (см. RenderDeepZoomHistogram).
+                double histogramValue = trackHistogram
+                    ? System.Math.Clamp((state.HistogramInputUseSmooth ? metrics.Smooth : metrics.Iterations) /
+                                         System.Math.Max(1, state.Iterations), 0, 1)
+                    : 0;
+                Color color = ResolveColor(state, metrics, histogramValue);
                 int offset = row + localX * 4;
                 buffer[offset] = color.B;
                 buffer[offset + 1] = color.G;
@@ -272,8 +289,27 @@ public static partial class MandelbrotFamilyRenderer
     {
         DeepZoomPlan plan = PlanDeepZoom(state);
         ReferenceOrbit orbit = GetReferenceOrbit(state, plan.ReferenceBits);
+        int threads = state.Threads <= 0 ? Environment.ProcessorCount : state.Threads;
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = System.Math.Clamp(threads, 1, Environment.ProcessorCount)
+        };
+
         if (IsDegenerateOrbit(orbit, state.Iterations))
         {
+            // Вырожденная орбита обслуживается тем же путём, что и до Фазы 7: Histogram —
+            // прежним decimal-двухпроходным рендером (полноценное выравнивание по CDF по
+            // кадру здесь не критично к скорости — редкий пограничный случай), остальные
+            // режимы — brute-force в double (см. Фазу 2).
+            if (state.ColoringMode == MandelbrotColoringMode.Histogram)
+            {
+                decimal decimalViewWidth = DecimalViewWidth(state.Zoom);
+                decimal decimalViewHeight = decimalViewWidth * height / width;
+                int completedHistogramRows = 0;
+                RenderHistogram(state, buffer, width, height, stride, decimalViewWidth, decimalViewHeight,
+                    options, token, ref completedHistogramRows, reportProgress);
+                return;
+            }
             RenderBruteForceFull(state, buffer, width, height, stride, token, reportProgress);
             return;
         }
@@ -283,11 +319,13 @@ public static partial class MandelbrotFamilyRenderer
         double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * height / width;
 
-        int threads = state.Threads <= 0 ? Environment.ProcessorCount : state.Threads;
-        var options = new ParallelOptions
+        if (state.ColoringMode == MandelbrotColoringMode.Histogram)
         {
-            MaxDegreeOfParallelism = System.Math.Clamp(threads, 1, Environment.ProcessorCount)
-        };
+            RenderDeepZoomHistogram(state, buffer, width, height, stride, plan, orbit, isJulia,
+                escapeSquared, viewWidth, viewHeight, options, token, reportProgress);
+            return;
+        }
+
         int completedRows = 0;
 
         Parallel.For(0, height, options, (y, loopState) =>
@@ -312,6 +350,101 @@ public static partial class MandelbrotFamilyRenderer
             int done = Interlocked.Increment(ref completedRows);
             if (done == height || done % System.Math.Max(1, height / 100) == 0)
                 reportProgress?.Invoke(done * 100 / height);
+        });
+    }
+
+    // Histogram на глубоком движке: та же двухпроходная схема, что и decimal-версия
+    // (RenderHistogram) — первый проход копит Iterations/Smooth и гистограмму бинов,
+    // между проходами строится CDF, второй проход красит по ней. Ядро пикселя то же самое
+    // (DeepZoomPixelDispatch), что и у Smooth/Trap/Stripe — Iterations/Smooth считаются
+    // безусловно во всех режимах, поэтому BLA/FloatExp/отражение/степени работают как обычно.
+    private static void RenderDeepZoomHistogram(
+        MandelbrotState state,
+        byte[] buffer,
+        int width,
+        int height,
+        int stride,
+        DeepZoomPlan plan,
+        ReferenceOrbit orbit,
+        bool isJulia,
+        double escapeSquared,
+        double viewWidth,
+        double viewHeight,
+        ParallelOptions options,
+        CancellationToken token,
+        Action<int>? reportProgress)
+    {
+        var smoothValues = new double[checked(width * height)];
+        var iterationValues = new int[smoothValues.Length];
+        var bins = new int[state.Iterations + 1];
+        object histogramLock = new();
+        int scanRows = 0;
+
+        Parallel.For(0, height, options, (y, loopState) =>
+        {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
+            var localBins = new int[bins.Length];
+            double deltaImaginary = (0.5 - (double)y / height) * viewHeight;
+            int row = y * width;
+            for (int x = 0; x < width; x++)
+            {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
+                double deltaReal = ((double)x / width - 0.5) * viewWidth;
+                PixelMetrics value = DeepZoomPixelDispatch(
+                    plan, state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
+                smoothValues[row + x] = value.Smooth;
+                iterationValues[row + x] = value.Iterations;
+                int bin = state.HistogramInputUseSmooth
+                    ? System.Math.Clamp((int)System.Math.Floor(value.Smooth), 0, state.Iterations)
+                    : System.Math.Clamp(value.Iterations, 0, state.Iterations);
+                localBins[bin]++;
+            }
+            lock (histogramLock)
+            {
+                for (int i = 0; i < bins.Length; i++) bins[i] += localBins[i];
+            }
+            int done = Interlocked.Increment(ref scanRows);
+            reportProgress?.Invoke(done * 65 / height);
+        });
+
+        if (token.IsCancellationRequested) return;
+
+        long total = (long)width * height;
+        var cdf = new double[bins.Length];
+        long cumulative = 0;
+        for (int i = 0; i <= state.Iterations; i++)
+        {
+            cumulative += bins[i];
+            cdf[i] = total == 0 ? 0 : (double)cumulative / total;
+        }
+
+        int coloredRows = 0;
+        Parallel.For(0, height, options, (y, loopState) =>
+        {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
+            int metricRow = y * width;
+            int outputRow = y * stride;
+            for (int x = 0; x < width; x++)
+            {
+                if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
+                PixelMetrics value = new(iterationValues[metricRow + x], smoothValues[metricRow + x], 0, 0);
+                int bin = state.HistogramInputUseSmooth
+                    ? System.Math.Clamp((int)System.Math.Floor(value.Smooth), 0, state.Iterations)
+                    : System.Math.Clamp(value.Iterations, 0, state.Iterations);
+                double normalized = value.Iterations >= state.Iterations
+                    ? 0
+                    : state.HistogramEnabledEqualization
+                        ? cdf[bin]
+                        : bin / (double)System.Math.Max(1, state.Iterations);
+                Color color = ResolveColor(state, value, normalized);
+                int offset = outputRow + x * 4;
+                buffer[offset] = color.B;
+                buffer[offset + 1] = color.G;
+                buffer[offset + 2] = color.R;
+                buffer[offset + 3] = 255;
+            }
+            int done = Interlocked.Increment(ref coloredRows);
+            reportProgress?.Invoke(65 + done * 35 / height);
         });
     }
 
@@ -1236,6 +1369,7 @@ public static partial class MandelbrotFamilyRenderer
         var (centerX, centerY) = ProjectCenterToDouble(state);
         double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * canvasHeight / canvasWidth;
+        bool trackHistogram = state.ColoringMode == MandelbrotColoringMode.Histogram;
 
         for (int localY = 0; localY < tile.Height; localY++)
         {
@@ -1248,7 +1382,11 @@ public static partial class MandelbrotFamilyRenderer
                 int x = tile.X + localX;
                 double real = centerX + ((double)x / canvasWidth - 0.5) * viewWidth;
                 PixelMetrics metrics = Iterate(state, real, imaginary, token);
-                Color color = ResolveColor(state, metrics, 0);
+                double histogramValue = trackHistogram
+                    ? System.Math.Clamp((state.HistogramInputUseSmooth ? metrics.Smooth : metrics.Iterations) /
+                                         System.Math.Max(1, state.Iterations), 0, 1)
+                    : 0;
+                Color color = ResolveColor(state, metrics, histogramValue);
                 int offset = row + localX * 4;
                 buffer[offset] = color.B;
                 buffer[offset + 1] = color.G;
