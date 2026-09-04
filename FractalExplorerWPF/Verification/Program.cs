@@ -276,7 +276,114 @@ internal static class Program
         await VerifyReflectedVariantsAsync(Palette);
         await VerifyMultibrotDeepZoomAsync(Palette);
         await VerifySimonobrotDeepZoomAsync(Palette);
+        await VerifyHistogramDeepZoomAsync(Palette);
         await VerifyEngineAccuracyAsync(Palette);
+    }
+
+    // Phase 7: Histogram coloring moved onto the deep engine (RenderDeepZoomHistogram) — the
+    // decimal stage it used to require unconditionally is now only a degenerate-orbit
+    // fallback. Same two-pass CDF pipeline as the decimal version, fed by the already-proven
+    // deep kernels (Iterations/Smooth are unconditional in every kernel, so BLA/FloatExp/
+    // reflection/power formulas all carry through unchanged).
+    private static async Task VerifyHistogramDeepZoomAsync(Func<MandelbrotPalette> palette)
+    {
+        static int RgbDelta(byte[] a, byte[] b, int pixel)
+        {
+            int o = pixel * 4;
+            return Math.Max(Math.Abs(a[o] - b[o]),
+                   Math.Max(Math.Abs(a[o + 1] - b[o + 1]), Math.Abs(a[o + 2] - b[o + 2])));
+        }
+
+        static int CountDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+                if (RgbDelta(a, b, pixel) != 0) n++;
+            return n;
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool? forceDeep, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = forceDeep;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally { MandelbrotFamilyRenderer.ForceDeepZoomForTests = null; }
+            return pixels;
+        }
+
+        const int w = 112, h = 74, total = w * h;
+        MandelbrotState HistogramState(double zoom, int iterations, bool equalize, bool useSmooth) => new()
+        {
+            ColoringMode = MandelbrotColoringMode.Histogram,
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = zoom,
+            Iterations = iterations,
+            HistogramEnabledEqualization = equalize,
+            HistogramInputUseSmooth = useSmooth,
+            Threads = 2,
+            Palette = palette()
+        };
+
+        // (a) Where decimal was still trustworthy, the deep two-pass pipeline (binning + CDF
+        //     + colouring) must reproduce it up to boundary chaos — across every combination
+        //     of equalization and smooth/iteration binning.
+        foreach ((bool equalize, bool useSmooth) in new[] { (true, true), (true, false), (false, true), (false, false) })
+        {
+            MandelbrotState state = HistogramState(1.0e12, 6000, equalize, useSmooth);
+            byte[] decimalPixels = await RenderAsync(state, forceDeep: false, w, h);
+            byte[] deepPixels = await RenderAsync(state, forceDeep: true, w, h);
+            int differing = CountDiffering(decimalPixels, deepPixels);
+            Console.WriteLine($"[diag] Histogram equalize={equalize} smooth={useSmooth}: decimal vs deep {differing}/{total} px differ");
+            Check(deepPixels.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                $"Histogram (equalize={equalize}, smooth={useSmooth}) must resolve structure.");
+            Check(differing * 100 <= total * 5,
+                $"Histogram (equalize={equalize}, smooth={useSmooth}): decimal vs deep diverges on {differing}/{total} px (>5%).");
+        }
+
+        // (b) Determinism: the two-pass parallel binning must not depend on thread scheduling.
+        {
+            MandelbrotState state = HistogramState(1.0e18, 4000, equalize: true, useSmooth: true);
+            byte[] a = await RenderAsync(state, forceDeep: true, w, h);
+            byte[] b = await RenderAsync(state, forceDeep: true, w, h);
+            Check(CountDiffering(a, b) == 0, "Deep Histogram must be deterministic across runs.");
+        }
+
+        // (c) Degenerate reference orbit + Histogram must still fall back cleanly (decimal
+        //     two-pass render, no crash) instead of silently mis-colouring with normalized=0.
+        {
+            var degenerate = new MandelbrotState
+            {
+                ColoringMode = MandelbrotColoringMode.Histogram,
+                CenterX = 1000m,
+                CenterY = 1000m,
+                Zoom = 1.0e30,
+                Iterations = 500,
+                Threads = 2,
+                Palette = palette()
+            };
+            int progress = 0;
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.Render(degenerate, pixels, w, h, w * 4,
+                CancellationToken.None, value => progress = value);
+            Check(progress == 100, "Degenerate-orbit Histogram fallback must complete with 100% progress.");
+            Check(pixels.Where((_, index) => index % 4 == 3).All(value => value == 255),
+                "Degenerate-orbit Histogram fallback must fill every pixel.");
+        }
+
+        // (d) Tile-mode preview path (local normalization, not the full-frame CDF) must not
+        //     crash and must resolve structure for a deep-eligible state.
+        {
+            MandelbrotState state = HistogramState(1.0e12, 3000, equalize: true, useSmooth: true);
+            var tile = new MandelbrotRenderTile(0, 0, w, h, 0, 0);
+            byte[]? tilePixels = MandelbrotFamilyRenderer.RenderTile(state, w, h, tile, CancellationToken.None);
+            Check(tilePixels is not null, "Histogram tile render must not be cancelled.");
+            Check(tilePixels!.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                "Histogram tile render must resolve structure.");
+        }
     }
 
     // Phase 5: Generalized/Multibrot of integer power p on the deep engine — exact binomial

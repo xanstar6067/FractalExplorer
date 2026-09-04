@@ -10,10 +10,11 @@ public static partial class MandelbrotFamilyRenderer
 {
     // Порог зума, за которым обычный double перестаёт быть надёжным (сетка координат и
     // накопление ошибки в z→z²+c). Ниже — плоский double-рендер (см. <see cref="Iterate"/>).
-    // Выше для 7 «неглубоких» вариантов (Burning Ship и т.п.) и для режимов Histogram/
-    // DistanceEstimation по-прежнему работает ступень decimal (<see cref="IterateDecimal"/>);
-    // для Mandelbrot/Julia в остальных режимах ступень decimal пропускается — сразу
-    // включается пертурбационный движок.
+    // Выше ступень decimal (<see cref="IterateDecimal"/>) по-прежнему обслуживает: варианты
+    // без глубокого движка (Burning Ship и т.п. — только decimal; Simonobrot/Generalized вне
+    // целой поддерживаемой степени), режим DistanceEstimation (нужна производная, которую
+    // пертурбация пока не даёт) и вырожденную опорную орбиту в Histogram. Во всех остальных
+    // случаях (включая Histogram — см. RenderDeepZoomHistogram) ступень decimal пропускается.
     private const double DecimalIterationZoomThreshold = 1_500_000_000d;
 
     // Mandelbrot/Julia: «второй двигатель» (пертурбация + опорная орбита в BigFloat)
@@ -22,10 +23,11 @@ public static partial class MandelbrotFamilyRenderer
     // схлопнута до double → пертурбация.
     private const double PerturbationZoomThreshold = DecimalIterationZoomThreshold;
 
-    // Ширина области в decimal для «плоских» ступеней (double- и decimal-итерация не в
-    // режиме глубокого зума: 7 «неглубоких» вариантов, а также Histogram/DistanceEstimation).
-    // Зум зажимается по верхней границе decimal; выше него всё обслуживает пертурбационный
-    // движок, а этот путь и раньше упирался в старый MaxZoom, так что ничего не теряется.
+    // Ширина области в decimal для «плоских» ступеней: double-/decimal-итерация вне
+    // глубокого зума, режим DistanceEstimation и запасной путь Histogram при вырожденной
+    // опорной орбите. Зум зажимается по верхней границе decimal; выше него всё, что умеет,
+    // обслуживает пертурбационный движок, а этот путь и раньше упирался в старый MaxZoom,
+    // так что ничего не теряется.
     private const decimal DecimalViewWidthMinimum = 0.000000000000001m;
 
     private static decimal DecimalViewWidth(double zoom)
