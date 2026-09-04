@@ -274,6 +274,170 @@ internal static class Program
         await VerifyDecimalStageRemovedAsync(Palette);
         await VerifyBlaAccelerationAsync(Palette);
         await VerifyReflectedVariantsAsync(Palette);
+        await VerifyMultibrotDeepZoomAsync(Palette);
+        await VerifyEngineAccuracyAsync(Palette);
+    }
+
+    // Phase 5: Generalized/Multibrot of integer power p on the deep engine — exact binomial
+    // perturbation (Z+δ)ᵖ−Zᵖ, BLA with a p-dependent table. Verified against the exact
+    // BigFloat reference (repeated-multiplication zᵖ, no perturbation).
+    private static async Task VerifyMultibrotDeepZoomAsync(Func<MandelbrotPalette> palette)
+    {
+        static int CountRgbDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                if (a[o] != b[o] || a[o + 1] != b[o + 1] || a[o + 2] != b[o + 2]) n++;
+            }
+            return n;
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool? forceDeep, bool? forceBla, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = forceDeep;
+            MandelbrotFamilyRenderer.ForceBlaForTests = forceBla;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally
+            {
+                MandelbrotFamilyRenderer.ForceDeepZoomForTests = null;
+                MandelbrotFamilyRenderer.ForceBlaForTests = null;
+            }
+            return pixels;
+        }
+
+        const int w = 56, h = 40, total = w * h;
+
+        // Structured boundary views per power; the perturbation engine is forced on so the
+        // kernel is exercised on real detail and compared to the exact BigFloat reference
+        // (repeated-multiplication zᵖ, no perturbation). Small image / modest iterations —
+        // the exact BigFloat renderer is slow.
+        (int Power, decimal Cx, decimal Cy)[] cases =
+        {
+            (3, -0.295455m, 0.977273m),
+            (5, -0.540000m, 0.600000m),
+            (8, 0.660000m, 0.000000m),
+            (12, 0.750000m, 0.000000m),
+        };
+
+        foreach ((int power, decimal cx, decimal cy) in cases)
+        {
+            var state = new MandelbrotState
+            {
+                Variant = MandelbrotVariant.Generalized,
+                Power = power,
+                CenterX = cx,
+                CenterY = cy,
+                Zoom = 300.0,
+                Iterations = 2000,
+                Threads = 2,
+                Palette = palette()
+            };
+            byte[] perturbation = await RenderAsync(state, forceDeep: true, forceBla: null, w, h);
+            byte[] exact = await Task.Run(() =>
+                MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
+            byte[] blaOff = await RenderAsync(state, forceDeep: true, forceBla: false, w, h);
+
+            int vsExact = CountRgbDiffering(perturbation, exact);
+            int vsBlaOff = CountRgbDiffering(perturbation, blaOff);
+            int maxD = 0, nonBlack = 0;
+            for (int i = 0; i < total; i++)
+            {
+                int o = i * 4;
+                maxD = Math.Max(maxD, Math.Max(Math.Abs(perturbation[o] - exact[o]),
+                    Math.Max(Math.Abs(perturbation[o + 1] - exact[o + 1]), Math.Abs(perturbation[o + 2] - exact[o + 2]))));
+                if (perturbation[o] != 0 || perturbation[o + 1] != 0 || perturbation[o + 2] != 0) nonBlack++;
+            }
+            Console.WriteLine($"[diag] Multibrot p={power}: vs exact {vsExact}/{total} (maxΔ {maxD}), BLA on/off {vsBlaOff}/{total}, nonblack {nonBlack}");
+            Check(nonBlack > total / 10, $"Multibrot p={power} view must carry structure.");
+            Check(vsExact * 100 <= total * 3,
+                $"Multibrot p={power}: perturbation diverges from exact on {vsExact}/{total} px, maxΔ {maxD} (>3%).");
+            Check(vsBlaOff * 100 <= total * 3,
+                $"Multibrot p={power}: BLA changes {vsBlaOff}/{total} px vs non-BLA (>3%).");
+        }
+
+        // Mandelbrot must be untouched by the Multibrot path.
+        var mandel = new MandelbrotState
+        {
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = 5.0e25,
+            Iterations = 4000,
+            Threads = 2,
+            Palette = palette()
+        };
+        Check(CountRgbDiffering(
+                await RenderAsync(mandel, forceDeep: true, forceBla: null, w, h),
+                await RenderAsync(mandel, forceDeep: true, forceBla: null, w, h)) == 0,
+            "Mandelbrot deep render must stay deterministic after Phase 5.");
+    }
+
+    // How significant is the quality loss of the production engine (perturbation + BLA +
+    // FloatExp) versus a near-exact BigFloat direct-iteration reference? Reports the
+    // fraction of differing pixels and the worst per-channel delta per view.
+    private static async Task VerifyEngineAccuracyAsync(Func<MandelbrotPalette> palette)
+    {
+        static (int Differing, int MaxDelta) Compare(byte[] a, byte[] b)
+        {
+            int differing = 0, maxDelta = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                int d = Math.Max(Math.Abs(a[o] - b[o]),
+                    Math.Max(Math.Abs(a[o + 1] - b[o + 1]), Math.Abs(a[o + 2] - b[o + 2])));
+                if (d != 0) differing++;
+                maxDelta = Math.Max(maxDelta, d);
+            }
+            return (differing, maxDelta);
+        }
+
+        MandelbrotPalette Pal() => palette();
+
+        MandelbrotState Deep(MandelbrotVariant variant, decimal cx, decimal cy, double zoom, int iterations,
+            decimal power = 2m, decimal jr = 0m, decimal ji = 0m) => new()
+        {
+            Variant = variant,
+            CenterX = cx,
+            CenterY = cy,
+            Power = power,
+            JuliaCReal = jr,
+            JuliaCImaginary = ji,
+            Zoom = zoom,
+            Iterations = iterations,
+            Threads = 2,
+            Palette = Pal()
+        };
+
+        const int w = 48, h = 32, total = w * h;
+        var mandelCentre = (X: -1.2628848671045503000020782246m, Y: 0.0409687601493310685285376264m);
+
+        (string Label, MandelbrotState State)[] views =
+        {
+            ("Mandelbrot 1e30",        Deep(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e30, 4500)),
+            ("Mandelbrot 1e120 (fexp)",Deep(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e120, 4500)),
+            ("BurningShip 1e30",       Deep(MandelbrotVariant.BurningShip, -1.62m, 0m, 1.0e30, 3000)),
+        };
+
+        foreach ((string label, MandelbrotState state) in views)
+        {
+            byte[] engine = new byte[w * h * 4];
+            await Task.Run(() => MandelbrotFamilyRenderer.Render(state, engine, w, h, w * 4, CancellationToken.None));
+            byte[] exact = await Task.Run(() =>
+                MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
+            (int differing, int maxDelta) = Compare(engine, exact);
+            int nonBlack = 0;
+            for (int i = 0; i < total; i++)
+                if (engine[i * 4] != 0 || engine[i * 4 + 1] != 0 || engine[i * 4 + 2] != 0) nonBlack++;
+            double percent = 100.0 * differing / total;
+            Console.WriteLine($"[diag] accuracy {label}: {differing}/{total} px differ ({percent:F2}%), max Δ {maxDelta}, nonblack {nonBlack}");
+            Check(differing * 100 <= total * 5,
+                $"Engine diverges from the exact reference on {differing}/{total} px for {label} (>5%).");
+        }
     }
 
     // Phase 4: reflected/conjugate variants (Burning Ship, Julia Burning Ship, Tricorn,

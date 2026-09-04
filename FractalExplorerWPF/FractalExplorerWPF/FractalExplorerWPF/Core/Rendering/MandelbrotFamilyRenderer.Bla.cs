@@ -46,13 +46,19 @@ public static partial class MandelbrotFamilyRenderer
         /// <summary>
         /// Строит таблицу по опорной орбите (<paramref name="re"/>/<paramref name="im"/>,
         /// первые <paramref name="length"/> точек). <paramref name="deltaCMax"/> — верхняя
-        /// оценка |δc| по кадру (берётся ширина вида, консервативно). Возвращает null, если
-        /// таблица не нужна или орбита слишком длинная.
+        /// оценка |δc| по кадру (берётся ширина вида, консервативно). <paramref name="power"/> —
+        /// целая степень формулы zᵖ+c (2 для Mandelbrot/Julia): линейный член A = p·Zᵖ⁻¹,
+        /// радиус r = tol·(2/(p−1))·|Z|. Возвращает null, если таблица не нужна или орбита
+        /// слишком длинная.
         /// </summary>
         public static BlaTable? Build(
-            double[] re, double[] im, int length, bool isJulia, double escapeSquared, double deltaCMax)
+            double[] re, double[] im, int length, bool isJulia, double escapeSquared, double deltaCMax,
+            int power = 2)
         {
             if (length < 4 || length > BlaMaxOrbitLength) return null;
+
+            // r = tol·|A|/|следующий член| = tol·(p/C(p,2))·|Z| = tol·(2/(p−1))·|Z|.
+            double radiusFactor = 2.0 / (power - 1);
 
             int level0Count = length - 1;
             int levels = 1;
@@ -77,8 +83,17 @@ public static partial class MandelbrotFamilyRenderer
             for (int n = 0; n < level0Count; n++)
             {
                 double zr = re[n], zi = im[n];
-                ax[0][n] = 2.0 * zr;
-                ay[0][n] = 2.0 * zi;
+
+                // A = p·Zᵖ⁻¹ (для p=2 — ровно 2Z, как раньше).
+                double powerReal = 1.0, powerImaginary = 0.0;
+                for (int e = 0; e < power - 1; e++)
+                {
+                    double nr = powerReal * zr - powerImaginary * zi;
+                    powerImaginary = powerReal * zi + powerImaginary * zr;
+                    powerReal = nr;
+                }
+                ax[0][n] = power * powerReal;
+                ay[0][n] = power * powerImaginary;
                 bx[0][n] = bSeed;
                 by[0][n] = 0.0;
 
@@ -91,7 +106,7 @@ public static partial class MandelbrotFamilyRenderer
                 }
                 else
                 {
-                    double r = BlaTolerance * 2.0 * System.Math.Sqrt(zMagnitudeSquared);
+                    double r = BlaTolerance * radiusFactor * System.Math.Sqrt(zMagnitudeSquared);
                     r2[0][n] = r * r;
                 }
             }

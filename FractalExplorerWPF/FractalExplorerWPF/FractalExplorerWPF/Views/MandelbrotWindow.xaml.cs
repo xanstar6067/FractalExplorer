@@ -62,12 +62,16 @@ public partial class MandelbrotWindow : Window
     //  • Mandelbrot/Julia — полный MaxZoom (адаптивная точность + FloatExp-δ + BLA);
     //  • отражённые (Burning Ship, Tricorn, Buffalo, Celtic и их Julia) — пертурбация со
     //    свёрнутым δ, но δ всегда в double и без BLA, поэтому консервативные 1e50;
-    //  • Simonobrot/Generalized (степенная формула) — только decimal-ступень, прежние 5e28.
+    //  • Generalized — глубокий движок только для целой степени p∈[2,12] (биномиальное
+    //    возмущение + BLA); дробная степень остаётся на decimal и на таком зуме даёт
+    //    однородную картинку — граничный случай наравне с Histogram/DE;
+    //  • Simonobrot — только decimal-ступень, прежние 5e28.
     private double EffectiveMaxZoom => _definition.Variant switch
     {
         MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia => MaxZoom,
         MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip
             or MandelbrotVariant.Tricorn or MandelbrotVariant.Buffalo or MandelbrotVariant.Celtic => 1e50,
+        MandelbrotVariant.Generalized => 1e40,
         _ => 5e28,
     };
 

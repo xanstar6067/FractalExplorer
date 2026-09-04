@@ -55,11 +55,31 @@ public static partial class MandelbrotFamilyRenderer
     // зума (в пределах поддерживаемых вариантов и режимов). null — по порогу зума.
     internal static bool? ForceDeepZoomForTests { get; set; }
 
+    // Целая степень Multibrot (Generalized), для которой применим глубокий движок:
+    // z^p через умножение и биномиальное возмущение (дробная степень требует pow в BigFloat).
+    private const int MinMultibrotPower = 2;
+    private const int MaxMultibrotPower = 12;
+
+    private static bool IsMultibrotDeepZoomPower(decimal power) =>
+        power == decimal.Truncate(power) && power >= MinMultibrotPower && power <= MaxMultibrotPower;
+
+    private static int MultibrotPowerOrZero(MandelbrotState state) =>
+        state.Variant == MandelbrotVariant.Generalized && IsMultibrotDeepZoomPower(state.Power)
+            ? (int)state.Power
+            : 0;
+
+    private static bool SupportsDeepZoom(MandelbrotState state) => state.Variant switch
+    {
+        MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia
+            or MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip
+            or MandelbrotVariant.Tricorn or MandelbrotVariant.Buffalo or MandelbrotVariant.Celtic => true,
+        MandelbrotVariant.Generalized => IsMultibrotDeepZoomPower(state.Power),
+        _ => false,
+    };
+
     private static bool ShouldUseDeepZoom(MandelbrotState state)
     {
-        if (state.Variant is not (MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia
-            or MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip
-            or MandelbrotVariant.Tricorn or MandelbrotVariant.Buffalo or MandelbrotVariant.Celtic))
+        if (!SupportsDeepZoom(state))
             return false;
         if (state.ColoringMode is MandelbrotColoringMode.Histogram or MandelbrotColoringMode.DistanceEstimation)
             return false;
@@ -159,6 +179,13 @@ public static partial class MandelbrotFamilyRenderer
         if (ReflectKindOf(state.Variant) is { } reflect)
             return DeepZoomPixelReflected(state, orbit, reflect, isJulia, deltaReal, deltaImaginary,
                 escapeSquared, token);
+
+        // Multibrot целой степени: биномиальное возмущение (δ в double, BLA с p-зависимым A).
+        int multibrotPower = MultibrotPowerOrZero(state);
+        if (multibrotPower >= 3)
+            return DeepZoomPixelMultibrot(state, orbit, multibrotPower, deltaReal, deltaImaginary,
+                escapeSquared, token);
+        // p == 2 (или обычные Mandelbrot/Julia) — общий z²+c-путь ниже.
 
         return plan.UseFloatExpDelta
             ? DeepZoomPixelFloatExp(state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token)
@@ -290,6 +317,7 @@ public static partial class MandelbrotFamilyRenderer
             state.JuliaCReal.ToString(CultureInfo.InvariantCulture),
             state.JuliaCImaginary.ToString(CultureInfo.InvariantCulture),
             state.Threshold.ToString(CultureInfo.InvariantCulture),
+            state.Power.ToString(CultureInfo.InvariantCulture),
             referenceBits.ToString(CultureInfo.InvariantCulture));
 
         lock (_orbitLock)
@@ -320,6 +348,7 @@ public static partial class MandelbrotFamilyRenderer
 
         bool isJulia = IsJuliaVariant(state.Variant);
         ReflectKind? reflect = ReflectKindOf(state.Variant);
+        int multibrotPower = MultibrotPowerOrZero(state);   // 0, либо p ∈ [2, 12]
         BigFloat constantReal = isJulia ? BigFloat.FromDecimal(state.JuliaCReal) : centerX;
         BigFloat constantImaginary = isJulia ? BigFloat.FromDecimal(state.JuliaCImaginary) : centerY;
         BigFloat zReal = isJulia ? centerX : BigFloat.Zero;
@@ -352,6 +381,19 @@ public static partial class MandelbrotFamilyRenderer
                 (zReal, zImaginary) = StepReflectedReference(
                     kind, zReal, zImaginary, constantReal, constantImaginary, two);
             }
+            else if (multibrotPower >= 3)
+            {
+                // z ← zᵖ + c  (степенями умножения)
+                BigFloat powerReal = zReal, powerImaginary = zImaginary;
+                for (int e = 1; e < multibrotPower; e++)
+                {
+                    BigFloat nr = powerReal * zReal - powerImaginary * zImaginary;
+                    powerImaginary = powerReal * zImaginary + powerImaginary * zReal;
+                    powerReal = nr;
+                }
+                zReal = powerReal + constantReal;
+                zImaginary = powerImaginary + constantImaginary;
+            }
             else
             {
                 BigFloat nextReal = zReal * zReal - zImaginary * zImaginary + constantReal;
@@ -363,13 +405,15 @@ public static partial class MandelbrotFamilyRenderer
 
         var orbit = new ReferenceOrbit { Re = re, Im = im, Length = length, Escaped = escaped };
 
-        // Пирамида BLA — только для чистого z²+c (Mandelbrot/Julia): у отражённых вариантов
-        // линейная часть не комплексная. δcmax — консервативная оценка |δc| по кадру (полная
-        // ширина вида 3/zoom), не зависит от размера полотна, поэтому кэшируется с орбитой.
+        // Пирамида BLA — для z²+c (Mandelbrot/Julia) и целой степени Multibrot (A = p·Zᵖ⁻¹).
+        // У отражённых вариантов линейная часть не комплексная — BLA не строится. δcmax —
+        // консервативная оценка |δc| по кадру (полная ширина вида 3/zoom), не зависит от
+        // размера полотна, поэтому кэшируется с орбитой.
         double escapeSquared = (double)(state.Threshold * state.Threshold);
         double deltaCMax = state.Zoom > 0 && double.IsFinite(state.Zoom) ? 3.0 / state.Zoom : 0.0;
         orbit.Bla = reflect is null
-            ? BlaTable.Build(re, im, length, isJulia, escapeSquared, deltaCMax)
+            ? BlaTable.Build(re, im, length, isJulia, escapeSquared, deltaCMax,
+                multibrotPower >= 2 ? multibrotPower : 2)
             : null;
 
         return orbit;
@@ -761,6 +805,156 @@ public static partial class MandelbrotFamilyRenderer
 
             referenceIndex++;
             iteration++;
+
+            double nextReferenceReal = referenceIndex < orbit.Length ? orbit.Re[referenceIndex] : 0.0;
+            double nextReferenceImaginary = referenceIndex < orbit.Length ? orbit.Im[referenceIndex] : 0.0;
+            double fullReal = nextReferenceReal + deltaReal;
+            double fullImaginary = nextReferenceImaginary + deltaImaginary;
+            magnitudeSquared = fullReal * fullReal + fullImaginary * fullImaginary;
+
+            if (magnitudeSquared > escapeSquared)
+            {
+                escaped = true;
+                break;
+            }
+
+            double deltaMagnitudeSquared = deltaReal * deltaReal + deltaImaginary * deltaImaginary;
+            double referenceMagnitudeSquared =
+                nextReferenceReal * nextReferenceReal + nextReferenceImaginary * nextReferenceImaginary;
+            if (referenceIndex >= orbit.Length - 1 ||
+                magnitudeSquared < deltaMagnitudeSquared ||
+                magnitudeSquared < GlitchToleranceSquared * referenceMagnitudeSquared)
+            {
+                deltaReal = fullReal - orbit.Re[0];
+                deltaImaginary = fullImaginary - orbit.Im[0];
+                referenceIndex = 0;
+            }
+        }
+
+        if (!escaped)
+            return new PixelMetrics(maxIterations, maxIterations, 0, 0);
+
+        double smooth = iteration;
+        if (magnitudeSquared > 1)
+        {
+            double logZn = System.Math.Log(magnitudeSquared) / 2;
+            const double smoothingPower = 2;
+            double nu = System.Math.Log(System.Math.Max(logZn, 1e-300) / System.Math.Log(smoothingPower)) /
+                        System.Math.Log(smoothingPower);
+            if (double.IsFinite(nu)) smooth = iteration + 1 - nu;
+        }
+
+        return new PixelMetrics(
+            iteration,
+            smooth,
+            minTrap == double.MaxValue ? 0 : minTrap,
+            iteration == 0 ? 0 : stripe / iteration);
+    }
+
+    // Пертурбационное ядро Multibrot (Generalized) целой степени p ≥ 3: формула zᵖ+c.
+    // Возмущение — точное биномиальное разложение (Z+δ)ᵖ − Zᵖ = Σₖ C(p,k)·Zᵖ⁻ᵏ·δᵏ (без
+    // вычитания ⇒ без катастрофического сокращения). Линейный член A = p·Zᵖ⁻¹ комплексный,
+    // поэтому BLA (с p-зависимой таблицей) применяется как обычно. δ всегда в double —
+    // потолок зума Multibrot (EffectiveMaxZoom) ниже, чем нужен FloatExp.
+    private static PixelMetrics DeepZoomPixelMultibrot(
+        MandelbrotState state,
+        ReferenceOrbit orbit,
+        int power,
+        double deltaConstantReal,
+        double deltaConstantImaginary,
+        double escapeSquared,
+        CancellationToken token)
+    {
+        int maxIterations = state.Iterations;
+        bool trackTrap = state.ColoringMode == MandelbrotColoringMode.OrbitTrap;
+        bool trackStripe = state.ColoringMode == MandelbrotColoringMode.StripeAverage;
+
+        // Generalized не бывает Жюлиа: δ₀ = 0, δc добавляется каждый шаг.
+        double deltaReal = 0.0;
+        double deltaImaginary = 0.0;
+        double addReal = deltaConstantReal;
+        double addImaginary = deltaConstantImaginary;
+
+        BlaTable? bla = BlaEnabled && !trackTrap && !trackStripe ? orbit.Bla : null;
+
+        // Биномиальные коэффициенты C(p,k) для фиксированного p (p ≤ 12 ⇒ помещаются в long).
+        Span<long> binomial = stackalloc long[power + 1];
+        binomial[0] = 1;
+        for (int k = 1; k <= power; k++) binomial[k] = binomial[k - 1] * (power - k + 1) / k;
+        Span<double> zPowerReal = stackalloc double[power];
+        Span<double> zPowerImaginary = stackalloc double[power];
+
+        int referenceIndex = 0;
+        int iteration = 0;
+        double magnitudeSquared = 0;
+        double minTrap = double.MaxValue;
+        double stripe = 0;
+        bool escaped = false;
+
+        while (iteration < maxIterations)
+        {
+            if ((iteration & 8191) == 0 && token.IsCancellationRequested) return default;
+
+            if (bla is not null &&
+                bla.TryLookup(referenceIndex, deltaReal * deltaReal + deltaImaginary * deltaImaginary,
+                    maxIterations - iteration,
+                    out double blaAx, out double blaAy, out double blaBx, out double blaBy, out int blaSteps))
+            {
+                double skippedReal = blaAx * deltaReal - blaAy * deltaImaginary
+                                   + blaBx * addReal - blaBy * addImaginary;
+                double skippedImaginary = blaAx * deltaImaginary + blaAy * deltaReal
+                                        + blaBx * addImaginary + blaBy * addReal;
+                deltaReal = skippedReal;
+                deltaImaginary = skippedImaginary;
+                referenceIndex += blaSteps;
+                iteration += blaSteps;
+            }
+            else
+            {
+                double referenceReal = orbit.Re[referenceIndex];
+                double referenceImaginary = orbit.Im[referenceIndex];
+
+                double currentReal = referenceReal + deltaReal;
+                double currentImaginary = referenceImaginary + deltaImaginary;
+                if (trackTrap)
+                    minTrap = System.Math.Min(minTrap,
+                        System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
+                if (trackStripe)
+                    stripe += 0.5 + 0.5 * System.Math.Sin(
+                        state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
+
+                // Zᵏ, k = 0..p−1.
+                zPowerReal[0] = 1.0;
+                zPowerImaginary[0] = 0.0;
+                for (int j = 1; j < power; j++)
+                {
+                    zPowerReal[j] = zPowerReal[j - 1] * referenceReal - zPowerImaginary[j - 1] * referenceImaginary;
+                    zPowerImaginary[j] = zPowerReal[j - 1] * referenceImaginary + zPowerImaginary[j - 1] * referenceReal;
+                }
+
+                // Σ_{k=1}^{p} C(p,k)·Zᵖ⁻ᵏ·δᵏ
+                double accumulatorReal = 0.0, accumulatorImaginary = 0.0;
+                double deltaPowerReal = deltaReal, deltaPowerImaginary = deltaImaginary; // δ¹
+                for (int k = 1; k <= power; k++)
+                {
+                    double zTermReal = zPowerReal[power - k];
+                    double zTermImaginary = zPowerImaginary[power - k];
+                    double termReal = zTermReal * deltaPowerReal - zTermImaginary * deltaPowerImaginary;
+                    double termImaginary = zTermReal * deltaPowerImaginary + zTermImaginary * deltaPowerReal;
+                    accumulatorReal += binomial[k] * termReal;
+                    accumulatorImaginary += binomial[k] * termImaginary;
+
+                    double nextDeltaPowerReal = deltaPowerReal * deltaReal - deltaPowerImaginary * deltaImaginary;
+                    deltaPowerImaginary = deltaPowerReal * deltaImaginary + deltaPowerImaginary * deltaReal;
+                    deltaPowerReal = nextDeltaPowerReal;
+                }
+
+                deltaReal = accumulatorReal + addReal;
+                deltaImaginary = accumulatorImaginary + addImaginary;
+
+                referenceIndex++;
+                iteration++;
+            }
 
             double nextReferenceReal = referenceIndex < orbit.Length ? orbit.Re[referenceIndex] : 0.0;
             double nextReferenceImaginary = referenceIndex < orbit.Length ? orbit.Im[referenceIndex] : 0.0;
