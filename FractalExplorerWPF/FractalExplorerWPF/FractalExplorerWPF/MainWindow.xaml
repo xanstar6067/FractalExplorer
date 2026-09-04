@@ -95,17 +95,23 @@
                 </Button>
 
                 <Grid DockPanel.Dock="Top" Margin="5,0,5,10">
-                    <TextBox x:Name="SearchBox"
-                             Height="32" Padding="8,5,64,5"
-                             VerticalContentAlignment="Center"
-                             TextChanged="SearchBox_OnTextChanged"/>
-                    <TextBlock x:Name="SearchPlaceholder"
-                               Margin="10,0,0,0" VerticalAlignment="Center"
-                               IsHitTestVisible="False"
-                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
-                               Text="Поиск фракталов..."/>
-                    <Border HorizontalAlignment="Right" VerticalAlignment="Center"
-                            Margin="0,0,7,0" Padding="5,2" CornerRadius="4"
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0">
+                        <TextBox x:Name="SearchBox"
+                                 TextChanged="SearchBox_OnTextChanged"/>
+                        <TextBlock x:Name="SearchPlaceholder"
+                                   Margin="10,0,0,0" VerticalAlignment="Center"
+                                   IsHitTestVisible="False"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   Text="Поиск фракталов..."/>
+                    </Grid>
+
+                    <Border Grid.Column="1" VerticalAlignment="Center"
+                            Margin="6,0,0,0" Padding="6,3" CornerRadius="4"
                             Background="{DynamicResource Theme.ControlBackgroundAltBrush}"
                             BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1"
                             Cursor="Hand"
