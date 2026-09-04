@@ -275,6 +275,7 @@ internal static class Program
         await VerifyBlaAccelerationAsync(Palette);
         await VerifyReflectedVariantsAsync(Palette);
         await VerifyMultibrotDeepZoomAsync(Palette);
+        await VerifySimonobrotDeepZoomAsync(Palette);
         await VerifyEngineAccuracyAsync(Palette);
     }
 
@@ -375,6 +376,113 @@ internal static class Program
                 await RenderAsync(mandel, forceDeep: true, forceBla: null, w, h),
                 await RenderAsync(mandel, forceDeep: true, forceBla: null, w, h)) == 0,
             "Mandelbrot deep render must stay deterministic after Phase 5.");
+    }
+
+    // Phase 6: Simonobrot of even integer power p=2q — composition of two exact binomial
+    // perturbations (zᵖ and |z|ᵖ=Mᵠ), no BLA (the leading term is a real 2×2 map, not
+    // complex). Verified against the exact BigFloat reference, both with and without
+    // UseInversion (which flips the sign the reference-orbit cache key must also carry).
+    private static async Task VerifySimonobrotDeepZoomAsync(Func<MandelbrotPalette> palette)
+    {
+        static int CountRgbDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                if (a[o] != b[o] || a[o + 1] != b[o + 1] || a[o + 2] != b[o + 2]) n++;
+            }
+            return n;
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool? forceDeep, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = forceDeep;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally { MandelbrotFamilyRenderer.ForceDeepZoomForTests = null; }
+            return pixels;
+        }
+
+        const int w = 56, h = 40, total = w * h;
+
+        // Structured boundary views per power/inversion combo (auto-located).
+        (int Power, bool Inversion, decimal Cx, decimal Cy)[] cases =
+        {
+            (2, false, -0.03m, 0.84m),
+            (2, true,   0.03m, 0.84m),
+            (6, false, -0.90m, 0.18m),
+            (8, true,  -0.33m, 0.87m),
+            (12, false, -0.12m, 0.84m),
+        };
+
+        foreach ((int power, bool inversion, decimal cx, decimal cy) in cases)
+        {
+            var state = new MandelbrotState
+            {
+                Variant = MandelbrotVariant.Simonobrot,
+                Power = power,
+                UseInversion = inversion,
+                CenterX = cx,
+                CenterY = cy,
+                Zoom = 300.0,
+                Iterations = 2000,
+                Threads = 2,
+                Palette = palette()
+            };
+            byte[] perturbation = await RenderAsync(state, forceDeep: true, w, h);
+            byte[] exact = await Task.Run(() =>
+                MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
+
+            int vsExact = CountRgbDiffering(perturbation, exact);
+            int maxD = 0, nonBlack = 0;
+            for (int i = 0; i < total; i++)
+            {
+                int o = i * 4;
+                maxD = Math.Max(maxD, Math.Max(Math.Abs(perturbation[o] - exact[o]),
+                    Math.Max(Math.Abs(perturbation[o + 1] - exact[o + 1]), Math.Abs(perturbation[o + 2] - exact[o + 2]))));
+                if (perturbation[o] != 0 || perturbation[o + 1] != 0 || perturbation[o + 2] != 0) nonBlack++;
+            }
+            Console.WriteLine($"[diag] Simonobrot p={power} inv={inversion}: vs exact {vsExact}/{total} (maxΔ {maxD}), nonblack {nonBlack}");
+            Check(nonBlack > total / 10, $"Simonobrot p={power} inv={inversion} view must carry structure.");
+            Check(vsExact * 100 <= total * 3,
+                $"Simonobrot p={power} inv={inversion}: perturbation diverges from exact on {vsExact}/{total} px, maxΔ {maxD} (>3%).");
+        }
+
+        // UseInversion must be part of the reference-orbit cache key: two renders that
+        // differ only by it, at the same centre/zoom, must not collide.
+        {
+            var baseState = new MandelbrotState
+            {
+                Variant = MandelbrotVariant.Simonobrot,
+                Power = 2,
+                CenterX = -0.03m,
+                CenterY = 0.84m,
+                Zoom = 300.0,
+                Iterations = 2000,
+                Threads = 2,
+                Palette = palette()
+            };
+            var inverted = new MandelbrotState
+            {
+                Variant = MandelbrotVariant.Simonobrot,
+                Power = 2,
+                UseInversion = true,
+                CenterX = -0.03m,
+                CenterY = 0.84m,
+                Zoom = 300.0,
+                Iterations = 2000,
+                Threads = 2,
+                Palette = palette()
+            };
+            byte[] a = await RenderAsync(baseState, forceDeep: true, w, h);
+            byte[] b = await RenderAsync(inverted, forceDeep: true, w, h);
+            Check(CountRgbDiffering(a, b) > total / 4,
+                "UseInversion must be part of the orbit cache key (renders collided).");
+        }
     }
 
     // How significant is the quality loss of the production engine (perturbation + BLA +

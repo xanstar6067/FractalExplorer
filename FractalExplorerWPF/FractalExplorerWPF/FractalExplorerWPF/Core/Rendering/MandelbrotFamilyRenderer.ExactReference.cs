@@ -72,8 +72,12 @@ public static partial class MandelbrotFamilyRenderer
         bool isJulia = IsJuliaVariant(state.Variant);
         ReflectKind? reflect = ReflectKindOf(state.Variant);
         int multibrotPower = MultibrotPowerOrZero(state);
+        int simonobrotPower = SimonobrotPowerOrZero(state);
+        bool invertReal = state.Variant == MandelbrotVariant.Simonobrot && state.UseInversion;
 
-        BigFloat constantReal = isJulia ? BigFloat.FromDecimal(state.JuliaCReal) : startReal;
+        BigFloat constantReal = isJulia
+            ? BigFloat.FromDecimal(state.JuliaCReal)
+            : invertReal ? -startReal : startReal;
         BigFloat constantImaginary = isJulia ? BigFloat.FromDecimal(state.JuliaCImaginary) : startImaginary;
         BigFloat zReal = isJulia ? startReal : BigFloat.Zero;
         BigFloat zImaginary = isJulia ? startImaginary : BigFloat.Zero;
@@ -92,6 +96,22 @@ public static partial class MandelbrotFamilyRenderer
             {
                 (zReal, zImaginary) = StepReflectedReference(
                     kind, zReal, zImaginary, constantReal, constantImaginary, two);
+            }
+            else if (simonobrotPower >= 2)
+            {
+                int halfPower = simonobrotPower / 2;
+                BigFloat powerReal = zReal, powerImaginary = zImaginary;
+                for (int e = 1; e < simonobrotPower; e++)
+                {
+                    BigFloat nr = powerReal * zReal - powerImaginary * zImaginary;
+                    powerImaginary = powerReal * zImaginary + powerImaginary * zReal;
+                    powerReal = nr;
+                }
+                BigFloat magnitudeSquaredBig = zReal * zReal + zImaginary * zImaginary;
+                BigFloat magnitudePower = magnitudeSquaredBig;
+                for (int e = 1; e < halfPower; e++) magnitudePower *= magnitudeSquaredBig;
+                zReal = powerReal * magnitudePower + constantReal;
+                zImaginary = powerImaginary * magnitudePower + constantImaginary;
             }
             else if (multibrotPower >= 3)
             {

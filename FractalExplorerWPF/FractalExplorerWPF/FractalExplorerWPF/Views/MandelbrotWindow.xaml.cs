@@ -65,13 +65,17 @@ public partial class MandelbrotWindow : Window
     //  • Generalized — глубокий движок только для целой степени p∈[2,12] (биномиальное
     //    возмущение + BLA); дробная степень остаётся на decimal и на таком зуме даёт
     //    однородную картинку — граничный случай наравне с Histogram/DE;
-    //  • Simonobrot — только decimal-ступень, прежние 5e28.
+    //  • Simonobrot — глубокий движок только для целой ЧЁТНОЙ степени p∈[2,12] (композиция
+    //    двух биномиальных возмущений, без BLA); формула zᵖ·|z|ᵖ растёт заметно резче
+    //    Multibrot той же p (эффективно ~2p), поэтому потолок консервативнее; нечётная,
+    //    отрицательная и дробная степень остаются на decimal, прежние 5e28.
     private double EffectiveMaxZoom => _definition.Variant switch
     {
         MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia => MaxZoom,
         MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip
             or MandelbrotVariant.Tricorn or MandelbrotVariant.Buffalo or MandelbrotVariant.Celtic => 1e50,
         MandelbrotVariant.Generalized => 1e40,
+        MandelbrotVariant.Simonobrot => 1e30,
         _ => 5e28,
     };
 
