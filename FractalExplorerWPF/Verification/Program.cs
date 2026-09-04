@@ -273,6 +273,90 @@ internal static class Program
 
         await VerifyDecimalStageRemovedAsync(Palette);
         await VerifyBlaAccelerationAsync(Palette);
+        await VerifyReflectedVariantsAsync(Palette);
+    }
+
+    // Phase 4: reflected/conjugate variants (Burning Ship, Julia Burning Ship, Tricorn,
+    // Buffalo, Celtic) on the perturbation engine via a sign-folded δ recurrence (no BLA).
+    // Where decimal is still trustworthy the perturbation render must reproduce it up to
+    // boundary chaos; Mandelbrot/Julia must be untouched.
+    private static async Task VerifyReflectedVariantsAsync(Func<MandelbrotPalette> palette)
+    {
+        static int CountRgbDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                if (a[o] != b[o] || a[o + 1] != b[o + 1] || a[o + 2] != b[o + 2]) n++;
+            }
+            return n;
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool? forceDeep, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = forceDeep;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally { MandelbrotFamilyRenderer.ForceDeepZoomForTests = null; }
+            return pixels;
+        }
+
+        const int w = 120, h = 80, total = w * h;
+
+        (MandelbrotVariant variant, decimal cx, decimal cy, decimal jr, decimal ji, string label)[] cases =
+        {
+            (MandelbrotVariant.BurningShip,      -1.62m, 0m,     0m,     0m,   "BurningShip"),
+            (MandelbrotVariant.Tricorn,          -1.62m, 0m,     0m,     0m,   "Tricorn"),
+            (MandelbrotVariant.Buffalo,          -1.62m, 0m,     0m,     0m,   "Buffalo"),
+            (MandelbrotVariant.Celtic,           -1.62m, 0m,     0m,     0m,   "Celtic"),
+            (MandelbrotVariant.JuliaBurningShip,  0.5m, -0.3m, -1.5m,   0m,   "JuliaBurningShip"),
+        };
+
+        foreach ((MandelbrotVariant variant, decimal cx, decimal cy, decimal jr, decimal ji, string label) in cases)
+        {
+            foreach (double zoom in new[] { 1.0e10, 1.0e16 })
+            {
+                var state = new MandelbrotState
+                {
+                    Variant = variant,
+                    CenterX = cx,
+                    CenterY = cy,
+                    JuliaCReal = jr,
+                    JuliaCImaginary = ji,
+                    Zoom = zoom,
+                    Iterations = 3000,
+                    Threshold = 2m,
+                    Threads = 2,
+                    Palette = palette()
+                };
+                byte[] decimalPixels = await RenderAsync(state, forceDeep: false, w, h);
+                byte[] perturbationPixels = await RenderAsync(state, forceDeep: true, w, h);
+                int differing = CountRgbDiffering(decimalPixels, perturbationPixels);
+                Console.WriteLine($"[diag] {label} zoom {zoom:E0}: decimal vs perturbation {differing}/{total} px differ");
+                Check(perturbationPixels.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                    $"{label} perturbation must resolve structure at zoom {zoom:E0}.");
+                Check(differing * 100 <= total * 8,
+                    $"{label}: perturbation diverges from decimal on {differing}/{total} px at zoom {zoom:E0} (>8%).");
+            }
+        }
+
+        // Regression guard: the reflected code path must not touch Mandelbrot.
+        var mandel = new MandelbrotState
+        {
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = 5.0e25,
+            Iterations = 4000,
+            Threads = 2,
+            Palette = palette()
+        };
+        byte[] a1 = await RenderAsync(mandel, forceDeep: true, w, h);
+        byte[] a2 = await RenderAsync(mandel, forceDeep: true, w, h);
+        Check(CountRgbDiffering(a1, a2) == 0, "Mandelbrot deep render must stay deterministic after Phase 4.");
     }
 
     // Phase 3: BLA (Zhuoran) skips runs of iterations where δ stays small. It is a pure

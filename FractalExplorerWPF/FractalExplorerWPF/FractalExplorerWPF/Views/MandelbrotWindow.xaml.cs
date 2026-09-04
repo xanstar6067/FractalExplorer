@@ -58,12 +58,18 @@ public partial class MandelbrotWindow : Window
     // выше сначала нужны точность центра на UI-потоке и ступень BLA (иначе упор по времени).
     private const double MaxZoom = 1e90;
 
-    // Пертурбационный «второй двигатель» работает только для Mandelbrot и Julia. Остальные
-    // варианты по-прежнему обслуживает decimal-ступень, для них потолок остаётся прежним —
-    // иначе зум «уезжал» бы за предел decimal, а картинка стояла бы на месте.
-    private double EffectiveMaxZoom => _definition.Variant is MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia
-        ? MaxZoom
-        : 5e28;
+    // Потолок зума по вариантам:
+    //  • Mandelbrot/Julia — полный MaxZoom (адаптивная точность + FloatExp-δ + BLA);
+    //  • отражённые (Burning Ship, Tricorn, Buffalo, Celtic и их Julia) — пертурбация со
+    //    свёрнутым δ, но δ всегда в double и без BLA, поэтому консервативные 1e50;
+    //  • Simonobrot/Generalized (степенная формула) — только decimal-ступень, прежние 5e28.
+    private double EffectiveMaxZoom => _definition.Variant switch
+    {
+        MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia => MaxZoom,
+        MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip
+            or MandelbrotVariant.Tricorn or MandelbrotVariant.Buffalo or MandelbrotVariant.Celtic => 1e50,
+        _ => 5e28,
+    };
 
     private BitmapSource? _stableBitmap;
     // Центр последнего готового кадра — в произвольной точности: на глубоком зуме разность

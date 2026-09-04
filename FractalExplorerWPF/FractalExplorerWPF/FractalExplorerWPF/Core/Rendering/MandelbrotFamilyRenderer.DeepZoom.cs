@@ -57,11 +57,47 @@ public static partial class MandelbrotFamilyRenderer
 
     private static bool ShouldUseDeepZoom(MandelbrotState state)
     {
-        if (state.Variant is not (MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia))
+        if (state.Variant is not (MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia
+            or MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip
+            or MandelbrotVariant.Tricorn or MandelbrotVariant.Buffalo or MandelbrotVariant.Celtic))
             return false;
         if (state.ColoringMode is MandelbrotColoringMode.Histogram or MandelbrotColoringMode.DistanceEstimation)
             return false;
         return ForceDeepZoomForTests ?? (state.Zoom > PerturbationZoomThreshold);
+    }
+
+    // Варианты семейства с отражением/сопряжением: их линейная часть возмущения — не
+    // комплексное умножение, а «свёртка знака» покомпонентно (см. DeepZoomPixelReflected).
+    // BLA для них не строится (таблица рассчитана на комплексный A) — как и для режимов
+    // ловушки/полос.
+    private enum ReflectKind { BurningShip, Buffalo, Tricorn, Celtic }
+
+    private static ReflectKind? ReflectKindOf(MandelbrotVariant variant) => variant switch
+    {
+        MandelbrotVariant.BurningShip or MandelbrotVariant.JuliaBurningShip => ReflectKind.BurningShip,
+        MandelbrotVariant.Buffalo => ReflectKind.Buffalo,
+        MandelbrotVariant.Tricorn => ReflectKind.Tricorn,
+        MandelbrotVariant.Celtic => ReflectKind.Celtic,
+        _ => null,
+    };
+
+    private static bool IsJuliaVariant(MandelbrotVariant variant) =>
+        variant is MandelbrotVariant.Julia or MandelbrotVariant.JuliaBurningShip;
+
+    // |Zc + δc| − |Zc| без катастрофического сокращения: пока δ не перевернул знак
+    // компоненты (обычный случай на глубоком зуме) это ровно ±δc; на перевороте — точное
+    // отражённое выражение (δ там уже сравнимо с Z и тут же срабатывает rebasing).
+    private static double FoldedDelta(double referenceComponent, double deltaComponent)
+    {
+        if (referenceComponent > 0.0)
+            return deltaComponent > -referenceComponent
+                ? deltaComponent
+                : -(deltaComponent + 2.0 * referenceComponent);
+        if (referenceComponent < 0.0)
+            return deltaComponent < -referenceComponent
+                ? -deltaComponent
+                : deltaComponent + 2.0 * referenceComponent;
+        return System.Math.Abs(deltaComponent);
     }
 
     // ------------------------------------------------------------------ precision planner
@@ -116,10 +152,18 @@ public static partial class MandelbrotFamilyRenderer
         double deltaReal,
         double deltaImaginary,
         double escapeSquared,
-        CancellationToken token) =>
-        plan.UseFloatExpDelta
+        CancellationToken token)
+    {
+        // Варианты с отражением/сопряжением идут своим ядром (δ всегда в double: их потолок
+        // зума ограничен раньше, чем double-δ перестаёт хватать — см. EffectiveMaxZoom).
+        if (ReflectKindOf(state.Variant) is { } reflect)
+            return DeepZoomPixelReflected(state, orbit, reflect, isJulia, deltaReal, deltaImaginary,
+                escapeSquared, token);
+
+        return plan.UseFloatExpDelta
             ? DeepZoomPixelFloatExp(state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token)
             : DeepZoomPixel(state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
+    }
 
     // ------------------------------------------------------------------ entry points
 
@@ -135,7 +179,7 @@ public static partial class MandelbrotFamilyRenderer
         if (IsDegenerateOrbit(orbit, state.Iterations))
             return RenderBruteForceTile(state, canvasWidth, canvasHeight, tile, token);
 
-        bool isJulia = state.Variant == MandelbrotVariant.Julia;
+        bool isJulia = IsJuliaVariant(state.Variant);
         double escapeSquared = (double)(state.Threshold * state.Threshold);
         double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * canvasHeight / canvasWidth;
@@ -184,7 +228,7 @@ public static partial class MandelbrotFamilyRenderer
             return;
         }
 
-        bool isJulia = state.Variant == MandelbrotVariant.Julia;
+        bool isJulia = IsJuliaVariant(state.Variant);
         double escapeSquared = (double)(state.Threshold * state.Threshold);
         double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * height / width;
@@ -274,7 +318,8 @@ public static partial class MandelbrotFamilyRenderer
         var re = new double[capacity];
         var im = new double[capacity];
 
-        bool isJulia = state.Variant == MandelbrotVariant.Julia;
+        bool isJulia = IsJuliaVariant(state.Variant);
+        ReflectKind? reflect = ReflectKindOf(state.Variant);
         BigFloat constantReal = isJulia ? BigFloat.FromDecimal(state.JuliaCReal) : centerX;
         BigFloat constantImaginary = isJulia ? BigFloat.FromDecimal(state.JuliaCImaginary) : centerY;
         BigFloat zReal = isJulia ? centerX : BigFloat.Zero;
@@ -302,22 +347,67 @@ public static partial class MandelbrotFamilyRenderer
                 break;
             }
 
-            BigFloat nextReal = zReal * zReal - zImaginary * zImaginary + constantReal;
-            BigFloat nextImaginary = two * zReal * zImaginary + constantImaginary;
-            zReal = nextReal;
-            zImaginary = nextImaginary;
+            if (reflect is { } kind)
+            {
+                (zReal, zImaginary) = StepReflectedReference(
+                    kind, zReal, zImaginary, constantReal, constantImaginary, two);
+            }
+            else
+            {
+                BigFloat nextReal = zReal * zReal - zImaginary * zImaginary + constantReal;
+                BigFloat nextImaginary = two * zReal * zImaginary + constantImaginary;
+                zReal = nextReal;
+                zImaginary = nextImaginary;
+            }
         }
 
         var orbit = new ReferenceOrbit { Re = re, Im = im, Length = length, Escaped = escaped };
 
-        // Пирамида BLA. δcmax — консервативная оценка |δc| по кадру: берём полную ширину
-        // вида (3/zoom), она перекрывает полудиагональ при любом разумном соотношении сторон
-        // и не зависит от размера полотна, поэтому кэшируется вместе с орбитой.
+        // Пирамида BLA — только для чистого z²+c (Mandelbrot/Julia): у отражённых вариантов
+        // линейная часть не комплексная. δcmax — консервативная оценка |δc| по кадру (полная
+        // ширина вида 3/zoom), не зависит от размера полотна, поэтому кэшируется с орбитой.
         double escapeSquared = (double)(state.Threshold * state.Threshold);
         double deltaCMax = state.Zoom > 0 && double.IsFinite(state.Zoom) ? 3.0 / state.Zoom : 0.0;
-        orbit.Bla = BlaTable.Build(re, im, length, isJulia, escapeSquared, deltaCMax);
+        orbit.Bla = reflect is null
+            ? BlaTable.Build(re, im, length, isJulia, escapeSquared, deltaCMax)
+            : null;
 
         return orbit;
+    }
+
+    // Один шаг опорной орбиты отражённого варианта в BigFloat. Совпадает с IterateOnce:
+    // BurningShip w=(|zr|,-|zi|); Buffalo w=(|zr|,|zi|); Tricorn w=(zr,-zi); затем w²+c.
+    // Celtic: re=|zr²-zi²|+cr, im=2·zr·zi+ci.
+    private static (BigFloat, BigFloat) StepReflectedReference(
+        ReflectKind kind, BigFloat zReal, BigFloat zImaginary, BigFloat cReal, BigFloat cImaginary, BigFloat two)
+    {
+        if (kind == ReflectKind.Celtic)
+        {
+            BigFloat u = zReal * zReal - zImaginary * zImaginary;
+            BigFloat celticReal = (u.Sign < 0 ? -u : u) + cReal;
+            BigFloat celticImaginary = two * zReal * zImaginary + cImaginary;
+            return (celticReal, celticImaginary);
+        }
+
+        BigFloat wReal, wImaginary;
+        switch (kind)
+        {
+            case ReflectKind.BurningShip:
+                wReal = zReal.Sign < 0 ? -zReal : zReal;
+                wImaginary = zImaginary.Sign < 0 ? zImaginary : -zImaginary;
+                break;
+            case ReflectKind.Buffalo:
+                wReal = zReal.Sign < 0 ? -zReal : zReal;
+                wImaginary = zImaginary.Sign < 0 ? -zImaginary : zImaginary;
+                break;
+            default: // Tricorn
+                wReal = zReal;
+                wImaginary = -zImaginary;
+                break;
+        }
+
+        return (wReal * wReal - wImaginary * wImaginary + cReal,
+                two * wReal * wImaginary + cImaginary);
     }
 
     // ------------------------------------------------------------------ per-pixel perturbation
@@ -550,6 +640,149 @@ public static partial class MandelbrotFamilyRenderer
                 // δ = z − Z₀ (для Мандельброта Z₀ = 0; для Жюлиа — центр). См. double-ядро.
                 deltaReal = FloatExp.FromDouble(fullReal - orbit.Re[0]);
                 deltaImaginary = FloatExp.FromDouble(fullImaginary - orbit.Im[0]);
+                referenceIndex = 0;
+            }
+        }
+
+        if (!escaped)
+            return new PixelMetrics(maxIterations, maxIterations, 0, 0);
+
+        double smooth = iteration;
+        if (magnitudeSquared > 1)
+        {
+            double logZn = System.Math.Log(magnitudeSquared) / 2;
+            const double smoothingPower = 2;
+            double nu = System.Math.Log(System.Math.Max(logZn, 1e-300) / System.Math.Log(smoothingPower)) /
+                        System.Math.Log(smoothingPower);
+            if (double.IsFinite(nu)) smooth = iteration + 1 - nu;
+        }
+
+        return new PixelMetrics(
+            iteration,
+            smooth,
+            minTrap == double.MaxValue ? 0 : minTrap,
+            iteration == 0 ? 0 : stripe / iteration);
+    }
+
+    // Пертурбационное ядро для отражённых вариантов (Burning Ship, Julia Burning Ship,
+    // Tricorn, Buffalo, Celtic). Их формула — «свёртка знака» компонент z, затем z²+c,
+    // поэтому линейная часть возмущения не комплексная: свёрнутое δ считается точным
+    // разбором случаев (<see cref="FoldedDelta"/>), а BLA не применяется. δ всегда в
+    // double: потолок зума этих вариантов (EffectiveMaxZoom) ниже, чем нужен FloatExp.
+    // Опорная орбита и все проверки (escape, rebasing) — как в <see cref="DeepZoomPixel"/>.
+    private static PixelMetrics DeepZoomPixelReflected(
+        MandelbrotState state,
+        ReferenceOrbit orbit,
+        ReflectKind kind,
+        bool isJulia,
+        double deltaConstantReal,
+        double deltaConstantImaginary,
+        double escapeSquared,
+        CancellationToken token)
+    {
+        int maxIterations = state.Iterations;
+        bool trackTrap = state.ColoringMode == MandelbrotColoringMode.OrbitTrap;
+        bool trackStripe = state.ColoringMode == MandelbrotColoringMode.StripeAverage;
+
+        double deltaReal = isJulia ? deltaConstantReal : 0.0;
+        double deltaImaginary = isJulia ? deltaConstantImaginary : 0.0;
+        double addReal = isJulia ? 0.0 : deltaConstantReal;
+        double addImaginary = isJulia ? 0.0 : deltaConstantImaginary;
+
+        int referenceIndex = 0;
+        int iteration = 0;
+        double magnitudeSquared = 0;
+        double minTrap = double.MaxValue;
+        double stripe = 0;
+        bool escaped = false;
+
+        while (iteration < maxIterations)
+        {
+            if ((iteration & 8191) == 0 && token.IsCancellationRequested) return default;
+
+            double referenceReal = orbit.Re[referenceIndex];
+            double referenceImaginary = orbit.Im[referenceIndex];
+
+            // Ловушка/полосы считаются по z (до свёртки), как в обычном Iterate.
+            double currentReal = referenceReal + deltaReal;
+            double currentImaginary = referenceImaginary + deltaImaginary;
+            if (trackTrap)
+                minTrap = System.Math.Min(minTrap,
+                    System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
+            if (trackStripe)
+                stripe += 0.5 + 0.5 * System.Math.Sin(
+                    state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
+
+            if (kind == ReflectKind.Celtic)
+            {
+                // u = Re(z²) = zr²−zi² ⇒ δu = 2Zr·δr − 2Zi·δi + δr² − δi² ;  Re' = |u| + cr
+                // v = Im(z²) = 2 zr zi ⇒ δv = 2(Zr·δi + Zi·δr) + 2 δr δi   ;  Im' = v + ci
+                double deltaU = 2 * (referenceReal * deltaReal - referenceImaginary * deltaImaginary)
+                              + deltaReal * deltaReal - deltaImaginary * deltaImaginary;
+                double deltaV = 2 * (referenceReal * deltaImaginary + referenceImaginary * deltaReal)
+                              + 2 * deltaReal * deltaImaginary;
+                deltaReal = FoldedDelta(referenceReal * referenceReal - referenceImaginary * referenceImaginary, deltaU) + addReal;
+                deltaImaginary = deltaV + addImaginary;
+            }
+            else
+            {
+                // Свёрнутая опорная точка W и свёрнутое отклонение δ_w = fold(Z+δ) − fold(Z).
+                double foldedReferenceReal, foldedReferenceImaginary, foldedDeltaReal, foldedDeltaImaginary;
+                switch (kind)
+                {
+                    case ReflectKind.BurningShip:
+                        foldedReferenceReal = System.Math.Abs(referenceReal);
+                        foldedReferenceImaginary = -System.Math.Abs(referenceImaginary);
+                        foldedDeltaReal = FoldedDelta(referenceReal, deltaReal);
+                        foldedDeltaImaginary = -FoldedDelta(referenceImaginary, deltaImaginary);
+                        break;
+                    case ReflectKind.Buffalo:
+                        foldedReferenceReal = System.Math.Abs(referenceReal);
+                        foldedReferenceImaginary = System.Math.Abs(referenceImaginary);
+                        foldedDeltaReal = FoldedDelta(referenceReal, deltaReal);
+                        foldedDeltaImaginary = FoldedDelta(referenceImaginary, deltaImaginary);
+                        break;
+                    default: // Tricorn — сопряжение, знак определён всегда
+                        foldedReferenceReal = referenceReal;
+                        foldedReferenceImaginary = -referenceImaginary;
+                        foldedDeltaReal = deltaReal;
+                        foldedDeltaImaginary = -deltaImaginary;
+                        break;
+                }
+
+                // δ ← 2·W·δ_w + δ_w² + δc
+                double twoWDeltaReal = 2 * (foldedReferenceReal * foldedDeltaReal - foldedReferenceImaginary * foldedDeltaImaginary);
+                double twoWDeltaImaginary = 2 * (foldedReferenceReal * foldedDeltaImaginary + foldedReferenceImaginary * foldedDeltaReal);
+                double foldedDeltaSquaredReal = foldedDeltaReal * foldedDeltaReal - foldedDeltaImaginary * foldedDeltaImaginary;
+                double foldedDeltaSquaredImaginary = 2 * foldedDeltaReal * foldedDeltaImaginary;
+                deltaReal = twoWDeltaReal + foldedDeltaSquaredReal + addReal;
+                deltaImaginary = twoWDeltaImaginary + foldedDeltaSquaredImaginary + addImaginary;
+            }
+
+            referenceIndex++;
+            iteration++;
+
+            double nextReferenceReal = referenceIndex < orbit.Length ? orbit.Re[referenceIndex] : 0.0;
+            double nextReferenceImaginary = referenceIndex < orbit.Length ? orbit.Im[referenceIndex] : 0.0;
+            double fullReal = nextReferenceReal + deltaReal;
+            double fullImaginary = nextReferenceImaginary + deltaImaginary;
+            magnitudeSquared = fullReal * fullReal + fullImaginary * fullImaginary;
+
+            if (magnitudeSquared > escapeSquared)
+            {
+                escaped = true;
+                break;
+            }
+
+            double deltaMagnitudeSquared = deltaReal * deltaReal + deltaImaginary * deltaImaginary;
+            double referenceMagnitudeSquared =
+                nextReferenceReal * nextReferenceReal + nextReferenceImaginary * nextReferenceImaginary;
+            if (referenceIndex >= orbit.Length - 1 ||
+                magnitudeSquared < deltaMagnitudeSquared ||
+                magnitudeSquared < GlitchToleranceSquared * referenceMagnitudeSquared)
+            {
+                deltaReal = fullReal - orbit.Re[0];
+                deltaImaginary = fullImaginary - orbit.Im[0];
                 referenceIndex = 0;
             }
         }
