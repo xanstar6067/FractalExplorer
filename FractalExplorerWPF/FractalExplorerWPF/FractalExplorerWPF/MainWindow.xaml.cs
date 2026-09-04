@@ -14,6 +14,7 @@ namespace FractalExplorerWPF;
 public partial class MainWindow : Window
 {
     private readonly IReadOnlyList<FractalCatalogItem> _catalog = FractalCatalog.Create();
+    private readonly HashSet<string> _favorites = FavoriteFractalsStore.Load();
     private FractalCatalogItem? _selectedItem;
     private bool _initializingRenderPattern = true;
     private bool _updatingThemes;
@@ -38,7 +39,7 @@ public partial class MainWindow : Window
             ThemeManager.ThemesChanged -= ThemeManager_OnThemesChanged;
         };
         ReloadThemeSelector();
-        PopulateCatalog();
+        ApplyCatalogFilter(null);
     }
 
     private void ReloadThemeSelector()
@@ -71,22 +72,51 @@ public partial class MainWindow : Window
     private void ThemeManager_OnThemeChanged(object? sender, EventArgs e) => ReloadThemeSelector();
     private void ThemeManager_OnThemesChanged(object? sender, EventArgs e) => ReloadThemeSelector();
 
-    private void PopulateCatalog()
-    {
-        FractalTree.Items.Clear();
-        AddCatalogLevel(FractalTree.Items, _catalog, 0);
+    private void SearchBox_OnTextChanged(object sender, TextChangedEventArgs e) =>
+        ApplyCatalogFilter(SearchBox.Text);
 
-        if (FractalTree.Items.Count > 0 &&
-            FractalTree.Items[0] is TreeViewItem firstCategory)
+    private void ApplyCatalogFilter(string? query)
+    {
+        query = query?.Trim();
+        bool hasQuery = !string.IsNullOrEmpty(query);
+        SearchPlaceholder.Visibility = string.IsNullOrEmpty(SearchBox.Text)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        IEnumerable<FractalCatalogItem> source = hasQuery
+            ? _catalog.Where(item => item.DisplayName.Contains(query!, StringComparison.OrdinalIgnoreCase))
+            : _catalog;
+
+        FractalTree.Items.Clear();
+
+        if (!hasQuery && _favorites.Count > 0)
+        {
+            List<FractalCatalogItem> favoriteItems =
+                _catalog.Where(item => _favorites.Contains(item.DisplayName)).ToList();
+            if (favoriteItems.Count > 0)
+            {
+                var favoriteNode = new TreeViewItem { Header = "★ Избранное", IsExpanded = true };
+                foreach (FractalCatalogItem item in favoriteItems)
+                    favoriteNode.Items.Add(CreateLeafNode(item));
+                FractalTree.Items.Add(favoriteNode);
+            }
+        }
+
+        AddCatalogLevel(FractalTree.Items, source, 0, hasQuery);
+
+        EmptySearchText.Visibility = FractalTree.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        if (FractalTree.Items.Count > 0 && FractalTree.Items[0] is TreeViewItem firstCategory)
         {
             TrySelectFirstCatalogItem(firstCategory);
         }
     }
 
-    private static void AddCatalogLevel(
+    private void AddCatalogLevel(
         ItemCollection target,
         IEnumerable<FractalCatalogItem> items,
-        int depth)
+        int depth,
+        bool expandAll)
     {
         foreach (IGrouping<string?, FractalCatalogItem> branch in items.GroupBy(item =>
                      depth < item.CategoryPath.Count ? item.CategoryPath[depth] : null))
@@ -95,19 +125,70 @@ public partial class MainWindow : Window
             {
                 foreach (FractalCatalogItem item in branch)
                 {
-                    target.Add(new TreeViewItem
-                    {
-                        Header = item.DisplayName,
-                        Tag = item
-                    });
+                    target.Add(CreateLeafNode(item));
                 }
 
                 continue;
             }
 
-            var categoryNode = new TreeViewItem { Header = branch.Key };
-            AddCatalogLevel(categoryNode.Items, branch, depth + 1);
+            var categoryNode = new TreeViewItem { Header = branch.Key, IsExpanded = expandAll };
+            AddCatalogLevel(categoryNode.Items, branch, depth + 1, expandAll);
             target.Add(categoryNode);
+        }
+    }
+
+    private TreeViewItem CreateLeafNode(FractalCatalogItem item)
+    {
+        bool isFavorite = _favorites.Contains(item.DisplayName);
+        var node = new TreeViewItem
+        {
+            Header = isFavorite ? "★ " + item.DisplayName : item.DisplayName,
+            Tag = item
+        };
+
+        var toggleFavorite = new MenuItem();
+        toggleFavorite.Click += (_, _) => ToggleFavorite(item);
+        var contextMenu = new ContextMenu();
+        contextMenu.Items.Add(toggleFavorite);
+        contextMenu.Opened += (_, _) => toggleFavorite.Header = _favorites.Contains(item.DisplayName)
+            ? "Убрать из избранного"
+            : "Добавить в избранное";
+        node.ContextMenu = contextMenu;
+
+        return node;
+    }
+
+    private void ToggleFavorite(FractalCatalogItem item)
+    {
+        if (!_favorites.Remove(item.DisplayName))
+            _favorites.Add(item.DisplayName);
+        FavoriteFractalsStore.Save(_favorites);
+        ApplyCatalogFilter(SearchBox.Text);
+    }
+
+    private void MainWindow_OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            OpenQuickSwitcher();
+            e.Handled = true;
+        }
+    }
+
+    private void QuickSwitcherHint_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
+        OpenQuickSwitcher();
+
+    private void OpenQuickSwitcher()
+    {
+        var dialog = new QuickSwitcherWindow(_catalog) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.SelectedItem is { } item)
+        {
+            _selectedItem = item;
+            FractalName.Text = item.DisplayName;
+            FractalDescription.Text = item.Description;
+            LaunchButton.IsEnabled = item.LaunchKey is not null;
+            LaunchButton.Content = "Запустить";
+            LaunchSelected();
         }
     }
 

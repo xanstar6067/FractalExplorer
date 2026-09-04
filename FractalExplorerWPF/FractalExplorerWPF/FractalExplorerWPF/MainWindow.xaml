@@ -7,7 +7,8 @@
         MinWidth="760"
         MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        Icon="Assets/Icons/FractalExplorer.ico">
+        Icon="Assets/Icons/FractalExplorer.ico"
+        PreviewKeyDown="MainWindow_OnPreviewKeyDown">
     <Window.Resources>
         <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
             <Setter Property="MinHeight" Value="32"/>
@@ -92,15 +93,46 @@
                         <TextBlock VerticalAlignment="Center" Text="О программе"/>
                     </StackPanel>
                 </Button>
-                <TreeView x:Name="FractalTree"
-                          Background="Transparent"
-                          BorderThickness="0"
-                          ScrollViewer.CanContentScroll="False"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          ScrollViewer.VerticalScrollBarVisibility="Auto"
-                          SelectedItemChanged="FractalTree_OnSelectedItemChanged"
-                          PreviewMouseLeftButtonDown="FractalTree_OnPreviewMouseLeftButtonDown"
-                          MouseDoubleClick="FractalTree_OnMouseDoubleClick"/>
+
+                <Grid DockPanel.Dock="Top" Margin="5,0,5,10">
+                    <TextBox x:Name="SearchBox"
+                             Height="32" Padding="8,5,64,5"
+                             VerticalContentAlignment="Center"
+                             TextChanged="SearchBox_OnTextChanged"/>
+                    <TextBlock x:Name="SearchPlaceholder"
+                               Margin="10,0,0,0" VerticalAlignment="Center"
+                               IsHitTestVisible="False"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                               Text="Поиск фракталов..."/>
+                    <Border HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Margin="0,0,7,0" Padding="5,2" CornerRadius="4"
+                            Background="{DynamicResource Theme.ControlBackgroundAltBrush}"
+                            BorderBrush="{DynamicResource Theme.BorderBrush}" BorderThickness="1"
+                            Cursor="Hand"
+                            ToolTip="Быстрый переключатель"
+                            MouseLeftButtonDown="QuickSwitcherHint_OnMouseLeftButtonDown">
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   Text="Ctrl+K"/>
+                    </Border>
+                </Grid>
+
+                <Grid>
+                    <TreeView x:Name="FractalTree"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              ScrollViewer.CanContentScroll="False"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              SelectedItemChanged="FractalTree_OnSelectedItemChanged"
+                              PreviewMouseLeftButtonDown="FractalTree_OnPreviewMouseLeftButtonDown"
+                              MouseDoubleClick="FractalTree_OnMouseDoubleClick"/>
+                    <TextBlock x:Name="EmptySearchText"
+                               Margin="10,20,10,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                               Text="Ничего не найдено"
+                               Visibility="Collapsed"/>
+                </Grid>
             </DockPanel>
         </Border>
 

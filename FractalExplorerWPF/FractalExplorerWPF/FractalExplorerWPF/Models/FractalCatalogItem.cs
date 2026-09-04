@@ -5,4 +5,7 @@ public sealed record FractalCatalogItem(
     string DisplayName,
     string Description,
     string PreviewResourcePath,
-    string? LaunchKey = null);
+    string? LaunchKey = null)
+{
+    public string CategoryBreadcrumb => string.Join(" › ", CategoryPath);
+}

@@ -1,0 +1,52 @@
+<Window x:Class="FractalExplorerWPF.Views.QuickSwitcherWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Быстрый переключатель"
+        Width="480"
+        Height="440"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="../Assets/Icons/FractalExplorer.ico">
+    <Grid Background="{DynamicResource Theme.BaseBackgroundBrush}" Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBox x:Name="SearchBox"
+                 Height="36" Padding="10,7"
+                 VerticalContentAlignment="Center"
+                 TextChanged="SearchBox_OnTextChanged"
+                 PreviewKeyDown="SearchBox_OnPreviewKeyDown"/>
+
+        <TextBlock x:Name="EmptyResultText" Grid.Row="2"
+                   Margin="4,16,0,0"
+                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                   Text="Ничего не найдено"
+                   Visibility="Collapsed"/>
+
+        <ListBox x:Name="ResultList" Grid.Row="2" Margin="0,10,0,0"
+                 Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 MouseLeftButtonUp="ResultList_OnMouseLeftButtonUp">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="6,6">
+                        <TextBlock FontSize="14" Text="{Binding DisplayName}"/>
+                        <TextBlock Margin="0,2,0,0"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                                   Text="{Binding CategoryBreadcrumb}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock Grid.Row="1" Margin="4,8,0,0"
+                   FontSize="11"
+                   Foreground="{DynamicResource Theme.SecondaryTextBrush}"
+                   Text="↑↓ — выбор, Enter — открыть, Esc — закрыть"/>
+    </Grid>
+</Window>
