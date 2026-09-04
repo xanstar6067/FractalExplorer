@@ -269,7 +269,149 @@ internal static class Program
             "Deep FloatExp render must fill every pixel.");
         Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
             "Deep-zoom render must restore the calling thread's working precision.");
-        await Task.CompletedTask;
+
+        await VerifyDecimalStageRemovedAsync(Palette);
+    }
+
+    // Phase 2: the decimal stage is gone from the Mandelbrot/Julia ladder — perturbation
+    // now takes over wherever plain double stops being trusted (~1.5e9). Byte-identity for
+    // zoom < 1.5e9 and zoom >= 1e25 is proven by the external git-stash A/B; here we check
+    // the band that changed hands (was decimal brute-force, now perturbation).
+    private static async Task VerifyDecimalStageRemovedAsync(Func<MandelbrotPalette> palette)
+    {
+        static int RgbDelta(byte[] a, byte[] b, int pixel)
+        {
+            int o = pixel * 4;
+            return Math.Max(Math.Abs(a[o] - b[o]),
+                   Math.Max(Math.Abs(a[o + 1] - b[o + 1]), Math.Abs(a[o + 2] - b[o + 2])));
+        }
+
+        static int CountDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+                if (RgbDelta(a, b, pixel) != 0) n++;
+            return n;
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool? forceDeep, bool? forceFloatExp, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = forceDeep;
+            MandelbrotFamilyRenderer.ForceFloatExpDeltaForTests = forceFloatExp;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally
+            {
+                MandelbrotFamilyRenderer.ForceDeepZoomForTests = null;
+                MandelbrotFamilyRenderer.ForceFloatExpDeltaForTests = null;
+            }
+            return pixels;
+        }
+
+        MandelbrotState DeepState(double zoom, int iterations) => new()
+        {
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = zoom,
+            Iterations = iterations,
+            Threads = 2,
+            Palette = palette()
+        };
+
+        const int w = 112, h = 74, total = w * h;
+
+        // (a) Where decimal was still trustworthy (<= ~1e18), perturbation must reproduce
+        //     it up to boundary chaos (a 1-ULP coordinate difference can flip a boundary
+        //     pixel by a whole colour band — see the project memory).
+        foreach (double zoom in new[] { 1.0e12, 1.0e18 })
+        {
+            MandelbrotState state = DeepState(zoom, 6000);
+            byte[] decimalPixels = await RenderAsync(state, forceDeep: false, forceFloatExp: null, w, h);
+            byte[] perturbationPixels = await RenderAsync(state, forceDeep: true, forceFloatExp: null, w, h);
+            int differing = CountDiffering(decimalPixels, perturbationPixels);
+            Console.WriteLine($"[diag] zoom {zoom:E0}: decimal vs perturbation {differing}/{total} px differ");
+            Check(perturbationPixels.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                $"Perturbation must resolve structure at zoom {zoom:E0}.");
+            Check(differing * 100 <= total * 5,
+                $"decimal→perturbation diverges on {differing}/{total} px at zoom {zoom:E0} (>5%).");
+        }
+
+        // (b) Past ~1e20 decimal itself runs out of digits, so it is no longer the oracle.
+        //     Instead check the perturbation engine is internally converged: swapping the
+        //     δ representation (double ↔ FloatExp) over the same reference orbit must not
+        //     move the picture. If it doesn't, the divergence from decimal up here is
+        //     decimal's error, not the engine's.
+        foreach (double zoom in new[] { 1.0e18, 1.0e23 })
+        {
+            MandelbrotState state = DeepState(zoom, 6000);
+            byte[] doubleDelta = await RenderAsync(state, forceDeep: true, forceFloatExp: false, w, h);
+            byte[] floatExpDelta = await RenderAsync(state, forceDeep: true, forceFloatExp: true, w, h);
+            int differing = CountDiffering(doubleDelta, floatExpDelta);
+            Console.WriteLine($"[diag] zoom {zoom:E0}: perturbation double-δ vs FloatExp-δ {differing}/{total} px differ");
+            Check(differing * 200 <= total,
+                $"Perturbation not δ-representation-stable at zoom {zoom:E0}: {differing}/{total} px (>0.5%).");
+        }
+
+        // (c) Julia perturbation with the rebasing fix (δ = z − Z₀; Julia's Z₀ = centre is
+        //     non-zero, and the old code used δ = z, which glitched wherever rebasing
+        //     fired). A dendrite view forces heavy rebasing; at this shallow zoom plain
+        //     double is an exact oracle, so agreement means the fix is right, not just
+        //     "doesn't crash".
+        {
+            var julia = new MandelbrotState
+            {
+                Variant = MandelbrotVariant.Julia,
+                JuliaCReal = -0.8m,
+                JuliaCImaginary = 0.156m,
+                CenterX = 0.15m,
+                CenterY = 0.30m,
+                Zoom = 100.0,
+                Iterations = 3000,
+                Threads = 2,
+                Palette = palette()
+            };
+            byte[] doublePixels = await RenderAsync(julia, forceDeep: false, forceFloatExp: null, w, h);
+            byte[] perturbationPixels = await RenderAsync(julia, forceDeep: true, forceFloatExp: null, w, h);
+            int differing = CountDiffering(doublePixels, perturbationPixels);
+            int structuredPixels = 0;
+            for (int pixel = 0; pixel < total; pixel++)
+                if (perturbationPixels[pixel * 4] != perturbationPixels[0] ||
+                    perturbationPixels[pixel * 4 + 1] != perturbationPixels[1] ||
+                    perturbationPixels[pixel * 4 + 2] != perturbationPixels[2])
+                    structuredPixels++;
+            Console.WriteLine($"[diag] Julia dendrite zoom 100: double vs perturbation {differing}/{total} px differ; structured {structuredPixels}/{total}");
+            Check(structuredPixels > total / 4, "Julia perturbation must be structured, not a flat fill.");
+            Check(differing * 100 <= total * 10,
+                $"Julia: perturbation strays from the double oracle on {differing}/{total} px (>10%) — rebase fix suspect.");
+        }
+
+        // (d) Degenerate reference orbit (centre deep in the fast-escaping exterior): the
+        //     fallback must run in double (no decimal), fill the frame and stay uniform.
+        var degenerate = new MandelbrotState
+        {
+            CenterX = 1000m,
+            CenterY = 1000m,
+            Zoom = 1.0e30,
+            Iterations = 500,
+            Threads = 2,
+            Palette = palette()
+        };
+        int degenerateProgress = 0;
+        byte[] degeneratePixels = new byte[w * h * 4];
+        MandelbrotFamilyRenderer.Render(degenerate, degeneratePixels, w, h, w * 4,
+            CancellationToken.None, value => degenerateProgress = value);
+        Check(degenerateProgress == 100, "Degenerate-orbit fallback must complete with 100% progress.");
+        Check(degeneratePixels.Where((_, index) => index % 4 == 3).All(value => value == 255),
+            "Degenerate-orbit fallback must fill every pixel.");
+        bool uniform = true;
+        for (int pixel = 1; pixel < w * h && uniform; pixel++)
+            uniform = degeneratePixels[pixel * 4] == degeneratePixels[0]
+                   && degeneratePixels[pixel * 4 + 1] == degeneratePixels[1]
+                   && degeneratePixels[pixel * 4 + 2] == degeneratePixels[2];
+        Check(uniform, "Degenerate-orbit fallback must produce a uniform frame.");
     }
 
     private static async Task DrainAsync()

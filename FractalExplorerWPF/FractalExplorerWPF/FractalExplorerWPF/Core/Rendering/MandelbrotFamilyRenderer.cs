@@ -8,20 +8,24 @@ namespace FractalExplorerWPF.Core.Rendering;
 
 public static partial class MandelbrotFamilyRenderer
 {
-    // Порог зума, начиная с которого итерация ведётся в decimal (режим высокой
-    // глубины/точности); ниже порога используется double. Вынесено из IterateAt
-    // как именованная константа — поведение не меняет.
+    // Порог зума, за которым обычный double перестаёт быть надёжным (сетка координат и
+    // накопление ошибки в z→z²+c). Ниже — плоский double-рендер (см. <see cref="Iterate"/>).
+    // Выше для 7 «неглубоких» вариантов (Burning Ship и т.п.) и для режимов Histogram/
+    // DistanceEstimation по-прежнему работает ступень decimal (<see cref="IterateDecimal"/>);
+    // для Mandelbrot/Julia в остальных режимах ступень decimal пропускается — сразу
+    // включается пертурбационный движок.
     private const double DecimalIterationZoomThreshold = 1_500_000_000d;
 
-    // Третья ступень: начиная с этого зума (переход e+24 → e+25) плоский brute-force
-    // в decimal уступает место «второму двигателю» — пертурбационному рендеру с
-    // опорной орбитой в BigFloat. Две ступени ниже (double и decimal) не затрагиваются.
-    private const double PerturbationZoomThreshold = 1e25;
+    // Mandelbrot/Julia: «второй двигатель» (пертурбация + опорная орбита в BigFloat)
+    // включается там же, где кончается надёжный double. Фаза 2 опустила порог с 1e25:
+    // ступень decimal для этих двух вариантов больше не используется, лестница точности
+    // схлопнута до double → пертурбация.
+    private const double PerturbationZoomThreshold = DecimalIterationZoomThreshold;
 
-    // Ширина области в decimal для «плоских» ступеней (double- и decimal-итерация, а также
-    // запасной brute-force при вырожденной опорной орбите). Зум зажимается по верхней
-    // границе decimal: всё, что выше 1e25, обслуживает пертурбационный движок, а этот путь
-    // на таком зуме и раньше упирался в старый MaxZoom, так что ничего не теряется.
+    // Ширина области в decimal для «плоских» ступеней (double- и decimal-итерация не в
+    // режиме глубокого зума: 7 «неглубоких» вариантов, а также Histogram/DistanceEstimation).
+    // Зум зажимается по верхней границе decimal; выше него всё обслуживает пертурбационный
+    // движок, а этот путь и раньше упирался в старый MaxZoom, так что ничего не теряется.
     private const decimal DecimalViewWidthMinimum = 0.000000000000001m;
 
     private static decimal DecimalViewWidth(double zoom)

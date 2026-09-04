@@ -6,19 +6,22 @@ using Color = System.Windows.Media.Color;
 namespace FractalExplorerWPF.Core.Rendering;
 
 /// <summary>
-/// Третья ступень точности рендера семейства Мандельброта — «второй двигатель».
+/// «Второй двигатель» рендера семейства Мандельброта — пертурбационный метод.
 ///
-/// Первые две ступени (double и decimal, см. <see cref="IterateAt"/>) остаются без
-/// изменений и обслуживают зум до ~1e25. Начиная с <see cref="PerturbationZoomThreshold"/>
-/// плоская арифметика в <see cref="decimal"/> упирается в свои ~28 значащих цифр, поэтому
-/// включается пертурбационный метод:
+/// Для Mandelbrot/Julia лестница точности схлопнута до двух ступеней: плоский double
+/// (<see cref="Iterate"/>) до <see cref="PerturbationZoomThreshold"/> (~1.5e9), выше —
+/// этот движок. Ступень <see cref="decimal"/> (<see cref="IterateDecimal"/>) осталась
+/// только для 7 «неглубоких» вариантов и режимов Histogram/DistanceEstimation.
 ///
 /// 1. Один раз на кадр считается опорная орбита <c>Zₙ</c> в центре области — в
-///    <see cref="BigFloat"/> (произвольная точность), результат кэшируется в double-массивах.
-/// 2. Каждый пиксель итерирует лишь отклонение <c>δₙ = zₙ − Zₙ</c> в обычном double:
+///    <see cref="BigFloat"/> с адаптивной точностью (<see cref="PlanDeepZoom"/>),
+///    результат кэшируется в double-массивах.
+/// 2. Каждый пиксель итерирует лишь отклонение <c>δₙ = zₙ − Zₙ</c>:
 ///    <c>δₙ₊₁ = 2·Zₙ·δₙ + δₙ² + δc</c> (для Жюлиа слагаемое δc отсутствует, а δc задаёт δ₀).
+///    Представление δ — обычный double либо <see cref="FloatExp"/> за ~1e72 (тот же
+///    <see cref="PlanDeepZoom"/>).
 /// 3. Потеря значимости («глитчи») лечится rebasing по Zhuoran: когда |zₙ| &lt; |δₙ| или
-///    опорная орбита закончилась, δ сбрасывается в текущее z, а индекс опорной точки — в 0.
+///    опорная орбита закончилась, δ сбрасывается в <c>z − Z₀</c>, а индекс опорной точки — в 0.
 ///
 /// Раскраска, палитры и <see cref="PixelMetrics"/> переиспользуются из основного файла —
 /// поэтому класс объявлен <c>partial</c>.
@@ -45,10 +48,18 @@ public static partial class MandelbrotFamilyRenderer
     private static string? _orbitKey;
     private static ReferenceOrbit? _orbitCache;
 
-    private static bool ShouldUseDeepZoom(MandelbrotState state) =>
-        state.Zoom > PerturbationZoomThreshold &&
-        state.Variant is MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia &&
-        state.ColoringMode is not (MandelbrotColoringMode.Histogram or MandelbrotColoringMode.DistanceEstimation);
+    // Тестовый шов: принудительно включает/выключает пертурбационный движок независимо от
+    // зума (в пределах поддерживаемых вариантов и режимов). null — по порогу зума.
+    internal static bool? ForceDeepZoomForTests { get; set; }
+
+    private static bool ShouldUseDeepZoom(MandelbrotState state)
+    {
+        if (state.Variant is not (MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia))
+            return false;
+        if (state.ColoringMode is MandelbrotColoringMode.Histogram or MandelbrotColoringMode.DistanceEstimation)
+            return false;
+        return ForceDeepZoomForTests ?? (state.Zoom > PerturbationZoomThreshold);
+    }
 
     // ------------------------------------------------------------------ precision planner
 
@@ -374,8 +385,11 @@ public static partial class MandelbrotFamilyRenderer
                 magnitudeSquared < deltaMagnitudeSquared ||
                 magnitudeSquared < GlitchToleranceSquared * referenceMagnitudeSquared)
             {
-                deltaReal = fullReal;
-                deltaImaginary = fullImaginary;
+                // δ отсчитывается от опорной точки, поэтому при сбросе индекса в 0 нужно
+                // δ = z − Z₀. Для Мандельброта Z₀ = 0 (вычитание — no-op, бит-в-бит как
+                // раньше); для Жюлиа Z₀ = центр, и без вычитания rebasing давал глитчи.
+                deltaReal = fullReal - orbit.Re[0];
+                deltaImaginary = fullImaginary - orbit.Im[0];
                 referenceIndex = 0;
             }
         }
@@ -478,8 +492,9 @@ public static partial class MandelbrotFamilyRenderer
                 magnitudeSquared < deltaMagnitudeSquared ||
                 magnitudeSquared < GlitchToleranceSquared * referenceMagnitudeSquared)
             {
-                deltaReal = FloatExp.FromDouble(fullReal);
-                deltaImaginary = FloatExp.FromDouble(fullImaginary);
+                // δ = z − Z₀ (для Мандельброта Z₀ = 0; для Жюлиа — центр). См. double-ядро.
+                deltaReal = FloatExp.FromDouble(fullReal - orbit.Re[0]);
+                deltaImaginary = FloatExp.FromDouble(fullImaginary - orbit.Im[0]);
                 referenceIndex = 0;
             }
         }
@@ -506,8 +521,21 @@ public static partial class MandelbrotFamilyRenderer
 
     // ------------------------------------------------------------------ brute-force safety net
 
-    // Костыль на случай вырожденной опорной орбиты (центр вне множества и т.п.): считаем
-    // такой тайл проверенной второй ступенью в decimal — точность та же, что была раньше.
+    private static (double X, double Y) ProjectCenterToDouble(MandelbrotState state)
+    {
+        double x = state.CenterXExact is { Length: > 0 } exactX
+            ? BigFloat.Parse(exactX).ToDouble()
+            : (double)state.CenterX;
+        double y = state.CenterYExact is { Length: > 0 } exactY
+            ? BigFloat.Parse(exactY).ToDouble()
+            : (double)state.CenterY;
+        return (x, y);
+    }
+
+    // Запасной путь на случай вырожденной опорной орбиты (центр в глубоком внешнем регионе,
+    // орбита выходит за радиус почти сразу). Такой вид почти однороден: всё убегает за
+    // считаные итерации, накапливать ошибку нечему, и обычного double достаточно. Ступень
+    // decimal здесь больше не используется.
     private static byte[]? RenderBruteForceTile(
         MandelbrotState state,
         int canvasWidth,
@@ -517,20 +545,21 @@ public static partial class MandelbrotFamilyRenderer
     {
         int stride = checked(tile.Width * 4);
         var buffer = new byte[checked(stride * tile.Height)];
-        decimal viewWidth = DecimalViewWidth(state.Zoom);
-        decimal viewHeight = viewWidth * canvasHeight / canvasWidth;
+        var (centerX, centerY) = ProjectCenterToDouble(state);
+        double viewWidth = 3.0 / state.Zoom;
+        double viewHeight = viewWidth * canvasHeight / canvasWidth;
 
         for (int localY = 0; localY < tile.Height; localY++)
         {
             if (token.IsCancellationRequested) return null;
             int y = tile.Y + localY;
-            decimal imaginary = state.CenterY + (0.5m - (decimal)y / canvasHeight) * viewHeight;
+            double imaginary = centerY + (0.5 - (double)y / canvasHeight) * viewHeight;
             int row = localY * stride;
             for (int localX = 0; localX < tile.Width; localX++)
             {
                 int x = tile.X + localX;
-                decimal real = state.CenterX + ((decimal)x / canvasWidth - 0.5m) * viewWidth;
-                PixelMetrics metrics = IterateAt(state, real, imaginary, token);
+                double real = centerX + ((double)x / canvasWidth - 0.5) * viewWidth;
+                PixelMetrics metrics = Iterate(state, real, imaginary, token);
                 Color color = ResolveColor(state, metrics, 0);
                 int offset = row + localX * 4;
                 buffer[offset] = color.B;
@@ -557,20 +586,21 @@ public static partial class MandelbrotFamilyRenderer
         {
             MaxDegreeOfParallelism = System.Math.Clamp(threads, 1, Environment.ProcessorCount)
         };
-        decimal viewWidth = DecimalViewWidth(state.Zoom);
-        decimal viewHeight = viewWidth * height / width;
+        var (centerX, centerY) = ProjectCenterToDouble(state);
+        double viewWidth = 3.0 / state.Zoom;
+        double viewHeight = viewWidth * height / width;
         int completedRows = 0;
 
         Parallel.For(0, height, options, (y, loopState) =>
         {
             if (token.IsCancellationRequested) { loopState.Stop(); return; }
             int row = y * stride;
-            decimal imaginary = state.CenterY + (0.5m - (decimal)y / height) * viewHeight;
+            double imaginary = centerY + (0.5 - (double)y / height) * viewHeight;
             for (int x = 0; x < width; x++)
             {
                 if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
-                decimal real = state.CenterX + ((decimal)x / width - 0.5m) * viewWidth;
-                PixelMetrics metrics = IterateAt(state, real, imaginary, token);
+                double real = centerX + ((double)x / width - 0.5) * viewWidth;
+                PixelMetrics metrics = Iterate(state, real, imaginary, token);
                 Color color = ResolveColor(state, metrics, 0);
                 int offset = row + x * 4;
                 buffer[offset] = color.B;
