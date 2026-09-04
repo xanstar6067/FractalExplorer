@@ -38,6 +38,9 @@ public static partial class MandelbrotFamilyRenderer
 
         /// <summary>Опорная орбита вышла за радиус раньше, чем достигла числа итераций.</summary>
         public required bool Escaped;
+
+        /// <summary>Пирамида BLA для ускорения (null — не построена/не нужна).</summary>
+        public BlaTable? Bla;
     }
 
     // Критерий Pauldelbrot для rebasing: если |z|² падает ниже этой доли от |Zref|²,
@@ -305,7 +308,16 @@ public static partial class MandelbrotFamilyRenderer
             zImaginary = nextImaginary;
         }
 
-        return new ReferenceOrbit { Re = re, Im = im, Length = length, Escaped = escaped };
+        var orbit = new ReferenceOrbit { Re = re, Im = im, Length = length, Escaped = escaped };
+
+        // Пирамида BLA. δcmax — консервативная оценка |δc| по кадру: берём полную ширину
+        // вида (3/zoom), она перекрывает полудиагональ при любом разумном соотношении сторон
+        // и не зависит от размера полотна, поэтому кэшируется вместе с орбитой.
+        double escapeSquared = (double)(state.Threshold * state.Threshold);
+        double deltaCMax = state.Zoom > 0 && double.IsFinite(state.Zoom) ? 3.0 / state.Zoom : 0.0;
+        orbit.Bla = BlaTable.Build(re, im, length, isJulia, escapeSquared, deltaCMax);
+
+        return orbit;
     }
 
     // ------------------------------------------------------------------ per-pixel perturbation
@@ -330,6 +342,10 @@ public static partial class MandelbrotFamilyRenderer
         double addReal = isJulia ? 0.0 : deltaConstantReal;
         double addImaginary = isJulia ? 0.0 : deltaConstantImaginary;
 
+        // BLA доступен только для гладкой окраски: пропуск итераций несовместим с
+        // накоплением орбитальной ловушки / полосовой суммы по каждому шагу.
+        BlaTable? bla = BlaEnabled && !trackTrap && !trackStripe ? orbit.Bla : null;
+
         int referenceIndex = 0;
         int iteration = 0;
         double magnitudeSquared = 0;
@@ -341,28 +357,46 @@ public static partial class MandelbrotFamilyRenderer
         {
             if ((iteration & 8191) == 0 && token.IsCancellationRequested) return default;
 
-            double referenceReal = orbit.Re[referenceIndex];
-            double referenceImaginary = orbit.Im[referenceIndex];
+            if (bla is not null &&
+                bla.TryLookup(referenceIndex, deltaReal * deltaReal + deltaImaginary * deltaImaginary,
+                    maxIterations - iteration,
+                    out double blaAx, out double blaAy, out double blaBx, out double blaBy, out int blaSteps))
+            {
+                // δ ← A·δ + B·δc  (комплексно), пропуская blaSteps итераций разом
+                double skippedReal = blaAx * deltaReal - blaAy * deltaImaginary
+                                   + blaBx * addReal - blaBy * addImaginary;
+                double skippedImaginary = blaAx * deltaImaginary + blaAy * deltaReal
+                                        + blaBx * addImaginary + blaBy * addReal;
+                deltaReal = skippedReal;
+                deltaImaginary = skippedImaginary;
+                referenceIndex += blaSteps;
+                iteration += blaSteps;
+            }
+            else
+            {
+                double referenceReal = orbit.Re[referenceIndex];
+                double referenceImaginary = orbit.Im[referenceIndex];
 
-            double currentReal = referenceReal + deltaReal;
-            double currentImaginary = referenceImaginary + deltaImaginary;
-            if (trackTrap)
-                minTrap = System.Math.Min(minTrap,
-                    System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
-            if (trackStripe)
-                stripe += 0.5 + 0.5 * System.Math.Sin(
-                    state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
+                double currentReal = referenceReal + deltaReal;
+                double currentImaginary = referenceImaginary + deltaImaginary;
+                if (trackTrap)
+                    minTrap = System.Math.Min(minTrap,
+                        System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
+                if (trackStripe)
+                    stripe += 0.5 + 0.5 * System.Math.Sin(
+                        state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
 
-            // δ ← 2·Z·δ + δ² + δc
-            double twoZDeltaReal = 2 * (referenceReal * deltaReal - referenceImaginary * deltaImaginary);
-            double twoZDeltaImaginary = 2 * (referenceReal * deltaImaginary + referenceImaginary * deltaReal);
-            double deltaSquaredReal = deltaReal * deltaReal - deltaImaginary * deltaImaginary;
-            double deltaSquaredImaginary = 2 * deltaReal * deltaImaginary;
-            deltaReal = twoZDeltaReal + deltaSquaredReal + addReal;
-            deltaImaginary = twoZDeltaImaginary + deltaSquaredImaginary + addImaginary;
+                // δ ← 2·Z·δ + δ² + δc
+                double twoZDeltaReal = 2 * (referenceReal * deltaReal - referenceImaginary * deltaImaginary);
+                double twoZDeltaImaginary = 2 * (referenceReal * deltaImaginary + referenceImaginary * deltaReal);
+                double deltaSquaredReal = deltaReal * deltaReal - deltaImaginary * deltaImaginary;
+                double deltaSquaredImaginary = 2 * deltaReal * deltaImaginary;
+                deltaReal = twoZDeltaReal + deltaSquaredReal + addReal;
+                deltaImaginary = twoZDeltaImaginary + deltaSquaredImaginary + addImaginary;
 
-            referenceIndex++;
-            iteration++;
+                referenceIndex++;
+                iteration++;
+            }
 
             double nextReferenceReal = referenceIndex < orbit.Length ? orbit.Re[referenceIndex] : 0.0;
             double nextReferenceImaginary = referenceIndex < orbit.Length ? orbit.Im[referenceIndex] : 0.0;
@@ -437,6 +471,8 @@ public static partial class MandelbrotFamilyRenderer
         FloatExp addReal = FloatExp.FromDouble(isJulia ? 0.0 : deltaConstantReal);
         FloatExp addImaginary = FloatExp.FromDouble(isJulia ? 0.0 : deltaConstantImaginary);
 
+        BlaTable? bla = BlaEnabled && !trackTrap && !trackStripe ? orbit.Bla : null;
+
         int referenceIndex = 0;
         int iteration = 0;
         double magnitudeSquared = 0;
@@ -448,28 +484,47 @@ public static partial class MandelbrotFamilyRenderer
         {
             if ((iteration & 8191) == 0 && token.IsCancellationRequested) return default;
 
-            double referenceReal = orbit.Re[referenceIndex];
-            double referenceImaginary = orbit.Im[referenceIndex];
+            if (bla is not null &&
+                bla.TryLookup(referenceIndex,
+                    FloatExp.MagnitudeSquared(deltaReal, deltaImaginary).ToDouble(),
+                    maxIterations - iteration,
+                    out double blaAx, out double blaAy, out double blaBx, out double blaBy, out int blaSteps))
+            {
+                // δ ← A·δ + B·δc  (A, B — double из таблицы; δ, δc — FloatExp)
+                FloatExp skippedReal = deltaReal * blaAx - deltaImaginary * blaAy
+                                     + addReal * blaBx - addImaginary * blaBy;
+                FloatExp skippedImaginary = deltaReal * blaAy + deltaImaginary * blaAx
+                                          + addReal * blaBy + addImaginary * blaBx;
+                deltaReal = skippedReal;
+                deltaImaginary = skippedImaginary;
+                referenceIndex += blaSteps;
+                iteration += blaSteps;
+            }
+            else
+            {
+                double referenceReal = orbit.Re[referenceIndex];
+                double referenceImaginary = orbit.Im[referenceIndex];
 
-            double currentReal = referenceReal + deltaReal.ToDouble();
-            double currentImaginary = referenceImaginary + deltaImaginary.ToDouble();
-            if (trackTrap)
-                minTrap = System.Math.Min(minTrap,
-                    System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
-            if (trackStripe)
-                stripe += 0.5 + 0.5 * System.Math.Sin(
-                    state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
+                double currentReal = referenceReal + deltaReal.ToDouble();
+                double currentImaginary = referenceImaginary + deltaImaginary.ToDouble();
+                if (trackTrap)
+                    minTrap = System.Math.Min(minTrap,
+                        System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
+                if (trackStripe)
+                    stripe += 0.5 + 0.5 * System.Math.Sin(
+                        state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
 
-            // δ ← 2·Z·δ + δ² + δc
-            FloatExp twoZDeltaReal = (deltaReal * referenceReal - deltaImaginary * referenceImaginary) * 2.0;
-            FloatExp twoZDeltaImaginary = (deltaReal * referenceImaginary + deltaImaginary * referenceReal) * 2.0;
-            FloatExp deltaSquaredReal = deltaReal * deltaReal - deltaImaginary * deltaImaginary;
-            FloatExp deltaSquaredImaginary = deltaReal * deltaImaginary * 2.0;
-            deltaReal = twoZDeltaReal + deltaSquaredReal + addReal;
-            deltaImaginary = twoZDeltaImaginary + deltaSquaredImaginary + addImaginary;
+                // δ ← 2·Z·δ + δ² + δc
+                FloatExp twoZDeltaReal = (deltaReal * referenceReal - deltaImaginary * referenceImaginary) * 2.0;
+                FloatExp twoZDeltaImaginary = (deltaReal * referenceImaginary + deltaImaginary * referenceReal) * 2.0;
+                FloatExp deltaSquaredReal = deltaReal * deltaReal - deltaImaginary * deltaImaginary;
+                FloatExp deltaSquaredImaginary = deltaReal * deltaImaginary * 2.0;
+                deltaReal = twoZDeltaReal + deltaSquaredReal + addReal;
+                deltaImaginary = twoZDeltaImaginary + deltaSquaredImaginary + addImaginary;
 
-            referenceIndex++;
-            iteration++;
+                referenceIndex++;
+                iteration++;
+            }
 
             double nextReferenceReal = referenceIndex < orbit.Length ? orbit.Re[referenceIndex] : 0.0;
             double nextReferenceImaginary = referenceIndex < orbit.Length ? orbit.Im[referenceIndex] : 0.0;

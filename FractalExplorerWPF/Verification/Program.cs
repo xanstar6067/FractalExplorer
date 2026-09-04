@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -271,6 +272,124 @@ internal static class Program
             "Deep-zoom render must restore the calling thread's working precision.");
 
         await VerifyDecimalStageRemovedAsync(Palette);
+        await VerifyBlaAccelerationAsync(Palette);
+    }
+
+    // Phase 3: BLA (Zhuoran) skips runs of iterations where δ stays small. It is a pure
+    // accelerator over the Phase 2 perturbation engine — the output must match BLA-off up
+    // to a few boundary pixels (composite BLAs carry their own rounding order), and the
+    // OrbitTrap/StripeAverage modes must be untouched (BLA disabled there).
+    private static async Task VerifyBlaAccelerationAsync(Func<MandelbrotPalette> palette)
+    {
+        static int CountRgbDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                if (a[o] != b[o] || a[o + 1] != b[o + 1] || a[o + 2] != b[o + 2]) n++;
+            }
+            return n;
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool bla, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceBlaForTests = bla;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally { MandelbrotFamilyRenderer.ForceBlaForTests = null; }
+            return pixels;
+        }
+
+        MandelbrotState Deep(double zoom, int iterations, MandelbrotColoringMode mode = MandelbrotColoringMode.Smooth) => new()
+        {
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = zoom,
+            Iterations = iterations,
+            Threads = 2,
+            ColoringMode = mode,
+            Palette = palette()
+        };
+
+        const int w = 120, h = 80, total = w * h;
+
+        // (a) BLA on vs off across the engine's regimes (double-δ, deeper double-δ, FloatExp-δ).
+        foreach ((double zoom, int iterations, string label) in new[]
+        {
+            (5.0e25, 4000, "double-δ 5e25"),
+            (1.0e40, 5000, "double-δ 1e40"),
+            (1.0e120, 3500, "FloatExp-δ 1e120"),
+        })
+        {
+            MandelbrotState state = Deep(zoom, iterations);
+            byte[] off = await RenderAsync(state, bla: false, w, h);
+            byte[] on = await RenderAsync(state, bla: true, w, h);
+            int differing = CountRgbDiffering(off, on);
+            Console.WriteLine($"[diag] BLA {label}: on vs off {differing}/{total} px differ");
+            Check(on.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                $"BLA render must resolve structure ({label}).");
+            Check(differing * 100 <= total * 2,
+                $"BLA changes {differing}/{total} px vs non-BLA ({label}, >2%).");
+        }
+
+        // (b) Julia deep (B = 0 in the BLA table): on vs off must still match.
+        {
+            var julia = new MandelbrotState
+            {
+                Variant = MandelbrotVariant.Julia,
+                JuliaCReal = -0.8m,
+                JuliaCImaginary = 0.156m,
+                CenterX = 0.15m,
+                CenterY = 0.30m,
+                Zoom = 5.0e25,
+                Iterations = 4000,
+                Threads = 2,
+                Palette = palette()
+            };
+            int differing = CountRgbDiffering(
+                await RenderAsync(julia, bla: false, w, h),
+                await RenderAsync(julia, bla: true, w, h));
+            Console.WriteLine($"[diag] BLA Julia 5e25: on vs off {differing}/{total} px differ");
+            Check(differing * 100 <= total * 2, $"BLA changes Julia {differing}/{total} px (>2%).");
+        }
+
+        // (c) OrbitTrap coloring keeps every iteration ⇒ BLA is disabled ⇒ byte-identical.
+        {
+            MandelbrotState trap = Deep(5.0e25, 4000, MandelbrotColoringMode.OrbitTrap);
+            int differing = CountRgbDiffering(
+                await RenderAsync(trap, bla: false, w, h),
+                await RenderAsync(trap, bla: true, w, h));
+            Check(differing == 0, $"BLA must be inert for OrbitTrap coloring, changed {differing}/{total} px.");
+        }
+
+        // (d) Speed: a high-iteration deep view. BLA must not be slower; report the ratio.
+        {
+            MandelbrotState heavy = Deep(1.0e55, 24000);
+            const int hw = 160, hh = 108;
+            byte[] warm = new byte[hw * hh * 4];
+            MandelbrotFamilyRenderer.ForceBlaForTests = false;
+            MandelbrotFamilyRenderer.Render(heavy, warm, hw, hh, hw * 4, CancellationToken.None);
+
+            var clock = Stopwatch.StartNew();
+            MandelbrotFamilyRenderer.ForceBlaForTests = false;
+            MandelbrotFamilyRenderer.Render(heavy, warm, hw, hh, hw * 4, CancellationToken.None);
+            double offMs = clock.Elapsed.TotalMilliseconds;
+
+            clock.Restart();
+            MandelbrotFamilyRenderer.ForceBlaForTests = true;
+            MandelbrotFamilyRenderer.Render(heavy, warm, hw, hh, hw * 4, CancellationToken.None);
+            double onMs = clock.Elapsed.TotalMilliseconds;
+            MandelbrotFamilyRenderer.ForceBlaForTests = null;
+
+            Console.WriteLine($"[diag] BLA speed 1e55 i24000: off {offMs:F0}ms, on {onMs:F0}ms, ×{offMs / onMs:F2}");
+            Check(onMs <= offMs * 1.25, $"BLA slower than non-BLA: {onMs:F0}ms vs {offMs:F0}ms.");
+        }
+
+        await Task.CompletedTask;
     }
 
     // Phase 2: the decimal stage is gone from the Mandelbrot/Julia ladder — perturbation
