@@ -42,6 +42,9 @@ public partial class ImageExportManagerWindow : Window
     private bool _isRendering;
     private bool _closeWhenIdle;
     private bool _loading;
+    private readonly Queue<(double Seconds, int Percentage)> _renderSamples = new();
+    private bool _estimatingRender;
+    private int _renderPercentage;
     private ImageExportProcessingMode _displayedMode = ImageExportProcessingMode.Ssaa;
     private (string Label, double Value)[] _displayedFactors = AllSsaaFactors;
     private double _selectedSsaa = 1;
@@ -54,7 +57,7 @@ public partial class ImageExportManagerWindow : Window
         InitializeComponent();
         Title = configuration.WindowTitle;
         _elapsedTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _elapsedTimer.Tick += (_, _) => ElapsedText.Text = _stopwatch.Elapsed.ToString("mm\\:ss\\.f");
+        _elapsedTimer.Tick += (_, _) => UpdateTimingText();
         Loaded += Window_OnLoaded;
     }
 
@@ -215,6 +218,12 @@ public partial class ImageExportManagerWindow : Window
         _cts = new CancellationTokenSource();
         CancellationToken token = _cts.Token;
         _stopwatch.Restart();
+        _renderSamples.Clear();
+        _renderSamples.Enqueue((0, 0));
+        _renderPercentage = 0;
+        _estimatingRender = true;
+        RemainingText.Visibility = Visibility.Visible;
+        UpdateTimingText();
         _elapsedTimer.Start();
         BitmapSource? bitmap = null;
         try
@@ -224,10 +233,21 @@ public partial class ImageExportManagerWindow : Window
             int renderProgressLimit = needsResize ? 90 : 96;
             StatusText.Text = "Рендеринг изображения...";
             var renderProgress = new Progress<int>(value =>
-                ProgressBar.Value = Math.Clamp(value, 0, 100) * renderProgressLimit / 100.0);
+            {
+                // Ignore queued reports from an earlier export or a completed render stage.
+                if (!_estimatingRender || _cts?.Token != token || token.IsCancellationRequested) return;
+                int percentage = Math.Clamp(value, 0, 100);
+                if (percentage <= _renderPercentage) return;
+                _renderPercentage = percentage;
+                _renderSamples.Enqueue((_stopwatch.Elapsed.TotalSeconds, percentage));
+                ProgressBar.Value = percentage * renderProgressLimit / 100.0;
+                UpdateTimingText();
+            });
             bitmap = await _configuration.RenderAsync(
                 new ImageExportRenderRequest(plan.RenderWidth, plan.RenderHeight, plan.RenderSsaaFactor),
                 token, renderProgress);
+            _estimatingRender = false;
+            RemainingText.Visibility = Visibility.Collapsed;
             if (token.IsCancellationRequested) { StatusText.Text = "Операция отменена."; return; }
 
             if (bitmap.PixelWidth != plan.OutputWidth || bitmap.PixelHeight != plan.OutputHeight)
@@ -269,6 +289,9 @@ public partial class ImageExportManagerWindow : Window
         {
             _stopwatch.Stop();
             _elapsedTimer.Stop();
+            _estimatingRender = false;
+            RemainingText.Visibility = Visibility.Collapsed;
+            UpdateTimingText();
             _cts.Dispose();
             _cts = null;
             bitmap = null;
@@ -278,6 +301,41 @@ public partial class ImageExportManagerWindow : Window
             if (_closeWhenIdle)
                 _ = Dispatcher.BeginInvoke(Close);
         }
+    }
+
+    private void UpdateTimingText()
+    {
+        TimeSpan elapsed = _stopwatch.Elapsed;
+        ElapsedText.Text = $"{(long)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}.{elapsed.Milliseconds / 100}";
+        if (!_estimatingRender) return;
+        if (_cts?.IsCancellationRequested == true)
+        {
+            RemainingText.Text = "Рендер отменяется...";
+            return;
+        }
+        if (_renderPercentage >= 100)
+        {
+            RemainingText.Text = "Завершение рендера...";
+            return;
+        }
+
+        double seconds = elapsed.TotalSeconds;
+        // Keep an anchor just before the last 10 seconds, including sparse progress reports.
+        while (_renderSamples.Count > 2 && _renderSamples.ElementAt(1).Seconds <= seconds - 10)
+            _renderSamples.Dequeue();
+        var first = _renderSamples.Peek();
+        double sampleDuration = seconds - first.Seconds;
+        int completed = _renderPercentage - first.Percentage;
+        if (sampleDuration < 1 || completed <= 0)
+        {
+            RemainingText.Text = "До завершения рендера: оценка скорости...";
+            return;
+        }
+
+        // Use raw render progress: the export bar also reserves a share for resizing and saving.
+        double remainingSeconds = (100 - _renderPercentage) * sampleDuration / completed;
+        TimeSpan remaining = TimeSpan.FromSeconds(Math.Ceiling(remainingSeconds));
+        RemainingText.Text = $"До завершения рендера ≈ {(long)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
     }
 
     private static void SaveBitmap(BitmapSource bitmap, string path, ImageExportFormat format, int jpegQuality)
@@ -413,7 +471,7 @@ public partial class ImageExportManagerWindow : Window
         if (rendering)
         {
             ProgressBar.Value = 0;
-            ElapsedText.Text = "00:00.0";
+            ElapsedText.Text = "00:00:00.0";
         }
         OptionsPanel.IsEnabled = !rendering;
         SaveButton.IsEnabled = !rendering;

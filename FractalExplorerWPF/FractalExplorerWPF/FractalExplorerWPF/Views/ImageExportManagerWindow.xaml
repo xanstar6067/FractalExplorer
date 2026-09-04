@@ -132,11 +132,16 @@
 
                 <TextBlock x:Name="StatusText" Grid.Row="0" Text="Готово" TextWrapping="Wrap"/>
                 <TextBlock x:Name="ElapsedText" Grid.Row="0" Grid.Column="1" Margin="16,0,0,0"
-                           MinWidth="48" HorizontalAlignment="Right" TextAlignment="Right" Text="00:00.0"/>
+                           MinWidth="48" HorizontalAlignment="Right" TextAlignment="Right" Text="00:00:00.0"/>
                 <ProgressBar x:Name="ProgressBar" Grid.Row="1" Grid.ColumnSpan="2"
                              Margin="0,8,0,0" Height="12" Minimum="0" Maximum="100"/>
-                <TextBlock x:Name="MemoryHint" Grid.Row="2" Grid.ColumnSpan="2" Margin="0,7,0,0"
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                    <TextBlock x:Name="RemainingText" Margin="0,7,0,0" Visibility="Collapsed"
+                               Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"
+                               ToolTip="Приблизительное время по текущей скорости рендера. Масштабирование и запись файла не учитываются."/>
+                    <TextBlock x:Name="MemoryHint" Margin="0,7,0,0"
                            Foreground="{DynamicResource Theme.SecondaryTextBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
             </Grid>
         </Border>
 
