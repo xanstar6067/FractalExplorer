@@ -50,6 +50,63 @@ public static partial class MandelbrotFamilyRenderer
         state.Variant is MandelbrotVariant.Mandelbrot or MandelbrotVariant.Julia &&
         state.ColoringMode is not (MandelbrotColoringMode.Histogram or MandelbrotColoringMode.DistanceEstimation);
 
+    // ------------------------------------------------------------------ precision planner
+
+    // log2(зума), начиная с которого отклонение δ на пиксель уже не помещается надёжно в
+    // обычный double (δ² уходит в денормалы и в ноль): 2^239 ≈ 8.8e71. Ниже порога
+    // работает проверенный double-δ путь, бит-в-бит совпадающий с прежним движком; выше —
+    // δ ведётся в FloatExp. Порог взят с большим запасом ниже реального отказа double
+    // (~1e290), чтобы полоса совпадения с прежним поведением была максимально широкой.
+    private const double FloatExpDeltaZoomBits = 239;
+
+    // Тестовый шов: принудительно задаёт представление δ (true — FloatExp, false — double).
+    // null — выбор по <see cref="PlanDeepZoom"/>. Используется только из проверочного проекта.
+    internal static bool? ForceFloatExpDeltaForTests { get; set; }
+
+    /// <summary>
+    /// План точности на кадр: разрядность мантиссы опорной орбиты (адаптивно от глубины
+    /// зума и числа итераций, но не ниже <see cref="BigFloat.MinimumPrecisionBits"/>) и
+    /// выбор представления δ (double либо FloatExp).
+    /// </summary>
+    private readonly record struct DeepZoomPlan(int ReferenceBits, bool UseFloatExpDelta);
+
+    private static DeepZoomPlan PlanDeepZoom(MandelbrotState state)
+    {
+        double zoomBits = state.Zoom > 0 && double.IsFinite(state.Zoom)
+            ? System.Math.Log2(state.Zoom)
+            : 0;
+
+        // Бит на разрешение соседних пикселей ≈ log2(zoom); удвоенный запас по числу
+        // итераций поглощает накопление ошибки округления вдоль опорной орбиты; +48 —
+        // суб-пиксельная точность и общий люфт. Ниже ~1e93 формула даёт < 384 и рабочая
+        // точность остаётся ровно 384 — прежнее поведение сохраняется бит-в-бит.
+        int iterationBits = BitLength(System.Math.Max(state.Iterations, 2));
+        int needed = (int)System.Math.Ceiling(zoomBits) + 2 * iterationBits + 48;
+        int referenceBits = System.Math.Max(BigFloat.MinimumPrecisionBits, RoundUpToMultiple(needed, 64));
+
+        bool floatExpDelta = ForceFloatExpDeltaForTests ?? (zoomBits >= FloatExpDeltaZoomBits);
+        return new DeepZoomPlan(referenceBits, floatExpDelta);
+    }
+
+    private static int BitLength(int value) =>
+        32 - System.Numerics.BitOperations.LeadingZeroCount((uint)value);
+
+    private static int RoundUpToMultiple(int value, int multiple) =>
+        (value + multiple - 1) / multiple * multiple;
+
+    private static PixelMetrics DeepZoomPixelDispatch(
+        DeepZoomPlan plan,
+        MandelbrotState state,
+        ReferenceOrbit orbit,
+        bool isJulia,
+        double deltaReal,
+        double deltaImaginary,
+        double escapeSquared,
+        CancellationToken token) =>
+        plan.UseFloatExpDelta
+            ? DeepZoomPixelFloatExp(state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token)
+            : DeepZoomPixel(state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
+
     // ------------------------------------------------------------------ entry points
 
     private static byte[]? RenderDeepZoomTile(
@@ -59,7 +116,8 @@ public static partial class MandelbrotFamilyRenderer
         MandelbrotRenderTile tile,
         CancellationToken token)
     {
-        ReferenceOrbit orbit = GetReferenceOrbit(state);
+        DeepZoomPlan plan = PlanDeepZoom(state);
+        ReferenceOrbit orbit = GetReferenceOrbit(state, plan.ReferenceBits);
         if (IsDegenerateOrbit(orbit, state.Iterations))
             return RenderBruteForceTile(state, canvasWidth, canvasHeight, tile, token);
 
@@ -81,8 +139,8 @@ public static partial class MandelbrotFamilyRenderer
             {
                 int x = tile.X + localX;
                 double deltaReal = ((double)x / canvasWidth - 0.5) * viewWidth;
-                PixelMetrics metrics = DeepZoomPixel(
-                    state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
+                PixelMetrics metrics = DeepZoomPixelDispatch(
+                    plan, state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
                 Color color = ResolveColor(state, metrics, 0);
                 int offset = row + localX * 4;
                 buffer[offset] = color.B;
@@ -104,7 +162,8 @@ public static partial class MandelbrotFamilyRenderer
         CancellationToken token,
         Action<int>? reportProgress)
     {
-        ReferenceOrbit orbit = GetReferenceOrbit(state);
+        DeepZoomPlan plan = PlanDeepZoom(state);
+        ReferenceOrbit orbit = GetReferenceOrbit(state, plan.ReferenceBits);
         if (IsDegenerateOrbit(orbit, state.Iterations))
         {
             RenderBruteForceFull(state, buffer, width, height, stride, token, reportProgress);
@@ -132,8 +191,8 @@ public static partial class MandelbrotFamilyRenderer
             {
                 if ((x & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
                 double deltaReal = ((double)x / width - 0.5) * viewWidth;
-                PixelMetrics metrics = DeepZoomPixel(
-                    state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
+                PixelMetrics metrics = DeepZoomPixelDispatch(
+                    plan, state, orbit, isJulia, deltaReal, deltaImaginary, escapeSquared, token);
                 Color color = ResolveColor(state, metrics, 0);
                 int offset = row + x * 4;
                 buffer[offset] = color.B;
@@ -155,7 +214,7 @@ public static partial class MandelbrotFamilyRenderer
     // отлично обслуживается rebasing'ом — это обычный случай для глубокого «внешнего» вида.
     private static bool IsDegenerateOrbit(ReferenceOrbit orbit, int iterations) => orbit.Length < 4;
 
-    private static ReferenceOrbit GetReferenceOrbit(MandelbrotState state)
+    private static ReferenceOrbit GetReferenceOrbit(MandelbrotState state, int referenceBits)
     {
         string centerXRaw = state.CenterXExact is { Length: > 0 } exactX
             ? exactX
@@ -172,23 +231,31 @@ public static partial class MandelbrotFamilyRenderer
             ((int)state.Variant).ToString(CultureInfo.InvariantCulture),
             state.JuliaCReal.ToString(CultureInfo.InvariantCulture),
             state.JuliaCImaginary.ToString(CultureInfo.InvariantCulture),
-            state.Threshold.ToString(CultureInfo.InvariantCulture));
+            state.Threshold.ToString(CultureInfo.InvariantCulture),
+            referenceBits.ToString(CultureInfo.InvariantCulture));
 
         lock (_orbitLock)
         {
             if (_orbitKey == key && _orbitCache is not null) return _orbitCache;
 
-            BigFloat centerX = BigFloat.Parse(centerXRaw);
-            BigFloat centerY = BigFloat.Parse(centerYRaw);
-            ReferenceOrbit orbit = ComputeReferenceOrbit(state, centerX, centerY);
+            ReferenceOrbit orbit = ComputeReferenceOrbit(state, centerXRaw, centerYRaw, referenceBits);
             _orbitKey = key;
             _orbitCache = orbit;
             return orbit;
         }
     }
 
-    private static ReferenceOrbit ComputeReferenceOrbit(MandelbrotState state, BigFloat centerX, BigFloat centerY)
+    private static ReferenceOrbit ComputeReferenceOrbit(
+        MandelbrotState state, string centerXRaw, string centerYRaw, int referenceBits)
     {
+        // Вся арифметика центра и опорной орбиты — с адаптивной точностью; ниже ~1e93
+        // referenceBits == MinimumPrecisionBits, поэтому парсинг и итерация идут ровно
+        // так же, как раньше. Парсим внутри области: Parse тоже округляет до рабочей точности.
+        using var precision = new BigFloat.PrecisionScope(referenceBits);
+
+        BigFloat centerX = BigFloat.Parse(centerXRaw);
+        BigFloat centerY = BigFloat.Parse(centerYRaw);
+
         int capacity = state.Iterations + 1;
         var re = new double[capacity];
         var im = new double[capacity];
@@ -309,6 +376,110 @@ public static partial class MandelbrotFamilyRenderer
             {
                 deltaReal = fullReal;
                 deltaImaginary = fullImaginary;
+                referenceIndex = 0;
+            }
+        }
+
+        if (!escaped)
+            return new PixelMetrics(maxIterations, maxIterations, 0, 0);
+
+        double smooth = iteration;
+        if (magnitudeSquared > 1)
+        {
+            double logZn = System.Math.Log(magnitudeSquared) / 2;
+            const double smoothingPower = 2;
+            double nu = System.Math.Log(System.Math.Max(logZn, 1e-300) / System.Math.Log(smoothingPower)) /
+                        System.Math.Log(smoothingPower);
+            if (double.IsFinite(nu)) smooth = iteration + 1 - nu;
+        }
+
+        return new PixelMetrics(
+            iteration,
+            smooth,
+            minTrap == double.MaxValue ? 0 : minTrap,
+            iteration == 0 ? 0 : stripe / iteration);
+    }
+
+    // Тот же алгоритм, что <see cref="DeepZoomPixel"/>, но отклонение δ ведётся в
+    // <see cref="FloatExp"/>: на зуме за ~1e72 δ и особенно δ² перестают помещаться в
+    // обычный double. Опорная орбита и все проверки (escape, rebasing) остаются в double —
+    // там значения ограничены и расширенный диапазон не нужен. Ниже порога FloatExp этот
+    // путь не вызывается, поэтому расхождение округления с double-путём картинку не задевает.
+    private static PixelMetrics DeepZoomPixelFloatExp(
+        MandelbrotState state,
+        ReferenceOrbit orbit,
+        bool isJulia,
+        double deltaConstantReal,
+        double deltaConstantImaginary,
+        double escapeSquared,
+        CancellationToken token)
+    {
+        int maxIterations = state.Iterations;
+        bool trackTrap = state.ColoringMode == MandelbrotColoringMode.OrbitTrap;
+        bool trackStripe = state.ColoringMode == MandelbrotColoringMode.StripeAverage;
+
+        FloatExp deltaReal = FloatExp.FromDouble(isJulia ? deltaConstantReal : 0.0);
+        FloatExp deltaImaginary = FloatExp.FromDouble(isJulia ? deltaConstantImaginary : 0.0);
+        FloatExp addReal = FloatExp.FromDouble(isJulia ? 0.0 : deltaConstantReal);
+        FloatExp addImaginary = FloatExp.FromDouble(isJulia ? 0.0 : deltaConstantImaginary);
+
+        int referenceIndex = 0;
+        int iteration = 0;
+        double magnitudeSquared = 0;
+        double minTrap = double.MaxValue;
+        double stripe = 0;
+        bool escaped = false;
+
+        while (iteration < maxIterations)
+        {
+            if ((iteration & 8191) == 0 && token.IsCancellationRequested) return default;
+
+            double referenceReal = orbit.Re[referenceIndex];
+            double referenceImaginary = orbit.Im[referenceIndex];
+
+            double currentReal = referenceReal + deltaReal.ToDouble();
+            double currentImaginary = referenceImaginary + deltaImaginary.ToDouble();
+            if (trackTrap)
+                minTrap = System.Math.Min(minTrap,
+                    System.Math.Min(System.Math.Abs(currentReal), System.Math.Abs(currentImaginary)));
+            if (trackStripe)
+                stripe += 0.5 + 0.5 * System.Math.Sin(
+                    state.StripeFrequency * System.Math.Atan2(currentImaginary, currentReal));
+
+            // δ ← 2·Z·δ + δ² + δc
+            FloatExp twoZDeltaReal = (deltaReal * referenceReal - deltaImaginary * referenceImaginary) * 2.0;
+            FloatExp twoZDeltaImaginary = (deltaReal * referenceImaginary + deltaImaginary * referenceReal) * 2.0;
+            FloatExp deltaSquaredReal = deltaReal * deltaReal - deltaImaginary * deltaImaginary;
+            FloatExp deltaSquaredImaginary = deltaReal * deltaImaginary * 2.0;
+            deltaReal = twoZDeltaReal + deltaSquaredReal + addReal;
+            deltaImaginary = twoZDeltaImaginary + deltaSquaredImaginary + addImaginary;
+
+            referenceIndex++;
+            iteration++;
+
+            double nextReferenceReal = referenceIndex < orbit.Length ? orbit.Re[referenceIndex] : 0.0;
+            double nextReferenceImaginary = referenceIndex < orbit.Length ? orbit.Im[referenceIndex] : 0.0;
+            double fullReal = nextReferenceReal + deltaReal.ToDouble();
+            double fullImaginary = nextReferenceImaginary + deltaImaginary.ToDouble();
+            magnitudeSquared = fullReal * fullReal + fullImaginary * fullImaginary;
+
+            if (magnitudeSquared > escapeSquared)
+            {
+                escaped = true;
+                break;
+            }
+
+            // |δ|²: при действительно малом δ обращается в 0 и не даёт ложного rebasing;
+            // ближе к |δ| ~ |z| снова становится числом в диапазоне double — как и нужно.
+            double deltaMagnitudeSquared = FloatExp.MagnitudeSquared(deltaReal, deltaImaginary).ToDouble();
+            double referenceMagnitudeSquared =
+                nextReferenceReal * nextReferenceReal + nextReferenceImaginary * nextReferenceImaginary;
+            if (referenceIndex >= orbit.Length - 1 ||
+                magnitudeSquared < deltaMagnitudeSquared ||
+                magnitudeSquared < GlitchToleranceSquared * referenceMagnitudeSquared)
+            {
+                deltaReal = FloatExp.FromDouble(fullReal);
+                deltaImaginary = FloatExp.FromDouble(fullImaginary);
                 referenceIndex = 0;
             }
         }

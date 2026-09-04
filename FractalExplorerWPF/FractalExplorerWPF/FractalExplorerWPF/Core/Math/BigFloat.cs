@@ -19,14 +19,50 @@ namespace FractalExplorerWPF.Core.NewtonMath;
 public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
 {
     /// <summary>
-    /// Рабочая точность в битах. 384 бита ≈ 115 десятичных цифр — с большим запасом
-    /// перекрывает зум вплоть до предела <see cref="decimal"/>-зума (~1e28) и оставляет
-    /// место для последующего расширения диапазона зума.
+    /// Нижняя граница и значение по умолчанию рабочей точности мантиссы. 384 бита ≈ 115
+    /// десятичных цифр — с запасом перекрывает зум до предела <see cref="decimal"/>-зума
+    /// (~1e28) и достаётся глубокому зуму примерно до 1e90. Глубже
+    /// <see cref="WorkingPrecisionBits"/> поднимается адаптивно; ниже этого порога — никогда.
     /// </summary>
-    public const int PrecisionBits = 384;
+    public const int MinimumPrecisionBits = 384;
 
-    /// <summary>Число десятичных цифр после запятой при round-trip сериализации.</summary>
+    [ThreadStatic] private static int _workingPrecisionBits;
+
+    /// <summary>
+    /// Рабочая точность мантиссы для текущего потока: все операции округляют результат до
+    /// этого числа значащих бит. По умолчанию (и как нижняя граница) равна
+    /// <see cref="MinimumPrecisionBits"/>. Поднимается на время построения опорной орбиты
+    /// сверхглубокого зума через <see cref="PrecisionScope"/> и восстанавливается после.
+    /// </summary>
+    public static int WorkingPrecisionBits
+    {
+        get => _workingPrecisionBits < MinimumPrecisionBits ? MinimumPrecisionBits : _workingPrecisionBits;
+        set => _workingPrecisionBits = value < MinimumPrecisionBits ? MinimumPrecisionBits : value;
+    }
+
+    /// <summary>
+    /// Временно повышает <see cref="WorkingPrecisionBits"/> текущего потока и возвращает
+    /// прежнее значение при <see cref="Dispose"/>. Область точности не вкладывается сама в
+    /// себя рекурсивно — рассчитана на один охватывающий вызов построения опорной орбиты.
+    /// </summary>
+    public readonly ref struct PrecisionScope
+    {
+        private readonly int _previous;
+
+        public PrecisionScope(int bits)
+        {
+            _previous = _workingPrecisionBits;
+            WorkingPrecisionBits = bits;
+        }
+
+        public void Dispose() => _workingPrecisionBits = _previous;
+    }
+
+    /// <summary>Минимум десятичных цифр после запятой при round-trip сериализации.</summary>
     private const int SerializationFractionDigits = 130;
+
+    // log10(2): перевод «значащих бит мантиссы» в «десятичные цифры».
+    private const double Log10Of2 = 0.30102999566398120;
 
     public BigInteger Mantissa { get; }
     public int Exponent { get; }
@@ -40,10 +76,11 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
             return;
         }
 
+        int precisionBits = WorkingPrecisionBits;
         int bitLength = (int)mantissa.GetBitLength();
-        if (bitLength > PrecisionBits)
+        if (bitLength > precisionBits)
         {
-            int shift = bitLength - PrecisionBits;
+            int shift = bitLength - precisionBits;
             int sign = mantissa.Sign;
             BigInteger magnitude = BigInteger.Abs(mantissa);
             // Округление к ближайшему (half-up по модулю).
@@ -177,10 +214,10 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
         BigInteger absNumerator = BigInteger.Abs(numerator);
         BigInteger absDenominator = BigInteger.Abs(denominator);
 
-        // Масштабируем так, чтобы получить хотя бы PrecisionBits + 2 значащих бита.
+        // Масштабируем так, чтобы получить хотя бы WorkingPrecisionBits + 2 значащих бита.
         int numeratorBits = (int)absNumerator.GetBitLength();
         int denominatorBits = (int)absDenominator.GetBitLength();
-        int shift = PrecisionBits + 2 - (numeratorBits - denominatorBits);
+        int shift = WorkingPrecisionBits + 2 - (numeratorBits - denominatorBits);
         if (shift < 0) shift = 0;
 
         BigInteger scaled = (absNumerator << shift);
@@ -246,7 +283,16 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
         }
     }
 
-    public string ToInvariantString() => ToInvariantString(SerializationFractionDigits);
+    /// <summary>
+    /// Round-trip строка: число дробных цифр берётся по фактической длине мантиссы этого
+    /// значения (а не по <see cref="WorkingPrecisionBits"/> вызывающего потока), поэтому
+    /// сверхглубокий центр сериализуется без потери точности.
+    /// </summary>
+    public string ToInvariantString()
+    {
+        int significantDigits = (int)System.Math.Ceiling(Mantissa.GetBitLength() * Log10Of2) + 8;
+        return ToInvariantString(System.Math.Max(SerializationFractionDigits, significantDigits));
+    }
 
     public string ToInvariantString(int maxFractionDigits)
     {

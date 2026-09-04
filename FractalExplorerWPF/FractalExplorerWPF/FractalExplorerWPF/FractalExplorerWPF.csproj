@@ -15,4 +15,10 @@
     <Resource Include="Assets\Icons\**\*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Проверочный проект использует внутренние тестовые швы движка (напр. выбор
+         представления δ глубокого зума). -->
+    <InternalsVisibleTo Include="SavePreviewVerification" />
+  </ItemGroup>
+
 </Project>

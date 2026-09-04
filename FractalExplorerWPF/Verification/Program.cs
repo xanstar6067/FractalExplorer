@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using FractalExplorerWPF.Controls;
+using FractalExplorerWPF.Core.NewtonMath;
 using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
@@ -180,6 +181,9 @@ internal static class Program
         state.Iterations = 600;
         await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, width, height, width * 4, CancellationToken.None));
         Check(pixels.Where((_, index) => index % 4 != 3).All(value => value == 0), "Regression fixture must reproduce the old black preview at 600 iterations.");
+
+        await VerifyUnifiedDeepZoomEngineAsync();
+
         using var cancellation = new CancellationTokenSource();
         state.Iterations = 100_000;
         byte[] cancelledPixels = new byte[480 * 320 * 4];
@@ -187,6 +191,85 @@ internal static class Program
         cancellation.CancelAfter(30);
         await render.WaitAsync(TimeSpan.FromSeconds(10));
         Check(cancelledPixels.Where((_, index) => index % 4 == 3).Any(value => value == 0), "Cancellation must stop unfinished work.");
+    }
+
+    // Phase 1 of the unified deep-zoom engine: adaptive reference-orbit precision plus a
+    // FloatExp representation of the per-pixel δ, both behind the existing 1e25 gate.
+    // The byte-identical band (zoom <= 1e50) is proven by an external git-stash A/B hash
+    // run; here we check the two new mechanisms in isolation.
+    private static async Task VerifyUnifiedDeepZoomEngineAsync()
+    {
+        MandelbrotPalette Palette() =>
+            new() { Colors = [Colors.White, Colors.Black], InteriorColor = Colors.Black };
+
+        // 1. The FloatExp-δ kernel must track the trusted double-δ kernel where both are
+        //    valid. A moderately deep view with a bounded iteration budget keeps most
+        //    pixels off the chaotically sensitive boundary (1 ULP can flip one there).
+        var overlap = new MandelbrotState
+        {
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = 5.7607143988620999e25,
+            Iterations = 2200,
+            Threads = 2,
+            Palette = Palette()
+        };
+        const int ow = 110, oh = 72;
+        byte[] doubleDelta = new byte[ow * oh * 4];
+        byte[] floatExpDelta = new byte[ow * oh * 4];
+
+        MandelbrotFamilyRenderer.ForceFloatExpDeltaForTests = false;
+        await Task.Run(() => MandelbrotFamilyRenderer.Render(overlap, doubleDelta, ow, oh, ow * 4, CancellationToken.None));
+        MandelbrotFamilyRenderer.ForceFloatExpDeltaForTests = true;
+        await Task.Run(() => MandelbrotFamilyRenderer.Render(overlap, floatExpDelta, ow, oh, ow * 4, CancellationToken.None));
+        MandelbrotFamilyRenderer.ForceFloatExpDeltaForTests = null;
+
+        Check(floatExpDelta.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+            "FloatExp δ kernel must produce an image.");
+        Check(doubleDelta.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+            "Overlap fixture must have visible structure for the kernel comparison.");
+        int differing = 0;
+        for (int pixel = 0; pixel < ow * oh; pixel++)
+        {
+            int b = pixel * 4;
+            if (doubleDelta[b] != floatExpDelta[b] ||
+                doubleDelta[b + 1] != floatExpDelta[b + 1] ||
+                doubleDelta[b + 2] != floatExpDelta[b + 2])
+                differing++;
+        }
+        // At this depth δ stays inside normal double range, so the FloatExp recurrence
+        // rounds bit-for-bit like the double one on this fixed fixture. A drift here is a
+        // real kernel regression, not boundary chaos (both kernels share the exact same
+        // double reference orbit and δc).
+        Check(differing == 0,
+            $"FloatExp δ kernel diverges from the double δ kernel on {differing}/{ow * oh} pixels.");
+
+        // 2. A view deep enough to switch δ to FloatExp automatically and to lift the
+        //    reference precision above the 384-bit floor. No pre-change baseline exists
+        //    (old MaxZoom was 1e50); the checks are that the new paths run, complete and
+        //    leave the calling thread's working precision restored. Rendered synchronously
+        //    so the PrecisionScope opens and closes on *this* thread.
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "Working precision must start at the minimum.");
+        var deep = new MandelbrotState
+        {
+            CenterX = -1.2628848671045503000020782246m,
+            CenterY = 0.0409687601493310685285376264m,
+            Zoom = 1.0e120,
+            Iterations = 2600,
+            Threads = 2,
+            Palette = Palette()
+        };
+        int deepProgress = 0;
+        byte[] deepPixels = new byte[80 * 56 * 4];
+        MandelbrotFamilyRenderer.Render(deep, deepPixels, 80, 56, 80 * 4,
+            CancellationToken.None, value => deepProgress = value);
+        Check(deepProgress == 100, "Deep FloatExp render must complete with 100% progress.");
+        Check(deepPixels.Where((_, index) => index % 4 == 3).All(value => value == 255),
+            "Deep FloatExp render must fill every pixel.");
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "Deep-zoom render must restore the calling thread's working precision.");
+        await Task.CompletedTask;
     }
 
     private static async Task DrainAsync()
