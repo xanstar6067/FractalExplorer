@@ -252,10 +252,24 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
 
     public static BigFloat operator -(BigFloat left, BigFloat right) => left + (-right);
 
+    /// <summary>
+    /// Нижняя граница экспоненты: всё, что мельче 2^-1048576 (≈1e-315653), для задач движка
+    /// неотличимо от нуля и схлопывается в <see cref="Zero"/>. Защита нужна не «на всякий
+    /// случай»: экспонента хранится в <see cref="int"/>, а орбита, сходящаяся к
+    /// сверхпритягивающей точке (центр ровно в ядре минимандельброта, Жюлиа при c=0 внутри
+    /// круга), на каждом шаге z ← z² удваивает модуль экспоненты — int переполняется примерно
+    /// за 31 шаг, и без порога число «переворачивается» в огромное, а орбита ломается.
+    /// Со схлопыванием в ноль поведение остаётся математически верным: z→0 ⇒ z²+c → c, то
+    /// есть орбита правильно садится на цикл, содержащий ноль.
+    /// </summary>
+    private const int MinimumExponent = -(1 << 20);
+
     public static BigFloat operator *(BigFloat left, BigFloat right)
     {
         if (left.IsZero || right.IsZero) return Zero;
-        return new BigFloat(left.Mantissa * right.Mantissa, left.Exponent + right.Exponent);
+        long exponent = (long)left.Exponent + right.Exponent;
+        if (exponent < MinimumExponent) return Zero;
+        return new BigFloat(left.Mantissa * right.Mantissa, (int)exponent);
     }
 
     public double ToDouble()

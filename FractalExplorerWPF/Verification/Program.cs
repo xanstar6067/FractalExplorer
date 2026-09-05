@@ -431,12 +431,15 @@ internal static class Program
         static MandelbrotState De(
             MandelbrotVariant variant, decimal cx, decimal cy, double zoom, int iterations,
             MandelbrotPalette pal, decimal power = 2m, decimal jr = 0m, decimal ji = 0m,
-            bool inversion = false, double relief = 1.35) => new()
+            bool inversion = false, double relief = 1.35,
+            string? exactX = null, string? exactY = null) => new()
         {
             ColoringMode = MandelbrotColoringMode.DistanceEstimation,
             Variant = variant,
             CenterX = cx,
             CenterY = cy,
+            CenterXExact = exactX,
+            CenterYExact = exactY,
             Power = power,
             JuliaCReal = jr,
             JuliaCImaginary = ji,
@@ -472,29 +475,46 @@ internal static class Program
 
         // (b) Accuracy against the near-exact BigFloat reference, which drives the very same
         //     derivative recurrence from a directly iterated arbitrary-precision orbit. Small
-        //     images: the reference samples (w+2)×(h+2) pixels and is slow.
+        //     images: the reference samples (w+2)x(h+2) pixels and is slow.
+        //
+        //     The headline assertion is the DE *excess*: the same view is also rendered in
+        //     Smooth mode (no derivative at all) and compared to the reference, so we can tell
+        //     the error Distance Estimation adds from the error the underlying orbit already
+        //     carries. On a chaotic view the second number is large for reasons that predate
+        //     this phase, and only the excess is meaningful.
         {
             const int w = 40, h = 28, total = w * h;
-            (string Label, MandelbrotState State)[] views =
+
+            // -2 - 10^-offset: an exactly-representable centre just outside the antenna tip,
+            // at any depth. The whole frame then sits in the smooth escaping region, where
+            // the orbit is not chaotic and an exact comparison is actually meaningful.
+            static string OutsideTip(int offsetDigits) => "-2." + new string('0', offsetDigits - 1) + "1";
+
+            (string Label, bool OrbitChaotic, MandelbrotState State)[] views =
             {
-                ("Mandelbrot 1e30",         De(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e30, 4000, palette())),
-                // Кончик антенны: центр −2 представим точно на любой глубине, поэтому вид
-                // остаётся осмысленным и на 1e50/1e120 (в отличие от 28-значного центра выше),
-                // а орбита выходит за радиус за ~log₄(зум) шагов — эталон считается быстро.
-                ("Mandelbrot tip 1e50",     De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e50, 800, palette())),
-                ("Mandelbrot tip 1e120",    De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e120, 800, palette())),
-                ("BurningShip 1e30",        De(MandelbrotVariant.BurningShip, -1.62m, 0m, 1.0e30, 3000, palette())),
-                ("Tricorn 1e10",            De(MandelbrotVariant.Tricorn, -1.62m, 0m, 1.0e10, 2000, palette())),
-                ("Buffalo 1e10",            De(MandelbrotVariant.Buffalo, -1.62m, 0m, 1.0e10, 2000, palette())),
-                ("Celtic 1e10",             De(MandelbrotVariant.Celtic, -1.62m, 0m, 1.0e10, 2000, palette())),
-                ("JuliaBurningShip 1e10",   De(MandelbrotVariant.JuliaBurningShip, 0.5m, -0.3m, 1.0e10, 2000, palette(), jr: -1.5m)),
-                ("Multibrot p=3",           De(MandelbrotVariant.Generalized, -0.295455m, 0.977273m, 300.0, 2000, palette(), power: 3m)),
-                ("Multibrot p=8",           De(MandelbrotVariant.Generalized, 0.66m, 0m, 300.0, 2000, palette(), power: 8m)),
-                ("Simonobrot p=2",          De(MandelbrotVariant.Simonobrot, -0.03m, 0.84m, 300.0, 2000, palette(), power: 2m)),
-                ("Simonobrot p=6 inv",      De(MandelbrotVariant.Simonobrot, -0.90m, 0.18m, 300.0, 2000, palette(), power: 6m, inversion: true)),
+                ("Mandelbrot 1e30",         false, De(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e30, 4000, palette())),
+                ("Mandelbrot outside-tip 1e50",  false, De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e50, 800, palette(), exactX: OutsideTip(46), exactY: "0")),
+                ("Mandelbrot outside-tip 1e120", false, De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e120, 800, palette(), exactX: OutsideTip(118), exactY: "0")),
+                // Unit-circle Julia (c = 0): centre 1 is exact at any depth and the dynamics
+                // z <- z^2 are perfectly smooth, so this isolates deep-zoom numerics from
+                // boundary chaos. Also the only fixture here that starts the derivative at I.
+                ("Julia c=0 circle 1e50",   false, De(MandelbrotVariant.Julia, 1m, 0m, 1.0e50, 600, palette())),
+                // The antenna tip itself: half the frame (c > -2) is the chaotic region of the
+                // real quadratic map, so the orbit alone diverges on ~50% of pixels. Kept
+                // deliberately - it is the case where only the DE excess can be asserted.
+                ("Mandelbrot tip 1e50",     true,  De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e50, 800, palette())),
+                ("BurningShip 1e30",        false, De(MandelbrotVariant.BurningShip, -1.62m, 0m, 1.0e30, 3000, palette())),
+                ("Tricorn 1e10",            false, De(MandelbrotVariant.Tricorn, -1.62m, 0m, 1.0e10, 2000, palette())),
+                ("Buffalo 1e10",            false, De(MandelbrotVariant.Buffalo, -1.62m, 0m, 1.0e10, 2000, palette())),
+                ("Celtic 1e10",             false, De(MandelbrotVariant.Celtic, -1.62m, 0m, 1.0e10, 2000, palette())),
+                ("JuliaBurningShip 1e10",   false, De(MandelbrotVariant.JuliaBurningShip, 0.5m, -0.3m, 1.0e10, 2000, palette(), jr: -1.5m)),
+                ("Multibrot p=3",           false, De(MandelbrotVariant.Generalized, -0.295455m, 0.977273m, 300.0, 2000, palette(), power: 3m)),
+                ("Multibrot p=8",           false, De(MandelbrotVariant.Generalized, 0.66m, 0m, 300.0, 2000, palette(), power: 8m)),
+                ("Simonobrot p=2",          false, De(MandelbrotVariant.Simonobrot, -0.03m, 0.84m, 300.0, 2000, palette(), power: 2m)),
+                ("Simonobrot p=6 inv",      false, De(MandelbrotVariant.Simonobrot, -0.90m, 0.18m, 300.0, 2000, palette(), power: 6m, inversion: true)),
             };
 
-            foreach ((string label, MandelbrotState state) in views)
+            foreach ((string label, bool chaotic, MandelbrotState state) in views)
             {
                 byte[] engine = await RenderAsync(state, forceDeep: true, forceBla: null, w, h);
                 byte[] exact = await Task.Run(() =>
@@ -504,24 +524,26 @@ internal static class Program
                 for (int i = 0; i < total; i++)
                     if (engine[i * 4] != 0 || engine[i * 4 + 1] != 0 || engine[i * 4 + 2] != 0) nonBlack++;
 
-                // Separates the two error sources: how much of the DE difference is already
-                // present in the underlying orbit (Smooth colouring, no derivative at all)?
+                // Same view without any derivative: how much of the difference is the orbit's?
                 state.ColoringMode = MandelbrotColoringMode.Smooth;
                 byte[] smoothEngine = await RenderAsync(state, forceDeep: true, forceBla: null, w, h);
                 byte[] smoothExact = await Task.Run(() =>
                     MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
                 state.ColoringMode = MandelbrotColoringMode.DistanceEstimation;
-                int smoothDiffering = Compare(smoothEngine, smoothExact).Differing;
+                int orbitOnly = Compare(smoothEngine, smoothExact).Differing;
+                int excess = Math.Abs(differing - orbitOnly);
 
                 Console.WriteLine($"[diag] DE accuracy {label}: {differing}/{total} px differ " +
-                                  $"({100.0 * differing / total:F2}%), maxΔ {maxDelta}, nonblack {nonBlack}, " +
-                                  $"orbit-only {smoothDiffering}/{total}");
+                                  $"({100.0 * differing / total:F2}%), maxD {maxDelta}, nonblack {nonBlack}, " +
+                                  $"orbit-only {orbitOnly}, DE excess {excess}");
                 Check(nonBlack > total / 10, $"DE view {label} must carry structure.");
-                Check(differing * 100 <= total * 8,
-                    $"DE {label}: deep engine diverges from the exact reference on {differing}/{total} px (>8%).");
+                Check(excess * 100 <= total * 3,
+                    $"DE {label}: the derivative adds {excess}/{total} px of error over the orbit itself (>3%).");
+                if (!chaotic)
+                    Check(differing * 100 <= total * 8,
+                        $"DE {label}: deep engine diverges from the exact reference on {differing}/{total} px (>8%).");
             }
         }
-
         // (c) The relief must survive the depth. If the normalized distance field had
         //     underflowed to zero, ApplyDistanceLighting would early-return the unshaded base
         //     colour for every pixel and the relief strength would stop mattering — so a
