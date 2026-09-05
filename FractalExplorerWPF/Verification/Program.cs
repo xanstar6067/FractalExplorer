@@ -277,6 +277,7 @@ internal static class Program
         await VerifyMultibrotDeepZoomAsync(Palette);
         await VerifySimonobrotDeepZoomAsync(Palette);
         await VerifyHistogramDeepZoomAsync(Palette);
+        await VerifyDistanceEstimationDeepZoomAsync(Palette);
         await VerifyEngineAccuracyAsync(Palette);
     }
 
@@ -383,6 +384,210 @@ internal static class Program
             Check(tilePixels is not null, "Histogram tile render must not be cancelled.");
             Check(tilePixels!.Where((_, index) => index % 4 != 3).Any(value => value != 0),
                 "Histogram tile render must resolve structure.");
+        }
+    }
+
+    // Phase 8: Distance Estimation moved onto the deep engine
+    // (RenderDeepZoomDistanceEstimation). No new per-formula perturbation math was needed:
+    // the derivative recurrence D ← J(z)·D + ∂f/∂c depends on z alone, and every kernel
+    // already assembles z = Z + δ in double for orbit-trap/stripe — so DE arrives for all
+    // supported variants at once, reusing GetIterationJacobian from the flat stage verbatim.
+    // BLA is disabled in this mode (skipping iterations would skip derivative steps).
+    // Distances are stored normalized to the pixel size; float would flush the absolute
+    // deep-zoom values (~1e-43 already at zoom 1e40) straight to zero and kill the relief.
+    private static async Task VerifyDistanceEstimationDeepZoomAsync(Func<MandelbrotPalette> palette)
+    {
+        static (int Differing, int MaxDelta) Compare(byte[] a, byte[] b)
+        {
+            int differing = 0, maxDelta = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                int d = Math.Max(Math.Abs(a[o] - b[o]),
+                    Math.Max(Math.Abs(a[o + 1] - b[o + 1]), Math.Abs(a[o + 2] - b[o + 2])));
+                if (d != 0) differing++;
+                maxDelta = Math.Max(maxDelta, d);
+            }
+            return (differing, maxDelta);
+        }
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool? forceDeep, bool? forceBla, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = forceDeep;
+            MandelbrotFamilyRenderer.ForceBlaForTests = forceBla;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally
+            {
+                MandelbrotFamilyRenderer.ForceDeepZoomForTests = null;
+                MandelbrotFamilyRenderer.ForceBlaForTests = null;
+            }
+            return pixels;
+        }
+
+        static MandelbrotState De(
+            MandelbrotVariant variant, decimal cx, decimal cy, double zoom, int iterations,
+            MandelbrotPalette pal, decimal power = 2m, decimal jr = 0m, decimal ji = 0m,
+            bool inversion = false, double relief = 1.35) => new()
+        {
+            ColoringMode = MandelbrotColoringMode.DistanceEstimation,
+            Variant = variant,
+            CenterX = cx,
+            CenterY = cy,
+            Power = power,
+            JuliaCReal = jr,
+            JuliaCImaginary = ji,
+            UseInversion = inversion,
+            Zoom = zoom,
+            Iterations = iterations,
+            DistanceReliefStrength = relief,
+            Threads = 2,
+            Palette = pal
+        };
+
+        var mandelCentre = (X: -1.2628848671045503000020782246m, Y: 0.0409687601493310685285376264m);
+
+        // (a) Where the flat double stage is still trustworthy, the perturbation kernels must
+        //     reproduce its relief. Both stages run the identical Jacobian/EstimateDistance
+        //     code; the only difference is where z comes from.
+        {
+            const int w = 96, h = 64, total = w * h;
+            foreach (double zoom in new[] { 1.0e6, 1.0e8 })
+            {
+                MandelbrotState state = De(MandelbrotVariant.Mandelbrot,
+                    mandelCentre.X, mandelCentre.Y, zoom, 3000, palette());
+                byte[] flat = await RenderAsync(state, forceDeep: false, forceBla: null, w, h);
+                byte[] deep = await RenderAsync(state, forceDeep: true, forceBla: null, w, h);
+                (int differing, int maxDelta) = Compare(flat, deep);
+                Console.WriteLine($"[diag] DE zoom {zoom:E0}: flat vs deep {differing}/{total} px differ (maxΔ {maxDelta})");
+                Check(deep.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                    $"Deep DE must resolve structure at zoom {zoom:E0}.");
+                Check(differing * 100 <= total * 8,
+                    $"Deep DE diverges from the flat stage on {differing}/{total} px at zoom {zoom:E0} (>8%).");
+            }
+        }
+
+        // (b) Accuracy against the near-exact BigFloat reference, which drives the very same
+        //     derivative recurrence from a directly iterated arbitrary-precision orbit. Small
+        //     images: the reference samples (w+2)×(h+2) pixels and is slow.
+        {
+            const int w = 40, h = 28, total = w * h;
+            (string Label, MandelbrotState State)[] views =
+            {
+                ("Mandelbrot 1e30",         De(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e30, 4000, palette())),
+                // Кончик антенны: центр −2 представим точно на любой глубине, поэтому вид
+                // остаётся осмысленным и на 1e50/1e120 (в отличие от 28-значного центра выше),
+                // а орбита выходит за радиус за ~log₄(зум) шагов — эталон считается быстро.
+                ("Mandelbrot tip 1e50",     De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e50, 800, palette())),
+                ("Mandelbrot tip 1e120",    De(MandelbrotVariant.Mandelbrot, -2m, 0m, 1.0e120, 800, palette())),
+                ("BurningShip 1e30",        De(MandelbrotVariant.BurningShip, -1.62m, 0m, 1.0e30, 3000, palette())),
+                ("Tricorn 1e10",            De(MandelbrotVariant.Tricorn, -1.62m, 0m, 1.0e10, 2000, palette())),
+                ("Buffalo 1e10",            De(MandelbrotVariant.Buffalo, -1.62m, 0m, 1.0e10, 2000, palette())),
+                ("Celtic 1e10",             De(MandelbrotVariant.Celtic, -1.62m, 0m, 1.0e10, 2000, palette())),
+                ("JuliaBurningShip 1e10",   De(MandelbrotVariant.JuliaBurningShip, 0.5m, -0.3m, 1.0e10, 2000, palette(), jr: -1.5m)),
+                ("Multibrot p=3",           De(MandelbrotVariant.Generalized, -0.295455m, 0.977273m, 300.0, 2000, palette(), power: 3m)),
+                ("Multibrot p=8",           De(MandelbrotVariant.Generalized, 0.66m, 0m, 300.0, 2000, palette(), power: 8m)),
+                ("Simonobrot p=2",          De(MandelbrotVariant.Simonobrot, -0.03m, 0.84m, 300.0, 2000, palette(), power: 2m)),
+                ("Simonobrot p=6 inv",      De(MandelbrotVariant.Simonobrot, -0.90m, 0.18m, 300.0, 2000, palette(), power: 6m, inversion: true)),
+            };
+
+            foreach ((string label, MandelbrotState state) in views)
+            {
+                byte[] engine = await RenderAsync(state, forceDeep: true, forceBla: null, w, h);
+                byte[] exact = await Task.Run(() =>
+                    MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
+                (int differing, int maxDelta) = Compare(engine, exact);
+                int nonBlack = 0;
+                for (int i = 0; i < total; i++)
+                    if (engine[i * 4] != 0 || engine[i * 4 + 1] != 0 || engine[i * 4 + 2] != 0) nonBlack++;
+
+                // Separates the two error sources: how much of the DE difference is already
+                // present in the underlying orbit (Smooth colouring, no derivative at all)?
+                state.ColoringMode = MandelbrotColoringMode.Smooth;
+                byte[] smoothEngine = await RenderAsync(state, forceDeep: true, forceBla: null, w, h);
+                byte[] smoothExact = await Task.Run(() =>
+                    MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
+                state.ColoringMode = MandelbrotColoringMode.DistanceEstimation;
+                int smoothDiffering = Compare(smoothEngine, smoothExact).Differing;
+
+                Console.WriteLine($"[diag] DE accuracy {label}: {differing}/{total} px differ " +
+                                  $"({100.0 * differing / total:F2}%), maxΔ {maxDelta}, nonblack {nonBlack}, " +
+                                  $"orbit-only {smoothDiffering}/{total}");
+                Check(nonBlack > total / 10, $"DE view {label} must carry structure.");
+                Check(differing * 100 <= total * 8,
+                    $"DE {label}: deep engine diverges from the exact reference on {differing}/{total} px (>8%).");
+            }
+        }
+
+        // (c) The relief must survive the depth. If the normalized distance field had
+        //     underflowed to zero, ApplyDistanceLighting would early-return the unshaded base
+        //     colour for every pixel and the relief strength would stop mattering — so a
+        //     relief-on vs relief-off render being identical is exactly the failure mode.
+        foreach ((decimal cx, decimal cy, double zoom, int iterations, string label) in new[]
+        {
+            (mandelCentre.X, mandelCentre.Y, 1.0e30, 4000, "centre 1e30"),
+            (-2m, 0m, 1.0e50, 800, "tip 1e50"),
+            (-2m, 0m, 1.0e120, 800, "tip 1e120"),
+        })
+        {
+            const int w = 64, h = 44, total = w * h;
+            MandelbrotState lit = De(MandelbrotVariant.Mandelbrot, cx, cy, zoom, iterations, palette());
+            MandelbrotState flatLit = De(MandelbrotVariant.Mandelbrot, cx, cy, zoom, iterations, palette(), relief: 0);
+            byte[] withRelief = await RenderAsync(lit, forceDeep: true, forceBla: null, w, h);
+            byte[] withoutRelief = await RenderAsync(flatLit, forceDeep: true, forceBla: null, w, h);
+            (int differing, int maxDelta) = Compare(withRelief, withoutRelief);
+            Console.WriteLine($"[diag] DE relief alive, {label}: {differing}/{total} px react to relief (maxΔ {maxDelta})");
+            Check(differing * 4 > total,
+                $"DE distance field collapsed at {label}: only {differing}/{total} px react to relief.");
+        }
+
+        // (d) BLA must be inert in this mode — the pyramid skips iterations, which would skip
+        //     derivative steps. Forcing it on and off must give bit-identical output.
+        {
+            const int w = 64, h = 44;
+            MandelbrotState state = De(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e30, 3500, palette());
+            byte[] blaOn = await RenderAsync(state, forceDeep: true, forceBla: true, w, h);
+            byte[] blaOff = await RenderAsync(state, forceDeep: true, forceBla: false, w, h);
+            Check(Compare(blaOn, blaOff).Differing == 0,
+                "BLA must be disabled for Distance Estimation (output changed with BLA forced on).");
+        }
+
+        // (e) Degenerate reference orbit + DE must fall back to the decimal two-pass render.
+        {
+            const int w = 64, h = 44;
+            MandelbrotState degenerate = De(MandelbrotVariant.Mandelbrot, 1000m, 1000m, 1.0e30, 500, palette());
+            int progress = 0;
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.Render(degenerate, pixels, w, h, w * 4,
+                CancellationToken.None, value => progress = value);
+            Check(progress == 100, "Degenerate-orbit DE fallback must complete with 100% progress.");
+            Check(pixels.Where((_, index) => index % 4 == 3).All(value => value == 255),
+                "Degenerate-orbit DE fallback must fill every pixel.");
+        }
+
+        // (f) Tile path (used by the preview scheduler) must resolve the same relief.
+        {
+            const int w = 64, h = 44;
+            MandelbrotState state = De(MandelbrotVariant.Mandelbrot, mandelCentre.X, mandelCentre.Y, 1.0e30, 3000, palette());
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = true;
+            byte[]? tilePixels;
+            byte[] fullPixels = new byte[w * h * 4];
+            try
+            {
+                var tile = new MandelbrotRenderTile(0, 0, w, h, 0, 0);
+                tilePixels = MandelbrotFamilyRenderer.RenderTile(state, w, h, tile, CancellationToken.None);
+                MandelbrotFamilyRenderer.Render(state, fullPixels, w, h, w * 4, CancellationToken.None);
+            }
+            finally { MandelbrotFamilyRenderer.ForceDeepZoomForTests = null; }
+            Check(tilePixels is not null, "Deep DE tile render must not be cancelled.");
+            Check(tilePixels!.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                "Deep DE tile render must resolve structure.");
+            // A whole-canvas tile samples exactly the same grid as the full-frame pass.
+            Check(Compare(tilePixels!, fullPixels).Differing == 0,
+                "Deep DE tile render must match the full-frame render on a full-canvas tile.");
         }
     }
 

@@ -11,10 +11,10 @@ public static partial class MandelbrotFamilyRenderer
     // Порог зума, за которым обычный double перестаёт быть надёжным (сетка координат и
     // накопление ошибки в z→z²+c). Ниже — плоский double-рендер (см. <see cref="Iterate"/>).
     // Выше ступень decimal (<see cref="IterateDecimal"/>) по-прежнему обслуживает: варианты
-    // без глубокого движка (Burning Ship и т.п. — только decimal; Simonobrot/Generalized вне
-    // целой поддерживаемой степени), режим DistanceEstimation (нужна производная, которую
-    // пертурбация пока не даёт) и вырожденную опорную орбиту в Histogram. Во всех остальных
-    // случаях (включая Histogram — см. RenderDeepZoomHistogram) ступень decimal пропускается.
+    // без глубокого движка (Simonobrot/Generalized вне целой поддерживаемой степени) и
+    // вырожденную опорную орбиту в Histogram/DistanceEstimation. Во всех остальных случаях
+    // (включая Histogram — см. RenderDeepZoomHistogram — и DistanceEstimation — см.
+    // RenderDeepZoomDistanceEstimation) ступень decimal пропускается.
     private const double DecimalIterationZoomThreshold = 1_500_000_000d;
 
     // Mandelbrot/Julia: «второй двигатель» (пертурбация + опорная орбита в BigFloat)
@@ -24,8 +24,8 @@ public static partial class MandelbrotFamilyRenderer
     private const double PerturbationZoomThreshold = DecimalIterationZoomThreshold;
 
     // Ширина области в decimal для «плоских» ступеней: double-/decimal-итерация вне
-    // глубокого зума, режим DistanceEstimation и запасной путь Histogram при вырожденной
-    // опорной орбите. Зум зажимается по верхней границе decimal; выше него всё, что умеет,
+    // глубокого зума и запасные пути Histogram/DistanceEstimation при вырожденной опорной
+    // орбите. Зум зажимается по верхней границе decimal; выше него всё, что умеет,
     // обслуживает пертурбационный движок, а этот путь и раньше упирался в старый MaxZoom,
     // так что ничего не теряется.
     private const decimal DecimalViewWidthMinimum = 0.000000000000001m;
@@ -189,11 +189,28 @@ public static partial class MandelbrotFamilyRenderer
             }
         }
 
-        for (int localY = 0; localY < tile.Height; localY++)
+        ShadeDistanceFieldTile(state, buffer, tile.Width, tile.Height, stride, distances, pixelSize);
+        return buffer;
+    }
+
+    // Второй проход Distance Estimation для тайла: по полю расстояний (tileWidth+2)×(tileHeight+2)
+    // затеняет уже записанные в buffer базовые цвета. Общий для decimal-ступени и глубокого
+    // движка — тот отличается только тем, что подаёт нормированные расстояния и pixelSize = 1.
+    private static void ShadeDistanceFieldTile(
+        MandelbrotState state,
+        byte[] buffer,
+        int tileWidth,
+        int tileHeight,
+        int stride,
+        float[] distances,
+        double pixelSize)
+    {
+        int sampleWidth = tileWidth + 2;
+        for (int localY = 0; localY < tileHeight; localY++)
         {
             int sampleRow = (localY + 1) * sampleWidth;
             int outputRow = localY * stride;
-            for (int localX = 0; localX < tile.Width; localX++)
+            for (int localX = 0; localX < tileWidth; localX++)
             {
                 int sampleIndex = sampleRow + localX + 1;
                 int outputOffset = outputRow + localX * 4;
@@ -209,8 +226,47 @@ public static partial class MandelbrotFamilyRenderer
                 WriteColor(buffer, outputOffset, shaded);
             }
         }
+    }
 
-        return buffer;
+    // То же самое для полного кадра, параллельно и с прогрессом (70..100 %).
+    private static void ShadeDistanceField(
+        MandelbrotState state,
+        byte[] buffer,
+        int width,
+        int height,
+        int stride,
+        float[] distances,
+        double pixelSize,
+        ParallelOptions options,
+        CancellationToken token,
+        Action<int>? progress)
+    {
+        int sampleWidth = width + 2;
+        int shadedRows = 0;
+        Parallel.For(0, height, options, (y, loopState) =>
+        {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
+            int sampleRow = (y + 1) * sampleWidth;
+            int outputRow = y * stride;
+            for (int x = 0; x < width; x++)
+            {
+                int sampleIndex = sampleRow + x + 1;
+                int outputOffset = outputRow + x * 4;
+                Color shaded = ApplyDistanceLighting(
+                    state,
+                    ReadColor(buffer, outputOffset),
+                    distances[sampleIndex],
+                    distances[sampleIndex - 1],
+                    distances[sampleIndex + 1],
+                    distances[sampleIndex - sampleWidth],
+                    distances[sampleIndex + sampleWidth],
+                    pixelSize);
+                WriteColor(buffer, outputOffset, shaded);
+            }
+
+            int done = Interlocked.Increment(ref shadedRows);
+            progress?.Invoke(70 + done * 30 / height);
+        });
     }
 
     private static void RenderDistanceEstimation(
@@ -261,32 +317,8 @@ public static partial class MandelbrotFamilyRenderer
 
         if (token.IsCancellationRequested) return;
 
-        int shadedRows = 0;
-        double pixelSize = (double)(viewWidth / width);
-        Parallel.For(0, height, options, (y, loopState) =>
-        {
-            if (token.IsCancellationRequested) { loopState.Stop(); return; }
-            int sampleRow = (y + 1) * sampleWidth;
-            int outputRow = y * stride;
-            for (int x = 0; x < width; x++)
-            {
-                int sampleIndex = sampleRow + x + 1;
-                int outputOffset = outputRow + x * 4;
-                Color shaded = ApplyDistanceLighting(
-                    state,
-                    ReadColor(buffer, outputOffset),
-                    distances[sampleIndex],
-                    distances[sampleIndex - 1],
-                    distances[sampleIndex + 1],
-                    distances[sampleIndex - sampleWidth],
-                    distances[sampleIndex + sampleWidth],
-                    pixelSize);
-                WriteColor(buffer, outputOffset, shaded);
-            }
-
-            int done = Interlocked.Increment(ref shadedRows);
-            progress?.Invoke(70 + done * 30 / height);
-        });
+        ShadeDistanceField(state, buffer, width, height, stride, distances,
+            (double)(viewWidth / width), options, token, progress);
     }
 
     private static Color ResolveDistanceBaseColor(MandelbrotState state, PixelMetrics metrics)
@@ -504,13 +536,7 @@ public static partial class MandelbrotFamilyRenderer
         bool estimateDistance = state.ColoringMode == MandelbrotColoringMode.DistanceEstimation;
         if (estimateDistance) thresholdSquared = Math.Max(4, thresholdSquared);
         Jacobian2 derivative = isJulia ? Jacobian2.Identity : Jacobian2.Zero;
-        Jacobian2 parameterDerivative = isJulia
-            ? Jacobian2.Zero
-            : new Jacobian2(
-                state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -1 : 1,
-                0,
-                0,
-                1);
+        Jacobian2 parameterDerivative = ParameterDerivativeOf(state, isJulia);
         double minTrap = double.MaxValue;
         double stripe = 0;
         int iterations = 0;
@@ -570,13 +596,7 @@ public static partial class MandelbrotFamilyRenderer
         bool estimateDistance = state.ColoringMode == MandelbrotColoringMode.DistanceEstimation;
         if (estimateDistance) thresholdSquared = Math.Max(4m, thresholdSquared);
         Jacobian2 derivative = isJulia ? Jacobian2.Identity : Jacobian2.Zero;
-        Jacobian2 parameterDerivative = isJulia
-            ? Jacobian2.Zero
-            : new Jacobian2(
-                state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -1 : 1,
-                0,
-                0,
-                1);
+        Jacobian2 parameterDerivative = ParameterDerivativeOf(state, isJulia);
         decimal minTrap = decimal.MaxValue;
         double stripe = 0;
         int iterations = 0;
@@ -626,6 +646,19 @@ public static partial class MandelbrotFamilyRenderer
             iterations == 0 ? 0 : stripe / iterations,
             distance);
     }
+
+    // ∂f/∂c — постоянная часть рекуррентности производной D ← J(z)·D + ∂f/∂c.
+    // Жюлиа: c фиксирована, производная ведётся по z₀, поэтому добавки нет (а D₀ = I).
+    // Остальные: c = точка пикселя, добавка единичная; у Симоноброта с инверсией в формулу
+    // подставляется −re, поэтому у вещественной компоненты знак минус.
+    private static Jacobian2 ParameterDerivativeOf(MandelbrotState state, bool isJulia) =>
+        isJulia
+            ? Jacobian2.Zero
+            : new Jacobian2(
+                state.UseInversion && state.Variant == MandelbrotVariant.Simonobrot ? -1 : 1,
+                0,
+                0,
+                1);
 
     private static Jacobian2 GetIterationJacobian(MandelbrotState state, double zr, double zi)
     {

@@ -29,7 +29,10 @@ public static partial class MandelbrotFamilyRenderer
             ? exactY
             : state.CenterY.ToString(CultureInfo.InvariantCulture);
 
-        double escapeSquared = (double)(state.Threshold * state.Threshold);
+        bool estimateDistance = state.ColoringMode == MandelbrotColoringMode.DistanceEstimation;
+        double escapeSquared = estimateDistance
+            ? DistanceEstimationEscapeSquared(state)
+            : (double)(state.Threshold * state.Threshold);
         double viewWidth = 3.0 / state.Zoom;
         double viewHeight = viewWidth * height / width;
 
@@ -38,6 +41,13 @@ public static partial class MandelbrotFamilyRenderer
             MaxDegreeOfParallelism = System.Math.Clamp(
                 state.Threads <= 0 ? Environment.ProcessorCount : state.Threads, 1, Environment.ProcessorCount),
         };
+
+        if (estimateDistance)
+        {
+            RenderExactReferenceDistanceEstimation(state, buffer, width, height, bits,
+                centerXRaw, centerYRaw, escapeSquared, viewWidth, viewHeight, options, token);
+            return buffer;
+        }
 
         Parallel.For(0, height, options, (y, loopState) =>
         {
@@ -66,6 +76,62 @@ public static partial class MandelbrotFamilyRenderer
         return buffer;
     }
 
+    // Эталон для Distance Estimation. Схема — как у глубокого движка
+    // (<see cref="RenderDeepZoomDistanceEstimation"/>): те же нормированные на пиксель
+    // расстояния и тот же второй проход, поэтому картинки сравнимы побайтово. Отличие ровно
+    // одно и именно оно и измеряется: <c>z</c> для якобиана берётся из точной BigFloat-орбиты,
+    // а не из суммы <c>Z + δ</c>.
+    private static void RenderExactReferenceDistanceEstimation(
+        MandelbrotState state,
+        byte[] buffer,
+        int width,
+        int height,
+        int bits,
+        string centerXRaw,
+        string centerYRaw,
+        double escapeSquared,
+        double viewWidth,
+        double viewHeight,
+        ParallelOptions options,
+        CancellationToken token)
+    {
+        int stride = checked(width * 4);
+        int sampleWidth = checked(width + 2);
+        int sampleHeight = checked(height + 2);
+        var distances = new float[checked(sampleWidth * sampleHeight)];
+        double pixelSize = viewWidth / width;
+
+        Parallel.For(0, sampleHeight, options, (sampleY, loopState) =>
+        {
+            if (token.IsCancellationRequested) { loopState.Stop(); return; }
+            using var precision = new BigFloat.PrecisionScope(bits);
+
+            BigFloat centerX = BigFloat.Parse(centerXRaw);
+            BigFloat centerY = BigFloat.Parse(centerYRaw);
+            int y = sampleY - 1;
+            BigFloat imaginary = centerY + BigFloat.FromDouble((0.5 - (double)y / height) * viewHeight);
+            int distanceRow = sampleY * sampleWidth;
+
+            for (int sampleX = 0; sampleX < sampleWidth; sampleX++)
+            {
+                if ((sampleX & 63) == 0 && token.IsCancellationRequested) { loopState.Stop(); return; }
+                int x = sampleX - 1;
+                BigFloat real = centerX + BigFloat.FromDouble(((double)x / width - 0.5) * viewWidth);
+                PixelMetrics metrics = ExactIterate(state, real, imaginary, escapeSquared, token);
+                distances[distanceRow + sampleX] = StoreDistance(metrics.Distance / pixelSize);
+                if (sampleX is > 0 && sampleX <= width && sampleY is > 0 && sampleY <= height)
+                {
+                    Color baseColor = ResolveDistanceBaseColor(state, metrics);
+                    WriteColor(buffer, (sampleY - 1) * stride + (sampleX - 1) * 4, baseColor);
+                }
+            }
+        });
+
+        if (token.IsCancellationRequested) return;
+
+        ShadeDistanceField(state, buffer, width, height, stride, distances, 1.0, options, token, null);
+    }
+
     private static PixelMetrics ExactIterate(
         MandelbrotState state, BigFloat startReal, BigFloat startImaginary, double escapeSquared, CancellationToken token)
     {
@@ -86,11 +152,21 @@ public static partial class MandelbrotFamilyRenderer
         int maxIterations = state.Iterations;
         int iteration = 0;
         double magnitudeSquared = 0;
+        double escapeReal = 0;
+        double escapeImaginary = 0;
         bool escaped = false;
+
+        bool estimateDistance = state.ColoringMode == MandelbrotColoringMode.DistanceEstimation;
+        Jacobian2 derivative = isJulia ? Jacobian2.Identity : Jacobian2.Zero;
+        Jacobian2 parameterDerivative = ParameterDerivativeOf(state, isJulia);
 
         while (iteration < maxIterations)
         {
             if ((iteration & 4095) == 0 && token.IsCancellationRequested) return default;
+
+            if (estimateDistance)
+                derivative = AdvanceDerivative(state, derivative, parameterDerivative,
+                    zReal.ToDouble(), zImaginary.ToDouble());
 
             if (reflect is { } kind)
             {
@@ -140,6 +216,8 @@ public static partial class MandelbrotFamilyRenderer
             magnitudeSquared = realDouble * realDouble + imaginaryDouble * imaginaryDouble;
             if (!double.IsFinite(magnitudeSquared) || magnitudeSquared > escapeSquared)
             {
+                escapeReal = realDouble;
+                escapeImaginary = imaginaryDouble;
                 escaped = true;
                 break;
             }
@@ -148,16 +226,7 @@ public static partial class MandelbrotFamilyRenderer
         if (!escaped)
             return new PixelMetrics(maxIterations, maxIterations, 0, 0);
 
-        double smooth = iteration;
-        if (magnitudeSquared > 1)
-        {
-            double logZn = System.Math.Log(magnitudeSquared) / 2;
-            const double smoothingPower = 2;
-            double nu = System.Math.Log(System.Math.Max(logZn, 1e-300) / System.Math.Log(smoothingPower)) /
-                        System.Math.Log(smoothingPower);
-            if (double.IsFinite(nu)) smooth = iteration + 1 - nu;
-        }
-
-        return new PixelMetrics(iteration, smooth, 0, 0);
+        return FinishDeepZoomPixel(iteration, magnitudeSquared, double.MaxValue, 0,
+            estimateDistance, escapeReal, escapeImaginary, derivative);
     }
 }
