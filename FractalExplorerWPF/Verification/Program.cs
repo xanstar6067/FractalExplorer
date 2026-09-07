@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -273,6 +274,7 @@ internal static class Program
 
         await VerifyDecimalStageRemovedAsync(Palette);
         await VerifyBlaAccelerationAsync(Palette);
+        await VerifyRealBlaAccelerationAsync(Palette);
         await VerifyReflectedVariantsAsync(Palette);
         await VerifyMultibrotDeepZoomAsync(Palette);
         await VerifySimonobrotDeepZoomAsync(Palette);
@@ -1080,6 +1082,216 @@ internal static class Program
         }
 
         await Task.CompletedTask;
+    }
+
+    // Phase 9: BLA with a REAL 2x2 linear part. The five reflected/conjugate variants
+    // (Burning Ship, Julia Burning Ship, Tricorn, Buffalo, Celtic) and even-power Simonobrot
+    // advance delta through a real linear map, not a complex multiplication, so they get their
+    // own pyramid (RealBlaTable); the complex BlaTable is left untouched and still serves
+    // Mandelbrot/Julia/Multibrot. Like the complex one this is a pure accelerator, hence:
+    //   (a) it must actually engage - the skip counter guards against a vacuous pass;
+    //   (b) it must cost the picture nothing. Views deep enough to engage BLA sit in
+    //       boundary-chaotic territory, where the engine already differs from an exact BigFloat
+    //       render on a few percent of pixels. The honest metric is therefore the EXCESS of
+    //       that difference over the same render with BLA off, not the raw diff;
+    //   (c) coloring modes that consume every single iteration (orbit trap, stripe average,
+    //       distance estimation) must keep BLA off and stay byte-identical.
+    // The centres are exact decimal strings found by walking into each variant's boundary, so
+    // the frames stay structured at these depths instead of degenerating into a flat field.
+    private static async Task VerifyRealBlaAccelerationAsync(Func<MandelbrotPalette> palette)
+    {
+        static int CountRgbDiffering(byte[] a, byte[] b)
+        {
+            int n = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int o = pixel * 4;
+                if (a[o] != b[o] || a[o + 1] != b[o + 1] || a[o + 2] != b[o + 2]) n++;
+            }
+            return n;
+        }
+
+        MandelbrotState State(
+            MandelbrotVariant variant, string centreX, string centreY, double zoom,
+            MandelbrotColoringMode mode = MandelbrotColoringMode.Smooth,
+            decimal power = 2m, decimal juliaReal = 0m, decimal juliaImaginary = 0m,
+            bool inversion = false) => new()
+            {
+                Variant = variant,
+                ColoringMode = mode,
+                // decimal only carries ~28 digits; the deep engine reads the exact strings.
+                CenterX = decimal.Parse(centreX[..System.Math.Min(centreX.Length, 20)], CultureInfo.InvariantCulture),
+                CenterY = decimal.Parse(centreY[..System.Math.Min(centreY.Length, 20)], CultureInfo.InvariantCulture),
+                CenterXExact = centreX,
+                CenterYExact = centreY,
+                Power = power,
+                JuliaCReal = juliaReal,
+                JuliaCImaginary = juliaImaginary,
+                UseInversion = inversion,
+                Zoom = zoom,
+                Iterations = 6000,
+                Threshold = 2m,
+                Threads = 2,
+                Palette = palette(),
+            };
+
+        async Task<byte[]> RenderAsync(MandelbrotState state, bool bla, int w, int h)
+        {
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.ForceBlaForTests = bla;
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = true;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally
+            {
+                MandelbrotFamilyRenderer.ForceBlaForTests = null;
+                MandelbrotFamilyRenderer.ForceDeepZoomForTests = null;
+            }
+            return pixels;
+        }
+
+        async Task<long> CountSkipsAsync(MandelbrotState state, int w, int h)
+        {
+            MandelbrotFamilyRenderer.RealBlaSkippedIterationsForTests = 0;
+            MandelbrotFamilyRenderer.CountRealBlaSkipsForTests = true;
+            try { await RenderAsync(state, bla: true, w, h); }
+            finally { MandelbrotFamilyRenderer.CountRealBlaSkipsForTests = false; }
+            return MandelbrotFamilyRenderer.RealBlaSkippedIterationsForTests;
+        }
+
+        const string burningShipX = "-0.81350985269959441502640438927923405594718016208354671578096";
+        const string burningShipY = "1.15385056973366263716386423762505110184996148623201569967787";
+        const string celticX = "-0.891865646507391491113368732535744974340110083129727811184488";
+        const string celticY = "1.544758206384140070271947748309466179897357707661851201063699";
+        const string simonobrot4X = "0.279452570816264365821172574207784238378988855076446292869889";
+        const string simonobrot4Y = "1.018073395776969286854111772196867045308653990469452818298968";
+
+        (string Label, MandelbrotState State)[] fixtures =
+        {
+            ("BurningShip 3e30", State(MandelbrotVariant.BurningShip,
+                "-0.813509852699594415026404389279137158659901740416441180706343",
+                "1.153850569733662637163864237624756879942846369129799170139332", 3.1622776601683795e30)),
+            ("BurningShip 1e45", State(MandelbrotVariant.BurningShip, burningShipX, burningShipY, 1.0e45)),
+            ("Tricorn 3e30", State(MandelbrotVariant.Tricorn,
+                "0.740107894676546596166278068634689383680928471433837845616988",
+                "1.284164879491910489407619722838421840742204004581206006914469", 3.1622776601683795e30)),
+            ("Buffalo 1e45", State(MandelbrotVariant.Buffalo,
+                "0.251515542826420576827659826958312420927687487022709942977638",
+                "0.454127991517863684724990589158969466705687426119938699326094", 1.0e45)),
+            ("Celtic 3e30", State(MandelbrotVariant.Celtic, celticX, celticY, 3.1622776601683795e30)),
+            ("JuliaBurningShip 1e45", State(MandelbrotVariant.JuliaBurningShip,
+                "-0.024227550790277459831804555192054182024312705553405370339065",
+                "0.56875673781379166740393234420623920098438359700265085138842", 1.0e45,
+                juliaReal: -1.5m, juliaImaginary: 0.02m)),
+            ("Simonobrot p2 1e28", State(MandelbrotVariant.Simonobrot,
+                "-0.233085135590328323057688239020593618626185475481456854709886",
+                "0.956730152389579347325401450437689559915308904251176295871525", 1.0e28, power: 2m)),
+            ("Simonobrot p4 1e28", State(MandelbrotVariant.Simonobrot, simonobrot4X, simonobrot4Y, 1.0e28, power: 4m)),
+            ("Simonobrot p6 inv 1e28", State(MandelbrotVariant.Simonobrot,
+                "0.227591276012239845382720882305167929274131349145291924124711",
+                "1.029105663003342779985661616216266280026506157420936047716223", 1.0e28,
+                power: 6m, inversion: true)),
+            ("Simonobrot p12 1e28", State(MandelbrotVariant.Simonobrot,
+                "0.122209692688143080456363858471452783327760583215973003556001",
+                "1.021769700244342585739196861366295324922134500631004946262376", 1.0e28, power: 12m)),
+        };
+
+        const int w = 120, h = 80, total = w * h;
+        const int ew = 36, eh = 24, etotal = ew * eh;
+
+        foreach ((string label, MandelbrotState state) in fixtures)
+        {
+            long skips = await CountSkipsAsync(state, w, h);
+            byte[] off = await RenderAsync(state, bla: false, w, h);
+            byte[] on = await RenderAsync(state, bla: true, w, h);
+            int differing = CountRgbDiffering(off, on);
+
+            Check(on.Where((_, index) => index % 4 != 3).Any(value => value != 0),
+                $"Real BLA render must resolve structure ({label}).");
+            Check(skips > 0, $"Real BLA never engaged on {label}: the fixture proves nothing.");
+
+            byte[] exact = await Task.Run(() =>
+                MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, ew, eh, CancellationToken.None));
+            int exactVersusOff = CountRgbDiffering(exact, await RenderAsync(state, bla: false, ew, eh));
+            int exactVersusOn = CountRgbDiffering(exact, await RenderAsync(state, bla: true, ew, eh));
+            int excess = exactVersusOn - exactVersusOff;
+
+            Console.WriteLine($"[diag] real BLA {label}: skipped {skips:N0} iterations, on vs off " +
+                $"{differing}/{total} px, vs exact {exactVersusOff} -> {exactVersusOn}/{etotal} (excess {excess})");
+
+            // Pure accelerator: it may add no error of its own beyond the boundary chaos the
+            // engine already carries. 2% of the sampled pixels is the whole budget.
+            Check(excess * 50 <= etotal,
+                $"Real BLA adds {excess}/{etotal} px of error over non-BLA on {label} (>2%).");
+        }
+
+        // Coloring modes that consume every iteration keep BLA off, so they stay byte-identical.
+        foreach (MandelbrotColoringMode mode in new[]
+        {
+            MandelbrotColoringMode.OrbitTrap,
+            MandelbrotColoringMode.StripeAverage,
+            MandelbrotColoringMode.DistanceEstimation,
+        })
+        {
+            foreach ((string label, MandelbrotState state) in new (string, MandelbrotState)[]
+            {
+                ("BurningShip", State(MandelbrotVariant.BurningShip, burningShipX, burningShipY, 1.0e45, mode)),
+                ("Celtic", State(MandelbrotVariant.Celtic, celticX, celticY, 3.1622776601683795e30, mode)),
+                ("Simonobrot p4", State(MandelbrotVariant.Simonobrot, simonobrot4X, simonobrot4Y, 1.0e28, mode, power: 4m)),
+            })
+            {
+                int differing = CountRgbDiffering(
+                    await RenderAsync(state, bla: false, w, h),
+                    await RenderAsync(state, bla: true, w, h));
+                Check(differing == 0,
+                    $"Real BLA must be inert for {mode} ({label}), changed {differing}/{total} px.");
+            }
+        }
+
+        // Speed - the whole point of the phase. The reflected step is cheap, so skipping runs of
+        // it pays off the most; Simonobrot's own step is heavy enough that the win is smaller,
+        // and there the requirement is only that the lookup must not cost more than it saves.
+        foreach ((string label, MandelbrotState state, double minimumRatio) in
+            new (string, MandelbrotState, double)[]
+            {
+                ("Tricorn 3e30", fixtures[2].State, 2.0),
+                ("Simonobrot p4 1e28", fixtures[7].State, 0.8),
+            })
+        {
+            const int sw = 160, sh = 108;
+            byte[] scratch = new byte[sw * sh * 4];
+            MandelbrotFamilyRenderer.ForceDeepZoomForTests = true;
+            double offMs = double.MaxValue, onMs = double.MaxValue;
+            try
+            {
+                MandelbrotFamilyRenderer.ForceBlaForTests = false;
+                MandelbrotFamilyRenderer.Render(state, scratch, sw, sh, sw * 4, CancellationToken.None);
+                var clock = new Stopwatch();
+                for (int trial = 0; trial < 3; trial++)
+                {
+                    clock.Restart();
+                    MandelbrotFamilyRenderer.ForceBlaForTests = false;
+                    MandelbrotFamilyRenderer.Render(state, scratch, sw, sh, sw * 4, CancellationToken.None);
+                    offMs = System.Math.Min(offMs, clock.Elapsed.TotalMilliseconds);
+
+                    clock.Restart();
+                    MandelbrotFamilyRenderer.ForceBlaForTests = true;
+                    MandelbrotFamilyRenderer.Render(state, scratch, sw, sh, sw * 4, CancellationToken.None);
+                    onMs = System.Math.Min(onMs, clock.Elapsed.TotalMilliseconds);
+                }
+            }
+            finally
+            {
+                MandelbrotFamilyRenderer.ForceBlaForTests = null;
+                MandelbrotFamilyRenderer.ForceDeepZoomForTests = null;
+            }
+
+            Console.WriteLine($"[diag] real BLA speed {label}: off {offMs:F0}ms, on {onMs:F0}ms, x{offMs / onMs:F2}");
+            Check(offMs / onMs >= minimumRatio,
+                $"Real BLA speed on {label}: x{offMs / onMs:F2}, expected at least x{minimumRatio:F2}.");
+        }
     }
 
     // Phase 2: the decimal stage is gone from the Mandelbrot/Julia ladder — perturbation
