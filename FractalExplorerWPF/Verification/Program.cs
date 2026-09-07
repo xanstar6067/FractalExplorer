@@ -272,6 +272,7 @@ internal static class Program
         Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
             "Deep-zoom render must restore the calling thread's working precision.");
 
+        VerifyBigFloatSqrt();
         await VerifyDecimalStageRemovedAsync(Palette);
         await VerifyBlaAccelerationAsync(Palette);
         await VerifyRealBlaAccelerationAsync(Palette);
@@ -714,10 +715,66 @@ internal static class Program
             "Mandelbrot deep render must stay deterministic after Phase 5.");
     }
 
+    // Phase 10: BigFloat.Sqrt — the one operation odd-power Simonobrot needs that the type
+    // did not have (|z|ᵖ = M^(p/2) = Mᵠ·√M). Checked three ways: against the published
+    // decimal expansion of √2, by round-tripping (√x)² back to x at several magnitudes, and
+    // by demanding exactness on perfect squares (where the integer Newton iteration must
+    // land on the root itself, not one ULP below it).
+    private static void VerifyBigFloatSqrt()
+    {
+        // First 100 digits of √2.
+        const string Root2 =
+            "1.414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641572";
+
+        using (new BigFloat.PrecisionScope(BigFloat.MinimumPrecisionBits))
+        {
+            string produced = BigFloat.Sqrt(BigFloat.FromInt(2)).ToInvariantString(120);
+            int common = 0;
+            while (common < produced.Length && common < Root2.Length && produced[common] == Root2[common]) common++;
+            // 384 bits ≈ 115 decimal digits, so all 100 published ones must come out right.
+            Check(common >= Root2.Length,
+                $"BigFloat.Sqrt(2) matches only {common} of {Root2.Length} published characters: {produced}");
+        }
+
+        foreach (int bits in new[] { BigFloat.MinimumPrecisionBits, 512, 1024 })
+        {
+            using var precision = new BigFloat.PrecisionScope(bits);
+            foreach (string text in new[] { "2", "3", "0.9999999999999", "1e-120", "1e40", "1e-300" })
+            {
+                BigFloat value = BigFloat.Parse(text);
+                BigFloat root = BigFloat.Sqrt(value);
+                BigFloat error = root * root - value;
+                if (error.Sign < 0) error = -error;
+                // Two roundings (the root and the squaring) at `bits` significant bits. The
+                // bound is scaled in BigFloat, not in double: at 1e-300 a relative ratio
+                // taken through ToDouble would underflow to zero and pass vacuously.
+                BigFloat tolerance = value * BigFloat.FromDouble(System.Math.ScaleB(1.0, -(bits - 4)));
+                Check(error.CompareTo(tolerance) <= 0,
+                    $"BigFloat.Sqrt({text}) at {bits} bits: (√x)² is off by {error.ToInvariantString(20)}.");
+            }
+
+            foreach (string text in new[] { "4", "0.25", "1", "1e-100", "1e100", "12345678901234567890" })
+            {
+                BigFloat value = BigFloat.Parse(text);
+                Check((BigFloat.Sqrt(value * value) - value).IsZero,
+                    $"BigFloat.Sqrt of the perfect square ({text})² must return exactly {text} at {bits} bits.");
+            }
+
+            Check(BigFloat.Sqrt(BigFloat.Zero).IsZero, "BigFloat.Sqrt(0) must be zero.");
+        }
+
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "BigFloat.Sqrt checks must leave the working precision restored.");
+    }
+
     // Phase 6: Simonobrot of even integer power p=2q — composition of two exact binomial
-    // perturbations (zᵖ and |z|ᵖ=Mᵠ), no BLA (the leading term is a real 2×2 map, not
-    // complex). Verified against the exact BigFloat reference, both with and without
-    // UseInversion (which flips the sign the reference-orbit cache key must also carry).
+    // perturbations (zᵖ and |z|ᵖ=Mᵠ). Phase 10 added odd p=2q+1, where the modulus factor
+    // carries a square root and is perturbed by the exact identity
+    // δ√M = δm/(√(M+δm)+√M). Verified against the exact BigFloat reference, both with and
+    // without UseInversion (which flips the sign the reference-orbit cache key must also
+    // carry) — and, for the odd powers, against the plain-double Iterate path as well:
+    // that one goes through Complex.Pow/Math.Pow, so it is the only oracle that does not
+    // share StepSimonobrotReference with the engine under test.
     private static async Task VerifySimonobrotDeepZoomAsync(Func<MandelbrotPalette> palette)
     {
         static int CountRgbDiffering(byte[] a, byte[] b)
@@ -753,6 +810,13 @@ internal static class Program
             (6, false, -0.90m, 0.18m),
             (8, true,  -0.33m, 0.87m),
             (12, false, -0.12m, 0.84m),
+            // Phase 10 — odd powers, where the modulus factor is Mᵠ·√M. Centres picked for
+            // edge density (the detail the kernel has to reproduce), not just for non-black.
+            (3, false, -0.70m, -0.35m),
+            (5, false,  0.55m, -0.85m),
+            (7, true,   0.30m, 0.85m),
+            (9, false,  0.95m, 0.25m),
+            (11, false, -0.10m, -0.95m),
         };
 
         foreach ((int power, bool inversion, decimal cx, decimal cy) in cases)
@@ -772,8 +836,15 @@ internal static class Program
             byte[] perturbation = await RenderAsync(state, forceDeep: true, w, h);
             byte[] exact = await Task.Run(() =>
                 MandelbrotFamilyRenderer.RenderExactReferenceForTests(state, w, h, CancellationToken.None));
+            // The exact reference and the reference orbit share StepSimonobrotReference, so
+            // it cannot catch an error in the formula itself — only in the perturbation on
+            // top of it. The plain-double path can: it computes zᵖ·|z|ᵖ through
+            // Complex.Pow and Math.Pow(√M, p), independently of everything above. At zoom
+            // 300 double is exact enough to be that oracle.
+            byte[] flat = await RenderAsync(state, forceDeep: false, w, h);
 
             int vsExact = CountRgbDiffering(perturbation, exact);
+            int vsFlat = CountRgbDiffering(perturbation, flat);
             int maxD = 0, nonBlack = 0;
             for (int i = 0; i < total; i++)
             {
@@ -782,10 +853,13 @@ internal static class Program
                     Math.Max(Math.Abs(perturbation[o + 1] - exact[o + 1]), Math.Abs(perturbation[o + 2] - exact[o + 2]))));
                 if (perturbation[o] != 0 || perturbation[o + 1] != 0 || perturbation[o + 2] != 0) nonBlack++;
             }
-            Console.WriteLine($"[diag] Simonobrot p={power} inv={inversion}: vs exact {vsExact}/{total} (maxΔ {maxD}), nonblack {nonBlack}");
+            Console.WriteLine($"[diag] Simonobrot p={power} inv={inversion}: vs exact {vsExact}/{total} (maxΔ {maxD}), " +
+                $"vs plain double {vsFlat}/{total}, nonblack {nonBlack}");
             Check(nonBlack > total / 10, $"Simonobrot p={power} inv={inversion} view must carry structure.");
             Check(vsExact * 100 <= total * 3,
                 $"Simonobrot p={power} inv={inversion}: perturbation diverges from exact on {vsExact}/{total} px, maxΔ {maxD} (>3%).");
+            Check(vsFlat * 100 <= total * 3,
+                $"Simonobrot p={power} inv={inversion}: perturbation diverges from the plain-double formula on {vsFlat}/{total} px (>3%).");
         }
 
         // UseInversion must be part of the reference-orbit cache key: two renders that
@@ -1196,6 +1270,14 @@ internal static class Program
             ("Simonobrot p12 1e28", State(MandelbrotVariant.Simonobrot,
                 "0.122209692688143080456363858471452783327760583215973003556001",
                 "1.021769700244342585739196861366295324922134500631004946262376", 1.0e28, power: 12m)),
+            // Phase 10 — odd powers: the same real 2×2 table, with both half-integer powers
+            // of the modulus (M^(p/2) and M^(p/2−1)) carrying a √M factor.
+            ("Simonobrot p3 1e28", State(MandelbrotVariant.Simonobrot,
+                "-0.202832656913406719584951309136145088020207829768900793575531",
+                "1.112011809221549716846392243745997167999832561088051678883473", 1.0e28, power: 3m)),
+            ("Simonobrot p5 1e28", State(MandelbrotVariant.Simonobrot,
+                "-0.548667511943908696630758431962511649547657017247242149297411",
+                "0.872765118321406809316583683587250477176667101144019039749011", 1.0e28, power: 5m)),
         };
 
         const int w = 120, h = 80, total = w * h;
@@ -1225,6 +1307,26 @@ internal static class Program
             // engine already carries. 2% of the sampled pixels is the whole budget.
             Check(excess * 50 <= etotal,
                 $"Real BLA adds {excess}/{etotal} px of error over non-BLA on {label} (>2%).");
+        }
+
+        // Odd-power Simonobrot must reach the deep engine through the production gate, not
+        // only through the test seam: without ForceDeepZoomForTests the render still has to
+        // engage the real BLA, which only the perturbation kernels ever consult.
+        {
+            MandelbrotState state = fixtures[^2].State;   // Simonobrot p3 1e28
+            byte[] pixels = new byte[w * h * 4];
+            MandelbrotFamilyRenderer.RealBlaSkippedIterationsForTests = 0;
+            MandelbrotFamilyRenderer.CountRealBlaSkipsForTests = true;
+            try
+            {
+                await Task.Run(() => MandelbrotFamilyRenderer.Render(state, pixels, w, h, w * 4, CancellationToken.None));
+            }
+            finally { MandelbrotFamilyRenderer.CountRealBlaSkipsForTests = false; }
+
+            Check(MandelbrotFamilyRenderer.RealBlaSkippedIterationsForTests > 0,
+                "Odd-power Simonobrot must select the deep engine at 1e28 without the test seam.");
+            Check(CountRgbDiffering(pixels, await RenderAsync(state, bla: true, w, h)) == 0,
+                "The production gate must produce exactly the forced-deep render for odd-power Simonobrot.");
         }
 
         // Coloring modes that consume every iteration keep BLA off, so they stay byte-identical.

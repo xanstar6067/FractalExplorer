@@ -175,19 +175,8 @@ public static partial class MandelbrotFamilyRenderer
             }
             else if (simonobrotPower >= 2)
             {
-                int halfPower = simonobrotPower / 2;
-                BigFloat powerReal = zReal, powerImaginary = zImaginary;
-                for (int e = 1; e < simonobrotPower; e++)
-                {
-                    BigFloat nr = powerReal * zReal - powerImaginary * zImaginary;
-                    powerImaginary = powerReal * zImaginary + powerImaginary * zReal;
-                    powerReal = nr;
-                }
-                BigFloat magnitudeSquaredBig = zReal * zReal + zImaginary * zImaginary;
-                BigFloat magnitudePower = magnitudeSquaredBig;
-                for (int e = 1; e < halfPower; e++) magnitudePower *= magnitudeSquaredBig;
-                zReal = powerReal * magnitudePower + constantReal;
-                zImaginary = powerImaginary * magnitudePower + constantImaginary;
+                (zReal, zImaginary) = StepSimonobrotReference(
+                    simonobrotPower, zReal, zImaginary, constantReal, constantImaginary);
             }
             else if (multibrotPower >= 3)
             {

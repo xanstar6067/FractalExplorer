@@ -3,7 +3,7 @@ namespace FractalExplorerWPF.Core.Rendering;
 /// <summary>
 /// BLA для вариантов, у которых линейная часть возмущения — вещественная 2×2-карта, а не
 /// комплексное умножение: пять отражённых/сопряжённых вариантов (Burning Ship, Julia Burning
-/// Ship, Tricorn, Buffalo, Celtic) и Симоноброт чётной степени.
+/// Ship, Tricorn, Buffalo, Celtic) и Симоноброт целой степени.
 ///
 /// Устройство то же, что у комплексной <see cref="BlaTable"/> (Zhuoran): пирамида отображений
 /// δ_out ≈ A·δ_in + B·δc по отрезкам из 2^k итераций, слияние соседних пар вверх по уровням,
@@ -23,7 +23,8 @@ namespace FractalExplorerWPF.Core.Rendering;
 /// <item>Buffalo:      A = M(2W)·diag(s(Zr),  s(Zi)), W = (|Zr|,  |Zi|);</item>
 /// <item>Tricorn:      A = M(2W)·diag(1, −1),         W = (Zr, −Zi);</item>
 /// <item>Celtic:       A = diag(s(U), 1)·M(2Z),       U = Zr²−Zi²;</item>
-/// <item>Симоноброт p=2q: A = M(p·Mᵠ·Zᵖ⁻¹) + 2q·Mᵠ⁻¹·(Zᵖ ⊗ Z), M = |Z|².</item>
+/// <item>Симоноброт: A = M(p·M^(p/2)·Zᵖ⁻¹) + p·M^(p/2−1)·(Zᵖ ⊗ Z), M = |Z|²; при нечётном p
+/// обе степени модуля полуцелые и берут множителем √M.</item>
 /// </list>
 /// </summary>
 public static partial class MandelbrotFamilyRenderer
@@ -167,8 +168,8 @@ public static partial class MandelbrotFamilyRenderer
 
                 if (simonobrotPower >= 2)
                 {
-                    // z ← zᵖ·Mᵠ + c. Линейная часть: Mᵠ·p·Zᵖ⁻¹·δ (комплексная) плюс
-                    // Zᵖ·2q·Mᵠ⁻¹·(Zr·δr + Zi·δi) (вещественная, ранга 1). d = p + 2q = 2p.
+                    // z ← zᵖ·M^(p/2) + c. Линейная часть: M^(p/2)·p·Zᵖ⁻¹·δ (комплексная) плюс
+                    // Zᵖ·p·M^(p/2−1)·(Zr·δr + Zi·δi) (вещественная, ранга 1). d = 2p.
                     double powerMinusOneReal = 1.0, powerMinusOneImaginary = 0.0;   // Z^(p−1)
                     for (int e = 0; e < simonobrotPower - 1; e++)
                     {
@@ -179,14 +180,22 @@ public static partial class MandelbrotFamilyRenderer
                     double wReal = powerMinusOneReal * zr - powerMinusOneImaginary * zi;     // Zᵖ
                     double wImaginary = powerMinusOneReal * zi + powerMinusOneImaginary * zr;
 
-                    double magnitudePowerHalf = 1.0;                                          // Mᵠ
+                    double magnitudePowerHalf = 1.0;                                          // M^(p/2)
                     for (int e = 0; e < halfPower; e++) magnitudePowerHalf *= zMagnitudeSquared;
-                    double magnitudePowerHalfMinusOne = 1.0;                                  // Mᵠ⁻¹
+                    double magnitudePowerHalfMinusOne = 1.0;                                  // M^(p/2−1)
                     for (int e = 0; e < halfPower - 1; e++) magnitudePowerHalfMinusOne *= zMagnitudeSquared;
+                    if ((simonobrotPower & 1) != 0)
+                    {
+                        // Нечётное p = 2q+1: обе степени модуля полуцелые — M^(p/2) = Mᵠ·√M,
+                        // M^(p/2−1) = M^(q−1)·√M (q ≥ 1, так как нечётное p здесь не меньше 3).
+                        double root = System.Math.Sqrt(zMagnitudeSquared);
+                        magnitudePowerHalf *= root;
+                        magnitudePowerHalfMinusOne *= root;
+                    }
 
                     double linearReal = simonobrotPower * magnitudePowerHalf * powerMinusOneReal;
                     double linearImaginary = simonobrotPower * magnitudePowerHalf * powerMinusOneImaginary;
-                    double rankOneScale = 2.0 * halfPower * magnitudePowerHalfMinusOne;
+                    double rankOneScale = simonobrotPower * magnitudePowerHalfMinusOne;
 
                     n11 = linearReal + rankOneScale * wReal * zr;
                     n12 = -linearImaginary + rankOneScale * wReal * zi;

@@ -13,8 +13,8 @@ namespace FractalExplorerWPF.Core.NewtonMath;
 /// Тип нужен только «второму двигателю» глубокого зума Мандельброта: он хранит
 /// центр области и опорную точку с точностью, недостижимой для <see cref="decimal"/>
 /// (≈28 десятичных цифр). Набор операций намеренно минимален — сложение, вычитание,
-/// умножение, сравнение и конвертации, которых достаточно для навигации и построения
-/// опорной орбиты.
+/// умножение, квадратный корень, сравнение и конвертации, которых достаточно для навигации
+/// и построения опорной орбиты.
 /// </summary>
 public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
 {
@@ -270,6 +270,57 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
         long exponent = (long)left.Exponent + right.Exponent;
         if (exponent < MinimumExponent) return Zero;
         return new BigFloat(left.Mantissa * right.Mantissa, (int)exponent);
+    }
+
+    /// <summary>
+    /// Квадратный корень с рабочей точностью. Нужен нечётной степени Симоноброта:
+    /// <c>|z|ᵖ = M^(p/2) = Mᵠ·√M</c> при <c>p = 2q+1</c>, где <c>M = |z|²</c>.
+    /// Отрицательный аргумент — ошибка вызывающего (в движке под корнем всегда сумма
+    /// квадратов).
+    /// </summary>
+    public static BigFloat Sqrt(BigFloat value)
+    {
+        if (value.IsZero) return Zero;
+        if (value.Sign < 0)
+            throw new ArgumentOutOfRangeException(nameof(value), "Квадратный корень из отрицательного числа.");
+
+        // √(m·2^e) = √(m·2^s) · 2^((e−s)/2). Сдвиг s подбирается так, чтобы (e−s) было
+        // чётным, а у целочисленного корня оказалось на 8 бит больше рабочей точности:
+        // погрешность «floor» целого корня — не более 1 младшего бита, то есть на восемь
+        // разрядов ниже позиции округления, которое дальше делает конструктор.
+        int targetBits = 2 * (WorkingPrecisionBits + 8);
+        int shift = targetBits - (int)value.Mantissa.GetBitLength();
+        if (shift < 0) shift = 0;
+        if ((((long)value.Exponent - shift) & 1L) != 0) shift++;
+
+        BigInteger root = IntegerSquareRoot(value.Mantissa << shift);
+        return new BigFloat(root, (value.Exponent - shift) / 2);
+    }
+
+    /// <summary>
+    /// ⌊√value⌋ методом Ньютона. Начальное приближение берётся из старших бит через
+    /// <see cref="System.Math.Sqrt"/> (сразу ~50 верных бит), поэтому даже для
+    /// восьмисотбитного аргумента хватает трёх-четырёх уточнений вместо трёх десятков.
+    /// Приближение заведомо не меньше искомого корня — на этом держится монотонность
+    /// итерации и её остановка ровно на ⌊√value⌋.
+    /// </summary>
+    private static BigInteger IntegerSquareRoot(BigInteger value)
+    {
+        if (value.Sign <= 0) return BigInteger.Zero;
+
+        int bitLength = (int)value.GetBitLength();
+        int headShift = bitLength > 53 ? (bitLength - 53) & ~1 : 0;
+        double head = (double)(value >> headShift);
+        // Слагаемые с запасом закрывают и отброшенный хвост, и округление double.
+        BigInteger guess =
+            ((BigInteger)System.Math.Ceiling(System.Math.Sqrt(head + 4.0)) + 2) << (headShift / 2);
+
+        while (true)
+        {
+            BigInteger next = (guess + value / guess) >> 1;
+            if (next >= guess) return guess;
+            guess = next;
+        }
     }
 
     public double ToDouble()
