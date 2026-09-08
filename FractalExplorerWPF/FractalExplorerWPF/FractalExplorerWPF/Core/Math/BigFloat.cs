@@ -26,6 +26,15 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
     /// </summary>
     public const int MinimumPrecisionBits = 384;
 
+    /// <summary>
+    /// Жёсткий нижний предел, ниже которого <see cref="WorkingPrecisionBits"/> не опускается
+    /// даже явным заданием. Значение по умолчанию (когда точность не задана) по-прежнему
+    /// <see cref="MinimumPrecisionBits"/>; область <see cref="PrecisionScope"/> может опустить
+    /// точность ниже 384 бит — это нужно ступеням, которым 115 десятичных цифр избыточны и
+    /// стоят лишнего времени (прямая итерация Коллатца на умеренной глубине).
+    /// </summary>
+    public const int AbsoluteMinimumPrecisionBits = 96;
+
     [ThreadStatic] private static int _workingPrecisionBits;
 
     /// <summary>
@@ -36,8 +45,12 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
     /// </summary>
     public static int WorkingPrecisionBits
     {
-        get => _workingPrecisionBits < MinimumPrecisionBits ? MinimumPrecisionBits : _workingPrecisionBits;
-        set => _workingPrecisionBits = value < MinimumPrecisionBits ? MinimumPrecisionBits : value;
+        get => _workingPrecisionBits < AbsoluteMinimumPrecisionBits
+            ? MinimumPrecisionBits
+            : _workingPrecisionBits;
+        set => _workingPrecisionBits = value < AbsoluteMinimumPrecisionBits
+            ? AbsoluteMinimumPrecisionBits
+            : value;
     }
 
     /// <summary>
@@ -103,8 +116,23 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
 
     public static BigFloat Zero => default;
 
+    /// <summary>Единица. Значение не зависит от рабочей точности.</summary>
+    public static BigFloat One { get; } = FromInt(1);
+
     public bool IsZero => Mantissa.IsZero;
     public int Sign => Mantissa.Sign;
+
+    /// <summary>
+    /// Двоичный порядок величины: для ненулевого значения |x| ∈ [2^(BinaryExponent−1),
+    /// 2^BinaryExponent). По нему алгоритмы трансцендентных функций выбирают глубину
+    /// приведения аргумента и решают, что очередной член ряда уже пренебрежимо мал —
+    /// без вычитания и без выделения памяти под промежуточный результат.
+    /// </summary>
+    public int BinaryExponent => Mantissa.IsZero
+        ? int.MinValue
+        : (int)BigInteger.Abs(Mantissa).GetBitLength() + Exponent;
+
+    public static BigFloat Abs(BigFloat value) => value.Sign < 0 ? -value : value;
 
     private static BigFloat FromRawRounded(BigInteger mantissa, int exponent) => new(mantissa, exponent);
 
@@ -264,12 +292,64 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
     /// </summary>
     private const int MinimumExponent = -(1 << 20);
 
+    /// <summary>
+    /// Верхняя граница экспоненты, симметричная <see cref="MinimumExponent"/>. Значение
+    /// 2^1048576 (≈1e315652) для задач движка уже «бесконечность»: любая орбита с таким
+    /// модулем давно вышла за радиус выхода. Насыщение здесь нужно ровно затем же, зачем
+    /// схлопывание внизу — экспонента хранится в <see cref="int"/>, и без ограничения
+    /// произведение двух огромных чисел «перевернулось» бы в маленькое.
+    /// </summary>
+    private const int MaximumExponent = 1 << 20;
+
+    /// <summary>Значение mantissa·2^exponent с округлением до рабочей точности и с
+    /// ограничением экспоненты сверху и снизу.</summary>
+    private static BigFloat Scaled(BigInteger mantissa, long exponent)
+    {
+        if (mantissa.IsZero) return Zero;
+        if (exponent < MinimumExponent) return Zero;
+        if (exponent > MaximumExponent) exponent = MaximumExponent;
+        return new BigFloat(mantissa, (int)exponent);
+    }
+
+    /// <summary>Значение mantissa·2^exponent, округлённое до рабочей точности.</summary>
+    public static BigFloat FromScaled(BigInteger mantissa, int exponent) => Scaled(mantissa, exponent);
+
+    /// <summary>
+    /// Умножение на 2^shift. Меняется только экспонента, поэтому операция точная —
+    /// на ней держится приведение аргумента у <see cref="BigFloatMath"/>.
+    /// </summary>
+    public static BigFloat ScaleByPowerOfTwo(BigFloat value, int shift) =>
+        value.IsZero ? Zero : Scaled(value.Mantissa, (long)value.Exponent + shift);
+
     public static BigFloat operator *(BigFloat left, BigFloat right)
     {
         if (left.IsZero || right.IsZero) return Zero;
-        long exponent = (long)left.Exponent + right.Exponent;
-        if (exponent < MinimumExponent) return Zero;
-        return new BigFloat(left.Mantissa * right.Mantissa, (int)exponent);
+        return Scaled(left.Mantissa * right.Mantissa, (long)left.Exponent + right.Exponent);
+    }
+
+    public static BigFloat operator *(BigFloat left, long right) =>
+        left.IsZero || right == 0 ? Zero : Scaled(left.Mantissa * right, left.Exponent);
+
+    /// <summary>
+    /// Деление с рабочей точностью. Считается как отношение мантисс через
+    /// <see cref="FromRatio"/> с последующим сложением экспонент: вычитания близких величин
+    /// здесь нет, поэтому погрешность результата — одно округление.
+    /// </summary>
+    public static BigFloat operator /(BigFloat left, BigFloat right)
+    {
+        if (right.IsZero) throw new DivideByZeroException("Деление BigFloat на ноль.");
+        if (left.IsZero) return Zero;
+        BigFloat ratio = FromRatio(left.Mantissa, right.Mantissa);
+        return Scaled(ratio.Mantissa, (long)ratio.Exponent + left.Exponent - right.Exponent);
+    }
+
+    /// <summary>Деление на небольшое целое — знаменатели членов ряда Тейлора.</summary>
+    public static BigFloat operator /(BigFloat left, long right)
+    {
+        if (right == 0) throw new DivideByZeroException("Деление BigFloat на ноль.");
+        if (left.IsZero) return Zero;
+        BigFloat ratio = FromRatio(left.Mantissa, right);
+        return Scaled(ratio.Mantissa, (long)ratio.Exponent + left.Exponent);
     }
 
     /// <summary>
@@ -425,6 +505,13 @@ public readonly struct BigFloat : IComparable<BigFloat>, IEquatable<BigFloat>
         BigFloat difference = this - other;
         return difference.Mantissa.Sign;
     }
+
+    public static bool operator <(BigFloat left, BigFloat right) => left.CompareTo(right) < 0;
+    public static bool operator >(BigFloat left, BigFloat right) => left.CompareTo(right) > 0;
+    public static bool operator <=(BigFloat left, BigFloat right) => left.CompareTo(right) <= 0;
+    public static bool operator >=(BigFloat left, BigFloat right) => left.CompareTo(right) >= 0;
+    public static bool operator ==(BigFloat left, BigFloat right) => left.Equals(right);
+    public static bool operator !=(BigFloat left, BigFloat right) => !left.Equals(right);
 
     public bool Equals(BigFloat other) => Mantissa == other.Mantissa && Exponent == other.Exponent;
     public override bool Equals(object? obj) => obj is BigFloat other && Equals(other);

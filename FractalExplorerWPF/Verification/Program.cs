@@ -273,6 +273,8 @@ internal static class Program
             "Deep-zoom render must restore the calling thread's working precision.");
 
         VerifyBigFloatSqrt();
+        VerifyBigFloatTranscendental();
+        await VerifyCollatzDeepZoomAsync();
         await VerifyDecimalStageRemovedAsync(Palette);
         await VerifyBlaAccelerationAsync(Palette);
         await VerifyRealBlaAccelerationAsync(Palette);
@@ -720,6 +722,448 @@ internal static class Program
     // decimal expansion of √2, by round-tripping (√x)² back to x at several magnitudes, and
     // by demanding exactness on perfect squares (where the integer Newton iteration must
     // land on the root itself, not one ULP below it).
+    // Phase 11: transcendental functions over BigFloat (π, exp, sin/cos, sh/ch), built for
+    // the Collatz deep-zoom stage. Nothing in the Mandelbrot engine calls them, so this is
+    // the only place that pins them down. Three independent kinds of oracle:
+    //   • published digits — catches a wrong algorithm outright;
+    //   • identities (sin²+cos²=1, ch²−sh²=1, doubling formulas) — hold at every precision
+    //     and catch guard-bit shortfalls the digit checks would miss at a single precision;
+    //   • agreement with the double library on ordinary arguments — catches a wrong branch
+    //     in the argument reduction, which the identities alone would not (they survive a
+    //     consistent shift of both sin and cos).
+    private static void VerifyBigFloatTranscendental()
+    {
+        // First 100 digits of each constant (truncated, not rounded — the checks compare
+        // a prefix of the produced digit string).
+        const string PiDigits =
+            "3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067";
+        const string EDigits =
+            "2.718281828459045235360287471352662497757247093699959574966967627724076630353547594571382178525166427";
+        const string Sin1Digits =
+            "0.841470984807896506652502321630298999622563060798371065672751709991910404391239668948639743543052695";
+        const string Cos1Digits =
+            "0.540302305868139717400936607442976603732310420617922227670097255381100394774471764517951856087183089";
+        const string Sinh1Digits =
+            "1.175201193643801456882381850595600815155717981334095870229565413013307567304323895607117452089623391";
+        const string Cosh1Digits =
+            "1.543080634815243778477905620757061682601529112365863704737402214710769063049223698964264726435543035";
+        const string SinPiTenthDigits =
+            "0.309016994374947424102293417182819058860154589902881431067724311352630231409451224853603602094695568";
+        const string CosPiTenthDigits =
+            "0.951056516295153572116439333379382143405698634125750222447305644430153170085193501718792810970811381";
+        const string ExpMinusFiveDigits =
+            "0.006737946999085467096636048423148424248849585027355085430305531572683522515604062281449138844208361";
+
+        static void CheckDigits(string label, BigFloat value, string expected)
+        {
+            string produced = value.ToInvariantString(expected.Length + 20);
+            int common = 0;
+            while (common < produced.Length && common < expected.Length && produced[common] == expected[common])
+                common++;
+            Check(common >= expected.Length,
+                $"{label} matches only {common} of {expected.Length} published characters: {produced}");
+        }
+
+        // 384 bits ≈ 115 decimal digits, so all 100 published ones must come out right.
+        using (new BigFloat.PrecisionScope(BigFloat.MinimumPrecisionBits))
+        {
+            CheckDigits("π", BigFloatMath.Pi, PiDigits);
+            CheckDigits("exp(1)", BigFloatMath.Exp(BigFloat.One), EDigits);
+            CheckDigits("exp(-5)", BigFloatMath.Exp(BigFloat.FromInt(-5)), ExpMinusFiveDigits);
+            Check(BigFloatMath.Exp(BigFloat.Zero).Equals(BigFloat.One), "exp(0) must be exactly 1.");
+
+            BigFloatMath.SinCos(BigFloat.One, out BigFloat sine, out BigFloat cosine);
+            CheckDigits("sin(1)", sine, Sin1Digits);
+            CheckDigits("cos(1)", cosine, Cos1Digits);
+
+            BigFloatMath.SinCosPi(BigFloat.One / 10, out BigFloat sinePi, out BigFloat cosinePi);
+            CheckDigits("sin(π/10)", sinePi, SinPiTenthDigits);
+            CheckDigits("cos(π/10)", cosinePi, CosPiTenthDigits);
+
+            BigFloatMath.SinhCosh(BigFloat.One, out BigFloat hyperbolicSine, out BigFloat hyperbolicCosine);
+            CheckDigits("sh(1)", hyperbolicSine, Sinh1Digits);
+            CheckDigits("ch(1)", hyperbolicCosine, Cosh1Digits);
+        }
+
+        // π at a precision far above and far below the 384-bit default: the Machin series
+        // must be recomputed per precision, not reused from a cache keyed by nothing.
+        using (new BigFloat.PrecisionScope(1024)) CheckDigits("π at 1024 bits", BigFloatMath.Pi, PiDigits);
+        using (new BigFloat.PrecisionScope(128))
+        {
+            string produced = BigFloatMath.Pi.ToInvariantString(60);
+            int common = 0;
+            while (common < produced.Length && produced[common] == PiDigits[common]) common++;
+            // 128 bits ≈ 38 decimal digits; ask for 34 to stay clear of the rounding digit.
+            Check(common >= 36, $"π at 128 bits matches only {common} characters: {produced}");
+        }
+
+        // Identities at several precisions, over arguments that exercise every branch of
+        // the reduction (both signs, every quadrant, several periods away from zero).
+        foreach (int bits in new[] { 128, BigFloat.MinimumPrecisionBits, 512 })
+        {
+            using var precision = new BigFloat.PrecisionScope(bits);
+            BigFloat tolerance = BigFloat.FromDouble(System.Math.ScaleB(1.0, -(bits - 12)));
+            for (int index = -260; index <= 260; index += 7)
+            {
+                BigFloat turns = BigFloat.FromInt(index) / 37;
+                BigFloatMath.SinCosPi(turns, out BigFloat sine, out BigFloat cosine);
+                BigFloat residual = BigFloat.Abs(sine * sine + cosine * cosine - BigFloat.One);
+                Check(residual.CompareTo(tolerance) <= 0,
+                    $"sin²+cos² deviates from 1 by {residual.ToInvariantString(20)} at {index}/37 turns, {bits} bits.");
+
+                // sin(2πx) = 2 sin(πx) cos(πx) ties the reduced branches to each other:
+                // a quadrant mix-up survives sin²+cos²=1 but not this.
+                BigFloatMath.SinCosPi(BigFloat.ScaleByPowerOfTwo(turns, 1), out BigFloat doubleSine, out _);
+                BigFloat doublingError = BigFloat.Abs(
+                    doubleSine - BigFloat.ScaleByPowerOfTwo(sine * cosine, 1));
+                Check(doublingError.CompareTo(tolerance) <= 0,
+                    $"sin(2πx) ≠ 2·sin(πx)·cos(πx) by {doublingError.ToInvariantString(20)} at {index}/37 turns.");
+
+                BigFloatMath.SinhCosh(turns, out BigFloat hyperbolicSine, out BigFloat hyperbolicCosine);
+                BigFloat hyperbolicResidual = BigFloat.Abs(
+                    hyperbolicCosine * hyperbolicCosine - hyperbolicSine * hyperbolicSine - BigFloat.One);
+                // ch grows like e^|x|, so the absolute residual is allowed to grow with it.
+                BigFloat hyperbolicTolerance = tolerance * hyperbolicCosine * hyperbolicCosine;
+                Check(hyperbolicResidual.CompareTo(hyperbolicTolerance) <= 0,
+                    $"ch²−sh² deviates from 1 by {hyperbolicResidual.ToInvariantString(20)} at {index}/37, {bits} bits.");
+            }
+        }
+
+        // Reduction by period is exact because it is done on the argument of sin(πx), not by
+        // dividing by an approximate 2π. Far from zero the double library visibly loses this
+        // (Math.PI * 12345.75 is already rounded), so the reference here is the exact value:
+        // 12345.75 mod 2 = 1.75, hence sin = −√2/2 and cos = +√2/2.
+        using (new BigFloat.PrecisionScope(BigFloat.MinimumPrecisionBits))
+        {
+            BigFloat half = BigFloat.ScaleByPowerOfTwo(BigFloat.Sqrt(BigFloat.FromInt(2)), -1);
+            BigFloat tolerance = BigFloat.FromDouble(System.Math.ScaleB(1.0, -360));
+            // Every argument here is an exact multiple of 1/4 turn, so |sin| = |cos| = √2/2
+            // to the last bit; the signs come from the (small, exactly representable)
+            // reduced argument, where the double library is still reliable.
+            foreach (double turns in new[] { 12345.75, -87.25, 1e6 + 1.75, 0.75 })
+            {
+                BigFloatMath.SinCosPi(BigFloat.FromDouble(turns), out BigFloat sine, out BigFloat cosine);
+                double reduced = turns - 2 * System.Math.Round(turns / 2);
+                BigFloat expectedSine = System.Math.Sin(System.Math.PI * reduced) < 0 ? -half : half;
+                BigFloat expectedCosine = System.Math.Cos(System.Math.PI * reduced) < 0 ? -half : half;
+                Check(BigFloat.Abs(sine - expectedSine).CompareTo(tolerance) <= 0 &&
+                      BigFloat.Abs(cosine - expectedCosine).CompareTo(tolerance) <= 0,
+                    $"sin/cos(π·{turns}) lost the exact ±√2/2: {sine.ToInvariantString(25)}, {cosine.ToInvariantString(25)}");
+            }
+        }
+
+        // Agreement with the double library on ordinary arguments — an oracle that shares
+        // no code with BigFloat at all.
+        using (new BigFloat.PrecisionScope(256))
+        {
+            var random = new Random(20260908);
+            double worstTrig = 0, worstExp = 0, worstHyperbolic = 0;
+            for (int index = 0; index < 3000; index++)
+            {
+                double turns = (random.NextDouble() - 0.5) * 8;
+                BigFloatMath.SinCosPi(BigFloat.FromDouble(turns), out BigFloat sine, out BigFloat cosine);
+                worstTrig = System.Math.Max(worstTrig,
+                    System.Math.Abs(sine.ToDouble() - System.Math.Sin(System.Math.PI * turns)));
+                worstTrig = System.Math.Max(worstTrig,
+                    System.Math.Abs(cosine.ToDouble() - System.Math.Cos(System.Math.PI * turns)));
+
+                double argument = (random.NextDouble() - 0.5) * 60;
+                double exponential = System.Math.Exp(argument);
+                worstExp = System.Math.Max(worstExp,
+                    System.Math.Abs(BigFloatMath.Exp(BigFloat.FromDouble(argument)).ToDouble() - exponential) / exponential);
+
+                BigFloatMath.SinhCosh(BigFloat.FromDouble(argument),
+                    out BigFloat hyperbolicSine, out BigFloat hyperbolicCosine);
+                worstHyperbolic = System.Math.Max(worstHyperbolic,
+                    System.Math.Abs(hyperbolicSine.ToDouble() - System.Math.Sinh(argument)) /
+                    System.Math.Abs(System.Math.Sinh(argument)));
+                worstHyperbolic = System.Math.Max(worstHyperbolic,
+                    System.Math.Abs(hyperbolicCosine.ToDouble() - System.Math.Cosh(argument)) /
+                    System.Math.Cosh(argument));
+            }
+            Console.WriteLine($"[diag] BigFloat vs double: trig {worstTrig:E2} abs, exp {worstExp:E2} rel, " +
+                              $"hyperbolic {worstHyperbolic:E2} rel");
+            Check(worstTrig < 1e-13 && worstExp < 1e-13 && worstHyperbolic < 1e-13,
+                "BigFloat transcendentals disagree with the double library beyond double's own rounding.");
+        }
+
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "Transcendental checks must leave the working precision restored.");
+    }
+
+    // Centres found by descending on edge density (a frame far outside the set comes out
+    // uniformly non-black and would pass a "has content" check while showing nothing).
+    private static readonly (double Zoom, string CenterX, string CenterY)[] DeepCollatzCentres =
+    [
+        (1.1e12, "-0.869177864622138448380772548135348733365049368",
+                 "0.003351110447198153027105397611632949120554176"),
+        (1.1e15, "-0.869177864620624139702320622587697311553355236",
+                 "0.003351110446321172760920851431301963941719519"),
+        (1.1e18, "-0.869177864620622627578561083124457777168012231",
+                 "0.00335111044632155045879382890961167857526658"),
+    ];
+
+    // Phase 11: Collatz gained a third precision stage — direct iteration in BigFloat.
+    // Unlike the Mandelbrot family this is not perturbation: the formula is transcendental
+    // (cos πz), its derivative is tens per step, so δ from a reference orbit reaches the
+    // size of the orbit within a couple of dozen iterations and there is nothing to rebase
+    // onto. The stage engages above zoom 1e10, which is where the old ladder actually broke
+    // — both the double and the decimal path computed cos/sin in double, so decimal only
+    // ever raised the precision of the coordinates, never of the formula.
+    private static async Task VerifyCollatzDeepZoomAsync()
+    {
+        static MandelbrotPalette Palette() => new()
+        {
+            Colors = [Colors.White, Colors.Black],
+            InteriorColor = Colors.Black,
+            IsGradient = true
+        };
+
+        static CollatzState View(double centerX, double centerY, double zoom,
+            CollatzVariation variation, CollatzColoringMode coloring, int iterations = 150) => new()
+        {
+            CenterX = (decimal)centerX,
+            CenterY = (decimal)centerY,
+            Zoom = zoom,
+            Iterations = iterations,
+            Threshold = 100m,
+            Variation = variation,
+            ColoringMode = coloring,
+            PParameter = 3m,
+            QRealParameter = 0.2m,
+            QImaginaryParameter = -0.1m,
+            UseSmoothColoring = true,
+            OrbitDensitySampleStep = 2,
+            Palette = Palette()
+        };
+
+        static CollatzState Exact(double zoom, string centerX, string centerY,
+            CollatzVariation variation = CollatzVariation.Standard,
+            CollatzColoringMode coloring = CollatzColoringMode.EscapeTime)
+        {
+            CollatzState state = View(0, 0, zoom, variation, coloring);
+            state.CenterXExact = centerX;
+            state.CenterYExact = centerY;
+            state.CenterX = BigFloat.Parse(centerX).ToDecimalClamped();
+            state.CenterY = BigFloat.Parse(centerY).ToDecimalClamped();
+            return state;
+        }
+
+        static int CountDiffering(byte[] a, byte[] b)
+        {
+            int differing = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int offset = pixel * 4;
+                if (a[offset] != b[offset] || a[offset + 1] != b[offset + 1] ||
+                    a[offset + 2] != b[offset + 2]) differing++;
+            }
+            return differing;
+        }
+
+        // Neighbouring pixels that differ — the frame really shows structure rather than a
+        // uniform fill. Counting non-black pixels is not enough: the verification palette is
+        // white→black with a black interior, so a frame far outside the set comes out fully
+        // non-black and tells nothing (the lesson from the Simonobrot fixtures).
+        static int CountEdges(byte[] pixels, int width)
+        {
+            int edges = 0;
+            int rows = pixels.Length / 4 / width;
+            for (int y = 0; y < rows; y++)
+            for (int x = 1; x < width; x++)
+            {
+                int offset = (y * width + x) * 4;
+                if (pixels[offset] != pixels[offset - 4] || pixels[offset + 1] != pixels[offset - 3] ||
+                    pixels[offset + 2] != pixels[offset - 2]) edges++;
+            }
+            return edges;
+        }
+
+        async Task<byte[]> RenderAsync(CollatzState state, bool? forceBigFloat, int width, int height,
+            int? forcePrecisionBits = null)
+        {
+            byte[] pixels = new byte[width * height * 4];
+            CollatzRenderer.ForceBigFloatForTests = forceBigFloat;
+            CollatzRenderer.ForcePrecisionBitsForTests = forcePrecisionBits;
+            try
+            {
+                await Task.Run(() => CollatzRenderer.Render(state, pixels, width, height, width * 4, 4,
+                    CancellationToken.None));
+            }
+            finally
+            {
+                CollatzRenderer.ForceBigFloatForTests = null;
+                CollatzRenderer.ForcePrecisionBitsForTests = null;
+            }
+            return pixels;
+        }
+
+        const int w = 64, h = 44, total = w * h;
+
+        // 1. Where double is still trustworthy, the BigFloat stage must reproduce it. Run
+        //    every variation against every coloring mode: each mode reads a different set of
+        //    orbit metrics, and each variation a different branch of the formula. This is
+        //    the check that the formula, the escape tests and every metric were transcribed
+        //    correctly — the double path shares no code with the BigFloat one.
+        var variations = new[]
+        {
+            CollatzVariation.Standard, CollatzVariation.SineVariation,
+            CollatzVariation.ParityBranchVariation, CollatzVariation.GeneralizedP,
+            CollatzVariation.GeneralizedPQ
+        };
+        var colorings = new[]
+        {
+            CollatzColoringMode.EscapeTime, CollatzColoringMode.FinalArgument,
+            CollatzColoringMode.FinalMagnitude, CollatzColoringMode.CycleBasins,
+            CollatzColoringMode.IntegerTrap, CollatzColoringMode.RealAxisTrap,
+            CollatzColoringMode.OrbitDensity, CollatzColoringMode.PeriodDetection
+        };
+        int worstDiffering = 0;
+        string worstLabel = "";
+        foreach (CollatzVariation variation in variations)
+        foreach (CollatzColoringMode coloring in colorings)
+        {
+            CollatzState state = View(0.5623, 0, 5000, variation, coloring,
+                coloring == CollatzColoringMode.OrbitDensity ? 60 : 150);
+            byte[] shallow = await RenderAsync(state, false, w, h);
+            byte[] deep = await RenderAsync(state, true, w, h);
+            int differing = CountDiffering(shallow, deep);
+            if (differing > worstDiffering)
+            {
+                worstDiffering = differing;
+                worstLabel = $"{variation}/{coloring}";
+            }
+            Check(differing * 100 <= total * 6,
+                $"BigFloat stage diverges from the double stage on {differing}/{total} px " +
+                $"for {variation}/{coloring} (>6%).");
+        }
+        Console.WriteLine($"[diag] Collatz BigFloat vs double @zoom 5e3: worst {worstDiffering}/{total} " +
+                          $"({100.0 * worstDiffering / total:F2}%) at {worstLabel}");
+
+        // 2. The same at a zoom where double is near its limit. A larger drift is expected
+        //    here, and it is double's: the BigFloat stage carries ~50 spare bits there.
+        CollatzState nearLimit = View(0.5623, 0, 1e8, CollatzVariation.Standard,
+            CollatzColoringMode.EscapeTime);
+        int nearLimitDiffering = CountDiffering(await RenderAsync(nearLimit, false, w, h),
+            await RenderAsync(nearLimit, true, w, h));
+        Console.WriteLine($"[diag] Collatz BigFloat vs double @zoom 1e8: {nearLimitDiffering}/{total} " +
+                          $"({100.0 * nearLimitDiffering / total:F2}%)");
+        Check(nearLimitDiffering * 100 <= total * 25,
+            $"BigFloat stage diverges from double at 1e8 on {nearLimitDiffering}/{total} px (>25%).");
+
+        // 3. Deep frames must complete, fill every pixel, still show structure, and leave the
+        //    calling thread's working precision alone. And — the only check of the precision
+        //    plan itself that needs no external oracle — the planned precision must give the
+        //    same frame as a deliberately excessive one.
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "Working precision must start at the minimum.");
+        foreach ((double zoom, string centerX, string centerY) in DeepCollatzCentres)
+        {
+            CollatzState deep = Exact(zoom, centerX, centerY);
+            var watch = Stopwatch.StartNew();
+            byte[] planned = await RenderAsync(deep, null, w, h);
+            watch.Stop();
+            int plannedBits = CollatzRenderer.PlanPrecisionBits(deep);
+            byte[] generous = await RenderAsync(deep, null, w, h, plannedBits + 256);
+            int edges = CountEdges(planned, w);
+            int drift = CountDiffering(planned, generous);
+            Console.WriteLine($"[diag] Collatz deep {zoom:E1}: {plannedBits} bits, " +
+                              $"{watch.Elapsed.TotalMilliseconds:F0} ms for {w}×{h}, edges {edges}, " +
+                              $"drift vs +256 bits {drift}/{total}");
+            Check(planned.Where((_, index) => index % 4 == 3).All(value => value == 255),
+                $"Deep Collatz render at {zoom:E1} left pixels unfilled.");
+            Check(edges >= 40, $"Deep Collatz render at {zoom:E1} shows no structure (edges {edges}).");
+            Check(drift * 100 <= total * 2,
+                $"The precision plan is short at {zoom:E1}: {drift}/{total} px change when given 256 more bits.");
+        }
+
+        // 4. Past the deepest centre we have, structure is not guaranteed — but the stage
+        //    must still run to completion at the zoom ceiling the window allows.
+        foreach (double zoom in new[] { 1e30, 1e50 })
+        {
+            CollatzState extreme = Exact(zoom, DeepCollatzCentres[^1].CenterX, DeepCollatzCentres[^1].CenterY);
+            var watch = Stopwatch.StartNew();
+            byte[] pixels = await RenderAsync(extreme, null, w, h);
+            watch.Stop();
+            Console.WriteLine($"[diag] Collatz extreme {zoom:E0}: " +
+                              $"{CollatzRenderer.PlanPrecisionBits(extreme)} bits, " +
+                              $"{watch.Elapsed.TotalMilliseconds:F0} ms for {w}×{h}");
+            Check(pixels.Where((_, index) => index % 4 == 3).All(value => value == 255),
+                $"Collatz render at {zoom:E0} left pixels unfilled.");
+        }
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "Deep Collatz render must restore the calling thread's working precision.");
+
+        // 5. The tile path and the full-frame path must agree pixel for pixel: the window
+        //    renders tiles, the exporter renders whole frames.
+        CollatzState tiled = Exact(DeepCollatzCentres[^1].Zoom, DeepCollatzCentres[^1].CenterX,
+            DeepCollatzCentres[^1].CenterY);
+        byte[] full = await RenderAsync(tiled, null, w, h);
+        var tile = new MandelbrotRenderTile(16, 12, 32, 20, 1, 1);
+        byte[]? tilePixels = await Task.Run(() =>
+            CollatzRenderer.RenderTile(tiled, w, h, tile, CancellationToken.None));
+        Check(tilePixels is not null, "Deep Collatz tile render returned null without cancellation.");
+        int tileDiffering = 0;
+        for (int y = 0; y < tile.Height; y++)
+        for (int x = 0; x < tile.Width; x++)
+        {
+            int tileOffset = (y * tile.Width + x) * 4;
+            int frameOffset = ((tile.Y + y) * w + tile.X + x) * 4;
+            if (tilePixels![tileOffset] != full[frameOffset] ||
+                tilePixels[tileOffset + 1] != full[frameOffset + 1] ||
+                tilePixels[tileOffset + 2] != full[frameOffset + 2]) tileDiffering++;
+        }
+        Check(tileDiffering == 0,
+            $"Deep Collatz tile disagrees with the full frame on {tileDiffering} px.");
+
+        // 6. The exact centre must actually reach the renderer: a shift of a tenth of a pixel
+        //    at 1e18 is far below what the decimal centre can hold, so if the exact strings
+        //    were being ignored the frame would not move at all. And an exact centre equal to
+        //    the decimal one must change nothing.
+        CollatzState shifted = Exact(DeepCollatzCentres[^1].Zoom,
+            ShiftCentre(DeepCollatzCentres[^1].CenterX, DeepCollatzCentres[^1].Zoom),
+            DeepCollatzCentres[^1].CenterY);
+        Check(CountDiffering(full, await RenderAsync(shifted, null, w, h)) > 0,
+            "A sub-decimal shift of the exact centre changed nothing — the exact centre is ignored.");
+
+        CollatzState plain = View(0.5623, 0, 1e12, CollatzVariation.Standard, CollatzColoringMode.EscapeTime);
+        CollatzState mirrored = View(0.5623, 0, 1e12, CollatzVariation.Standard, CollatzColoringMode.EscapeTime);
+        mirrored.CenterXExact = "0.5623";
+        mirrored.CenterYExact = "0";
+        Check(CountDiffering(await RenderAsync(plain, null, w, h),
+                  await RenderAsync(mirrored, null, w, h)) == 0,
+            "An exact centre equal to the decimal centre must render identically.");
+
+        // 7. Determinism: the stage is parallel over rows and keeps per-thread state (the
+        //    orbit history buffer and the working precision).
+        CollatzState repeat = Exact(DeepCollatzCentres[0].Zoom, DeepCollatzCentres[0].CenterX,
+            DeepCollatzCentres[0].CenterY, CollatzVariation.GeneralizedPQ,
+            CollatzColoringMode.CycleBasins);
+        Check(CountDiffering(await RenderAsync(repeat, null, w, h),
+                  await RenderAsync(repeat, null, w, h)) == 0,
+            "Two identical deep Collatz renders differ — the stage is not deterministic.");
+
+        // 8. The precision plan must grow with depth and never drop below the floor.
+        int previousBits = 0;
+        foreach (double zoom in new[] { 1e10, 1e15, 1e20, 1e30, 1e40, 1e50 })
+        {
+            int bits = CollatzRenderer.PlanPrecisionBits(View(0, 0, zoom, CollatzVariation.Standard,
+                CollatzColoringMode.EscapeTime));
+            Check(bits >= 128 && bits >= previousBits,
+                $"Precision plan is not monotonic: {bits} bits at zoom {zoom:E0} after {previousBits}.");
+            previousBits = bits;
+        }
+    }
+
+    // Moves an exact centre by about a tenth of a pixel at the given zoom — a difference the
+    // decimal centre cannot represent at these depths.
+    private static string ShiftCentre(string centre, double zoom)
+    {
+        using var precision = new BigFloat.PrecisionScope(1024);
+        BigFloat step = BigFloat.FromInt(4) / BigFloat.FromDouble(zoom) / 640;
+        return (BigFloat.Parse(centre) + step).ToInvariantString();
+    }
+
     private static void VerifyBigFloatSqrt()
     {
         // First 100 digits of √2.

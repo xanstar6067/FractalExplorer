@@ -43,7 +43,23 @@ public sealed class CollatzState
     public string FractalType { get; set; } = "Collatz";
     public decimal CenterX { get; set; }
     public decimal CenterY { get; set; }
-    public decimal Zoom { get; set; } = 1;
+
+    /// <summary>
+    /// Центр области в произвольной точности — инвариантные десятичные строки. Заполняются
+    /// только на глубоком зуме, где 28 цифр <see cref="decimal"/> уже не разрешают соседние
+    /// пиксели; у обычных сохранений остаются null, и центр берётся из
+    /// <see cref="CenterX"/>/<see cref="CenterY"/>. Поля <see cref="CenterX"/> и
+    /// <see cref="CenterY"/> при этом всё равно заполняются ближайшим decimal — для показа
+    /// и для совместимости со старыми версиями формата.
+    /// </summary>
+    public string? CenterXExact { get; set; }
+    public string? CenterYExact { get; set; }
+
+    /// <summary>
+    /// Масштаб. Тип double, а не decimal: ступень BigFloat уводит зум далеко за предел
+    /// decimal (~7.9e28). Старые сохранения читаются без изменений — в JSON это просто число.
+    /// </summary>
+    public double Zoom { get; set; } = 1;
     public decimal Threshold { get; set; } = 100;
     public int Iterations { get; set; } = 150;
     public CollatzVariation Variation { get; set; }

@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using FractalExplorerWPF.Core.NewtonMath;
 using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
@@ -32,8 +33,32 @@ public partial class CollatzWindow : Window
     private bool _isRendering, _panning, _isFullscreen, _controlsVisible = true, _hasRenderedFrame,
         _updatingControls;
     private Point _lastPanPoint;
-    private decimal _centerX, _centerY, _zoom = 1;
-    private decimal _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
+    private decimal _centerX, _centerY;
+    private double _zoom = 1;
+    private double _renderedZoom = 1;
+
+    // Ступень BigFloat: выше DeepZoomThreshold центр ведётся в произвольной точности, а
+    // _centerX/_centerY остаются ближайшим decimal — для показа и для старого формата
+    // сохранений. Центр отрисованного кадра нужен в той же точности, иначе разность
+    // «текущий центр − отрисованный» тонет в 28 цифрах и грубый предпросмотр перестаёт
+    // двигаться на глубине.
+    private BigFloat _centerXExact, _centerYExact;
+    private BigFloat _renderedCenterXExact, _renderedCenterYExact;
+    private bool _deepZoomEngaged;
+
+    /// <summary>Зум, с которого включается ступень BigFloat — тот же порог, что и у рендера.</summary>
+    private const double DeepZoomThreshold = 1e10;
+
+    private const double MinZoom = 1e-15;
+
+    /// <summary>
+    /// Потолок зума. Прежний 1e15 был недостижим на практике: и double-, и decimal-ступень
+    /// считали тригонометрию через Math.Cos/Math.Sin, поэтому картинка разваливалась уже
+    /// около 1e10. Ступень BigFloat считает и координаты, и саму формулу с точностью,
+    /// подобранной под глубину; ограничение теперь не в точности, а во времени кадра —
+    /// каждый шаг орбиты стоит десятки микросекунд.
+    /// </summary>
+    private const double MaxZoom = 1e50;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
 
@@ -102,8 +127,10 @@ public partial class CollatzWindow : Window
         {
             SaveName = name,
             Timestamp = DateTime.Now,
-            CenterX = _centerX,
-            CenterY = _centerY,
+            CenterX = _deepZoomEngaged ? _centerXExact.ToDecimalClamped() : _centerX,
+            CenterY = _deepZoomEngaged ? _centerYExact.ToDecimalClamped() : _centerY,
+            CenterXExact = _deepZoomEngaged ? _centerXExact.ToInvariantString() : null,
+            CenterYExact = _deepZoomEngaged ? _centerYExact.ToInvariantString() : null,
             Zoom = _zoom,
             Threshold = threshold,
             Iterations = iterations,
@@ -136,7 +163,29 @@ public partial class CollatzWindow : Window
         _updatingControls = true;
         _centerX = state.CenterX;
         _centerY = state.CenterY;
-        _zoom = Math.Max(0.000000000000001m, state.Zoom);
+        _zoom = Math.Clamp(state.Zoom, MinZoom, MaxZoom);
+        _deepZoomEngaged = false;
+        if (state.CenterXExact is { Length: > 0 } exactX && state.CenterYExact is { Length: > 0 } exactY)
+        {
+            try
+            {
+                _centerXExact = BigFloat.Parse(exactX);
+                _centerYExact = BigFloat.Parse(exactY);
+                _deepZoomEngaged = _zoom >= DeepZoomThreshold;
+                if (_deepZoomEngaged)
+                {
+                    _centerX = _centerXExact.ToDecimalClamped();
+                    _centerY = _centerYExact.ToDecimalClamped();
+                }
+            }
+            catch (FormatException)
+            {
+                // Испорченная строка центра не должна мешать открыть сохранение: остаётся
+                // decimal-центр, точности которого хватает примерно до 1e24.
+                _deepZoomEngaged = false;
+            }
+        }
+        if (!_deepZoomEngaged) SyncDeepZoomState();
         IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture);
         ThresholdBox.Text = Format(state.Threshold);
         ZoomBox.Text = Format(_zoom);
@@ -250,8 +299,9 @@ public partial class CollatzWindow : Window
 
     private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e)
     {
-        if (!TryRead(ZoomBox.Text, out decimal zoom)) return;
-        _zoom = Math.Clamp(zoom, 0.000000000000001m, 1_000_000_000_000_000m);
+        if (!TryReadDouble(ZoomBox.Text, out double zoom)) return;
+        _zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+        SyncDeepZoomState();
         UpdatePreviewTransform();
         if (!_updatingControls) ScheduleRender();
     }
@@ -363,11 +413,19 @@ public partial class CollatzWindow : Window
             }
             StablePreviewImage.Source = completed;
             CanvasImage.Source = null;
-            _renderedCenterX = state.CenterX;
-            _renderedCenterY = state.CenterY;
+            _renderedCenterXExact = state.CenterXExact is { Length: > 0 } renderedX
+                ? BigFloat.Parse(renderedX)
+                : BigFloat.FromDecimal(state.CenterX);
+            _renderedCenterYExact = state.CenterYExact is { Length: > 0 } renderedY
+                ? BigFloat.Parse(renderedY)
+                : BigFloat.FromDecimal(state.CenterY);
             _renderedZoom = state.Zoom;
             _hasRenderedFrame = true;
             UpdatePreviewTransform();
+            // На ступени BigFloat время кадра определяется выбранной точностью, поэтому
+            // её видно в статусе — иначе непонятно, почему кадр вдруг стал дороже.
+            if (CollatzRenderer.UsesBigFloat(state))
+                renderDetails += $"; точность {CollatzRenderer.PlanPrecisionBits(state)} бит";
             StatusText.Text = $"Готово за {watch.Elapsed.TotalSeconds:F3} сек.; {renderDetails}.";
         }
         catch (OperationCanceledException) { CanvasImage.Source = null; StatusText.Text = "Рендер отменён"; }
@@ -456,13 +514,30 @@ public partial class CollatzWindow : Window
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
         Point mouse = e.GetPosition(CanvasHost);
-        (decimal X, decimal Y) before = ScreenToWorld(mouse);
-        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), 0.000000000000001m, 1_000_000_000_000_000m);
-        (decimal X, decimal Y) after = ScreenToWorld(mouse);
-        _centerX += before.X - after.X;
-        _centerY += before.Y - after.Y;
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double height = Math.Max(1, CanvasHost.ActualHeight);
+        double fractionX = mouse.X / width - 0.5;
+        double fractionY = 0.5 - mouse.Y / height;
+
+        double previousZoom = _zoom;
+        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2 : 1 / 1.2), MinZoom, MaxZoom);
+
+        // Точка под курсором остаётся на месте: сдвиг центра — доля от разности ширин
+        // области. Это прежняя формула «мир до минус мир после», записанная явно; сдвиг
+        // мал и укладывается в double, а ApplyCenterShift кладёт его в BigFloat-центр на
+        // глубине и в decimal — как раньше — на мелком зуме.
+        double previousViewWidth = (double)BaseScale / previousZoom;
+        double currentViewWidth = (double)BaseScale / _zoom;
+        double shiftX = fractionX * (previousViewWidth - currentViewWidth);
+        double shiftY = fractionY * (previousViewWidth - currentViewWidth) * height / width;
+
+        SyncDeepZoomState();
+        ApplyCenterShift(shiftX, shiftY);
+
         UpdatePreviewTransform();
+        _updatingControls = true;
         ZoomBox.Text = Format(_zoom);
+        _updatingControls = false;
         ScheduleRender();
     }
 
@@ -478,10 +553,10 @@ public partial class CollatzWindow : Window
     {
         if (!_panning) return;
         Point current = e.GetPosition(CanvasHost);
-        (decimal X, decimal Y) before = ScreenToWorld(_lastPanPoint);
-        (decimal X, decimal Y) after = ScreenToWorld(current);
-        _centerX += before.X - after.X;
-        _centerY += before.Y - after.Y;
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double viewWidth = (double)BaseScale / _zoom;
+        ApplyCenterShift((_lastPanPoint.X - current.X) / width * viewWidth,
+            (current.Y - _lastPanPoint.Y) / width * viewWidth);
         _lastPanPoint = current;
         UpdatePreviewTransform();
     }
@@ -495,24 +570,59 @@ public partial class CollatzWindow : Window
         ScheduleRender();
     }
 
-    private (decimal X, decimal Y) ScreenToWorld(Point point)
+    /// <summary>
+    /// Прибавляет к центру небольшой сдвиг в мировых координатах. На глубине сдвиг уходит в
+    /// BigFloat-центр (decimal-приближение обновляется следом), на мелком зуме — в decimal.
+    /// </summary>
+    private void ApplyCenterShift(double shiftX, double shiftY)
     {
-        decimal width = (decimal)Math.Max(1, CanvasHost.ActualWidth);
-        decimal scale = BaseScale / _zoom;
-        return (_centerX + ((decimal)point.X - width / 2) * scale / width,
-            _centerY + ((decimal)Math.Max(1, CanvasHost.ActualHeight) / 2 - (decimal)point.Y) * scale / width);
+        if (_deepZoomEngaged)
+        {
+            _centerXExact += BigFloat.FromDouble(shiftX);
+            _centerYExact += BigFloat.FromDouble(shiftY);
+            _centerX = _centerXExact.ToDecimalClamped();
+            _centerY = _centerYExact.ToDecimalClamped();
+        }
+        else
+        {
+            _centerX += (decimal)shiftX;
+            _centerY += (decimal)shiftY;
+        }
+    }
+
+    /// <summary>
+    /// Заводит или глушит ступень BigFloat по текущему зуму. Вверх через порог центр
+    /// переносится из decimal в BigFloat, вниз decimal снова становится источником истины.
+    /// </summary>
+    private void SyncDeepZoomState()
+    {
+        bool shouldEngage = _zoom >= DeepZoomThreshold;
+        if (shouldEngage && !_deepZoomEngaged)
+        {
+            _centerXExact = BigFloat.FromDecimal(_centerX);
+            _centerYExact = BigFloat.FromDecimal(_centerY);
+            _deepZoomEngaged = true;
+        }
+        else if (!shouldEngage && _deepZoomEngaged)
+        {
+            _centerX = _centerXExact.ToDecimalClamped();
+            _centerY = _centerYExact.ToDecimalClamped();
+            _deepZoomEngaged = false;
+        }
     }
 
     private void UpdatePreviewTransform()
     {
         if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 || CanvasHost.ActualWidth <= 0) return;
-        double scale = (double)(_zoom / _renderedZoom);
-        decimal currentScale = BaseScale / _zoom;
+        double scale = _zoom / _renderedZoom;
+        double currentScale = (double)BaseScale / _zoom;
         double width = CanvasHost.ActualWidth;
+        BigFloat currentCenterX = _deepZoomEngaged ? _centerXExact : BigFloat.FromDecimal(_centerX);
+        BigFloat currentCenterY = _deepZoomEngaged ? _centerYExact : BigFloat.FromDecimal(_centerY);
         _previewScale.ScaleX = scale;
         _previewScale.ScaleY = scale;
-        _previewTranslation.X = (double)((_renderedCenterX - _centerX) / currentScale) * width;
-        _previewTranslation.Y = (double)((_centerY - _renderedCenterY) / currentScale) * width;
+        _previewTranslation.X = (_renderedCenterXExact - currentCenterX).ToDouble() / currentScale * width;
+        _previewTranslation.Y = (currentCenterY - _renderedCenterYExact).ToDouble() / currentScale * width;
     }
 
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e)
@@ -593,6 +703,10 @@ public partial class CollatzWindow : Window
         CollatzColoringMode.PeriodDetection => "Цвет определяется найденным периодом орбиты.",
         _ => "Текущий режим: цвет по числу итераций до выхода."
     };
+
+    private static bool TryReadDouble(string text, out double value) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||
+        double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
 
     private static bool TryRead(string text, out decimal value) =>
         decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) ||

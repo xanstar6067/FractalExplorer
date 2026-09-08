@@ -1,12 +1,13 @@
 using System.Numerics;
 using System.Windows.Media;
 using FractalExplorer.Utilities;
+using FractalExplorerWPF.Core.NewtonMath;
 using FractalExplorerWPF.Models;
 using Color = System.Windows.Media.Color;
 
 namespace FractalExplorerWPF.Core.Rendering;
 
-public static class CollatzRenderer
+public static partial class CollatzRenderer
 {
     private const decimal BaseScale = 4m;
     private const decimal DecimalScaleThreshold = 4m / 2_000_000_000m;
@@ -29,7 +30,10 @@ public static class CollatzRenderer
             throw new InvalidOperationException("Orbit Density requires a full-frame render.");
 
         byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
-        decimal scale = BaseScale / Math.Max(0.000000000000001m, state.Zoom);
+        if (UsesBigFloat(state))
+            return RenderTileDeep(state, canvasWidth, canvasHeight, tile, pixels, token) ? pixels : null;
+
+        decimal scale = DecimalScale(state);
 
         for (int localY = 0; localY < tile.Height; localY++)
         {
@@ -55,14 +59,19 @@ public static class CollatzRenderer
     public static void Render(CollatzState state, byte[] pixels, int width, int height, int stride,
         int threadCount, CancellationToken token, Action<int>? progress = null)
     {
-        decimal scale = BaseScale / Math.Max(0.000000000000001m, state.Zoom);
         int effectiveThreads = Math.Clamp(threadCount, 1, Environment.ProcessorCount);
         if (state.ColoringMode == CollatzColoringMode.OrbitDensity)
         {
-            RenderOrbitDensity(state, pixels, width, height, stride, effectiveThreads, scale, token, progress);
+            RenderOrbitDensity(state, pixels, width, height, stride, effectiveThreads, token, progress);
+            return;
+        }
+        if (UsesBigFloat(state))
+        {
+            RenderDeep(state, pixels, width, height, stride, effectiveThreads, token, progress);
             return;
         }
 
+        decimal scale = DecimalScale(state);
         long completed = 0;
 
         Parallel.For(0, height, new ParallelOptions
@@ -88,6 +97,14 @@ public static class CollatzRenderer
             if (rows == height || rows % Math.Max(1, height / 100) == 0) progress?.Invoke(rows * 100 / height);
         });
     }
+
+    /// <summary>
+    /// Ширина области в decimal. Зум с ростом типа стал double, поэтому перед делением он
+    /// ограничивается сверху пределом, на котором ступени double и decimal ещё работают —
+    /// выше рендер всё равно уходит на ступень BigFloat и это значение не запрашивает.
+    /// </summary>
+    private static decimal DecimalScale(CollatzState state) =>
+        BaseScale / (decimal)Math.Clamp(state.Zoom, 0.000000000000001, 1e15);
 
     private static Color CalculateColor(CollatzState state, decimal real, decimal imaginary, decimal scale)
     {
@@ -314,8 +331,11 @@ public static class CollatzRenderer
     }
 
     private static void RenderOrbitDensity(CollatzState state, byte[] pixels, int width, int height,
-        int stride, int threadCount, decimal scale, CancellationToken token, Action<int>? progress)
+        int stride, int threadCount, CancellationToken token, Action<int>? progress)
     {
+        bool deep = UsesBigFloat(state);
+        int precisionBits = deep ? PlanPrecisionBits(state) : 0;
+        decimal scale = deep ? 0m : DecimalScale(state);
         var density = new long[checked(width * height)];
         int sampleStep = Math.Clamp(state.OrbitDensitySampleStep, 1, 8);
         int sourceRows = (height + sampleStep - 1) / sampleStep;
@@ -335,16 +355,23 @@ public static class CollatzRenderer
                 int[] path = scratch.Path;
                 long[] localDensity = scratch.Density;
                 if (token.IsCancellationRequested) { loopState.Stop(); return scratch; }
+                using var precision = new BigFloat.PrecisionScope(
+                    deep ? precisionBits : BigFloat.MinimumPrecisionBits);
+                var geometry = deep ? new DeepGeometry(state, width, height) : default;
+                var parameters = deep ? new DeepParameters(state) : default;
                 int y = sourceRow * sampleStep;
                 for (int x = 0; x < width; x += sampleStep)
                 {
                     if (token.IsCancellationRequested) { loopState.Stop(); return scratch; }
                     bool escaped;
-                    int pathLength = scale < DecimalScaleThreshold
-                        ? TraceDensityOrbitDecimal(state, x, y, width, height, scale, path, token,
-                            out escaped)
-                        : TraceDensityOrbit(state, x, y, width, height, (double)scale, path, token,
-                            out escaped);
+                    int pathLength = deep
+                        ? TraceDensityOrbitDeep(state, geometry, parameters, x, y, width, height, path,
+                            token, out escaped)
+                        : scale < DecimalScaleThreshold
+                            ? TraceDensityOrbitDecimal(state, x, y, width, height, scale, path, token,
+                                out escaped)
+                            : TraceDensityOrbit(state, x, y, width, height, (double)scale, path, token,
+                                out escaped);
                     if (state.OrbitDensityEscapedOnly && !escaped) continue;
                     for (int index = 0; index < pathLength; index++)
                         localDensity[path[index]] += sampleWeight;
