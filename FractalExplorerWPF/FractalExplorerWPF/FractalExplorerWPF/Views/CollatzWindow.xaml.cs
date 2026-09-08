@@ -188,7 +188,7 @@ public partial class CollatzWindow : Window
         if (!_deepZoomEngaged) SyncDeepZoomState();
         IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture);
         ThresholdBox.Text = Format(state.Threshold);
-        ZoomBox.Text = Format(_zoom);
+        ZoomBox.Text = FormatZoom(_zoom);
         PParameterBox.Text = Format(state.PParameter);
         QRealParameterBox.Text = Format(state.QRealParameter);
         QImaginaryParameterBox.Text = Format(state.QImaginaryParameter);
@@ -299,11 +299,11 @@ public partial class CollatzWindow : Window
 
     private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e)
     {
-        if (!TryReadDouble(ZoomBox.Text, out double zoom)) return;
+        if (_updatingControls || !TryReadDouble(ZoomBox.Text, out double zoom) ||
+            !double.IsFinite(zoom) || zoom <= 0) return;
         _zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
         SyncDeepZoomState();
-        UpdatePreviewTransform();
-        if (!_updatingControls) ScheduleRender();
+        ScheduleRender();
     }
 
     private void RenderButton_OnClick(object sender, RoutedEventArgs e) => _ = RenderPreviewAsync();
@@ -322,7 +322,8 @@ public partial class CollatzWindow : Window
     private void ExportButton_OnClick(object sender, RoutedEventArgs e)
     {
         RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(CanvasHost);
-        _renderCts?.Cancel();
+        if (_isRendering) CommitAndBakePreview();
+        else _renderCts?.Cancel();
         CollatzState state;
         try { state = CaptureState("export"); }
         catch (Exception ex)
@@ -344,7 +345,11 @@ public partial class CollatzWindow : Window
     private void ScheduleRender()
     {
         if (!IsLoaded) return;
-        _renderCts?.Cancel();
+        // Запекание само выставляет трансформацию в единичную, но вызвать её надо в любом
+        // случае: _isRendering сбрасывается только в finally уже отменённого рендера, и до
+        // тех пор повторное запекание — пустая операция.
+        if (_isRendering) CommitAndBakePreview();
+        UpdatePreviewTransform();
         _renderTimer.Stop();
         _renderTimer.Start();
     }
@@ -513,6 +518,9 @@ public partial class CollatzWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        // Запекаем до изменения зума: снимок должен соответствовать прежнему виду, иначе
+        // грубый предпросмотр будет двигать не то, что нарисовано.
+        CommitAndBakePreview();
         Point mouse = e.GetPosition(CanvasHost);
         double width = Math.Max(1, CanvasHost.ActualWidth);
         double height = Math.Max(1, CanvasHost.ActualHeight);
@@ -534,15 +542,15 @@ public partial class CollatzWindow : Window
         SyncDeepZoomState();
         ApplyCenterShift(shiftX, shiftY);
 
-        UpdatePreviewTransform();
         _updatingControls = true;
-        ZoomBox.Text = Format(_zoom);
+        ZoomBox.Text = FormatZoom(_zoom);
         _updatingControls = false;
         ScheduleRender();
     }
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        CommitAndBakePreview();
         _panning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
         CanvasHost.CaptureMouse();
@@ -568,6 +576,47 @@ public partial class CollatzWindow : Window
         CanvasHost.ReleaseMouseCapture();
         Mouse.OverrideCursor = null;
         ScheduleRender();
+    }
+
+    /// <summary>
+    /// Останавливает текущий рендер и «запекает» то, что уже видно на холсте (сдвинутый
+    /// прежний кадр плюс успевшие лечь тайлы), в стабильный предпросмотр. После этого
+    /// снимок считается отрисованным для текущего вида, поэтому дальнейшие зум и
+    /// перетаскивание двигают именно его.
+    ///
+    /// Без этого при зуме терялся уже посчитанный кадр, а при перетаскивании рендер
+    /// продолжал идти поверх уезжающего фона.
+    /// </summary>
+    private void CommitAndBakePreview()
+    {
+        RenderSession? session = _activeSession;
+        _renderCts?.Cancel();
+        // Полнокадровые режимы (Orbit Density) сессию тайлов не заводят: запекать нечего,
+        // достаточно отменить рендер.
+        if (session is null) return;
+
+        FlushVisualizationEvents(session, true);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(SavePreviewLayer);
+        try
+        {
+            var baked = new RenderTargetBitmap(surface.PixelWidth, surface.PixelHeight,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            baked.Render(SavePreviewLayer);
+            baked.Freeze();
+            StablePreviewImage.Source = baked;
+            _renderedCenterXExact = _deepZoomEngaged ? _centerXExact : BigFloat.FromDecimal(_centerX);
+            _renderedCenterYExact = _deepZoomEngaged ? _centerYExact : BigFloat.FromDecimal(_centerY);
+            _renderedZoom = _zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+        }
+        catch (InvalidOperationException)
+        {
+            // Разметка бывает недоступна на свёртывании окна и в момент изменения размера.
+        }
+        CanvasImage.Source = null;
+        RenderOverlay.EndSession();
+        if (ReferenceEquals(_activeSession, session)) _activeSession = null;
     }
 
     /// <summary>
@@ -728,6 +777,12 @@ public partial class CollatzWindow : Window
             throw new InvalidOperationException($"Параметр «{parameterName}» должен быть целым числом от {minimum} до {maximum}.");
         return value;
     }
+
+    /// <summary>
+    /// Зум показывается восемью значащими цифрами: так большое значение уходит в
+    /// экспоненциальную запись (8.1707708E+09) и помещается в поле целиком, а не обрезается.
+    /// </summary>
+    private static string FormatZoom(double value) => value.ToString("G8", CultureInfo.InvariantCulture);
 
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
     private static string Format(double value) => value.ToString("G15", CultureInfo.InvariantCulture);
