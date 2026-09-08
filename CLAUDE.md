@@ -84,7 +84,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 | `Views/MathematicalLaboratoryWindow.xaml` / `.xaml.cs` | Универсальное окно математических лабораторий: арифметика по модулю, Паскаль modulo N, рациональные числа, геометрия простых, последовательность Рекамана, филлотаксис, инверсия окружностей/Мёбиус, апериодические мозаики, гиперболическая геометрия, диаграммы Вороного/релаксация Ллойда, торические и Лиссажу-узлы/косы, Brownian motion/Lévy flights, Kleinian/Schottky groups, Fourier Epicycles и фигуры Хладни/интерференция. Связаны `Models/MathematicalLaboratoryModels.cs`, `Core/Rendering/MathematicalLaboratoryRenderer.cs`, `Core/Rendering/AdvancedMathematicalLaboratoryRenderer.cs`, `Infrastructure/MathematicalLaboratorySaveStore.cs`. |
 | `Views/NewtonPoolsWindow.xaml` / `.xaml.cs` | Бассейны притяжения корней для методов Newton, Halley и Householder: выражение, параметры итераций, корни, окрашивание, сохранения и экспорт. Связаны `Models/NewtonModels.cs`, `Core/Rendering/NewtonPoolsEngine.cs`, `Core/Rendering/NewtonRootFinder.cs`, `Core/Math/NewtonExpressionParser.cs`, `Infrastructure/NewtonSaveStore.cs`. |
 | `Views/NovaWindow.xaml` / `.xaml.cs` | Семейство Nova в режимах Mandelbrot и Julia: комплексная степень, начальное значение, релаксация, константа `C`, палитра, сохранения и экспорт. Связаны `Models/NovaModels.cs`, `Core/Rendering/NovaRenderer.cs`, `Infrastructure/NovaSaveStore.cs`. |
-| `Views/PhoenixWindow.xaml` / `.xaml.cs` | Исследователь семейства Phoenix: динамическая и параметрическая плоскости, комплексные `C1`/`C2`, обобщённые степени, классические и экспериментальные варианты формулы, расширенные окраски, навигация, сохранения и экспорт. Связаны `Models/PhoenixModels.cs`, `Core/Rendering/PhoenixRenderer.cs`, `Infrastructure/PhoenixSaveStore.cs`. |
+| `Views/PhoenixWindow.xaml` / `.xaml.cs` | Исследователь семейства Phoenix: динамическая и параметрическая плоскости, комплексные `C1`/`C2`, обобщённые степени, классические и экспериментальные варианты формулы, расширенные окраски, навигация, сохранения и экспорт. Поддерживает глубокий зум до 1e24: выше 1.5e9 кадр считает пертурбационный движок с опорной орбитой в `BigFloat`, а центр ведётся в `BigFloat`. Связаны `Models/PhoenixModels.cs`, `Core/Rendering/PhoenixRenderer.cs`, `Core/Rendering/PhoenixRenderer.DeepZoom.cs`, `Core/Rendering/PhoenixRenderer.ExactReference.cs`, `Infrastructure/PhoenixSaveStore.cs`. |
 | `Views/SerpinskyWindow.xaml` / `.xaml.cs` | Треугольник Серпинского и режим игры хаоса: параметры построения, анимация/рендер, палитра, сохранения и экспорт. Связаны `Models/SerpinskySaveState.cs`, `Models/SerpinskyPalette.cs`, `Core/Rendering/FractalSerpinskyEngine.cs`, `Infrastructure/SerpinskySaveStore.cs`. |
 
 ### Редакторы параметров и палитр
@@ -114,7 +114,7 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 | `Views/ColorPickerWindow.xaml` / `.xaml.cs` | Полноразмерный общий диалог выбора цвета, построенный вокруг `Controls/ColorPickerPanel`. |
 | `Views/ImageExportManagerWindow.xaml` / `.xaml.cs` | Универсальный менеджер экспорта изображения: размеры, SSAA, формат/путь, прогресс, отмена и вызов переданного render callback. Конфигурация находится в `Infrastructure/ImageExportConfiguration.cs`. |
 | `Views/QuickSwitcherWindow.xaml` / `.xaml.cs` | Быстрый переключатель по каталогу фракталов (Ctrl+K из `MainWindow`): фильтрация по названию и категории, навигация стрелками, запуск по Enter. |
-| `Views/SaveManagerWindow.xaml` / `.xaml.cs` | Универсальная оболочка менеджера состояний: открыть, назвать, просмотреть, загрузить и удалить сохранение. Использует `Controls/SaveManagerControl` и конфигурации из `Infrastructure/SaveManagerConfigurations.cs`. |
+| `Views/SaveManagerWindow.xaml` / `.xaml.cs` | Универсальная оболочка менеджера состояний: сохраняет текущий кадр полотна как PNG-превью, открывает, загружает и удаляет сохранения; пересчёт превью запускается только вручную с прогрессом и отменой. Использует `Controls/SaveManagerControl` и конфигурации из `Infrastructure/SaveManagerConfigurations.cs`. |
 | `Views/ThemeColorPickerWindow.xaml` / `.xaml.cs` | Компактный выбор одного цвета специально для редактора темы. |
 | `Views/ThemeEditorWindow.xaml` / `.xaml.cs` | Создание, редактирование, импорт, выбор и сохранение тем оформления приложения. Основная логика тем находится в `Theming/`. |
 
@@ -124,11 +124,21 @@ FractalExplorerWPF/FractalExplorerWPF/FractalExplorerWPF/
 |---|---|
 | `Controls/ColorPickerPanel.xaml` / `.xaml.cs` | Общая панель выбора цвета: каналы, ввод значения, предпросмотр и экранная пипетка. |
 | `Controls/ColorSelectorControl.xaml` / `.xaml.cs` | Компактный переиспользуемый селектор цвета для панелей параметров. |
-| `Controls/SaveManagerControl.xaml` / `.xaml.cs` | Переиспользуемое содержимое менеджера сохранений со списком и операциями над состояниями. |
+| `Controls/SaveManagerControl.xaml` / `.xaml.cs` | Переиспользуемое содержимое менеджера сохранений: список, PNG-превью текущего кадра, ручной пересчёт с прогрессом, временем и отменой; выбор записи не запускает вычислений. |
 | `Controls/FractalControlPanel.cs` | Программно создаваемая общая панель параметров фрактала. |
 | `Controls/RenderProgressOverlay.cs` | Общий оверлей состояния и прогресса рендера. |
 
 При добавлении, удалении, переименовании или изменении назначения WPF-окна либо общего контрола обязательно обновляй этот каталог в том же изменении.
+
+## Отдельный эксперимент perturbation theory
+
+По отдельному запросу пользователя создан самостоятельный WPF / .NET 10 эксперимент в `perturbation theory/`. Он не заменяет основную WPF-версию; обычные задачи по-прежнему относятся к `FractalExplorerWPF/`.
+
+| Окно и файлы | Назначение |
+|---|---|
+| `perturbation theory/perturbation theory/perturbation theory/MainWindow.xaml` / `.xaml.cs` | Упрощённый исследователь классического Мандельброта: переключение между perturbation (три режима точности double/decimal) и классическим движком основной WPF-версии (автоматическая точность), быстрые масштабирование и перемещение полотна, фиксированные палитры, плавная и дискретная окраска, время рендера для сравнения. Сохранений и редактора палитр нет. |
+
+Движок находится в `perturbation theory/perturbation theory/perturbation theory/Core/Rendering/PerturbationRenderer.cs`. Описание, ограничения точности и команды запуска — в `perturbation theory/README.md`. Численная проверка — отдельный консольный проект `perturbation theory/Verification/Verification.csproj`.
 
 ## Сборка и проверка
 
@@ -139,4 +149,10 @@ dotnet build .\FractalExplorerWPF\FractalExplorerWPF\FractalExplorerWPF.slnx
 dotnet run --project .\FractalExplorerWPF\FractalExplorerWPF\FractalExplorerWPF\FractalExplorerWPF.csproj
 ```
 
-Отдельного тестового проекта сейчас нет, поэтому минимальная обязательная автоматическая проверка изменений — успешная сборка WPF-решения. Не редактируй `bin/` и `obj/` и не добавляй их содержимое в репозиторий.
+Минимальная обязательная автоматическая проверка изменений — успешная сборка WPF-решения. Для менеджера сохранений и глубокого зума есть отдельная проверка без показа окон и без захвата экрана:
+
+```powershell
+dotnet run --project .\FractalExplorerWPF\Verification\SavePreviewVerification.csproj
+```
+
+Сценарии ручной проверки описаны в `FractalExplorerWPF/Verification/README.md`. Не редактируй `bin/` и `obj/` и не добавляй их содержимое в репозиторий.

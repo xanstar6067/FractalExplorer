@@ -11,6 +11,7 @@ using FractalExplorerWPF.Core.NewtonMath;
 using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Infrastructure;
 using FractalExplorerWPF.Models;
+using FractalExplorerWPF.Views;
 
 // No visible windows or screen capture. The snapshot callback supplies synthetic pixels.
 internal static class Program
@@ -275,6 +276,7 @@ internal static class Program
         VerifyBigFloatSqrt();
         VerifyBigFloatTranscendental();
         await VerifyCollatzDeepZoomAsync();
+        await VerifyPhoenixDeepZoomAsync();
         await VerifyDecimalStageRemovedAsync(Palette);
         await VerifyBlaAccelerationAsync(Palette);
         await VerifyRealBlaAccelerationAsync(Palette);
@@ -1209,6 +1211,371 @@ internal static class Program
 
         Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
             "BigFloat.Sqrt checks must leave the working precision restored.");
+    }
+
+    // Phoenix on the perturbation engine. Phoenix had no precision ladder at all: both the
+    // full render and the tile path computed coordinates in plain double, so the picture fell
+    // apart around 1e12 while the zoom box happily accepted decimal.MaxValue/2.
+    //
+    // What makes Phoenix different from the Mandelbrot family is memory: z_{n+1} depends on
+    // z_{n-1}, so the per-pixel state is the pair (δₙ, δₙ₋₁) and the reference orbit is stored
+    // shifted by one (Orbit[i] = Z_{i-1}, Orbit[0] = z₋₁) so that rebasing to the start has a
+    // z₋₁ to rebase against.
+    //
+    // The load-bearing check is the first one: the plain double path shares no code with the
+    // BigFloat/perturbation path, so agreement at a zoom where double is still exact is what
+    // proves the formula, every coloring metric and the perturbation algebra were all
+    // transcribed correctly. The exact BigFloat reference is the oracle for the depths where
+    // the double path can no longer be trusted — but it shares VariantPowerBig with the
+    // reference orbit, so it can only catch perturbation errors, not formula errors.
+    private static async Task VerifyPhoenixDeepZoomAsync()
+    {
+        static MandelbrotPalette Palette() => new()
+        {
+            Colors = [Colors.White, Colors.Black],
+            InteriorColor = Colors.Black,
+            IsGradient = true
+        };
+
+        static PhoenixState View(double zoom, PhoenixVariant variant, PhoenixColoringMode coloring,
+            PhoenixPlaneMode plane = PhoenixPlaneMode.Julia, int primaryPower = 2, int secondaryPower = 0,
+            int iterations = 200, double centerX = 0, double centerY = 0) => new()
+        {
+            CenterX = (decimal)centerX,
+            CenterY = (decimal)centerY,
+            Zoom = zoom,
+            Iterations = iterations,
+            Threshold = 4m,
+            C1Real = 0.56667m,
+            C2Real = -0.5m,
+            PlaneMode = plane,
+            Variant = variant,
+            PrimaryPower = primaryPower,
+            SecondaryPower = secondaryPower,
+            ColoringMode = coloring,
+            OrbitTrapMode = PhoenixOrbitTrapMode.Axes,
+            OrbitTrapRadius = 0.5,
+            OrbitTrapStrength = 1.5,
+            StripeFrequency = 3,
+            StripeStrength = 0.65,
+            CycleTolerance = 1e-7,
+            MaximumDetectedPeriod = 32,
+            Palette = Palette()
+        };
+
+        static PhoenixState AtExactCenter(PhoenixState state, string centerX, string centerY)
+        {
+            state.CenterXExact = centerX;
+            state.CenterYExact = centerY;
+            state.CenterX = BigFloat.Parse(centerX).ToDecimalClamped();
+            state.CenterY = BigFloat.Parse(centerY).ToDecimalClamped();
+            return state;
+        }
+
+        static int CountDiffering(byte[] a, byte[] b)
+        {
+            int differing = 0;
+            for (int pixel = 0; pixel * 4 < a.Length; pixel++)
+            {
+                int offset = pixel * 4;
+                if (a[offset] != b[offset] || a[offset + 1] != b[offset + 1] ||
+                    a[offset + 2] != b[offset + 2]) differing++;
+            }
+            return differing;
+        }
+
+        // Соседние различающиеся пиксели: кадр действительно показывает структуру, а не
+        // однородную заливку. Считать «не-чёрные» недостаточно — проверочная палитра
+        // белый→чёрный, и кадр далеко снаружи множества выходит сплошь не-чёрным.
+        static int CountEdges(byte[] pixels, int width)
+        {
+            int edges = 0;
+            int rows = pixels.Length / 4 / width;
+            for (int y = 0; y < rows; y++)
+            for (int x = 1; x < width; x++)
+            {
+                int offset = (y * width + x) * 4;
+                if (pixels[offset] != pixels[offset - 4] || pixels[offset + 1] != pixels[offset - 3] ||
+                    pixels[offset + 2] != pixels[offset - 2]) edges++;
+            }
+            return edges;
+        }
+
+        static async Task<byte[]> RenderAsync(PhoenixState state, bool? forceDeep, int width, int height,
+            int? forceBits = null)
+        {
+            byte[] pixels = new byte[width * height * 4];
+            PhoenixRenderer.ForceDeepZoomForTests = forceDeep;
+            PhoenixRenderer.ForceReferenceBitsForTests = forceBits;
+            try
+            {
+                await Task.Run(() => PhoenixRenderer.Render(state, pixels, width, height, width * 4, 4,
+                    CancellationToken.None));
+            }
+            finally
+            {
+                PhoenixRenderer.ForceDeepZoomForTests = null;
+                PhoenixRenderer.ForceReferenceBitsForTests = null;
+            }
+            return pixels;
+        }
+
+        const int w = 64, h = 44, total = w * h;
+
+        // 1. Где плоский double ещё точен, пертурбационный движок обязан его воспроизвести.
+        //    Прогоняем все пять вариантов против всех семи режимов окраски и обеих плоскостей:
+        //    каждый режим читает свой набор метрик орбиты, каждый вариант — свою ветку свёртки
+        //    знака. Это и есть проверка переноса формулы: у двух путей нет общего кода.
+        var variants = new[]
+        {
+            PhoenixVariant.Classic, PhoenixVariant.Tricorn, PhoenixVariant.BurningShip,
+            PhoenixVariant.Celtic, PhoenixVariant.Buffalo
+        };
+        var colorings = new[]
+        {
+            PhoenixColoringMode.Discrete, PhoenixColoringMode.Smooth, PhoenixColoringMode.OrbitTrap,
+            PhoenixColoringMode.StripeAverage, PhoenixColoringMode.TriangleInequalityAverage,
+            PhoenixColoringMode.FinalArgument, PhoenixColoringMode.Period
+        };
+        int worstDiffering = 0;
+        string worstLabel = "";
+        foreach (PhoenixVariant variant in variants)
+        foreach (PhoenixColoringMode coloring in colorings)
+        foreach (PhoenixPlaneMode plane in new[] { PhoenixPlaneMode.Julia, PhoenixPlaneMode.ParameterC1 })
+        {
+            PhoenixState state = View(700, variant, coloring, plane);
+            byte[] shallow = await RenderAsync(state, false, w, h);
+            byte[] deep = await RenderAsync(state, true, w, h);
+            int differing = CountDiffering(shallow, deep);
+            if (differing > worstDiffering)
+            {
+                worstDiffering = differing;
+                worstLabel = $"{variant}/{coloring}/{plane}";
+            }
+            Check(differing * 100 <= total * 2,
+                $"Phoenix perturbation must match the plain double path at zoom 700 " +
+                $"({variant}, {coloring}, {plane}): {differing}/{total} pixels differ.");
+        }
+        Console.WriteLine($"[diag] phoenix shallow-vs-deep worst {worstDiffering}/{total} ({worstLabel})");
+
+        // Степени: вторая степень b > 0 включает второе слагаемое c1·G(z) целиком (при b = 0
+        // оно вырождается в константу, и ошибка в его возмущении осталась бы незамеченной).
+        foreach ((int primary, int secondary) in new[] { (2, 0), (3, 0), (2, 1), (3, 2), (5, 4), (12, 1) })
+        {
+            PhoenixState state = View(400, PhoenixVariant.Classic, PhoenixColoringMode.Smooth,
+                primaryPower: primary, secondaryPower: secondary);
+            byte[] shallow = await RenderAsync(state, false, w, h);
+            byte[] deep = await RenderAsync(state, true, w, h);
+            int differing = CountDiffering(shallow, deep);
+            Check(differing * 100 <= total * 2,
+                $"Phoenix perturbation must match the plain path for powers a={primary}, b={secondary}: " +
+                $"{differing}/{total} pixels differ.");
+        }
+
+        // 2. На глубине плоскому пути верить уже нельзя — сравниваем с прямой итерацией в
+        //    BigFloat. Центры найдены спуском по границе (см. стенд в истории задачи), поэтому
+        //    у кадров есть структура: без неё сравнение прошло бы вхолостую.
+        (string X, string Y, double Zoom)[] deepFixtures =
+        [
+            ("0.3605697876344492991196400742422874", "0.9162050700528197582748546315293717", 1.10e12),
+            ("0.3605697876341732990634970411179978", "0.9162050700524670653999492733755535", 1.15e18),
+            ("0.3605697876341732992373776850660347", "0.9162050700524670649253017882362955", 1.21e24),
+            ("0.3605697876341732992373786585380622", "0.9162050700524670649253011924481502", 1.98e28),
+        ];
+        foreach ((string centerX, string centerY, double zoom) in deepFixtures)
+        {
+            PhoenixState state = AtExactCenter(
+                View(zoom, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                centerX, centerY);
+            byte[] deep = await RenderAsync(state, true, w, h);
+            byte[] exact = await Task.Run(() =>
+                PhoenixRenderer.RenderExactReferenceForTests(state, w, h, 128, CancellationToken.None));
+            int differing = CountDiffering(deep, exact);
+            int edges = CountEdges(exact, w);
+            Console.WriteLine($"[diag] phoenix deep {zoom:0.0e+0}: {differing}/{total} differ, {edges} edges");
+            Check(differing * 100 <= total * 3,
+                $"Phoenix deep zoom must match the exact BigFloat reference at {zoom:0.0e+0}: " +
+                $"{differing}/{total} pixels differ.");
+        }
+
+        // 3. План точности: тот же кадр с заведомо избыточной разрядностью опорной орбиты.
+        //    Единственная проверка самого плана, не требующая внешнего эталона.
+        foreach (double zoom in new[] { 1.10e12, 1.15e18, 1.21e24 })
+        {
+            PhoenixState state = AtExactCenter(
+                View(zoom, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                "0.3605697876341732992373776850660347", "0.9162050700524670649253017882362955");
+            byte[] planned = await RenderAsync(state, true, w, h);
+            byte[] generous = await RenderAsync(state, true, w, h,
+                PhoenixRenderer.PlanReferenceBits(state) + 256);
+            int drift = CountDiffering(planned, generous);
+            Check(drift == 0,
+                $"Phoenix precision plan must not drift with 256 extra reference bits at {zoom:0.0e+0}: " +
+                $"{drift}/{total} pixels differ.");
+        }
+
+        // 4. Тайл прогрессивного предпросмотра обязан совпасть с полным кадром: у них разные
+        //    точки входа в движок и своя раскладка пикселей.
+        {
+            PhoenixState state = AtExactCenter(
+                View(1e15, PhoenixVariant.BurningShip, PhoenixColoringMode.Smooth, iterations: 300),
+                "0.3605697876341732992373776850660347", "0.9162050700524670649253017882362955");
+            byte[] full = await RenderAsync(state, true, w, h);
+            PhoenixRenderer.ForceDeepZoomForTests = true;
+            byte[]? tile;
+            try
+            {
+                tile = await Task.Run(() => PhoenixRenderer.RenderTile(state, w, h,
+                    new MandelbrotRenderTile(16, 12, 24, 16, 1, 1), CancellationToken.None));
+            }
+            finally { PhoenixRenderer.ForceDeepZoomForTests = null; }
+            Check(tile is not null, "Phoenix deep-zoom tile must render.");
+            int tileDiffering = 0;
+            for (int localY = 0; localY < 16; localY++)
+            for (int localX = 0; localX < 24; localX++)
+            {
+                int tileOffset = (localY * 24 + localX) * 4;
+                int fullOffset = ((12 + localY) * w + 16 + localX) * 4;
+                if (tile![tileOffset] != full[fullOffset] || tile[tileOffset + 1] != full[fullOffset + 1] ||
+                    tile[tileOffset + 2] != full[fullOffset + 2]) tileDiffering++;
+            }
+            Check(tileDiffering == 0,
+                $"Phoenix deep-zoom tile must match the full frame exactly: {tileDiffering}/384 differ.");
+        }
+
+        // 5. Точный центр действительно доходит до рендера: сдвиг на десятую пикселя на
+        //    глубине, где decimal-поля состояния его уже не различают, обязан менять кадр.
+        {
+            // Зум подобран так, чтобы полпикселя были заведомо мельче разрешения decimal
+            // (шаг ≈ 3e-30 против ULP ≈ 1e-28 у центра около 0.36): только тогда проверка
+            // показывает, что положение области доходит до рендера именно строкой.
+            const double zoom = 1.98e28;
+            PhoenixState reference = AtExactCenter(
+                View(zoom, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                "0.3605697876341732992373786585380622", "0.9162050700524670649253011924481502");
+            BigFloat nudge = BigFloat.FromDouble(4.0 / zoom / w * 0.5);
+            PhoenixState nudged = AtExactCenter(
+                View(zoom, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                (BigFloat.Parse(reference.CenterXExact!) + nudge).ToInvariantString(),
+                reference.CenterYExact!);
+            Check(CountEdges(await RenderAsync(reference, true, w, h), w) > 50,
+                "The center-precision fixture must show structure, or a changed frame proves nothing.");
+            Check(reference.CenterX == nudged.CenterX,
+                "The nudge must be invisible to the decimal center fields — otherwise this proves nothing.");
+            byte[] before = await RenderAsync(reference, true, w, h);
+            byte[] after = await RenderAsync(nudged, true, w, h);
+            Check(CountDiffering(before, after) > 0,
+                "A tenth-of-a-pixel shift of the exact center must change the deep-zoom frame.");
+        }
+
+        // 6. Кэш опорной орбиты не путает состояния, различающиеся только формулой. Это тот
+        //    самый класс ошибок, который у семейства Мандельброта однажды дал чёрный кадр:
+        //    ключ кэша не нёс степень.
+        {
+            PhoenixState first = View(1e12, PhoenixVariant.Classic, PhoenixColoringMode.Smooth,
+                primaryPower: 2, secondaryPower: 0);
+            PhoenixState second = View(1e12, PhoenixVariant.Classic, PhoenixColoringMode.Smooth,
+                primaryPower: 3, secondaryPower: 0);
+            byte[] a = await RenderAsync(first, true, w, h);
+            byte[] b = await RenderAsync(second, true, w, h);
+            byte[] againA = await RenderAsync(first, true, w, h);
+            Check(CountDiffering(a, b) > 0, "Different primary powers must not collide in the orbit cache.");
+            Check(CountDiffering(a, againA) == 0, "Re-rendering the same Phoenix state must be deterministic.");
+
+            PhoenixState julia = View(1e12, PhoenixVariant.Classic, PhoenixColoringMode.Smooth);
+            PhoenixState parameter = View(1e12, PhoenixVariant.Classic, PhoenixColoringMode.Smooth,
+                PhoenixPlaneMode.ParameterC1);
+            Check(CountDiffering(await RenderAsync(julia, true, w, h),
+                    await RenderAsync(parameter, true, w, h)) > 0,
+                "Dynamic and parameter planes must not collide in the orbit cache.");
+        }
+
+        // 7. Граница применимости движка — самый чувствительный кадр, какой удалось построить:
+        //    центр в точке границы (найдена бинарным поиском между заведомо внутренней и
+        //    заведомо внешней точками), а число итераций подобрано так, что вся область
+        //    вылетает за радиус в пределах одного шага. Здесь ошибка δ, накопленная за орбиту,
+        //    видна в чистом виде: одного шага разницы хватает, чтобы перекрасить половину
+        //    кадра. Проверка фиксирует, что на потолке зума окна расхождение остаётся на
+        //    уровне отдельных пикселей, и что дальше движок пускать нельзя.
+        {
+            const string borderX = "0.3605697876341732992373786585816072";
+            const string borderY =
+                "0.9044804668779509850030358017389001116892197535457371417753243249685989";
+            foreach ((double zoom, int budget) in new[] { (1e20, 2), (1e22, 2), (1e24, 4) })
+            {
+                PhoenixState state = AtExactCenter(
+                    View(zoom, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                    borderX, borderY);
+                byte[] deep = await RenderAsync(state, true, w, h);
+                byte[] exact = await Task.Run(() =>
+                    PhoenixRenderer.RenderExactReferenceForTests(state, w, h, 256, CancellationToken.None));
+                int differing = CountDiffering(deep, exact);
+                Console.WriteLine($"[diag] phoenix escape-front {zoom:0.0e+0}: {differing}/{total} differ");
+                Check(differing <= budget,
+                    $"On the escape front at {zoom:0.0e+0} the engine must stay within {budget} pixels " +
+                    $"of the exact reference: {differing}/{total} differ.");
+            }
+        }
+
+        // 8. Ребазирование должно оставаться редким событием, а не срабатывать на каждом шаге.
+        //    Условие «не хуже» в TryRebase существует именно для этого: у Феникса перенос в
+        //    начало орбиты обычно увеличивает вторую компоненту пары (там z₋₁ = 0), и если
+        //    условие сломается, δ начнёт переноситься туда, где оно только растёт. Порог взят
+        //    с большим запасом от измеренного (около полутора процентов шагов).
+        {
+            PhoenixState state = AtExactCenter(
+                View(1.21e24, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                "0.3605697876341732992373776850660347", "0.9162050700524670649253017882362955");
+            PhoenixRenderer.RebaseCountForTests = 0;
+            await RenderAsync(state, true, w, h);
+            long rebases = Interlocked.Read(ref PhoenixRenderer.RebaseCountForTests);
+            long steps = (long)total * state.Iterations;
+            Console.WriteLine($"[diag] phoenix rebases {rebases} over {steps} steps " +
+                $"({rebases * 100.0 / steps:F2}%)");
+            Check(rebases * 10 <= steps,
+                $"Phoenix rebasing must stay a rare event, not a per-step one: {rebases} rebases " +
+                $"over {steps} steps.");
+        }
+
+        // 9. Круг «окно → сохранение → окно»: точный центр обязан пережить его без потерь.
+        //    Именно здесь легко потерять глубину — decimal-поля состояния сохраняют лишь 28
+        //    знаков, и если окно перестанет писать или читать строки, зум просто вернётся к
+        //    прежнему потолку, а рендер останется формально исправным.
+        {
+            // Разметка окна тянет стили из App.xaml, а проверочный Application создаётся
+            // пустым: без словаря конструктор падает на StaticResource.
+            var themeStyles = new Uri("pack://application:,,,/FractalExplorerWPF;component/Theming/ThemeStyles.xaml");
+            if (Application.Current.Resources.MergedDictionaries.All(d => d.Source != themeStyles))
+                Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = themeStyles });
+
+            var window = new PhoenixWindow();
+            PhoenixState deep = AtExactCenter(
+                View(1e20, PhoenixVariant.Classic, PhoenixColoringMode.Smooth, iterations: 300),
+                "0.3605697876341732992373776850660347", "0.9162050700524670649253017882362955");
+            window.LoadState(deep);
+            PhoenixState captured = window.CaptureState("round-trip");
+
+            // Сравнение по значению, а не по тексту: BigFloat печатает столько цифр, сколько
+            // несёт его мантисса, поэтому строка на выходе длиннее исходной, обозначая то же
+            // число. Важно, что оно не изменилось, а не как оно записано.
+            Check(captured.CenterXExact is { Length: > 0 } && captured.CenterYExact is { Length: > 0 },
+                "A deep save must carry exact-center strings.");
+            Check(BigFloat.Parse(captured.CenterXExact!) == BigFloat.Parse(deep.CenterXExact!) &&
+                  BigFloat.Parse(captured.CenterYExact!) == BigFloat.Parse(deep.CenterYExact!),
+                "The window must round-trip the exact center of a deep save without losing digits.");
+            Check(captured.Zoom == deep.Zoom, "The window must round-trip a deep zoom unchanged.");
+
+            // И обратно: обычное сохранение с мелким зумом не должно обзаводиться строками
+            // точного центра — иначе они начнут расходиться с decimal-полями.
+            window.LoadState(View(700, PhoenixVariant.Classic, PhoenixColoringMode.Smooth));
+            PhoenixState shallow = window.CaptureState("round-trip-shallow");
+            Check(shallow.CenterXExact is null && shallow.CenterYExact is null,
+                "A shallow save must not carry exact-center strings.");
+            window.Close();
+        }
+
+        Check(BigFloat.WorkingPrecisionBits == BigFloat.MinimumPrecisionBits,
+            "Phoenix deep-zoom checks must leave the working precision restored.");
     }
 
     // Phase 6: Simonobrot of even integer power p=2q — composition of two exact binomial

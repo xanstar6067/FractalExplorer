@@ -4,10 +4,20 @@ using Color = System.Windows.Media.Color;
 
 namespace FractalExplorerWPF.Core.Rendering;
 
-public static class PhoenixRenderer
+public static partial class PhoenixRenderer
 {
     private const decimal BaseScale = 4m;
     private const int MaximumSupportedPeriod = 64;
+
+    /// <summary>
+    /// Масштаб кадра для плоской (double) ступени. Деление осталось в <see cref="decimal"/>,
+    /// хотя <see cref="PhoenixState.Zoom"/> стал double: так округление совпадает с прежним
+    /// бит-в-бит. Верхний кламп 1e15 защищает приведение к decimal — выше этого зума кадр
+    /// считает пертурбационный движок, а сюда попадает только вырожденная опорная орбита
+    /// (однородный кадр, где масштаб уже не важен).
+    /// </summary>
+    private static double PlainScale(PhoenixState state) =>
+        (double)(BaseScale / Math.Max(0.000000000001m, (decimal)Math.Clamp(state.Zoom, 1e-12, 1e15)));
 
     private readonly record struct ComplexValue(double Real, double Imaginary)
     {
@@ -35,9 +45,25 @@ public static class PhoenixRenderer
     public static void Render(PhoenixState state, byte[] pixels, int width, int height, int stride,
         int threadCount, CancellationToken token, Action<int>? progress = null)
     {
+        if (ShouldUseDeepZoom(state))
+        {
+            RenderDeepZoom(state, pixels, width, height, stride, threadCount, token, progress);
+            return;
+        }
+
+        RenderPlain(state, pixels, width, height, stride, threadCount, token, progress);
+    }
+
+    /// <summary>
+    /// Плоская (double) ступень целиком. Выделена из <see cref="Render"/>, чтобы глубокий путь
+    /// мог откатиться на неё при вырожденной опорной орбите, не проходя проверку зума заново.
+    /// </summary>
+    private static void RenderPlain(PhoenixState state, byte[] pixels, int width, int height, int stride,
+        int threadCount, CancellationToken token, Action<int>? progress)
+    {
         double centerX = (double)state.CenterX;
         double centerY = (double)state.CenterY;
-        double scale = (double)(BaseScale / Math.Max(0.000000000001m, state.Zoom));
+        double scale = PlainScale(state);
         long completed = 0;
         Parallel.For(0, height,
             new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, threadCount), CancellationToken = token },
@@ -62,10 +88,20 @@ public static class PhoenixRenderer
     public static byte[]? RenderTile(PhoenixState state, int canvasWidth, int canvasHeight,
         MandelbrotRenderTile tile, CancellationToken token)
     {
+        if (ShouldUseDeepZoom(state))
+            return RenderDeepZoomTile(state, canvasWidth, canvasHeight, tile, token);
+
+        return RenderPlainTile(state, canvasWidth, canvasHeight, tile, token);
+    }
+
+    /// <inheritdoc cref="RenderPlain"/>
+    private static byte[]? RenderPlainTile(PhoenixState state, int canvasWidth, int canvasHeight,
+        MandelbrotRenderTile tile, CancellationToken token)
+    {
         byte[] pixels = new byte[checked(tile.Width * tile.Height * 4)];
         double centerX = (double)state.CenterX;
         double centerY = (double)state.CenterY;
-        double scale = (double)(BaseScale / Math.Max(0.000000000001m, state.Zoom));
+        double scale = PlainScale(state);
         for (int localY = 0; localY < tile.Height; localY++)
         {
             if (token.IsCancellationRequested) return null;

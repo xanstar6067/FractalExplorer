@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using FractalExplorerWPF.Core.NewtonMath;
 using FractalExplorerWPF.Core.Rendering;
 using FractalExplorerWPF.Controls;
 using FractalExplorerWPF.Infrastructure;
@@ -26,17 +27,57 @@ public partial class PhoenixWindow : Window
     private readonly PhoenixSaveStore _saveStore = new();
     private CancellationTokenSource? _renderCts;
     private bool _isRendering, _panning, _isFullscreen, _controlsVisible = true;
+
+    /// <summary>
+    /// Окно само заполняет поле зума после колеса. Без этого флага обработчик изменения текста
+    /// тут же прочитал бы округлённое до восьми цифр значение обратно в <see cref="_zoom"/> —
+    /// уже после того, как по прежнему зуму посчитан сдвиг центра.
+    /// </summary>
+    private bool _updatingControls;
     private Point _lastPanPoint;
-    private decimal _centerX, _centerY, _zoom = 1;
-    private decimal _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
+    private decimal _centerX, _centerY;
+    private double _zoom = 1;
+    private double _renderedZoom = 1;
     private bool _hasRenderedFrame;
 
     /// <summary>
-    /// Потолок зума. Не <c>decimal.MaxValue</c>: колесо умножает зум на 1.2 ДО ограничения,
-    /// поэтому у самой границы типа умножение переполнялось прямо в обработчике мыши.
-    /// Половина диапазона недостижима на практике и запас от переполнения даёт с избытком.
+    /// Центр области в произвольной точности. Ведётся начиная с
+    /// <see cref="DeepZoomThreshold"/>, когда decimal (28 знаков) перестаёт различать соседние
+    /// пиксели; ниже порога источником истины остаются <see cref="_centerX"/>/<see cref="_centerY"/>.
     /// </summary>
-    private const decimal MaxZoom = decimal.MaxValue / 2m;
+    private BigFloat _centerXExact, _centerYExact;
+    private BigFloat _renderedCenterXExact, _renderedCenterYExact;
+    private bool _deepZoomEngaged;
+
+    /// <summary>
+    /// Зум, начиная с которого окно ведёт центр в <see cref="BigFloat"/>. Совпадает с порогом
+    /// включения пертурбационного движка в <c>PhoenixRenderer.DeepZoom</c>: смысла вести
+    /// точный центр раньше нет, а после — обязательно, иначе движку неоткуда взять положение
+    /// области с нужным числом знаков.
+    /// </summary>
+    private const double DeepZoomThreshold = 1.5e9;
+
+    private const double MinZoom = 0.000001;
+
+    /// <summary>
+    /// Потолок зума. Прежде здесь стояло <c>decimal.MaxValue/2</c> (≈4e28) — не предел
+    /// точности, а защита от переполнения: колесо умножает зум на 1.2 ДО ограничения. Картинка
+    /// при этом рассыпалась уже около 1e12, то есть поле пускало заведомо дальше, чем движок
+    /// мог посчитать.
+    ///
+    /// Теперь предел настоящий и измерен. Отклонение δ пертурбация ведёт в double, а
+    /// ребазирование у Феникса почти не срабатывает: в начале орбиты <c>z₋₁ = 0</c>, поэтому
+    /// перенос пары туда увеличивает вторую компоненту вместо того, чтобы уменьшить обе. Из-за
+    /// этого ошибка δ копится по всей орбите без сброса. На кадре, где вся область вылетает за
+    /// радиус в пределах одной-двух итераций (самый чувствительный случай — центр в точке
+    /// границы), расхождение с точной BigFloat-итерацией начинается так: 1e22 — 0 пикселей,
+    /// 1e24 — 1 из 1536, 1e26 — 6, 1e28 — уже 537. Потолок взят по последней глубине, где
+    /// расхождение остаётся на уровне отдельных пикселей границы.
+    ///
+    /// Поднять его можно, начав вести δ с удвоенной разрядностью (double-double): предел
+    /// сдвинется примерно на столько же порядков, на сколько прибавится значащих цифр.
+    /// </summary>
+    private const double MaxZoom = 1e24;
     private readonly TransformGroup _previewTransform = new();
     private readonly ScaleTransform _previewScale = new(1, 1);
     private readonly TranslateTransform _previewTranslation = new();
@@ -88,7 +129,12 @@ public partial class PhoenixWindow : Window
             throw new InvalidOperationException("Проверьте C1/C2, степени a (2–12) и b (0–12), итерации, радиус выхода и параметры окраски.");
         return new PhoenixState
         {
-            SaveName = name, Timestamp = DateTime.Now, CenterX = _centerX, CenterY = _centerY, Zoom = _zoom,
+            SaveName = name, Timestamp = DateTime.Now,
+            CenterX = _deepZoomEngaged ? _centerXExact.ToDecimalClamped() : _centerX,
+            CenterY = _deepZoomEngaged ? _centerYExact.ToDecimalClamped() : _centerY,
+            CenterXExact = _deepZoomEngaged ? _centerXExact.ToInvariantString() : null,
+            CenterYExact = _deepZoomEngaged ? _centerYExact.ToInvariantString() : null,
+            Zoom = _zoom,
             Threshold = threshold, Iterations = iterations, C1Real = c1r, C1Imaginary = c1i, C2Real = c2r, C2Imaginary = c2i,
             PlaneMode = GetSelectedEnum(PlaneModeBox, PhoenixPlaneMode.Julia),
             Variant = GetSelectedEnum(VariantBox, PhoenixVariant.Classic),
@@ -106,12 +152,36 @@ public partial class PhoenixWindow : Window
 
     public void LoadState(PhoenixState state)
     {
-        _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Clamp(state.Zoom, 0.000001m, MaxZoom);
+        _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY;
+        _zoom = Math.Clamp(state.Zoom, MinZoom, MaxZoom);
+        _deepZoomEngaged = false;
+        if (state.CenterXExact is { Length: > 0 } exactX && state.CenterYExact is { Length: > 0 } exactY)
+        {
+            try
+            {
+                _centerXExact = BigFloat.Parse(exactX);
+                _centerYExact = BigFloat.Parse(exactY);
+                _deepZoomEngaged = _zoom >= DeepZoomThreshold;
+                if (_deepZoomEngaged)
+                {
+                    _centerX = _centerXExact.ToDecimalClamped();
+                    _centerY = _centerYExact.ToDecimalClamped();
+                }
+            }
+            catch (FormatException)
+            {
+                // Испорченная строка точного центра — не повод не открыть сохранение:
+                // decimal-поля рядом задают ту же точку с точностью до 28 знаков.
+                _deepZoomEngaged = false;
+            }
+        }
+        if (!_deepZoomEngaged) SyncDeepZoomState();
         C1RealBox.Text = Format(state.C1Real); C1ImaginaryBox.Text = Format(state.C1Imaginary); C2RealBox.Text = Format(state.C2Real); C2ImaginaryBox.Text = Format(state.C2Imaginary);
         PrimaryPowerBox.Text = state.PrimaryPower.ToString(CultureInfo.InvariantCulture); SecondaryPowerBox.Text = state.SecondaryPower.ToString(CultureInfo.InvariantCulture);
         InitialZRealBox.Text = Format(state.InitialZReal); InitialZImaginaryBox.Text = Format(state.InitialZImaginary);
         PreviousRealBox.Text = Format(state.InitialPreviousReal); PreviousImaginaryBox.Text = Format(state.InitialPreviousImaginary);
-        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = FormatZoom(_zoom);
+        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold);
+        _updatingControls = true; ZoomBox.Text = FormatZoom(_zoom); _updatingControls = false;
         OrbitTrapRadiusBox.Text = state.OrbitTrapRadius.ToString("G15", CultureInfo.InvariantCulture);
         OrbitTrapStrengthBox.Text = state.OrbitTrapStrength.ToString("G15", CultureInfo.InvariantCulture);
         StripeFrequencyBox.Text = state.StripeFrequency.ToString("G15", CultureInfo.InvariantCulture);
@@ -144,7 +214,7 @@ public partial class PhoenixWindow : Window
         if (dialog.OpenC1AsJulia)
         {
             SelectByTag(PlaneModeBox, PhoenixPlaneMode.Julia);
-            _centerX = 0; _centerY = 0; _zoom = 1; ZoomBox.Text = "1"; UpdatePlaneUi();
+            ResetView(); UpdatePlaneUi();
         }
         ScheduleRender();
     }
@@ -182,9 +252,13 @@ public partial class PhoenixWindow : Window
     private void Parameter_OnChanged(object sender, EventArgs e) { UpdatePlaneUi(); ScheduleRender(); }
     private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e)
     {
-        if (TryRead(ZoomBox.Text, out decimal zoom))
+        // Выход до всего остального: поле заполняет само окно после колеса, и обратное чтение
+        // округлило бы зум уже после того, как по прежнему значению посчитан сдвиг центра.
+        if (_updatingControls) return;
+        if (TryReadDouble(ZoomBox.Text, out double zoom))
         {
-            _zoom = Math.Clamp(zoom, 0.000001m, MaxZoom);
+            _zoom = Math.Clamp(zoom, MinZoom, MaxZoom);
+            SyncDeepZoomState();
             UpdatePreviewTransform();
             ScheduleRender();
         }
@@ -249,8 +323,8 @@ public partial class PhoenixWindow : Window
             baked.Render(SavePreviewLayer);
             baked.Freeze();
             StablePreviewImage.Source = baked;
-            _renderedCenterX = _centerX;
-            _renderedCenterY = _centerY;
+            _renderedCenterXExact = _deepZoomEngaged ? _centerXExact : BigFloat.FromDecimal(_centerX);
+            _renderedCenterYExact = _deepZoomEngaged ? _centerYExact : BigFloat.FromDecimal(_centerY);
             _renderedZoom = _zoom;
             _hasRenderedFrame = true;
             UpdatePreviewTransform();
@@ -297,8 +371,14 @@ public partial class PhoenixWindow : Window
             completed.Freeze();
             StablePreviewImage.Source = completed;
             CanvasImage.Source = null;
-            _renderedCenterX = state.CenterX;
-            _renderedCenterY = state.CenterY;
+            // Центр берём из состояния, которым кадр посчитан, а не из текущего: пока шёл
+            // рендер, пользователь мог уже сдвинуть вид.
+            _renderedCenterXExact = state.CenterXExact is { Length: > 0 } renderedX
+                ? BigFloat.Parse(renderedX)
+                : BigFloat.FromDecimal(state.CenterX);
+            _renderedCenterYExact = state.CenterYExact is { Length: > 0 } renderedY
+                ? BigFloat.Parse(renderedY)
+                : BigFloat.FromDecimal(state.CenterY);
             _renderedZoom = state.Zoom;
             _hasRenderedFrame = true;
             UpdatePreviewTransform();
@@ -367,11 +447,30 @@ public partial class PhoenixWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        // Запекаем до изменения зума: снимок должен соответствовать прежнему виду.
         CommitAndBakePreview();
-        Point mouse = e.GetPosition(CanvasHost); (decimal X, decimal Y) before = ScreenToWorld(mouse);
-        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), 0.000001m, MaxZoom);
-        (decimal X, decimal Y) after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y;
-        UpdatePreviewTransform(); ZoomBox.Text = FormatZoom(_zoom); ScheduleRender();
+        Point mouse = e.GetPosition(CanvasHost);
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double height = Math.Max(1, CanvasHost.ActualHeight);
+        double fractionX = mouse.X / width - 0.5;
+        double fractionY = height / 2 - mouse.Y;
+
+        double previousZoom = _zoom;
+        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2 : 1 / 1.2), MinZoom, MaxZoom);
+
+        // Точка под курсором остаётся на месте. Прежняя формула «мир до минус мир после»,
+        // записанная через разность ширин области: сам сдвиг мал и укладывается в double, а
+        // ApplyCenterShift кладёт его в BigFloat-центр на глубине и в decimal на мелком зуме.
+        double viewWidthDelta = (double)BaseScale / previousZoom - (double)BaseScale / _zoom;
+        double shiftX = fractionX * viewWidthDelta;
+        double shiftY = fractionY / width * viewWidthDelta;
+
+        SyncDeepZoomState();
+        ApplyCenterShift(shiftX, shiftY);
+
+        UpdatePreviewTransform();
+        _updatingControls = true; ZoomBox.Text = FormatZoom(_zoom); _updatingControls = false;
+        ScheduleRender();
     }
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -382,7 +481,7 @@ public partial class PhoenixWindow : Window
             (decimal X, decimal Y) selected = ScreenToWorld(point);
             C1RealBox.Text = Format(selected.X); C1ImaginaryBox.Text = Format(selected.Y);
             SelectByTag(PlaneModeBox, PhoenixPlaneMode.Julia);
-            _centerX = 0; _centerY = 0; _zoom = 1; ZoomBox.Text = "1";
+            ResetView();
             UpdatePlaneUi(); UpdatePreviewTransform(); ScheduleRender(); e.Handled = true;
             return;
         }
@@ -390,40 +489,115 @@ public partial class PhoenixWindow : Window
     }
     private void CanvasHost_OnMouseMove(object sender, MouseEventArgs e)
     {
-        if (!_panning) return; Point current = e.GetPosition(CanvasHost); (decimal X, decimal Y) before = ScreenToWorld(_lastPanPoint); (decimal X, decimal Y) after = ScreenToWorld(current);
-        _centerX += before.X - after.X; _centerY += before.Y - after.Y; _lastPanPoint = current; UpdatePreviewTransform();
+        if (!_panning) return;
+        Point current = e.GetPosition(CanvasHost);
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double viewWidth = (double)BaseScale / _zoom;
+        ApplyCenterShift((_lastPanPoint.X - current.X) / width * viewWidth,
+            (current.Y - _lastPanPoint.Y) / width * viewWidth);
+        _lastPanPoint = current;
+        UpdatePreviewTransform();
     }
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) { if (!_panning) return; _panning = false; CanvasHost.ReleaseMouseCapture(); Mouse.OverrideCursor = null; ScheduleRender(); }
+
+    /// <summary>
+    /// Экранная точка в мировые координаты. Нужна только для выбора константы C1 двойным
+    /// щелчком, а C1 хранится в decimal, поэтому результат тоже decimal: на глубине разность
+    /// от центра считается в double, а к центру прибавляется уже в BigFloat.
+    /// </summary>
     private (decimal X, decimal Y) ScreenToWorld(Point point)
     {
-        decimal width = (decimal)Math.Max(1, CanvasHost.ActualWidth); decimal scale = BaseScale / _zoom;
-        return (_centerX + ((decimal)point.X - width / 2) * scale / width, _centerY + ((decimal)Math.Max(1, CanvasHost.ActualHeight) / 2 - (decimal)point.Y) * scale / width);
+        double width = Math.Max(1, CanvasHost.ActualWidth);
+        double viewWidth = (double)BaseScale / _zoom;
+        double offsetX = (point.X - width / 2) * viewWidth / width;
+        double offsetY = (Math.Max(1, CanvasHost.ActualHeight) / 2 - point.Y) * viewWidth / width;
+        if (!_deepZoomEngaged) return (_centerX + (decimal)offsetX, _centerY + (decimal)offsetY);
+        return ((_centerXExact + BigFloat.FromDouble(offsetX)).ToDecimalClamped(),
+            (_centerYExact + BigFloat.FromDouble(offsetY)).ToDecimalClamped());
     }
+
+    /// <summary>
+    /// Прибавляет к центру небольшой сдвиг в мировых координатах. На глубине сдвиг уходит в
+    /// BigFloat-центр (decimal-приближение обновляется следом), на мелком зуме — в decimal.
+    /// </summary>
+    private void ApplyCenterShift(double shiftX, double shiftY)
+    {
+        if (_deepZoomEngaged)
+        {
+            _centerXExact += BigFloat.FromDouble(shiftX);
+            _centerYExact += BigFloat.FromDouble(shiftY);
+            _centerX = _centerXExact.ToDecimalClamped();
+            _centerY = _centerYExact.ToDecimalClamped();
+        }
+        else
+        {
+            _centerX += (decimal)shiftX;
+            _centerY += (decimal)shiftY;
+        }
+    }
+
+    /// <summary>
+    /// Заводит или глушит ведение центра в BigFloat по текущему зуму. Вверх через порог центр
+    /// переносится из decimal, вниз decimal снова становится источником истины.
+    /// </summary>
+    private void SyncDeepZoomState()
+    {
+        bool shouldEngage = _zoom >= DeepZoomThreshold;
+        if (shouldEngage && !_deepZoomEngaged)
+        {
+            _centerXExact = BigFloat.FromDecimal(_centerX);
+            _centerYExact = BigFloat.FromDecimal(_centerY);
+            _deepZoomEngaged = true;
+        }
+        else if (!shouldEngage && _deepZoomEngaged)
+        {
+            _centerX = _centerXExact.ToDecimalClamped();
+            _centerY = _centerYExact.ToDecimalClamped();
+            _deepZoomEngaged = false;
+        }
+    }
+
     private void UpdatePreviewTransform()
     {
         if (!_hasRenderedFrame || _renderedZoom <= 0 || _zoom <= 0 || CanvasHost.ActualWidth <= 0) return;
-        double scale = (double)(_zoom / _renderedZoom);
-        decimal currentScale = BaseScale / _zoom;
+        double scale = _zoom / _renderedZoom;
+        double currentScale = (double)BaseScale / _zoom;
         double width = CanvasHost.ActualWidth;
-        double dx = (double)((_renderedCenterX - _centerX) / currentScale) * width;
-        double dy = (double)((_centerY - _renderedCenterY) / currentScale) * width;
+        BigFloat currentCenterX = _deepZoomEngaged ? _centerXExact : BigFloat.FromDecimal(_centerX);
+        BigFloat currentCenterY = _deepZoomEngaged ? _centerYExact : BigFloat.FromDecimal(_centerY);
         _previewScale.ScaleX = scale;
         _previewScale.ScaleY = scale;
-        _previewTranslation.X = dx;
-        _previewTranslation.Y = dy;
+        _previewTranslation.X = (_renderedCenterXExact - currentCenterX).ToDouble() / currentScale * width;
+        _previewTranslation.Y = (currentCenterY - _renderedCenterYExact).ToDouble() / currentScale * width;
     }
     private void ToggleControlsButton_OnClick(object sender, RoutedEventArgs e) => FractalControlPanel.Toggle(ref _controlsVisible, ControlsColumn, ControlsHost, ToggleControlsButton, 310, ScheduleRender);
     private void Window_OnKeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.F11 || e.Key == Key.Escape && _isFullscreen) ToggleFullscreen(); }
     private void ToggleFullscreen() { if (!_isFullscreen) { _previousWindowStyle = WindowStyle; _previousWindowState = WindowState; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; } else { WindowStyle = _previousWindowStyle; WindowState = _previousWindowState; } _isFullscreen = !_isFullscreen; }
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _renderCts?.Dispose(); }
+    /// <summary>
+    /// Возврат к исходному виду: центр в нуле, зум 1.
+    ///
+    /// Обнуляются обе пары полей сразу, и ведение центра в BigFloat гасится напрямую, а не
+    /// через <see cref="SyncDeepZoomState"/>: тот при спуске с глубины восстанавливает decimal
+    /// из BigFloat-полей и вернул бы прежний центр поверх только что обнулённого.
+    /// </summary>
+    private void ResetView()
+    {
+        _centerX = 0; _centerY = 0; _zoom = 1;
+        _centerXExact = BigFloat.Zero; _centerYExact = BigFloat.Zero;
+        _deepZoomEngaged = false;
+        _updatingControls = true; ZoomBox.Text = "1"; _updatingControls = false;
+    }
+
     private static bool TryRead(string text, out decimal value) => decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
+    private static bool TryReadDouble(string text, out double value) => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Зум показывается восемью значащими цифрами: большое значение уходит в
     /// экспоненциальную запись (8.1707708E+09) и помещается в поле целиком.
     /// </summary>
-    private static string FormatZoom(decimal value) => value.ToString("G8", CultureInfo.InvariantCulture);
+    private static string FormatZoom(double value) => value.ToString("G8", CultureInfo.InvariantCulture);
 
     private static TEnum GetSelectedEnum<TEnum>(ComboBox comboBox, TEnum fallback) where TEnum : struct, Enum
     {
