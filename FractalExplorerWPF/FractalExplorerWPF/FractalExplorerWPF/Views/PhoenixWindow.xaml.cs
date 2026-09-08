@@ -30,6 +30,13 @@ public partial class PhoenixWindow : Window
     private decimal _centerX, _centerY, _zoom = 1;
     private decimal _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
     private bool _hasRenderedFrame;
+
+    /// <summary>
+    /// Потолок зума. Не <c>decimal.MaxValue</c>: колесо умножает зум на 1.2 ДО ограничения,
+    /// поэтому у самой границы типа умножение переполнялось прямо в обработчике мыши.
+    /// Половина диапазона недостижима на практике и запас от переполнения даёт с избытком.
+    /// </summary>
+    private const decimal MaxZoom = decimal.MaxValue / 2m;
     private readonly TransformGroup _previewTransform = new();
     private readonly ScaleTransform _previewScale = new(1, 1);
     private readonly TranslateTransform _previewTranslation = new();
@@ -99,12 +106,12 @@ public partial class PhoenixWindow : Window
 
     public void LoadState(PhoenixState state)
     {
-        _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Max(0.000001m, state.Zoom);
+        _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Clamp(state.Zoom, 0.000001m, MaxZoom);
         C1RealBox.Text = Format(state.C1Real); C1ImaginaryBox.Text = Format(state.C1Imaginary); C2RealBox.Text = Format(state.C2Real); C2ImaginaryBox.Text = Format(state.C2Imaginary);
         PrimaryPowerBox.Text = state.PrimaryPower.ToString(CultureInfo.InvariantCulture); SecondaryPowerBox.Text = state.SecondaryPower.ToString(CultureInfo.InvariantCulture);
         InitialZRealBox.Text = Format(state.InitialZReal); InitialZImaginaryBox.Text = Format(state.InitialZImaginary);
         PreviousRealBox.Text = Format(state.InitialPreviousReal); PreviousImaginaryBox.Text = Format(state.InitialPreviousImaginary);
-        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = Format(_zoom);
+        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = FormatZoom(_zoom);
         OrbitTrapRadiusBox.Text = state.OrbitTrapRadius.ToString("G15", CultureInfo.InvariantCulture);
         OrbitTrapStrengthBox.Text = state.OrbitTrapStrength.ToString("G15", CultureInfo.InvariantCulture);
         StripeFrequencyBox.Text = state.StripeFrequency.ToString("G15", CultureInfo.InvariantCulture);
@@ -177,7 +184,7 @@ public partial class PhoenixWindow : Window
     {
         if (TryRead(ZoomBox.Text, out decimal zoom))
         {
-            _zoom = Math.Clamp(zoom, 0.000001m, decimal.MaxValue);
+            _zoom = Math.Clamp(zoom, 0.000001m, MaxZoom);
             UpdatePreviewTransform();
             ScheduleRender();
         }
@@ -216,7 +223,46 @@ public partial class PhoenixWindow : Window
         });
     }
 
-    private void ScheduleRender() { if (!IsLoaded) return; _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
+    private void ScheduleRender() { if (!IsLoaded) return; if (_isRendering) CommitAndBakePreview(); else _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
+
+    /// <summary>
+    /// Останавливает текущий рендер и «запекает» то, что уже видно на холсте (сдвинутый
+    /// прежний кадр плюс успевшие лечь тайлы), в стабильный предпросмотр. Снимок после
+    /// этого считается отрисованным для текущего вида, поэтому дальнейшие зум и
+    /// перетаскивание двигают именно его.
+    ///
+    /// Без этого при зуме терялся уже посчитанный кадр, а при перетаскивании рендер
+    /// продолжал идти поверх уезжающего фона.
+    /// </summary>
+    private void CommitAndBakePreview()
+    {
+        RenderSession? session = _activeSession;
+        _renderCts?.Cancel();
+        if (session is null) return;
+
+        FlushVisualizationEvents(session, true);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(SavePreviewLayer);
+        try
+        {
+            var baked = new RenderTargetBitmap(surface.PixelWidth, surface.PixelHeight,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            baked.Render(SavePreviewLayer);
+            baked.Freeze();
+            StablePreviewImage.Source = baked;
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+        }
+        catch (InvalidOperationException)
+        {
+            // Разметка бывает недоступна на свёртывании окна и в момент изменения размера.
+        }
+        CanvasImage.Source = null;
+        RenderOverlay.EndSession();
+        if (ReferenceEquals(_activeSession, session)) _activeSession = null;
+    }
     private void RenderTimer_OnTick(object? sender, EventArgs e) { _renderTimer.Stop(); _ = RenderPreviewAsync(); }
 
     private async Task RenderPreviewAsync()
@@ -321,13 +367,15 @@ public partial class PhoenixWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        CommitAndBakePreview();
         Point mouse = e.GetPosition(CanvasHost); (decimal X, decimal Y) before = ScreenToWorld(mouse);
-        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), 0.000001m, decimal.MaxValue);
+        _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), 0.000001m, MaxZoom);
         (decimal X, decimal Y) after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y;
-        UpdatePreviewTransform(); ZoomBox.Text = Format(_zoom); ScheduleRender();
+        UpdatePreviewTransform(); ZoomBox.Text = FormatZoom(_zoom); ScheduleRender();
     }
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        CommitAndBakePreview();
         Point point = e.GetPosition(CanvasHost);
         if (e.ClickCount >= 2 && GetSelectedEnum(PlaneModeBox, PhoenixPlaneMode.Julia) == PhoenixPlaneMode.ParameterC1)
         {
@@ -370,6 +418,12 @@ public partial class PhoenixWindow : Window
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _renderCts?.Dispose(); }
     private static bool TryRead(string text, out decimal value) => decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Зум показывается восемью значащими цифрами: большое значение уходит в
+    /// экспоненциальную запись (8.1707708E+09) и помещается в поле целиком.
+    /// </summary>
+    private static string FormatZoom(decimal value) => value.ToString("G8", CultureInfo.InvariantCulture);
 
     private static TEnum GetSelectedEnum<TEnum>(ComboBox comboBox, TEnum fallback) where TEnum : struct, Enum
     {

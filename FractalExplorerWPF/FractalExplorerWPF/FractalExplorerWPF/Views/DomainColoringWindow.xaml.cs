@@ -265,10 +265,51 @@ public partial class DomainColoringWindow : Window
     private void ScheduleRender()
     {
         if (!IsLoaded) return;
-        _renderCts?.Cancel();
+        if (_isRendering) CommitAndBakePreview();
+        else _renderCts?.Cancel();
         _renderTimer.Stop();
         _renderTimer.Start();
     }
+
+    /// <summary>
+    /// Останавливает текущий рендер и «запекает» то, что уже видно на холсте (сдвинутый
+    /// прежний кадр плюс успевшие лечь тайлы), в стабильный предпросмотр. Снимок после
+    /// этого считается отрисованным для текущего вида, поэтому дальнейшие зум и
+    /// перетаскивание двигают именно его.
+    ///
+    /// Без этого при зуме терялся уже посчитанный кадр, а при перетаскивании рендер
+    /// продолжал идти поверх уезжающего фона.
+    /// </summary>
+    private void CommitAndBakePreview()
+    {
+        RenderSession? session = _activeSession;
+        _renderCts?.Cancel();
+        if (session is null) return;
+
+        FlushVisualizationEvents(session, true);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(SavePreviewLayer);
+        try
+        {
+            var baked = new RenderTargetBitmap(surface.PixelWidth, surface.PixelHeight,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            baked.Render(SavePreviewLayer);
+            baked.Freeze();
+            StablePreviewImage.Source = baked;
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+        }
+        catch (InvalidOperationException)
+        {
+            // Разметка бывает недоступна на свёртывании окна и в момент изменения размера.
+        }
+        CanvasImage.Source = null;
+        RenderOverlay.EndSession();
+        if (ReferenceEquals(_activeSession, session)) _activeSession = null;
+    }
+
 
     private void RenderTimer_OnTick(object? sender, EventArgs e)
     {
@@ -448,6 +489,7 @@ public partial class DomainColoringWindow : Window
 
     private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        CommitAndBakePreview();
         Point mouse = e.GetPosition(CanvasHost);
         (double x, double y) = ScreenToWorld(mouse);
         _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2 : 1 / 1.2), 1e-12, 1e12);
@@ -462,6 +504,7 @@ public partial class DomainColoringWindow : Window
 
     private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        CommitAndBakePreview();
         _panning = true;
         _lastPanPoint = e.GetPosition(CanvasHost);
         CanvasHost.CaptureMouse();

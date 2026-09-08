@@ -36,6 +36,14 @@ public partial class NovaWindow : Window
     private bool _isRendering, _panning, _isFullscreen, _controlsVisible = true, _hasRenderedFrame;
     private Point _lastPanPoint;
     private decimal _centerX, _centerY, _zoom = 1;
+
+    /// <summary>
+    /// Потолок зума. Проверяется и при загрузке состояния: колесо умножает зум на 1.2 ДО
+    /// ограничения, поэтому без верхней границы на входе умножение может переполнить decimal.
+    /// </summary>
+    private const decimal MaxZoom = 1_000_000_000_000_000m;
+
+    private const decimal MinZoom = 0.000000000000001m;
     private decimal _renderedCenterX, _renderedCenterY, _renderedZoom = 1;
     private WindowStyle _previousWindowStyle;
     private WindowState _previousWindowState;
@@ -87,10 +95,10 @@ public partial class NovaWindow : Window
 
     public void LoadState(NovaState state)
     {
-        _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Max(0.000000000000001m, state.Zoom);
+        _renderCts?.Cancel(); _centerX = state.CenterX; _centerY = state.CenterY; _zoom = Math.Clamp(state.Zoom, MinZoom, MaxZoom);
         PRealBox.Text = Format(state.PReal); PImaginaryBox.Text = Format(state.PImaginary); Z0RealBox.Text = Format(state.Z0Real); Z0ImaginaryBox.Text = Format(state.Z0Imaginary);
         CRealBox.Text = Format(state.CReal); CImaginaryBox.Text = Format(state.CImaginary); MBox.Text = Format(state.M);
-        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = Format(_zoom);
+        IterationsBox.Text = state.Iterations.ToString(CultureInfo.InvariantCulture); ThresholdBox.Text = Format(state.Threshold); ZoomBox.Text = FormatZoom(_zoom);
         ColoringBox.SelectedIndex = state.UseSmoothColoring ? 1 : 0; _paletteManager.ActivePalette = state.Palette.Clone($"Загружено: {state.SaveName}");
         UpdatePreviewTransform(); ScheduleRender(); ScheduleMapRender();
     }
@@ -104,14 +112,53 @@ public partial class NovaWindow : Window
     private void Parameter_OnChanged(object sender, EventArgs e) => ScheduleRender();
     private void MapFormulaParameter_OnChanged(object sender, EventArgs e) { ScheduleRender(); ScheduleMapRender(); }
     private void JuliaMapParameter_OnChanged(object sender, EventArgs e) { ScheduleRender(); DrawMapMarker(); }
-    private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e) { if (TryRead(ZoomBox.Text, out decimal z)) { _zoom = Math.Clamp(z, 0.000000000000001m, 1_000_000_000_000_000m); UpdatePreviewTransform(); ScheduleRender(); } }
+    private void ZoomBox_OnChanged(object sender, TextChangedEventArgs e) { if (TryRead(ZoomBox.Text, out decimal z)) { _zoom = Math.Clamp(z, MinZoom, MaxZoom); UpdatePreviewTransform(); ScheduleRender(); } }
     private void RenderButton_OnClick(object sender, RoutedEventArgs e) => _ = RenderPreviewAsync();
     private void CancelButton_OnClick(object sender, RoutedEventArgs e) => _renderCts?.Cancel();
     private void PaletteButton_OnClick(object sender, RoutedEventArgs e) { var dialog = new MandelbrotPaletteWindow(_paletteManager) { Owner = this }; dialog.PaletteApplied += (_, _) => ScheduleRender(); dialog.ShowDialog(); }
     private void SavesButton_OnClick(object sender, RoutedEventArgs e) =>
         SaveManagerWindow.Open(this, SaveManagerConfigurations.ForNova(this, _saveStore, _variant));
 
-    private void ScheduleRender() { if (!IsLoaded) return; _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
+    private void ScheduleRender() { if (!IsLoaded) return; if (_isRendering) CommitAndBakePreview(); else _renderCts?.Cancel(); _renderTimer.Stop(); _renderTimer.Start(); }
+
+    /// <summary>
+    /// Останавливает текущий рендер и «запекает» то, что уже видно на холсте (сдвинутый
+    /// прежний кадр плюс успевшие лечь тайлы), в стабильный предпросмотр. Снимок после
+    /// этого считается отрисованным для текущего вида, поэтому дальнейшие зум и
+    /// перетаскивание двигают именно его.
+    ///
+    /// Без этого при зуме терялся уже посчитанный кадр, а при перетаскивании рендер
+    /// продолжал идти поверх уезжающего фона.
+    /// </summary>
+    private void CommitAndBakePreview()
+    {
+        RenderSession? session = _activeSession;
+        _renderCts?.Cancel();
+        if (session is null) return;
+
+        FlushVisualizationEvents(session, true);
+        RenderSurfaceMetrics surface = RenderSurfaceMetrics.Measure(SavePreviewLayer);
+        try
+        {
+            var baked = new RenderTargetBitmap(surface.PixelWidth, surface.PixelHeight,
+                surface.Dpi.PixelsPerInchX, surface.Dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            baked.Render(SavePreviewLayer);
+            baked.Freeze();
+            StablePreviewImage.Source = baked;
+            _renderedCenterX = _centerX;
+            _renderedCenterY = _centerY;
+            _renderedZoom = _zoom;
+            _hasRenderedFrame = true;
+            UpdatePreviewTransform();
+        }
+        catch (InvalidOperationException)
+        {
+            // Разметка бывает недоступна на свёртывании окна и в момент изменения размера.
+        }
+        CanvasImage.Source = null;
+        RenderOverlay.EndSession();
+        if (ReferenceEquals(_activeSession, session)) _activeSession = null;
+    }
     private void ScheduleMapRender() { if (!IsLoaded || _variant != NovaVariant.Julia) return; _mapCts?.Cancel(); _mapTimer.Stop(); _mapTimer.Start(); }
     private void JuliaMapHost_OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
@@ -262,8 +309,8 @@ public partial class NovaWindow : Window
     private int GetThreadCount() => ThreadsBox.SelectedItem?.ToString() == "Auto" ? Environment.ProcessorCount : Math.Max(1, Convert.ToInt32(ThreadsBox.SelectedItem, CultureInfo.InvariantCulture));
     private void SetRendering(bool value, string? status = null) { _isRendering = value; CancelButton.IsEnabled = value; if (!value) RenderProgress.Value = 0; if (status is not null) StatusText.Text = status; }
     private void CanvasHost_OnSizeChanged(object sender, SizeChangedEventArgs e) { UpdatePreviewTransform(); ScheduleRender(); }
-    private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e) { Point mouse = e.GetPosition(CanvasHost); var before = ScreenToWorld(mouse); _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), 0.000000000000001m, 1_000_000_000_000_000m); var after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y; UpdatePreviewTransform(); ZoomBox.Text = Format(_zoom); ScheduleRender(); }
-    private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) { _panning = true; _lastPanPoint = e.GetPosition(CanvasHost); CanvasHost.CaptureMouse(); Mouse.OverrideCursor = Cursors.SizeAll; }
+    private void CanvasHost_OnMouseWheel(object sender, MouseWheelEventArgs e) { CommitAndBakePreview(); Point mouse = e.GetPosition(CanvasHost); var before = ScreenToWorld(mouse); _zoom = Math.Clamp(_zoom * (e.Delta > 0 ? 1.2m : 1m / 1.2m), MinZoom, MaxZoom); var after = ScreenToWorld(mouse); _centerX += before.X - after.X; _centerY += before.Y - after.Y; UpdatePreviewTransform(); ZoomBox.Text = FormatZoom(_zoom); ScheduleRender(); }
+    private void CanvasHost_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e) { CommitAndBakePreview(); _panning = true; _lastPanPoint = e.GetPosition(CanvasHost); CanvasHost.CaptureMouse(); Mouse.OverrideCursor = Cursors.SizeAll; }
     private void CanvasHost_OnMouseMove(object sender, MouseEventArgs e) { if (!_panning) return; Point current = e.GetPosition(CanvasHost); var before = ScreenToWorld(_lastPanPoint); var after = ScreenToWorld(current); _centerX += before.X - after.X; _centerY += before.Y - after.Y; _lastPanPoint = current; UpdatePreviewTransform(); }
     private void CanvasHost_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e) { if (!_panning) return; _panning = false; CanvasHost.ReleaseMouseCapture(); Mouse.OverrideCursor = null; ScheduleRender(); }
     private (decimal X, decimal Y) ScreenToWorld(Point p) { decimal width = (decimal)Math.Max(1, CanvasHost.ActualWidth), scale = BaseScale / _zoom; return (_centerX + ((decimal)p.X - width / 2) * scale / width, _centerY + ((decimal)Math.Max(1, CanvasHost.ActualHeight) / 2 - (decimal)p.Y) * scale / width); }
@@ -274,6 +321,12 @@ public partial class NovaWindow : Window
     private void Window_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e) { _renderTimer.Stop(); _mapTimer.Stop(); _visualizationTimer.Stop(); _renderCts?.Cancel(); _mapCts?.Cancel(); _renderCts?.Dispose(); _mapCts?.Dispose(); }
     private static bool TryRead(string text, out decimal value) => decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) || decimal.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
     private static string Format(decimal value) => value.ToString("G15", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Зум показывается восемью значащими цифрами: большое значение уходит в
+    /// экспоненциальную запись (8.1707708E+09) и помещается в поле целиком.
+    /// </summary>
+    private static string FormatZoom(decimal value) => value.ToString("G8", CultureInfo.InvariantCulture);
     private sealed class RenderSession(WriteableBitmap bitmap, int count, int width, int height) { public WriteableBitmap Bitmap { get; } = bitmap; public int Count { get; } = count; public int Width { get; } = width; public int Height { get; } = height; public int Completed { get; set; } public ConcurrentQueue<TileEvent> Events { get; } = new(); }
     private readonly record struct TileEvent(bool Start, MandelbrotRenderTile Tile, byte[]? Pixels);
 }
